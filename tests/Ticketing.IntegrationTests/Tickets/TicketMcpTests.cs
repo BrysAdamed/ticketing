@@ -142,6 +142,32 @@ public sealed class TicketMcpTests(TicketingApiFactory api)
         Assert.Contains("ReadyForTesting", allTools["update_ticket"].ProtocolTool.InputSchema.GetRawText(), StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task Private_tickets_do_not_leak_through_mcp_reads()
+    {
+        // Arrange
+        var (mcp, _) = await SetUpAsync();
+        await using var session = mcp;
+        await CallAsync(mcp, "create_ticket", new() { ["projectKey"] = "WEB", ["title"] = "Secret", ["type"] = "Bug", ["labels"] = new[] { "secret" } });
+        await using var outsider = await api.CreateMcpClientAsync(await api.CreatePatAsync(await api.CreateUserAsync()));
+
+        // Act
+        var results = new List<CallToolResult>();
+        foreach (var (tool, args) in new (string, Dictionary<string, object?>)[]
+                 {
+                     ("get_ticket", new() { ["key"] = "WEB-1" }),
+                     ("get_ticket_history", new() { ["key"] = "WEB-1" }),
+                     ("list_comments", new() { ["key"] = "WEB-1" }),
+                     ("get_field_hints", new() { ["projectKey"] = "WEB", ["field"] = "labels" }),
+                     ("add_comment", new() { ["key"] = "WEB-1", ["body"] = "Hi" }),
+                 })
+            results.Add(await outsider.CallToolAsync(tool, args, cancellationToken: _ct));
+
+        // Assert
+        Assert.All(results, r => Assert.True(r.IsError));
+        Assert.All(results, r => Assert.EndsWith("notFound", Payload(r).GetProperty("code").GetString(), StringComparison.Ordinal));
+    }
+
     private async Task<(McpClient Client, TestUser User)> SetUpAsync()
     {
         var user = await api.CreateUserAsync();

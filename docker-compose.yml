@@ -1,0 +1,50 @@
+name: ticketing
+
+services:
+  db:
+    image: postgres:18.6-alpine
+    environment:
+      POSTGRES_DB: ticketing
+      POSTGRES_USER: ticketing
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+    volumes:
+      # PostgreSQL 18+ images keep data under /var/lib/postgresql/18/docker; mount the parent, not .../data.
+      - db-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: src/Ticketing.Api/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+      ConnectionStrings__Db: Host=db;Port=5432;Database=ticketing;Username=ticketing;Password=${DB_PASSWORD:?set DB_PASSWORD in .env}
+      Database__MigrateOnStartup: "true"
+      Auth__CookieSecurePolicy: ${COOKIE_SECURE_POLICY:-SameAsRequest}
+      TICKETING_BOOTSTRAP_ADMIN_EMAIL: ${TICKETING_BOOTSTRAP_ADMIN_EMAIL:?set TICKETING_BOOTSTRAP_ADMIN_EMAIL in .env}
+      TICKETING_BOOTSTRAP_ADMIN_PASSWORD: ${TICKETING_BOOTSTRAP_ADMIN_PASSWORD:?set TICKETING_BOOTSTRAP_ADMIN_PASSWORD in .env}
+    ports:
+      - "${API_HOST_PORT:-5080}:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./web
+    ports:
+      - "${WEB_HOST_PORT:-8080}:8080"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  db-data:

@@ -6,7 +6,7 @@ Normative for backend and frontend. The product rules behind them are in [the sp
 
 * Base path `/api/v1`. JSON with camelCase property names. Enums travel as their PascalCase names (`ReadyForTesting`).
 * Timestamps are ISO 8601 UTC strings (`2026-10-26T12:00:00Z`).
-* Ids are UUID strings. Tickets, test cases and regression sessions are also addressable by key (`/api/v1/tickets/WEB-42`).
+* Ids are UUID strings. Every route that names a project, ticket, test case or regression session accepts either the id or the human key (`/api/v1/projects/WEB`, `/api/v1/tickets/WEB-42`).
 * OpenAPI document: `/api/v1/openapi.json`; Scalar UI at `/scalar` (non-production or Admin only).
 
 ## Authentication
@@ -64,7 +64,11 @@ RFC 9457 problem details, always with a stable machine `code`:
 
 ## Concurrency
 
-Mutable resources expose `version` (number, PostgreSQL `xmin`). Updates (`PATCH`) send `If-Match: "<version>"`; when stale the server answers `409 concurrency.conflict`. PATCH bodies are partial: omitted properties stay unchanged, `null` clears an optional field.
+Mutable resources expose `rowVersion` (number, PostgreSQL `xmin`). It is named `rowVersion`, not `version`, because tickets and regression sessions have a business field called `version`. GET and PATCH responses also send it as `ETag: "<rowVersion>"`.
+
+Updates (`PATCH`) may send `If-Match: "<rowVersion>"`. It is optional (D-43). When the value is stale, the server answers `409 concurrency.conflict` without the current state, and the client refetches.
+
+PATCH bodies are partial: omitted properties stay unchanged, and `null` clears an optional field.
 
 ## Lists
 

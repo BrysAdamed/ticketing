@@ -1,0 +1,56 @@
+using Ticketing.Api.Http;
+using Ticketing.Application.Common;
+using Ticketing.Application.Projects;
+
+namespace Ticketing.Api.Endpoints;
+
+/// <summary>
+/// Reference endpoints. They only translate HTTP to a use case and back: route values, query strings and headers
+/// (If-Match, Idempotency-Key) go into the command, the handler does the rest, and errors surface as exceptions.
+/// Projects are addressed by key or id everywhere.
+/// </summary>
+public sealed class ProjectEndpoints : IEndpointModule
+{
+    public void MapEndpoints(RouteGroupBuilder api)
+    {
+        var projects = api.MapGroup("/projects").WithTags("Projects");
+
+        projects.MapGet("", async (
+                ListProjects.Handler handler, string? query, bool? includeArchived, int? limit, string? cursor, CancellationToken ct) =>
+            TypedResults.Ok(await handler.HandleAsync(
+                new ListProjects.Query(query, includeArchived ?? false, new PageRequest(limit, cursor)), ct)))
+            .WithSummary("Projects the caller can read, ordered by key.");
+
+        projects.MapGet("/{projectKeyOrId}", async (string projectKeyOrId, GetProject.Handler handler, HttpResponse response, CancellationToken ct) =>
+            {
+                var project = await handler.HandleAsync(new GetProject.Query(projectKeyOrId), ct);
+                response.SetRowVersion(project.RowVersion);
+                return TypedResults.Ok(project);
+            })
+            .WithSummary("A project (by key or id) with its members and linked boards.")
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        projects.MapPost("", async (CreateProject.Command command, CreateProject.Handler handler, HttpRequest request, CancellationToken ct) =>
+            {
+                var project = await handler.HandleAsync(command with { IdempotencyKey = request.IdempotencyKeyHeader() }, ct);
+                request.HttpContext.Response.SetRowVersion(project.RowVersion);
+                return TypedResults.Created($"/api/v1/projects/{project.Key}", project);
+            })
+            .WithSummary("Creates a project; the caller becomes its Owner. Accepts an Idempotency-Key header.")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status409Conflict);
+
+        projects.MapPatch("/{projectKeyOrId}", async (
+                string projectKeyOrId, UpdateProject.Command command, UpdateProject.Handler handler, HttpRequest request, CancellationToken ct) =>
+            {
+                var project = await handler.HandleAsync(
+                    command with { ProjectKeyOrId = projectKeyOrId, ExpectedVersion = request.ExpectedRowVersion() }, ct);
+                request.HttpContext.Response.SetRowVersion(project.RowVersion);
+                return TypedResults.Ok(project);
+            })
+            .WithSummary("Updates name, description or visibility (Owner only). Send If-Match with the rowVersion to avoid lost updates.")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
+    }
+}

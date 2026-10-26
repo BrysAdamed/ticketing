@@ -1,0 +1,6 @@
+# Development additions, loaded automatically by `docker compose up`.
+# On a server, run only the base file: docker compose -f docker-compose.yml up -d
+services:
+  db:
+    ports:
+      - "${DB_HOST_PORT:-5433}:5432"

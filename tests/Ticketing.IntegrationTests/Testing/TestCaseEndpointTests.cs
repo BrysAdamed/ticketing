@@ -227,9 +227,12 @@ public sealed class TestCaseEndpointTests(TicketingApiFactory api)
         var priv = await ownerClient.CreateProjectAsync("PRIV");
         await ownerClient.CreateProjectAsync("PUB", ProjectVisibility.Public);
         await api.AddMemberAsync(priv.Id, viewer, ProjectRole.Viewer);
-        var privateCase = await ownerClient.CreateManualCaseAsync("PRIV", "Secret");
+        var privateTicket = await api.CreateTicketAsync(priv, 1);
+        var privateCase = await ownerClient.CreateTestCaseAsync("PRIV", "Secret", new { status = "Manual", steps = new[] { "Step" }, ticketKey = privateTicket });
 
         // Act
+        var outsiderTicketCases = await outsiderClient.GetAsync($"/api/v1/tickets/{privateTicket}/test-cases", _ct);
+        var viewerTicketCases = await (await viewerClient.GetAsync($"/api/v1/tickets/{privateTicket}/test-cases", _ct)).ReadAsync<List<TestCaseSummaryDto>>();
         var viewerRead = await (await viewerClient.GetAsync($"/api/v1/test-cases/{privateCase.Key}", _ct)).ReadAsync<TestCaseDto>();
         var viewerCreate = await viewerClient.PostAsJsonAsync("/api/v1/projects/PRIV/test-cases", new { title = "No" }, _ct);
         var viewerUpdate = await viewerClient.PatchAsJsonAsync($"/api/v1/test-cases/{privateCase.Key}", new { title = "No" }, _ct);
@@ -250,6 +253,8 @@ public sealed class TestCaseEndpointTests(TicketingApiFactory api)
         await outsiderList.ShouldBeProblemAsync(HttpStatusCode.NotFound, ProjectErrors.NotFound);
         await outsiderPatch.ShouldBeProblemAsync(HttpStatusCode.NotFound, TestCaseErrors.NotFound);
         await publicCreate.ShouldHaveStatusAsync(HttpStatusCode.Created);
+        await outsiderTicketCases.ShouldBeProblemAsync(HttpStatusCode.NotFound, "ticket.notFound");
+        Assert.Equal(privateCase.Key, Assert.Single(viewerTicketCases).Key);
         await readOnlyToken.ShouldHaveStatusAsync(HttpStatusCode.Forbidden);
     }
 

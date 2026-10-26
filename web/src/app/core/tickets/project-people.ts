@@ -34,4 +34,12 @@ export class ProjectPeople {
     }
     return entry;
   }
+
+  /// Server-side search over every user who can be assigned in the project (`GET /users?projectKey=`):
+  /// any active user on a public project, Admins and Owner/Member members on a private one. At most 20.
+  search(projectKey: string, query: string): Promise<UserRef[]> {
+    return firstValueFrom(
+      this.api.get<UserRef[]>('/users', { projectKey: projectKey.toUpperCase(), query: query.trim() }),
+    );
+  }
 }

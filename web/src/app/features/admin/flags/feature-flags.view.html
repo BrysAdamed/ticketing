@@ -1,0 +1,128 @@
+<div class="tk-toolbar">
+  <span class="tk-muted summary"
+    >Flags switch features per user: master switch, then target users, roles and a stable
+    percentage.</span
+  >
+  <span class="fill"></span>
+  <button mat-flat-button type="button" data-testid="flags-new" (click)="create()">
+    <tk-icon name="tablerPlus" [size]="14" />
+    New flag
+  </button>
+</div>
+
+@if (store.status() === 'error' && store.flags().length === 0) {
+  <tk-empty-state
+    icon="tablerAlertCircle"
+    tone="danger"
+    title="Couldn't load feature flags"
+    [description]="store.error()?.title ?? null"
+  >
+    <button mat-stroked-button type="button" (click)="store.load()">Retry</button>
+  </tk-empty-state>
+} @else if (store.status() === 'loaded' || store.flags().length > 0) {
+  @if (store.flags().length === 0) {
+    <tk-empty-state
+      icon="tablerFlag"
+      title="No feature flags"
+      description="Create a flag to roll a feature out to some users first."
+    >
+      <button mat-stroked-button type="button" (click)="create()">New flag</button>
+    </tk-empty-state>
+  } @else {
+    <table
+      mat-table
+      [dataSource]="store.flags()"
+      class="flags"
+      aria-label="Feature flags"
+      data-testid="flags-table"
+    >
+      <ng-container matColumnDef="key">
+        <th mat-header-cell *matHeaderCellDef>Flag</th>
+        <td mat-cell *matCellDef="let f">
+          <button
+            type="button"
+            class="key-cell"
+            (click)="edit(f)"
+            [attr.data-testid]="'flag-edit-' + f.key"
+          >
+            <span class="key">{{ f.key }}</span>
+            @if (f.description) {
+              <span class="description">{{ f.description }}</span>
+            }
+          </button>
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="enabled">
+        <th mat-header-cell *matHeaderCellDef>Enabled</th>
+        <td mat-cell *matCellDef="let f">
+          <mat-slide-toggle
+            [checked]="f.enabled"
+            [attr.data-testid]="'flag-toggle-' + f.key"
+            [aria-label]="'Enable ' + f.key"
+            (change)="store.toggle(f, $event.checked)"
+          />
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="targeting">
+        <th mat-header-cell *matHeaderCellDef>Targeting</th>
+        <td mat-cell *matCellDef="let f" class="tk-muted" [class.dim]="!f.enabled">
+          {{ summary(f) }}
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="usersOn">
+        <th mat-header-cell *matHeaderCellDef class="num">On for</th>
+        <td
+          mat-cell
+          *matCellDef="let f"
+          class="num tnum"
+          [attr.data-testid]="'flag-users-on-' + f.key"
+          [matTooltip]="'Active users who currently evaluate on'"
+        >
+          <strong>{{ f.usersOn }}</strong>
+          <span class="tk-subtle"> / {{ f.activeUsers }} users</span>
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="updated">
+        <th mat-header-cell *matHeaderCellDef>Last change</th>
+        <td mat-cell *matCellDef="let f" class="tk-muted" [title]="f.updatedAt | absoluteTime">
+          {{ f.updatedBy?.displayName ?? 'System' }} · {{ f.updatedAt | relativeTime }}
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef><span class="sr-only">Actions</span></th>
+        <td mat-cell *matCellDef="let f" class="actions">
+          <button
+            type="button"
+            class="tk-icon-btn"
+            [matMenuTriggerFor]="menu"
+            [matMenuTriggerData]="{ flag: f }"
+            [attr.aria-label]="'Actions for ' + f.key"
+          >
+            <tk-icon name="tablerDots" [size]="16" />
+          </button>
+        </td>
+      </ng-container>
+      <tr mat-header-row *matHeaderRowDef="columns; sticky: true"></tr>
+      <tr
+        mat-row
+        *matRowDef="let f; columns: columns"
+        [attr.data-testid]="'flag-row-' + f.key"
+      ></tr>
+    </table>
+  }
+} @else {
+  <tk-skeleton-rows [count]="5" />
+}
+
+<mat-menu #menu="matMenu" xPosition="before">
+  <ng-template matMenuContent let-flag="flag">
+    <button mat-menu-item type="button" (click)="edit(flag)">
+      <tk-icon name="tablerPencil" [size]="16" />
+      <span>Edit targeting</span>
+    </button>
+    <button mat-menu-item type="button" class="danger" (click)="remove(flag)">
+      <tk-icon name="tablerX" [size]="16" />
+      <span>Delete</span>
+    </button>
+  </ng-template>
+</mat-menu>

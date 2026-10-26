@@ -42,29 +42,107 @@ public sealed class ProjectAndUserTests
         var creator = Guid.CreateVersion7();
         var project = Project.Create("WEB", "Website", null, ProjectVisibility.Private, creator, Now);
 
+        var other = Guid.CreateVersion7();
+
         // Act
-        var error = Assert.Throws<DomainException>(() => project.RemoveMember(creator));
-        project.AddMember(Guid.CreateVersion7(), ProjectRole.Owner, creator, Now);
-        project.ChangeMemberRole(creator, ProjectRole.Member);
+        var error = Assert.Throws<DomainException>(() => project.RemoveMember(creator, Active(creator)));
+        project.AddMember(other, ProjectRole.Owner, creator, Now);
+        var previous = project.ChangeMemberRole(creator, ProjectRole.Member, Active(creator, other));
 
         // Assert
         Assert.Equal(ProjectErrors.LastOwner, error.Code);
+        Assert.Equal(ProjectRole.Owner, previous);
         Assert.Equal(ProjectRole.Member, project.Members.Single(m => m.UserId == creator).Role);
     }
 
     [Fact]
-    public void Only_archived_projects_can_be_deleted()
+    public void A_deactivated_owner_does_not_count_as_the_remaining_owner()
+    {
+        // Arrange
+        var creator = Guid.CreateVersion7();
+        var deactivated = Guid.CreateVersion7();
+        var project = Project.Create("WEB", "Website", null, ProjectVisibility.Private, creator, Now);
+        project.AddMember(deactivated, ProjectRole.Owner, creator, Now);
+
+        // Act
+        var demote = Assert.Throws<DomainException>(() => project.ChangeMemberRole(creator, ProjectRole.Viewer, Active(creator)));
+        var remove = Assert.Throws<DomainException>(() => project.RemoveMember(creator, Active(creator)));
+        project.RemoveMember(deactivated, Active(creator));
+
+        // Assert
+        Assert.Equal((ProjectErrors.LastOwner, ProjectErrors.LastOwner), (demote.Code, remove.Code));
+        Assert.Equal([creator], project.Members.Select(m => m.UserId));
+    }
+
+    [Fact]
+    public void Members_cannot_be_added_twice_or_changed_on_an_archived_project()
+    {
+        // Arrange
+        var creator = Guid.CreateVersion7();
+        var member = Guid.CreateVersion7();
+        var project = Project.Create("WEB", "Website", null, ProjectVisibility.Private, creator, Now);
+        project.AddMember(member, ProjectRole.Viewer, creator, Now);
+
+        // Act
+        var duplicate = Assert.Throws<DomainException>(() => project.AddMember(member, ProjectRole.Member, creator, Now));
+        project.Archive(creator, Now);
+        var archivedAdd = Assert.Throws<DomainException>(() => project.AddMember(Guid.CreateVersion7(), ProjectRole.Member, creator, Now));
+        var archivedRole = Assert.Throws<DomainException>(() => project.ChangeMemberRole(member, ProjectRole.Member, Active(creator, member)));
+        var archivedRemove = Assert.Throws<DomainException>(() => project.RemoveMember(member, Active(creator, member)));
+
+        // Assert
+        Assert.Equal(ProjectErrors.AlreadyMember, duplicate.Code);
+        Assert.All([archivedAdd, archivedRole, archivedRemove], e => Assert.Equal(ProjectErrors.Archived, e.Code));
+    }
+
+    [Fact]
+    public void Only_archived_projects_can_be_deleted_and_only_with_the_typed_key()
     {
         // Arrange
         var actor = Guid.CreateVersion7();
         var project = Project.Create("WEB", "Website", null, ProjectVisibility.Private, actor, Now);
 
         // Act / Assert
-        Assert.Equal(ProjectErrors.NotArchived, Assert.Throws<DomainException>(() => project.Delete(actor, Now)).Code);
+        Assert.Equal(ProjectErrors.NotArchived, Assert.Throws<DomainException>(() => project.Delete(actor, Now, "WEB")).Code);
         project.Archive(actor, Now);
         Assert.Equal(ProjectErrors.Archived, Assert.Throws<DomainException>(project.EnsureWritable).Code);
-        project.Delete(actor, Now);
+        Assert.Equal(ProjectErrors.DeleteNotConfirmed, Assert.Throws<DomainException>(() => project.Delete(actor, Now, "web")).Code);
+        project.Delete(actor, Now, " WEB ");
         Assert.True(project.IsDeleted);
+    }
+
+    [Fact]
+    public void Unarchive_keeps_members_when_an_active_owner_remains()
+    {
+        // Arrange
+        var owner = Guid.CreateVersion7();
+        var project = Project.Create("WEB", "Website", null, ProjectVisibility.Private, owner, Now);
+        project.Archive(owner, Now);
+
+        // Act
+        var restored = project.Unarchive(owner, Now, Active(owner));
+
+        // Assert
+        Assert.Null(restored);
+        Assert.False(project.IsArchived);
+        Assert.Equal(ProjectErrors.NotArchived, Assert.Throws<DomainException>(() => project.Unarchive(owner, Now, Active(owner))).Code);
+    }
+
+    [Fact]
+    public void Unarchive_without_an_active_owner_makes_the_acting_admin_an_owner()
+    {
+        // Arrange
+        var deactivatedOwner = Guid.CreateVersion7();
+        var admin = Guid.CreateVersion7();
+        var project = Project.Create("WEB", "Website", null, ProjectVisibility.Private, deactivatedOwner, Now);
+        project.Archive(deactivatedOwner, Now);
+
+        // Act
+        var restored = project.Unarchive(admin, Now, Active());
+
+        // Assert
+        Assert.Equal((admin, ProjectRole.Owner), (restored?.UserId, restored?.Role));
+        Assert.Equal(2, project.Members.Count);
     }
 
     [Fact]
@@ -141,4 +219,6 @@ public sealed class ProjectAndUserTests
         Assert.Equal((high, low), (blocks.SourceTicketId, blocks.TargetTicketId));
         Assert.Throws<DomainException>(() => TicketLink.Create(low, low, TicketLinkType.Blocks, Guid.CreateVersion7(), Now));
     }
+
+    private static HashSet<Guid> Active(params Guid[] userIds) => [.. userIds];
 }

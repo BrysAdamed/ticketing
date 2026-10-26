@@ -63,7 +63,7 @@ public sealed class ReadableProjectsLeakGuardTests(TicketingApiFactory api)
             if (deleted)
             {
                 project.Archive(owner.Id, now);
-                project.Delete(owner.Id, now);
+                project.Delete(owner.Id, now, key);
             }
             db.Projects.Add(project);
             db.Tickets.Add(Ticket.Create(project.Id, 1, $"{key} ticket", TicketType.Bug, owner.Id, "a0", now));

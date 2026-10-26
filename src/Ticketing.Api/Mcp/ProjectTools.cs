@@ -17,18 +17,22 @@ namespace Ticketing.Api.Mcp;
 public sealed class ProjectTools
 {
     [McpServerTool(Name = "list_projects", ReadOnly = true, Idempotent = true, Title = "List projects")]
-    [Description("Lists projects you can read, ordered by key: key, name, visibility, your effective role (Owner, Member, Viewer) and open ticket count. Returns { items, nextCursor }.")]
+    [Description("Lists projects you can read, ordered by key: key, name, visibility (Private, Public), your effective role (Owner, Member, Viewer), "
+        + "open ticket count, ticket counts per status category, lead and archivedAt. Returns { items, nextCursor }.")]
     public static Task<CursorPage<ProjectSummaryDto>> ListProjects(
         ListProjects.Handler handler,
         [Description("Filter by key or name (case-insensitive substring).")] string? query = null,
         [Description("Include archived projects. Default false.")] bool includeArchived = false,
+        [Description("Only Private or only Public projects.")] ProjectVisibility? visibility = null,
+        [Description("Only projects you are an explicit member of. Default false.")] bool mine = false,
         [Description("Page size 1..100, default 25.")] int? limit = null,
         [Description("nextCursor from the previous page.")] string? cursor = null,
         CancellationToken cancellationToken = default) =>
-        handler.HandleAsync(new ListProjects.Query(query, includeArchived, new PageRequest(limit, cursor)), cancellationToken);
+        handler.HandleAsync(new ListProjects.Query(query, includeArchived, new PageRequest(limit, cursor), visibility, mine), cancellationToken);
 
     [McpServerTool(Name = "get_project", ReadOnly = true, Idempotent = true, Title = "Get project")]
-    [Description("Gets a project by key (for example WEB) or id: fields, members with roles, linked boards and the current rowVersion.")]
+    [Description("Gets a project by key (for example WEB) or id: fields, your role, archivedAt, members (role and effectiveRole: Owner, Member, Viewer; "
+        + "a Viewer on a Public project acts as Member), linked boards and the current rowVersion.")]
     public static Task<ProjectDto> GetProject(
         GetProject.Handler handler,
         [Description("Project key (for example WEB) or project id.")] string projectKey,
@@ -47,4 +51,25 @@ public sealed class ProjectTools
         [Description("Optional key that makes retries safe: a repeat within 24 hours returns the original result.")] string? idempotencyKey = null,
         CancellationToken cancellationToken = default) =>
         handler.HandleAsync(new CreateProject.Command(key, name, description, visibility, idempotencyKey), cancellationToken);
+
+    [Authorize(Policy = AuthPolicies.CanWrite)]
+    [McpServerTool(Name = "update_project", Destructive = false, Idempotent = true, Title = "Update project")]
+    [Description("Updates a project's name, description or visibility (Private or Public; Public means every signed-in user can edit). Owner only; "
+        + "archived projects are read-only. Omitted fields stay unchanged.")]
+    public static Task<ProjectDto> UpdateProject(
+        UpdateProject.Handler handler,
+        [Description("Project key (for example WEB) or project id.")] string projectKey,
+        [Description("New name, unique among active projects, at most 100 characters.")] string? name = null,
+        [Description("New markdown description, at most 10000 characters. An empty string clears it.")] string? description = null,
+        [Description("Private or Public.")] ProjectVisibility? visibility = null,
+        [Description("The rowVersion you last read; the update fails with concurrency.conflict if the project changed since.")] uint? expectedVersion = null,
+        CancellationToken cancellationToken = default) =>
+        handler.HandleAsync(new UpdateProject.Command
+        {
+            ProjectKeyOrId = projectKey,
+            Name = name is null ? default : new Optional<string>(name),
+            Description = description is null ? default : new Optional<string?>(description),
+            Visibility = visibility is { } v ? new Optional<ProjectVisibility>(v) : default,
+            ExpectedVersion = expectedVersion,
+        }, cancellationToken);
 }

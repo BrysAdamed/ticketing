@@ -26,13 +26,7 @@ public static class GetProject
                 .SingleOrDefaultAsync(cancellationToken)
                 ?? throw AppException.NotFound(ProjectErrors.NotFound, $"Project '{grant.ProjectKey}' was not found.");
 
-            var members = await db.ProjectMembers
-                .AsNoTracking()
-                .Where(m => m.ProjectId == grant.ProjectId)
-                .Join(db.Users, m => m.UserId, u => u.Id, (m, u) => new { Member = m, User = u })
-                .OrderBy(x => x.User.DisplayName)
-                .Select(x => new ProjectMemberDto(x.User.Id, x.User.Email, x.User.DisplayName, x.Member.Role, x.User.IsActive, x.User.GlobalRole))
-                .ToListAsync(cancellationToken);
+            var members = await ProjectMembership.LoadMembersAsync(db, grant.ProjectId, project.Visibility, cancellationToken);
 
             var boards = await db.BoardProjects
                 .AsNoTracking()

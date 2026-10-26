@@ -8,7 +8,7 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Archive (board)**: Makes a board read-only. The owner chooses where non-Done tickets go (their backlogs or another board); Done tickets stay as a record. Unarchive is allowed. [§6.4](product/01-refined-spec.md#64-backlog-and-boards)
 
-**Archive (project)**: Makes a project read-only for everyone; the only allowed action is unarchive. Its tickets leave all boards and the project is unlinked from them. [§4.3](product/01-refined-spec.md#43-project)
+**Archive (project)**: Makes a project read-only for everyone; the only allowed action is unarchive. Its tickets leave all boards and the project is unlinked from them. Writes on an archived project fail with 409 `project.archived`. [§4.3](product/01-refined-spec.md#43-project)
 
 **Archive (test case)**: Hides a test case from default lists and from future regression sessions without deleting it. [§6.10](product/01-refined-spec.md#610-test-case-lifecycle)
 
@@ -32,7 +32,7 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Bug**: Ticket type for a defect. Severity is shown prominently for bugs. Bugs can be created from a failed regression item. [§3](product/01-refined-spec.md#3-enumerations), [§6.11](product/01-refined-spec.md#611-regression-session-lifecycle)
 
-**Bug draft**: The pre-filled bug the server builds from a failed regression item's snapshot (title, templated repro steps, Severity Major, Priority High, session version, label `regression`). The create-bug dialog, REST and MCP all start from it (D-51). [§6.11](product/01-refined-spec.md#611-regression-session-lifecycle)
+**Bug draft**: The pre-filled bug the server builds from a failed regression item's snapshot (title, templated repro steps, Severity Major, Priority High, session version, label `regression`). The create-bug dialog, REST and MCP all start from it (D-59). [§6.11](product/01-refined-spec.md#611-regression-session-lifecycle)
 
 **Carry-over**: Moving a board's unfinished tickets elsewhere when it is archived: to their project backlogs (top) or to another non-archived board. [§6.4](product/01-refined-spec.md#64-backlog-and-boards)
 

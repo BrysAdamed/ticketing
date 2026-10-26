@@ -9,9 +9,18 @@ export interface ProjectSummary {
   id: string;
   key: string;
   name: string;
+  /// First 160 characters of the markdown description.
+  descriptionPreview?: string | null;
   visibility: ProjectVisibility;
+  /// Effective role (spec 5.1): Admins are Owner everywhere, everyone is at least Member on public projects.
   myRole: ProjectRole | null;
+  /// The caller has an explicit membership.
+  isMember?: boolean;
   openTicketCount?: number;
+  ticketCounts?: { toDo: number; inProgress: number; done: number };
+  lead?: { userId: string; displayName: string } | null;
+  /// Latest ticket update, or the project's creation time.
+  updatedAt?: string;
   archivedAt?: string | null;
 }
 

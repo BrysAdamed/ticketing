@@ -8,6 +8,7 @@ using Ticketing.Infrastructure.Attachments;
 using Ticketing.Infrastructure.Auth;
 using Ticketing.Infrastructure.FeatureFlags;
 using Ticketing.Infrastructure.Idempotency;
+using Ticketing.Infrastructure.Maintenance;
 using Ticketing.Infrastructure.Persistence;
 using Ticketing.Infrastructure.Time;
 
@@ -40,6 +41,10 @@ public static class DependencyInjection
         services.AddScoped<IAttachmentStore, PostgresAttachmentStore>();
         services.AddScoped<IIdempotency, IdempotencyService>();
         services.AddSingleton<IFeatureFlagStore, FeatureFlagStore>();
+
+        services.AddOptions<MaintenanceOptions>().Bind(configuration.GetSection(MaintenanceOptions.Section));
+        services.AddScoped<DataRetention>();
+        services.AddHostedService<DataRetentionService>();
         return services;
     }
 }

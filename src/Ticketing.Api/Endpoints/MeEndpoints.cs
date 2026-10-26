@@ -1,3 +1,4 @@
+using Ticketing.Api.Http;
 using Ticketing.Application.Me;
 
 namespace Ticketing.Api.Endpoints;
@@ -15,5 +16,23 @@ public sealed class MeEndpoints : IEndpointModule
         me.MapGet("/flags", async (GetMyFlags.Handler handler, CancellationToken ct) =>
             TypedResults.Ok(await handler.HandleAsync(new GetMyFlags.Query(), ct)))
             .WithSummary("Feature flag variants for the signed-in user.");
+
+        me.MapPatch("", async (UpdateMyProfile.Command command, UpdateMyProfile.Handler handler, CancellationToken ct) =>
+            TypedResults.Ok(await handler.HandleAsync(command, ct)))
+            .RequireCookieSession()
+            .WithSummary("Changes the signed-in user's display name (web session only).")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden);
+
+        me.MapPost("/password", async (ChangeMyPassword.Command command, ChangeMyPassword.Handler handler, HttpContext http, CancellationToken ct) =>
+            {
+                var session = await handler.HandleAsync(command, ct);
+                await AuthEndpoints.StartSessionAsync(http, session);
+                return TypedResults.NoContent();
+            })
+            .RequireCookieSession()
+            .WithSummary("Changes the signed-in user's password (current password required). Other sessions end; this one continues.")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden);
     }
 }

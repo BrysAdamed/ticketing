@@ -14,7 +14,7 @@ using Ticketing.Infrastructure.Persistence;
 namespace Ticketing.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(TicketingDbContext))]
-    [Migration("20261026232607_InitialCreate")]
+    [Migration("20261026233935_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -1223,6 +1223,12 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("xid")
                         .HasColumnName("xmin");
+
+                    b.Property<string>("SecurityStamp")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("security_stamp");
 
                     b.Property<DateTimeOffset?>("SetPasswordTokenExpiresAt")
                         .HasColumnType("timestamp with time zone")

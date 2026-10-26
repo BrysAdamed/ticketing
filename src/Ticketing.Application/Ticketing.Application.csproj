@@ -10,6 +10,9 @@
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Users\Resources\common-passwords.txt" LogicalName="Ticketing.Application.Users.common-passwords.txt" />
+  </ItemGroup>
+  <ItemGroup>
     <InternalsVisibleTo Include="Ticketing.IntegrationTests" />
   </ItemGroup>
 </Project>

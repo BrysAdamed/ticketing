@@ -1221,6 +1221,12 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                         .HasColumnType("xid")
                         .HasColumnName("xmin");
 
+                    b.Property<string>("SecurityStamp")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("security_stamp");
+
                     b.Property<DateTimeOffset?>("SetPasswordTokenExpiresAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("set_password_token_expires_at");

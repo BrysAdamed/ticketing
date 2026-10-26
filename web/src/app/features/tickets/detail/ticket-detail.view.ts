@@ -12,6 +12,7 @@ import { ConfirmService } from '@core/notify/confirm.service';
 import { ToastService } from '@core/notify/toast.service';
 import { ShortcutService } from '@core/shortcuts/shortcut.service';
 import { ProjectPeople } from '@core/tickets/project-people';
+import { TicketAttachments } from '@core/tickets/ticket-attachments';
 import { TICKET_DETAIL_SECTIONS } from '@core/tickets/ticket-sections';
 import { TicketLink, TicketRef, UserRef } from '@core/tickets/ticket.models';
 import { TICKET_TYPE_LABELS } from '@shared/domain/enums';
@@ -79,6 +80,7 @@ export class TicketDetailView {
   private readonly breadcrumbs = inject(Breadcrumbs);
 
   readonly ticketKey = input.required<string>();
+  protected readonly uploadHandler = inject(TicketAttachments).markdownUploader(() => this.ticketKey());
   readonly presentation = input<TicketPresentation>('page');
 
   protected readonly typeLabels = TICKET_TYPE_LABELS;

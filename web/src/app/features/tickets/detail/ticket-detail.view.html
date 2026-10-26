@@ -59,7 +59,7 @@
           />
         }
 
-        <tk-ticket-description class="description" [value]="t.description" [canEdit]="store.canEdit()" [save]="saveDescription" />
+        <tk-ticket-description class="description" [value]="t.description" [canEdit]="store.canEdit()" [save]="saveDescription" [uploadHandler]="t.permissions.canEdit ? uploadHandler : null" />
 
         @if (t.type !== 'Spike' || (t.children?.length ?? 0) > 0) {
           <tk-ticket-children [ticket]="t" [canEdit]="store.canEdit()" (created)="onChildCreated($event)" (adopt)="onChildAdopted($event)" />
@@ -97,6 +97,7 @@
           [historyLoading]="store.historyStatus() === 'loading'"
           [canComment]="t.permissions.canComment"
           [add]="addComment"
+          [uploadHandler]="t.permissions.canComment ? uploadHandler : null"
           (tabChange)="onActivityTab($event)"
           (loadMoreHistory)="store.loadHistory(true)"
           (loadAllComments)="store.loadAllComments()"

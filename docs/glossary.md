@@ -20,6 +20,8 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Auto-passed**: UI label for a regression item whose execution mode is `Automatic`: it starts as `Passed` with no executor. Anyone with write access can still change it, for example to `Failed` (D-13). [§6.11](product/01-refined-spec.md#611-regression-session-lifecycle)
 
+**Automation ratio**: Share of runnable test cases that are automated: `Automatic / (Manual + Automatic)` over non-archived cases; `New` cases do not count. Shown on the dashboard. [§7](product/01-refined-spec.md#7-project-dashboard)
+
 **Backlog**: The ordered list of a project's tickets that are not on any board (`BoardId = null`). Every project has exactly one. [§6.4](product/01-refined-spec.md#64-backlog-and-boards)
 
 **Board**: A named, ordered container that can hold tickets from up to 20 linked projects. Every signed-in user can see every board, but only cards from projects they can read. Boards replace sprints (D-09). [§4.12](product/01-refined-spec.md#412-board), [§5.4](product/01-refined-spec.md#54-board-actions)
@@ -99,6 +101,8 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 **Quick jump**: `Ctrl+K` or `/`: type a ticket or test case key to open it, or text to search ticket titles. [§6.8](product/01-refined-spec.md#68-search-lists-and-export)
 
 **Rank**: Hidden fractional-index string that orders tickets within their container; compared byte-wise (`COLLATE "C"`). [§6.6](product/01-refined-spec.md#66-ranking), [ADR 0010](adr/0010-fractional-index-ranking.md)
+
+**Regression bug**: A ticket created from a failed regression session item (the item's `BugTicketId`). The dashboard counts the open ones. [§6.11](product/01-refined-spec.md#611-regression-session-lifecycle)
 
 **Regression item**: One test case inside a regression session: a snapshot of the case plus its own status, assignee, result note and optional bug. [§4.11](product/01-refined-spec.md#411-regressionsessionitem)
 

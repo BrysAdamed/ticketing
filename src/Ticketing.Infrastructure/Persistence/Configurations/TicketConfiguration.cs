@@ -43,6 +43,7 @@ internal sealed class TicketConfiguration : IEntityTypeConfiguration<Ticket>
         builder.HasIndex(t => new { t.ProjectId, t.BoardId, t.Rank }).HasFilter("deleted_at IS NULL").HasDatabaseName("ix_tickets_container_rank");
         builder.HasIndex(t => new { t.BoardId, t.Rank }).HasFilter("board_id IS NOT NULL AND deleted_at IS NULL").HasDatabaseName("ix_tickets_board_rank");
         builder.HasIndex(t => new { t.ProjectId, t.Status }).HasFilter("deleted_at IS NULL");
+        builder.HasIndex(t => new { t.ProjectId, t.Type }).HasFilter("deleted_at IS NULL");
         builder.HasIndex(t => new { t.ProjectId, t.UpdatedAt }).HasFilter("deleted_at IS NULL");
         builder.HasIndex(t => new { t.ProjectId, t.CreatedAt }).HasFilter("deleted_at IS NULL");
         builder.HasIndex(t => new { t.ProjectId, t.ResolvedAt }).HasFilter("deleted_at IS NULL AND resolved_at IS NOT NULL");

@@ -14,7 +14,7 @@ using Ticketing.Infrastructure.Persistence;
 namespace Ticketing.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(TicketingDbContext))]
-    [Migration("20261026222717_InitialCreate")]
+    [Migration("20261026234413_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -1011,6 +1011,10 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("ProjectId", "Status")
                         .HasDatabaseName("ix_tickets_project_id_status")
+                        .HasFilter("deleted_at IS NULL");
+
+                    b.HasIndex("ProjectId", "Type")
+                        .HasDatabaseName("ix_tickets_project_id_type")
                         .HasFilter("deleted_at IS NULL");
 
                     b.HasIndex("ProjectId", "UpdatedAt")

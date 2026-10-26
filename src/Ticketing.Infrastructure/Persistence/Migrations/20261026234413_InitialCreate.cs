@@ -845,6 +845,12 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                 filter: "deleted_at IS NULL");
 
             migrationBuilder.CreateIndex(
+                name: "ix_tickets_project_id_type",
+                table: "tickets",
+                columns: new[] { "project_id", "type" },
+                filter: "deleted_at IS NULL");
+
+            migrationBuilder.CreateIndex(
                 name: "ix_tickets_project_id_updated_at",
                 table: "tickets",
                 columns: new[] { "project_id", "updated_at" },

@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { MatMenuModule } from '@angular/material/menu';
+import { ApiClient } from '@core/api/api-client';
 import { ProjectDirectory } from '@core/projects/project-directory';
 import { UserRef } from '@core/tickets/ticket.models';
 import {
@@ -147,7 +148,7 @@ interface ExtraChip {
       </button>
     </mat-menu>
 
-    <button type="button" class="fchip" [class.on]="f().assignee.length" [matMenuTriggerFor]="assigneeMenu" data-testid="filter-assignee">
+    <button type="button" class="fchip" [class.on]="f().assignee.length" [matMenuTriggerFor]="assigneeMenu" data-testid="filter-assignee" (menuOpened)="focusInput(userInput)">
       @if (f().assignee.length) {
         Assignee: <b>{{ assigneeSummary() }}</b>
       } @else {
@@ -155,13 +156,16 @@ interface ExtraChip {
       }
     </button>
     <mat-menu #assigneeMenu="matMenu" class="tk-filter-menu">
+      <div class="minput">
+        <input #userInput (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" placeholder="Find people…" aria-label="Find people" data-testid="filter-assignee-input" (input)="findUsers(userInput.value)" />
+      </div>
       <button mat-menu-item type="button" data-testid="filter-assignee-me" (click)="$event.stopPropagation(); toggle('assignee', 'me')">
         <span class="opt"><span class="box" [class.on]="f().assignee.includes('me')"></span>Me</span>
       </button>
       <button mat-menu-item type="button" (click)="$event.stopPropagation(); toggle('assignee', 'unassigned')">
         <span class="opt"><span class="box" [class.on]="f().assignee.includes('unassigned')"></span><tk-avatar />Unassigned</span>
       </button>
-      @for (user of users(); track user.id) {
+      @for (user of userOptions(); track user.id) {
         <button mat-menu-item type="button" (click)="$event.stopPropagation(); toggle('assignee', user.id)">
           <span class="opt"><span class="box" [class.on]="f().assignee.includes(user.id)"></span><tk-avatar [userId]="user.id" [name]="user.displayName" />{{ user.displayName }}</span>
         </button>
@@ -176,9 +180,11 @@ interface ExtraChip {
       }
     </button>
     <mat-menu #labelMenu="matMenu" class="tk-filter-menu">
-      <div class="minput" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
+      <div class="minput">
         <input
           #labelInput
+          (click)="$event.stopPropagation()"
+          (keydown)="$event.stopPropagation()"
           placeholder="Add label, Enter"
           aria-label="Label"
           data-testid="filter-label-input"
@@ -201,8 +207,8 @@ interface ExtraChip {
       }
     </button>
     <mat-menu #versionMenu="matMenu" class="tk-filter-menu">
-      <div class="minput" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
-        <input #versionInput placeholder="Exact version, Enter" aria-label="Version" [value]="f().version === 'none' ? '' : f().version" (keydown.enter)="setText('version', versionInput.value); versionInput.blur()" />
+      <div class="minput">
+        <input #versionInput (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" placeholder="Exact version, Enter" aria-label="Version" [value]="f().version === 'none' ? '' : f().version" (keydown.enter)="setText('version', versionInput.value); versionInput.blur()" />
       </div>
       <button mat-menu-item type="button" (click)="setText('version', 'none')">No version</button>
       <button mat-menu-item type="button" (click)="setText('version', '')">Any version</button>
@@ -385,6 +391,7 @@ interface ExtraChip {
 })
 export class SearchFilterBarComponent {
   private readonly directory = inject(ProjectDirectory);
+  private readonly api = inject(ApiClient);
 
   readonly filters = input.required<SearchFilters>();
   /// People to offer in the assignee menu (besides Me and Unassigned), for example the assignees in the results.
@@ -413,14 +420,60 @@ export class SearchFilterBarComponent {
     return parts.length === 1 ? parts[0] : `${parts.length}`;
   });
 
+  private readonly found = signal<readonly UserRef[] | null>(null);
+  private readonly known = signal<ReadonlyMap<string, UserRef>>(new Map());
+  private findTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /// Search results while typing, otherwise the people offered by the page plus selected ones.
+  protected readonly userOptions = computed(() => {
+    const found = this.found();
+    if (found) return found;
+    const selected = this.f().assignee.map((id) => this.known().get(id)).filter((u): u is UserRef => !!u);
+    const users = new Map([...selected, ...this.users()].map((u) => [u.id, u]));
+    return [...users.values()];
+  });
+
   protected readonly assigneeSummary = computed(() => {
     const values = this.f().assignee;
     if (values.length > 1) return `${values.length}`;
     const value = values[0];
     if (value === 'me') return 'Me';
     if (value === 'unassigned') return 'Unassigned';
-    return this.users().find((u) => u.id === value || u.email === value)?.displayName ?? value;
+    const user = this.known().get(value) ?? this.users().find((u) => u.id === value || u.email === value);
+    return user?.displayName ?? value;
   });
+
+  constructor() {
+    effect(() => {
+      const users = this.users();
+      untracked(() => this.remember(users));
+    });
+    inject(DestroyRef).onDestroy(() => {
+      if (this.findTimer) clearTimeout(this.findTimer);
+    });
+  }
+
+  protected findUsers(query: string): void {
+    if (this.findTimer) clearTimeout(this.findTimer);
+    if (!query.trim()) {
+      this.found.set(null);
+      return;
+    }
+    this.findTimer = setTimeout(() => {
+      this.api.get<UserRef[]>('/users', { query: query.trim(), includeInactive: true }).subscribe({
+        next: (users) => {
+          this.remember(users);
+          this.found.set(users);
+        },
+        error: () => this.found.set([]),
+      });
+    }, 150);
+  }
+
+  private remember(users: readonly UserRef[]): void {
+    if (!users.length) return;
+    this.known.update((map) => new Map([...map, ...users.map((u) => [u.id, u] as const)]));
+  }
 
   protected readonly locationLabel = computed(() => {
     const location = this.f().location;

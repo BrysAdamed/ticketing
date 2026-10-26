@@ -80,7 +80,7 @@ interface PendingUpload {
               @if (a.isImage) {
                 <img [src]="a.url" [alt]="a.fileName" loading="lazy" data-testid="attachment-thumb" />
               } @else {
-                <tk-icon [name]="iconFor(a)" [size]="18" />
+                <tk-icon [name]="iconFor(a)" [size]="20" />
               }
             </a>
             <span class="meta">
@@ -113,7 +113,7 @@ interface PendingUpload {
       <p class="none">No attachments.</p>
     }
     @if (dragOver()) {
-      <div class="overlay" aria-hidden="true"><tk-icon name="tablerUpload" [size]="18" />Drop to attach to {{ ticketKey() }}</div>
+      <div class="overlay" aria-hidden="true"><tk-icon name="tablerUpload" [size]="20" />Drop to attach to {{ ticketKey() }}</div>
     }
   `,
   styleUrl: './attachments-section.component.scss',

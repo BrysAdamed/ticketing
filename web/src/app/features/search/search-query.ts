@@ -31,7 +31,17 @@ export interface SearchFilters {
 export type SearchSort = 'updated' | 'created' | 'priority' | 'key' | 'rank';
 export type SortOrder = 'asc' | 'desc';
 export type ListField = { [K in keyof SearchFilters]: SearchFilters[K] extends string[] ? K : never }[keyof SearchFilters];
-export type TextField = { [K in keyof SearchFilters]: SearchFilters[K] extends string ? K : never }[keyof SearchFilters];
+export type TextField =
+  | 'q'
+  | 'version'
+  | 'parent'
+  | 'location'
+  | 'createdFrom'
+  | 'createdTo'
+  | 'updatedFrom'
+  | 'updatedTo'
+  | 'resolvedFrom'
+  | 'resolvedTo';
 
 export const SORTS: readonly { value: SearchSort; label: string }[] = [
   { value: 'updated', label: 'Updated' },

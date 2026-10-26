@@ -82,7 +82,7 @@ export function quickJumpProviders(): SearchProvider[] {
           icon: 'tablerSearch',
           run: () => void router.navigate(['/search'], { queryParams: { q: text } }),
         };
-        let items: QuickJumpItem[] = [];
+        let items: QuickJumpItem[];
         try {
           items = await firstValueFrom(api.get<QuickJumpItem[]>('/quick-jump', { q: text }).pipe(takeUntil(fromEvent(signal, 'abort'))), {
             defaultValue: [] as QuickJumpItem[],

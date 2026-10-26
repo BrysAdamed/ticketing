@@ -1,5 +1,5 @@
 import { ProjectSummary } from '@core/projects/project-directory';
-import { countProjects, filterProjects } from './projects-list.store';
+import { countProjects, filterProjects, plainPreview } from './projects-list.store';
 
 function project(key: string, overrides: Partial<ProjectSummary> = {}): ProjectSummary {
   return {
@@ -39,5 +39,13 @@ describe('project list filtering', () => {
   it('counts every segment', () => {
     // Act / Assert
     expect(countProjects(projects)).toEqual({ all: 4, mine: 2, public: 2, private: 2 });
+  });
+
+  it('shows markdown descriptions as one line of plain text', () => {
+    // Act / Assert
+    expect(plainPreview('# Portal\n\nFor **customers**, see [docs](https://x.test).')).toBe(
+      'Portal For customers, see docs.',
+    );
+    expect(plainPreview(null)).toBe('');
   });
 });

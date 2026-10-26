@@ -9,7 +9,7 @@
       matTooltip="New project (N)"
       (click)="createProject()"
     >
-      <tk-icon name="tablerPlus" [size]="16" />
+      <tk-icon matButtonIcon name="tablerPlus" [size]="16" />
       New project
     </button>
   </div>
@@ -83,8 +83,8 @@
             @if (project.archivedAt) {
               <tk-badge tone="muted" icon="tablerArchive">Archived</tk-badge>
             }
-            @if (project.descriptionPreview) {
-              <span class="description">{{ project.descriptionPreview }}</span>
+            @if (preview(project); as text) {
+              <span class="description">{{ text }}</span>
             }
           </span>
           <span class="c-vis" role="cell">

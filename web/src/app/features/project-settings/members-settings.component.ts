@@ -110,7 +110,7 @@ const SEARCH_DEBOUNCE_MS = 150;
           [disabled]="!selected() || adding()"
           (click)="add()"
         >
-          <tk-icon name="tablerUserPlus" [size]="16" />
+          <tk-icon matButtonIcon name="tablerUserPlus" [size]="16" />
           Add
         </button>
       </div>
@@ -284,6 +284,10 @@ const SEARCH_DEBOUNCE_MS = 150;
     .actions {
       display: inline-flex;
       justify-content: flex-end;
+    }
+    .actions .tk-icon-btn:disabled {
+      opacity: 0.35;
+      cursor: default;
     }
   `,
 })

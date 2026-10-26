@@ -16,6 +16,15 @@ export interface ProjectCounts {
 const PAGE_SIZE = 100;
 const MAX_PAGES = 10;
 
+/// One-line plain text from the markdown description preview: links keep their text, markup is dropped.
+export function plainPreview(markdown: string | null | undefined): string {
+  return (markdown ?? '')
+    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/[*_`#>~|]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 export function matchesProjectFilter(project: ProjectSummary, filter: ProjectFilter): boolean {
   switch (filter) {
     case 'mine':

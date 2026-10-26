@@ -29,7 +29,7 @@ import {
 import { SkeletonRowsComponent } from '@shared/ui/skeleton/skeleton-rows.component';
 import { NewProjectDialog } from './new-project.dialog';
 import { ProjectProgressComponent } from './project-progress.component';
-import { ProjectFilter, ProjectsListStore } from './projects-list.store';
+import { plainPreview, ProjectFilter, ProjectsListStore } from './projects-list.store';
 
 @Component({
   selector: 'tk-projects-list-view',
@@ -111,6 +111,10 @@ export class ProjectsListView {
       ],
       destroyRef,
     );
+  }
+
+  protected preview(project: ProjectSummary): string {
+    return plainPreview(project.descriptionPreview);
   }
 
   protected async createProject(): Promise<void> {

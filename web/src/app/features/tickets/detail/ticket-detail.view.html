@@ -1,0 +1,125 @@
+@if (store.status() === 'error' && !store.ticket()) {
+  @if (store.error()?.isNotFound) {
+    <tk-empty-state icon="tablerFileText" [title]="notFoundTitle()" description="Check the key, or ask a project owner for access.">
+      <a mat-stroked-button routerLink="/projects">All projects</a>
+    </tk-empty-state>
+  } @else {
+    <tk-empty-state icon="tablerAlertCircle" tone="danger" title="Couldn't load the ticket" [description]="store.error()?.title ?? null">
+      <button mat-stroked-button type="button" (click)="store.reload()">Retry</button>
+    </tk-empty-state>
+  }
+} @else if (store.ticket(); as t) {
+  <div class="detail" [class.peek]="presentation() === 'peek'">
+    <div class="dmain">
+      <div class="dbar">
+        <span class="meta">
+          <tk-type-icon [type]="t.type" [size]="14" />{{ typeLabels[t.type] }}
+          <span class="subtle">·</span>
+          <span class="tnum" data-testid="ticket-key">{{ t.key }}</span>
+          <span class="subtle">·</span>
+          <span [title]="t.createdAt | absoluteTime">opened by {{ t.createdBy.displayName }}</span>
+        </span>
+        <span class="right">
+          <button type="button" class="tk-icon-btn" aria-label="Copy key" matTooltip="Copy key  Ctrl ." data-testid="copy-key" (click)="copyKey()">
+            <tk-icon name="tablerCopy" [size]="14" />
+          </button>
+          <button type="button" class="tk-icon-btn" aria-label="Copy link" matTooltip="Copy link  Ctrl Shift ." data-testid="copy-link" (click)="copyLink()">
+            <tk-icon name="tablerLink" [size]="14" />
+          </button>
+          @if (t.permissions.canDelete) {
+            <button type="button" class="tk-icon-btn" aria-label="More actions" matTooltip="More actions" data-testid="ticket-more" [matMenuTriggerFor]="more">
+              <tk-icon name="tablerDots" [size]="14" />
+            </button>
+            <mat-menu #more="matMenu">
+              <button mat-menu-item type="button" class="danger" data-testid="ticket-delete" (click)="deleteTicket()">
+                <tk-icon name="tablerTrash" [size]="14" />Delete ticket
+              </button>
+            </mat-menu>
+          }
+        </span>
+      </div>
+
+      <div class="dbody">
+        @if (t.parent; as parent) {
+          <a class="parent-link" [routerLink]="['/tickets', parent.key]">
+            <tk-type-icon [type]="parent.type" [size]="12" /><span class="tnum">{{ parent.key }}</span>{{ parent.title }}
+          </a>
+        }
+        <tk-ticket-title [value]="t.title" [canEdit]="store.canEdit()" [save]="saveTitle" />
+
+        @if (presentation() === 'peek') {
+          <tk-ticket-fields
+            class="peek-fields"
+            layout="grid"
+            [ticket]="t"
+            [canEdit]="store.canEdit()"
+            [assignable]="assignable()"
+            (changed)="onFieldChange($event)"
+            (assignToMe)="assignToMe()"
+          />
+        }
+
+        <tk-ticket-description class="description" [value]="t.description" [canEdit]="store.canEdit()" [save]="saveDescription" />
+
+        @if (t.type !== 'Spike' || (t.children?.length ?? 0) > 0) {
+          <tk-ticket-children [ticket]="t" [canEdit]="store.canEdit()" (created)="onChildCreated($event)" (adopt)="onChildAdopted($event)" />
+        }
+
+        <tk-ticket-links [ticket]="t" [canEdit]="store.canEdit()" (added)="onLinkAdded($event)" (removed)="onLinkRemoved($event)" />
+
+        @if (!hasTestCaseSection && (t.testCases?.length ?? 0) > 0) {
+          <section class="sec tc" data-testid="ticket-test-cases">
+            <div class="sec-h">
+              <h2>Test cases</h2>
+              <span class="n tnum">{{ t.testCases!.length }}</span>
+            </div>
+            <div class="box">
+              @for (testCase of t.testCases; track testCase.id) {
+                <div class="lrow">
+                  <tk-test-case-status-badge [status]="testCase.status" />
+                  <span class="key tnum">{{ testCase.key }}</span>
+                  <span class="t">{{ testCase.title }}</span>
+                  <span class="subtle">{{ testCase.stepCount }} {{ testCase.stepCount === 1 ? 'step' : 'steps' }}</span>
+                </div>
+              }
+            </div>
+          </section>
+        }
+
+        <tk-ticket-sections-host [ticketKey]="t.key" [ticketId]="t.id" [projectKey]="t.projectKey" />
+
+        <tk-ticket-activity
+          [comments]="store.comments()"
+          [commentCount]="store.commentCount()"
+          [history]="store.history()"
+          [historyUsers]="store.historyUsers()"
+          [hasMoreHistory]="store.historyCursor() !== null"
+          [historyLoading]="store.historyStatus() === 'loading'"
+          [canComment]="t.permissions.canComment"
+          [add]="addComment"
+          (tabChange)="onActivityTab($event)"
+          (loadMoreHistory)="store.loadHistory(true)"
+          (loadAllComments)="store.loadAllComments()"
+          (edited)="store.editComment($event.id, $event.body)"
+          (deleted)="store.deleteComment($event)"
+        />
+      </div>
+    </div>
+
+    @if (presentation() === 'page') {
+      <aside class="dside" aria-label="Ticket fields">
+        <tk-ticket-fields
+          [ticket]="t"
+          [canEdit]="store.canEdit()"
+          [assignable]="assignable()"
+          (changed)="onFieldChange($event)"
+          (assignToMe)="assignToMe()"
+        />
+      </aside>
+    }
+  </div>
+} @else {
+  <div class="loading">
+    <tk-skeleton-rows [count]="6" />
+  </div>
+}

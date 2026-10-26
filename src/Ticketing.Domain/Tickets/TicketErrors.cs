@@ -15,4 +15,11 @@ public static class TicketErrors
     public const string Deleted = "ticket.deleted";
     public const string LinkSelf = "ticket.link.self";
     public const string LinkExists = "ticket.link.exists";
+    public const string LinkNotFound = "ticket.link.notFound";
+    public const string AssigneeInvalid = "ticket.assignee.invalid";
+    public const string ReporterInvalid = "ticket.reporter.invalid";
+    public const string RankAnchorInvalid = "ticket.rank.anchor";
+    public const string NotInBacklog = "ticket.notInBacklog";
+    public const string BoardInvalid = "ticket.board.invalid";
+    public const string BatchParentInvalid = "ticket.batch.parent";
 }

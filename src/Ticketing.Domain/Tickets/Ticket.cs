@@ -148,6 +148,8 @@ public sealed class Ticket
 
     public void ReplaceLabels(IEnumerable<string?>? labels) => Labels = TicketLabels.Normalize(labels);
 
+    public void EditLabels(IEnumerable<string?>? add, IEnumerable<string?>? remove) => Labels = TicketLabels.Edit(Labels, add, remove);
+
     public void SetParent(Ticket parent, IReadOnlyCollection<Guid> parentAncestorIds, int subtreeHeight)
     {
         TicketHierarchy.EnsureCanSetParent(this, parent, parentAncestorIds, subtreeHeight);

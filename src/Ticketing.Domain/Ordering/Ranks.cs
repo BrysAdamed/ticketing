@@ -21,25 +21,32 @@ public static class Ranks
 
     /// <summary>
     /// Plans a container rebalance: short, evenly spaced keys for <paramref name="existingCount"/> items in their current order,
-    /// leaving a slot at <paramref name="insertIndex"/> for the item being placed.
+    /// leaving <paramref name="insertCount"/> consecutive slots at <paramref name="insertIndex"/> for the items being placed.
     /// </summary>
-    public static RebalancePlan PlanRebalance(int existingCount, int insertIndex)
+    public static RebalancePlan PlanRebalance(int existingCount, int insertIndex, int insertCount = 1)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(existingCount);
         ArgumentOutOfRangeException.ThrowIfNegative(insertIndex);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(insertIndex, existingCount);
+        ArgumentOutOfRangeException.ThrowIfLessThan(insertCount, 1);
 
-        var keys = FractionalIndex.NKeysBetween(null, null, existingCount + 1);
+        var keys = FractionalIndex.NKeysBetween(null, null, existingCount + insertCount);
         var existing = new List<string>(existingCount);
+        var inserted = new List<string>(insertCount);
         for (var i = 0; i < keys.Count; i++)
         {
-            if (i != insertIndex)
+            if (i >= insertIndex && i < insertIndex + insertCount)
+                inserted.Add(keys[i]);
+            else
                 existing.Add(keys[i]);
         }
-        return new RebalancePlan(existing, keys[insertIndex]);
+        return new RebalancePlan(existing, inserted);
     }
 }
 
 /// <param name="ExistingRanks">New ranks for the existing items, in their current order.</param>
-/// <param name="InsertedRank">The rank for the item being placed.</param>
-public sealed record RebalancePlan(IReadOnlyList<string> ExistingRanks, string InsertedRank);
+/// <param name="InsertedRanks">The ranks for the items being placed, in order.</param>
+public sealed record RebalancePlan(IReadOnlyList<string> ExistingRanks, IReadOnlyList<string> InsertedRanks)
+{
+    public string InsertedRank => InsertedRanks[0];
+}

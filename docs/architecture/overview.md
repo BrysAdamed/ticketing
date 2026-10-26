@@ -35,7 +35,7 @@ docs/                        glossary, ADRs, workflows, decisions, ideas, design
 * **One use case = one handler class** in `Application/<Feature>/` (e.g. `Tickets/CreateTicket.cs` containing the request record, validator and handler). Handlers are plain classes registered in DI by assembly scanning; no mediator library.
 * **The REST endpoint and the MCP tool call the same handler.** Neither contains business logic — they translate transport ↔ handler only. This is what keeps the MCP server and the UI behaviourally identical.
 * **Authorization lives in the application layer** (`IProjectAccess` / `ICurrentUser`), not only in endpoint attributes, so MCP tools get identical permission checks.
-* **Errors** are returned as RFC 7807 `ProblemDetails` (validation → 400 with `errors`, not found → 404, forbidden → 403, conflict → 409).
+* **Errors** are returned as RFC 9457 problem details with a stable `code` — see [api-conventions.md](api-conventions.md).
 * **Endpoints** are grouped per feature in `Api/Endpoints/<Feature>Endpoints.cs` via a `Map<Feature>Endpoints(this IEndpointRouteBuilder)` extension, so features never edit a shared file beyond one registration line.
 * **EF Core** configurations live one-per-entity in `Infrastructure/Persistence/Configurations`, applied with `ApplyConfigurationsFromAssembly`. Reads use `AsNoTracking` projections straight into DTOs.
 * **IDs** are `Guid` (v7, time-ordered) except where a human-facing number exists (ticket number).

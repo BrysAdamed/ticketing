@@ -17,7 +17,35 @@ public interface ITicketRanker
     /// <param name="after">Rank of the neighbour below the target slot, or null for the bottom.</param>
     Task<string> BetweenAsync(
         RankContainer container, string? before, string? after, IReadOnlyCollection<Guid>? movingTicketIds, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Returns <paramref name="count"/> ordered ranks for a block of tickets placed at <paramref name="anchor"/>. The anchor's
+    /// neighbours are read under the container lock, ignoring <paramref name="movingTicketIds"/>. Throws a
+    /// <c>ticket.rank.anchor</c> conflict when an anchor ticket is not in the container (or is itself moving).
+    /// </summary>
+    Task<IReadOnlyList<string>> PlaceManyAsync(
+        RankContainer container, RankAnchor anchor, int count, IReadOnlyCollection<Guid> movingTicketIds, CancellationToken cancellationToken);
 }
+
+/// <summary>Where a block of tickets goes inside its container: the top, the bottom, or right before or after another ticket.</summary>
+public abstract record RankAnchor
+{
+    public static RankAnchor Top { get; } = new TopAnchor();
+
+    public static RankAnchor Bottom { get; } = new BottomAnchor();
+
+    public static RankAnchor Before(Guid ticketId) => new BeforeAnchor(ticketId);
+
+    public static RankAnchor After(Guid ticketId) => new AfterAnchor(ticketId);
+}
+
+public sealed record TopAnchor : RankAnchor;
+
+public sealed record BottomAnchor : RankAnchor;
+
+public sealed record BeforeAnchor(Guid TicketId) : RankAnchor;
+
+public sealed record AfterAnchor(Guid TicketId) : RankAnchor;
 
 public abstract record RankContainer
 {

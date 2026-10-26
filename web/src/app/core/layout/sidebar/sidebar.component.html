@@ -105,9 +105,24 @@
   <div class="section">
     <button type="button" class="section-label" (click)="toggleSection('boards')">Boards</button>
     @if (!isSectionCollapsed('boards')) {
+      @for (board of boardDirectory.boards(); track board.id) {
+        <a
+          class="nav"
+          [routerLink]="['/boards', board.id]"
+          routerLinkActive="active"
+          [attr.data-testid]="'nav-board-' + board.id"
+          [matTooltip]="board.name"
+          matTooltipPosition="right"
+          [matTooltipDisabled]="!layout.sidebarCollapsed()"
+        >
+          <tk-icon name="tablerLayoutKanban" />
+          <span class="label">{{ board.name }}</span>
+        </a>
+      }
       <a
-        class="nav"
+        class="nav subtle"
         routerLink="/boards"
+        [routerLinkActiveOptions]="{ exact: true }"
         routerLinkActive="active"
         data-testid="nav-boards"
         matTooltip="Boards"

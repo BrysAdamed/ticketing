@@ -1,0 +1,154 @@
+.filters {
+  gap: 8px;
+}
+
+.actor {
+  width: 180px;
+}
+
+.actor-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 2px 0 4px;
+  border: 1px solid var(--tk-accent);
+  border-radius: var(--tk-radius-md);
+  background: var(--tk-accent-subtle);
+  font-size: var(--tk-text-sm);
+}
+
+.text,
+.date {
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  border: 1px solid var(--tk-border);
+  border-radius: var(--tk-radius-md);
+  background: var(--tk-surface);
+  font-size: var(--tk-text-sm);
+
+  &:focus-within {
+    border-color: var(--tk-accent);
+  }
+
+  input {
+    border: 0;
+    outline: 0;
+    background: none;
+    color: var(--tk-text);
+    font: inherit;
+  }
+}
+
+.text input {
+  width: 220px;
+}
+
+.feed {
+  transition: opacity 120ms;
+
+  &.refreshing {
+    opacity: 0.6;
+  }
+}
+
+.day {
+  position: sticky;
+  top: 40px;
+  z-index: 1;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  background: var(--tk-bg-subtle);
+  border-bottom: 1px solid var(--tk-border-subtle);
+  color: var(--tk-text-muted);
+  font-size: var(--tk-text-xs);
+  font-weight: var(--tk-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.entry {
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 20px 6px 24px;
+  border-bottom: 1px solid var(--tk-border-subtle);
+
+  &:hover {
+    background: var(--tk-bg-hover);
+  }
+}
+
+.time {
+  width: 44px;
+  flex: none;
+  font-size: var(--tk-text-sm);
+}
+
+.type {
+  color: var(--tk-text-subtle);
+}
+
+.body {
+  flex: 1;
+  min-width: 0;
+}
+
+.line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.actor {
+  font-weight: var(--tk-weight-medium);
+}
+
+.system {
+  color: var(--tk-text-muted);
+  font-style: italic;
+}
+
+.verb {
+  color: var(--tk-text-muted);
+}
+
+.target {
+  font-weight: var(--tk-weight-medium);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.detail {
+  margin-top: 2px;
+  padding-left: 28px;
+  color: var(--tk-text-muted);
+  font-size: var(--tk-text-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.code {
+  width: 200px;
+  flex: none;
+  text-align: right;
+  font-family: var(--tk-font-mono);
+  font-size: var(--tk-text-xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.more {
+  display: flex;
+  justify-content: center;
+  padding: 12px;
+}

@@ -1,0 +1,162 @@
+<div class="tk-page-body">
+  @if (store.user(); as user) {
+    <section class="card" aria-labelledby="profile-heading">
+      <header>
+        <tk-avatar [userId]="user.id" [name]="user.displayName" [size]="32" />
+        <div>
+          <h2 id="profile-heading">Profile</h2>
+          <p class="tk-muted">How you appear on tickets, comments and history.</p>
+        </div>
+      </header>
+
+      <dl class="facts">
+        <dt>Email</dt>
+        <dd data-testid="profile-email">{{ user.email }}</dd>
+        <dt>Role</dt>
+        <dd>{{ roleLabels[user.globalRole] }}</dd>
+      </dl>
+
+      <form
+        novalidate
+        [formGroup]="nameForm"
+        (ngSubmit)="saveName()"
+        data-testid="profile-name-form"
+      >
+        <label class="tk-field-label" for="profile-display-name">Display name</label>
+        <div class="inline">
+          <mat-form-field>
+            <input
+              matInput
+              id="profile-display-name"
+              formControlName="displayName"
+              autocomplete="name"
+              data-testid="profile-display-name"
+            />
+            @if (nameForm.controls.displayName.hasError('required')) {
+              <mat-error>Enter a display name.</mat-error>
+            } @else if (nameForm.controls.displayName.hasError('maxlength')) {
+              <mat-error>Use at most 100 characters.</mat-error>
+            }
+          </mat-form-field>
+          <button
+            mat-stroked-button
+            type="submit"
+            data-testid="profile-save-name"
+            [disabled]="!nameForm.dirty || store.savingName()"
+          >
+            {{ store.savingName() ? 'Saving…' : 'Save' }}
+          </button>
+        </div>
+        @if (store.nameError(); as error) {
+          <div class="server-error">{{ error }}</div>
+        }
+      </form>
+    </section>
+
+    <section class="card" aria-labelledby="password-heading">
+      <header>
+        <span class="icon-tile"><tk-icon name="tablerShieldLock" [size]="16" /></span>
+        <div>
+          <h2 id="password-heading">Password</h2>
+          <p class="tk-muted">
+            Changing it signs you out everywhere else. This session stays signed in.
+          </p>
+        </div>
+      </header>
+
+      <form
+        novalidate
+        class="stack"
+        [formGroup]="passwordForm"
+        (ngSubmit)="changePassword()"
+        data-testid="profile-password-form"
+      >
+        @if (store.passwordErrors()['form']; as error) {
+          <div class="tk-callout tk-callout-danger" role="alert">
+            <tk-icon name="tablerAlertCircle" [size]="16" />
+            <span>{{ error }}</span>
+          </div>
+        }
+        <input
+          type="email"
+          class="sr-only"
+          autocomplete="username"
+          [value]="user.email"
+          readonly
+          tabindex="-1"
+          aria-hidden="true"
+        />
+        <div class="field">
+          <label class="tk-field-label" for="profile-current-password">Current password</label>
+          <mat-form-field>
+            <input
+              matInput
+              id="profile-current-password"
+              type="password"
+              formControlName="currentPassword"
+              autocomplete="current-password"
+              data-testid="profile-current-password"
+            />
+            @if (passwordForm.controls.currentPassword.hasError('required')) {
+              <mat-error>Enter your current password.</mat-error>
+            }
+          </mat-form-field>
+          @if (store.passwordErrors()['currentPassword']; as error) {
+            <div class="server-error">{{ error }}</div>
+          }
+        </div>
+        <div class="field">
+          <label class="tk-field-label" for="profile-new-password">New password</label>
+          <mat-form-field>
+            <input
+              matInput
+              id="profile-new-password"
+              type="password"
+              formControlName="newPassword"
+              autocomplete="new-password"
+              data-testid="profile-new-password"
+            />
+            @if (passwordForm.controls.newPassword.hasError('required')) {
+              <mat-error>Enter a new password.</mat-error>
+            } @else if (passwordForm.controls.newPassword.hasError('minlength')) {
+              <mat-error>Use at least {{ minLength }} characters.</mat-error>
+            } @else if (passwordForm.controls.newPassword.hasError('maxlength')) {
+              <mat-error>Use at most 128 characters.</mat-error>
+            }
+          </mat-form-field>
+          @if (store.passwordErrors()['newPassword']; as error) {
+            <div class="server-error">{{ error }}</div>
+          } @else {
+            <div class="hint">{{ hint }}</div>
+          }
+        </div>
+        <div class="field">
+          <label class="tk-field-label" for="profile-confirm-password">Repeat new password</label>
+          <mat-form-field>
+            <input
+              matInput
+              id="profile-confirm-password"
+              type="password"
+              formControlName="confirm"
+              autocomplete="new-password"
+              data-testid="profile-confirm-password"
+            />
+          </mat-form-field>
+          @if (passwordForm.hasError('mismatch') && passwordForm.controls.confirm.touched) {
+            <div class="server-error">The passwords don't match.</div>
+          }
+        </div>
+        <div>
+          <button
+            mat-flat-button
+            type="submit"
+            data-testid="profile-change-password"
+            [disabled]="store.changingPassword()"
+          >
+            {{ store.changingPassword() ? 'Changing…' : 'Change password' }}
+          </button>
+        </div>
+      </form>
+    </section>
+  }
+</div>

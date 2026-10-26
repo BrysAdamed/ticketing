@@ -1,0 +1,145 @@
+<div class="tk-toolbar filters">
+  <tk-segmented
+    ariaLabel="Entity type"
+    testId="audit-type"
+    [options]="typeOptions"
+    [value]="store.entityType()"
+    (valueChange)="setType($event)"
+  />
+  @if (store.actor(); as actor) {
+    <span class="actor-chip" data-testid="audit-actor-chip">
+      <tk-user [user]="actor" />
+      <button
+        type="button"
+        class="tk-icon-btn tk-icon-btn-sm"
+        aria-label="Clear actor filter"
+        (click)="setActor(null)"
+      >
+        <tk-icon name="tablerX" [size]="12" />
+      </button>
+    </span>
+  } @else {
+    <tk-user-search
+      class="compact actor"
+      placeholder="Actor…"
+      testId="audit-actor"
+      [includeInactive]="true"
+      (picked)="setActor($event)"
+    />
+  }
+  <label class="text">
+    <input
+      type="search"
+      placeholder="Action, e.g. user. or flag.updated"
+      aria-label="Action code or prefix"
+      data-testid="audit-action"
+      [value]="store.action()"
+      (input)="setAction($any($event.target).value)"
+    />
+  </label>
+  <label class="date">
+    <span class="tk-subtle">From</span>
+    <input
+      type="date"
+      aria-label="From date"
+      data-testid="audit-from"
+      [value]="store.from()"
+      [max]="store.to() || null"
+      (change)="setRange('from', $any($event.target).value)"
+    />
+  </label>
+  <label class="date">
+    <span class="tk-subtle">To</span>
+    <input
+      type="date"
+      aria-label="To date"
+      data-testid="audit-to"
+      [value]="store.to()"
+      [min]="store.from() || null"
+      (change)="setRange('to', $any($event.target).value)"
+    />
+  </label>
+  @if (store.hasFilters()) {
+    <button mat-button type="button" (click)="store.clearFilters()">Clear</button>
+  }
+</div>
+
+@if (store.status() === 'error' && store.entries().length === 0) {
+  <tk-empty-state
+    icon="tablerAlertCircle"
+    tone="danger"
+    title="Couldn't load the audit log"
+    [description]="store.error()?.title ?? null"
+  >
+    <button mat-stroked-button type="button" (click)="store.load()">Retry</button>
+  </tk-empty-state>
+} @else if (store.status() === 'loaded' || store.entries().length > 0) {
+  @if (store.entries().length === 0) {
+    @if (store.hasFilters()) {
+      <tk-empty-state
+        icon="tablerSearch"
+        title="No entries match"
+        description="Try a wider date range or another filter."
+      >
+        <button mat-stroked-button type="button" (click)="store.clearFilters()">
+          Clear filters
+        </button>
+      </tk-empty-state>
+    } @else {
+      <tk-empty-state
+        icon="tablerHistory"
+        title="Nothing audited yet"
+        description="Changes to users, tokens, flags and projects show up here."
+      />
+    }
+  } @else {
+    <div class="feed" [class.refreshing]="store.status() === 'loading'" data-testid="audit-feed">
+      @for (day of days(); track day.label) {
+        <div class="day">{{ day.label }}</div>
+        @for (row of day.rows; track row.entry.id) {
+          <div class="entry" [attr.data-testid]="'audit-row-' + row.entry.action">
+            <span class="time tnum tk-subtle" [title]="row.title">{{ row.time }}</span>
+            <tk-icon
+              class="type"
+              [name]="entityIcons[row.entry.entityType] ?? 'tablerHistory'"
+              [size]="14"
+              [matTooltip]="typeLabels[row.entry.entityType]"
+            />
+            <div class="body">
+              <div class="line">
+                @if (row.entry.actor; as actor) {
+                  <tk-user class="actor" [user]="actor" />
+                } @else {
+                  <span class="system">System</span>
+                }
+                <span class="verb">{{ row.description.verb }}</span>
+                <span class="target">{{ row.description.target }}</span>
+              </div>
+              @if (row.description.detail; as detail) {
+                <div class="detail">{{ detail }}</div>
+              }
+            </div>
+            @if (channelLabel(row.entry.channel); as channel) {
+              <tk-badge tone="muted">{{ channel }}</tk-badge>
+            }
+            <code class="code tk-subtle">{{ row.entry.action }}</code>
+          </div>
+        }
+      }
+    </div>
+    @if (store.nextCursor()) {
+      <div class="more">
+        <button
+          mat-stroked-button
+          type="button"
+          [disabled]="store.loadingMore()"
+          (click)="store.loadMore()"
+        >
+          {{ store.loadingMore() ? 'Loading…' : 'Load older entries' }}
+        </button>
+      </div>
+    }
+  }
+} @else {
+  <tk-skeleton-rows [count]="10" />
+}

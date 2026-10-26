@@ -69,6 +69,20 @@ describe('describeAuditEntry', () => {
     expect(description.detail).toBe('Read only, prefix tkt_abcd1234');
   });
 
+  it('drops the target when users act on their own password', () => {
+    // Act
+    const description = describeAuditEntry(
+      entry({
+        action: 'user.password.changed',
+        entityId: 'u1',
+        actor: { id: 'u1', email: 'jane@example.com', displayName: 'Jane', isActive: true },
+      }),
+    );
+
+    // Assert
+    expect(description).toEqual({ verb: 'changed their password', target: '', detail: null });
+  });
+
   it('keeps unknown action codes readable', () => {
     // Act / Assert
     expect(describeAuditEntry(entry({ action: 'project.member.added' })).verb).toBe(

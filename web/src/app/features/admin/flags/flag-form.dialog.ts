@@ -91,9 +91,17 @@ const MAX_TARGET_USERS = 200;
           </mat-form-field>
         </div>
 
-        <mat-slide-toggle formControlName="enabled" data-testid="flag-enabled">
-          Enabled <span class="tk-subtle">(master switch; off means off for everyone)</span>
-        </mat-slide-toggle>
+        <div class="switch-row">
+          <mat-slide-toggle
+            formControlName="enabled"
+            aria-labelledby="flag-enabled-label"
+            data-testid="flag-enabled"
+          />
+          <span id="flag-enabled-label"
+            >Enabled
+            <span class="tk-subtle">(master switch; off means off for everyone)</span></span
+          >
+        </div>
 
         <fieldset class="targeting">
           <legend class="tk-field-label">Who gets it when enabled</legend>
@@ -205,6 +213,11 @@ const MAX_TARGET_USERS = 200;
       margin-top: 4px;
       font-size: var(--tk-text-sm);
       color: var(--tk-danger-fg);
+    }
+    .switch-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
     .targeting {
       border: 1px solid var(--tk-border);

@@ -11,9 +11,9 @@ const VERBS: Record<string, string> = {
   'user.bootstrapped': 'bootstrapped administrator',
   'user.created': 'created user',
   'user.setPasswordLink.issued': 'issued a set-password link for',
-  'user.password.set': 'set the first password of',
-  'user.password.reset': 'reset the password of',
-  'user.password.changed': 'changed the password of',
+  'user.password.set': 'set their first password with the onboarding link',
+  'user.password.reset': 'reset their password with a set-password link',
+  'user.password.changed': 'changed their password',
   'user.field.changed': 'changed',
   'user.deactivated': 'deactivated',
   'user.reactivated': 'reactivated',
@@ -38,7 +38,10 @@ const FIELD_LABELS: Record<string, string> = {
 };
 
 export function describeAuditEntry(entry: AuditEntry): AuditDescription {
-  const target = entry.entityLabel ?? labelFromValues(entry) ?? `(removed ${entry.entityType})`;
+  const self = entry.actor?.id === entry.entityId && entry.action.startsWith('user.password.');
+  const target = self
+    ? ''
+    : (entry.entityLabel ?? labelFromValues(entry) ?? `(removed ${entry.entityType})`);
   const verb = VERBS[entry.action] ?? entry.action;
   if (entry.field) {
     const field = FIELD_LABELS[entry.field] ?? entry.field;

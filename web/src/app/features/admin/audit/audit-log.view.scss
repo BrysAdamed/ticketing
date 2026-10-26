@@ -86,7 +86,8 @@
 }
 
 .time {
-  width: 44px;
+  width: 64px;
+  white-space: nowrap;
   flex: none;
   font-size: var(--tk-text-sm);
 }
@@ -109,6 +110,8 @@
 }
 
 .actor {
+  flex: none;
+  max-width: 260px;
   font-weight: var(--tk-weight-medium);
 }
 

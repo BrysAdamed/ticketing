@@ -1,0 +1,62 @@
+[
+  {
+    "flagKey": "board.swimlanes",
+    "userId": "0190f5e2-7c1a-7b3e-9d4f-2a6b8c0d1e2f",
+    "bucket": 19
+  },
+  {
+    "flagKey": "board.swimlanes",
+    "userId": "0190f5e2-7c1a-7b3e-9d4f-2a6b8c0d1e30",
+    "bucket": 90
+  },
+  {
+    "flagKey": "ticket-view.v2",
+    "userId": "0190f5e2-7c1a-7b3e-9d4f-2a6b8c0d1e2f",
+    "bucket": 10
+  },
+  {
+    "flagKey": "ticket-view.v2",
+    "userId": "00000000-0000-0000-0000-000000000000",
+    "bucket": 82
+  },
+  {
+    "flagKey": "a",
+    "userId": "11111111-1111-1111-1111-111111111111",
+    "bucket": 60
+  },
+  {
+    "flagKey": "backlog.quick-create",
+    "userId": "0192a3b4-c5d6-7e8f-9a0b-1c2d3e4f5a6b",
+    "bucket": 71
+  },
+  {
+    "flagKey": "backlog.quick-create",
+    "userId": "ffffffff-ffff-ffff-ffff-ffffffffffff",
+    "bucket": 17
+  },
+  {
+    "flagKey": "dashboard.charts",
+    "userId": "0192a3b4-c5d6-7e8f-9a0b-1c2d3e4f5a6c",
+    "bucket": 88
+  },
+  {
+    "flagKey": "search.v2",
+    "userId": "019a0000-0000-7000-8000-000000000001",
+    "bucket": 2
+  },
+  {
+    "flagKey": "search.v2",
+    "userId": "019a0000-0000-7000-8000-000000000002",
+    "bucket": 60
+  },
+  {
+    "flagKey": "regression.live-updates",
+    "userId": "019a0000-0000-7000-8000-000000000003",
+    "bucket": 40
+  },
+  {
+    "flagKey": "x.y-z",
+    "userId": "019a0000-0000-7000-8000-000000000004",
+    "bucket": 21
+  }
+]

@@ -35,6 +35,7 @@ The SPA copies its query string to the API unchanged (minus UI-only parameters),
 | `priority` | `Highest`, `High`, `Medium`, `Low`, `Lowest` | |
 | `severity` | `Blocker`, `Critical`, `Major`, `Minor`, `Trivial`, `none` | `none` = severity not set. |
 | `assignee` | `me`, `unassigned`, user id or email, list | |
+| `assigneeNot` | `me`, `unassigned`, user id or email, list | Excludes these assignees (`unassigned` excludes tickets without an assignee). The dashboard's "Others" bucket: `assigneeNot=<top 10 ids>,unassigned`. |
 | `reporter` | `me`, user id or email, list | |
 | `label` | labels, list | Tickets having **all** of them. Labels are lower-cased on input. |
 | `version` | text | Exact, case-sensitive version (spec §4.5). `version=none` = no version. |
@@ -43,7 +44,7 @@ The SPA copies its query string to the API unchanged (minus UI-only parameters),
 | `createdFrom`, `createdTo` | date or timestamp | Created in range. |
 | `updatedFrom`, `updatedTo` | date or timestamp | Updated in range. Stale tickets (dashboard widget 8): `category=ToDo,InProgress&updatedTo=<now − 30 days as a UTC timestamp>&sort=updated&order=asc`. |
 | `resolvedFrom`, `resolvedTo` | date or timestamp | Entered Done in range (`ResolvedAt`). For the dashboard's created-vs-resolved widget. |
-| `fromRegression` | `true` | Only bugs created from a regression session item (dashboard widget 12). |
+| `fromRegression` | `true` | Only tickets created as bugs from a regression session item, from any session, cancelled ones included (dashboard widget 12). |
 
 Deleted tickets are never returned (spec §6.8 "include deleted = no").
 
@@ -80,4 +81,4 @@ Not sent to the API: `peek=<ticket key>` (open peek panel, layout-and-screens §
 
 ## MCP mapping
 
-`search_tickets` (spec §9.3) takes the same filters as JSON with these names: `projectKeys` ← `project`, `text` ← `q`, `types`, `statuses`, `statusCategory` (list) ← `category`, `priorities`, `severities`, `assignee` (list), `reporter` (list), `labels`, `version`, `parentKey`, `location`, `createdFrom`/`createdTo`, `updatedFrom`/`updatedTo`, `resolvedFrom`/`resolvedTo`, `fromRegression`, `sort`, `order`, `limit`, `cursor`.
+`search_tickets` (spec §9.3) takes the same filters as JSON with these names: `projectKeys` ← `project`, `text` ← `q`, `types`, `statuses`, `statusCategory` (list) ← `category`, `priorities`, `severities`, `assignee` (list), `assigneeNot` (list), `reporter` (list), `labels`, `version`, `parentKey`, `location`, `createdFrom`/`createdTo`, `updatedFrom`/`updatedTo`, `resolvedFrom`/`resolvedTo`, `fromRegression`, `sort`, `order`, `limit`, `cursor`.

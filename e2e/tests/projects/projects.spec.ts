@@ -89,8 +89,11 @@ test.describe('projects', () => {
 
     // Assert
     await expect(project.memberRow(email)).toHaveCount(0);
-    const members = await api.get<{ email: string }[]>(`/projects/${created.key}/members`);
-    expect(members.map((m) => m.email)).not.toContain(email);
+    await expect
+      .poll(async () =>
+        (await api.get<{ email: string }[]>(`/projects/${created.key}/members`)).map((m) => m.email),
+      )
+      .not.toContain(email);
   });
 
   test('an admin deletes an archived project after typing its key', async ({ page, api }) => {

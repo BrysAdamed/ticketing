@@ -82,7 +82,7 @@ const SEARCH_DEBOUNCE_MS = 150;
                 <span class="option">
                   <tk-avatar [userId]="user.id" [name]="user.displayName" />
                   <span>{{ user.displayName }}</span>
-                  <span class="tk-subtle">{{ user.email }}</span>
+                  <span class="tk-subtle option-email">{{ user.email }}</span>
                 </span>
               </mat-option>
             }
@@ -110,7 +110,7 @@ const SEARCH_DEBOUNCE_MS = 150;
           [disabled]="!selected() || adding()"
           (click)="add()"
         >
-          <tk-icon matButtonIcon name="tablerUserPlus" [size]="16" />
+          <tk-icon class="btn-icon" name="tablerUserPlus" [size]="16" />
           Add
         </button>
       </div>
@@ -218,9 +218,19 @@ const SEARCH_DEBOUNCE_MS = 150;
       color: var(--tk-text-subtle);
     }
     .option {
-      display: inline-flex;
+      display: flex;
       align-items: center;
       gap: 8px;
+      min-width: 0;
+      white-space: nowrap;
+    }
+    .option-email {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .btn-icon {
+      margin: 0 6px 0 -2px;
+      vertical-align: middle;
     }
     .table {
       border: 1px solid var(--tk-border);

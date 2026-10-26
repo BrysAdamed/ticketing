@@ -23,7 +23,7 @@ public sealed record ProjectDto(
     DateTimeOffset CreatedAt,
     IReadOnlyList<ProjectMemberDto> Members,
     IReadOnlyList<LinkedBoardDto> Boards,
-    uint Version);
+    uint RowVersion);
 
 public sealed record ProjectMemberDto(Guid UserId, string Email, string DisplayName, ProjectRole Role, bool IsActive, GlobalRole GlobalRole);
 

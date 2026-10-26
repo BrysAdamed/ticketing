@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Ticketing.Application.Abstractions;
+using Ticketing.Application.Common;
 using Ticketing.Domain.Activity;
 using Ticketing.Domain.Users;
 

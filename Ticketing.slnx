@@ -15,5 +15,6 @@
     <File Path="global.json" />
     <File Path=".editorconfig" />
     <File Path="docker-compose.yml" />
+    <File Path="docker-compose.override.yml" />
   </Folder>
 </Solution>

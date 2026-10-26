@@ -9,7 +9,7 @@ using Ticketing.IntegrationTests.Infrastructure;
 
 namespace Ticketing.IntegrationTests.Mcp;
 
-[Collection(nameof(ApiCollection))]
+[Collection(nameof(McpCollection))]
 public sealed class McpTests(TicketingApiFactory api)
 {
     private readonly CancellationToken _ct = TestContext.Current.CancellationToken;
@@ -68,6 +68,30 @@ public sealed class McpTests(TicketingApiFactory api)
         Assert.DoesNotContain("create_project", readOnlyTools);
         Assert.Contains("list_projects", readOnlyTools);
         Assert.Contains("create_project", readWriteTools);
+    }
+
+    [Fact]
+    public async Task Read_only_token_calling_a_write_tool_directly_is_refused()
+    {
+        // Arrange
+        var user = await api.CreateUserAsync();
+        await using var mcp = await api.CreateMcpClientAsync(await api.CreatePatAsync(user, PatScope.ReadOnly));
+
+        // Act
+        var refused = false;
+        try
+        {
+            var result = await mcp.CallToolAsync("create_project", new Dictionary<string, object?> { ["key"] = "RO", ["name"] = "Read only" }, cancellationToken: _ct);
+            refused = result.IsError == true;
+        }
+        catch (ModelContextProtocol.McpException)
+        {
+            refused = true;
+        }
+
+        // Assert
+        Assert.True(refused);
+        Assert.Equal(0, await api.WithDbAsync(db => Task.FromResult(db.Projects.Count())));
     }
 
     [Fact]

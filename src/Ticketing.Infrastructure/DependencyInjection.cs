@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -23,6 +24,7 @@ public static class DependencyInjection
         services.AddScoped<ITicketingDbContext>(sp => sp.GetRequiredService<TicketingDbContext>());
         services.AddOptions<DatabaseOptions>().Bind(configuration.GetSection(DatabaseOptions.Section));
         services.AddScoped<DatabaseInitializer>();
+        services.AddDataProtection().SetApplicationName("ticketing").PersistKeysToDbContext<TicketingDbContext>();
 
         services.TryAddSingleton(TimeProvider.System);
         services.AddScoped<IClock, RequestClock>();

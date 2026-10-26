@@ -14,13 +14,8 @@ public static class GetProject
 
     public sealed class Handler(ITicketingDbContext db, IProjectAccess access) : IHandler<Query, ProjectDto>
     {
-        public async Task<ProjectDto> HandleAsync(Query request, CancellationToken cancellationToken)
-        {
-            var grant = Guid.TryParse(request.ProjectKeyOrId, out var id)
-                ? await access.EnsureCanReadAsync(id, cancellationToken)
-                : await access.EnsureCanReadAsync(request.ProjectKeyOrId, cancellationToken);
-            return await LoadAsync(db, grant, cancellationToken);
-        }
+        public async Task<ProjectDto> HandleAsync(Query request, CancellationToken cancellationToken) =>
+            await LoadAsync(db, await access.EnsureCanReadAsync(request.ProjectKeyOrId, cancellationToken), cancellationToken);
 
         internal static async Task<ProjectDto> LoadAsync(ITicketingDbContext db, ProjectAccessGrant grant, CancellationToken cancellationToken)
         {

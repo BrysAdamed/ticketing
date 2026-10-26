@@ -10,7 +10,7 @@ using Ticketing.IntegrationTests.Infrastructure;
 
 namespace Ticketing.IntegrationTests.Projects;
 
-[Collection(nameof(ApiCollection))]
+[Collection(nameof(ProjectsCollection))]
 public sealed class ProjectEndpointTests(TicketingApiFactory api)
 {
     private readonly CancellationToken _ct = TestContext.Current.CancellationToken;
@@ -30,7 +30,7 @@ public sealed class ProjectEndpointTests(TicketingApiFactory api)
         Assert.Equal("/api/v1/projects/WEB", response.Headers.Location?.OriginalString);
         Assert.Equal(("WEB", "Website", ProjectVisibility.Private, ProjectRole.Owner), (project.Key, project.Name, project.Visibility, project.MyRole));
         Assert.Equal(user.Id, Assert.Single(project.Members).UserId);
-        Assert.NotEqual(0u, project.Version);
+        Assert.NotEqual(0u, project.RowVersion);
         var activity = await api.WithDbAsync(db => db.ActivityEntries.SingleAsync(_ct));
         Assert.Equal(("project.created", user.Id, WriteChannel.Web), (activity.Action, activity.ActorId, activity.Channel));
     }
@@ -89,6 +89,42 @@ public sealed class ProjectEndpointTests(TicketingApiFactory api)
     }
 
     [Fact]
+    public async Task Parallel_creates_with_the_same_idempotency_key_create_one_project()
+    {
+        // Arrange
+        var client = await api.CreatePatClientAsync(await api.CreateUserAsync());
+        HttpRequestMessage Request() => new(HttpMethod.Post, "/api/v1/projects")
+        {
+            Content = JsonContent.Create(new { key = "RACE", name = "Race" }),
+            Headers = { { "Idempotency-Key", "race-1" } },
+        };
+
+        // Act
+        var responses = await Task.WhenAll(Enumerable.Range(0, 6).Select(_ => client.SendAsync(Request(), _ct)));
+
+        // Assert
+        var projects = await Task.WhenAll(responses.Select(r => r.ReadAsync<ProjectDto>(HttpStatusCode.Created)));
+        Assert.Single(projects.Select(p => p.Id).Distinct());
+        Assert.Equal(1, await api.WithDbAsync(db => db.Projects.CountAsync(_ct)));
+    }
+
+    [Fact]
+    public async Task Projects_are_addressable_by_id_as_well_as_key()
+    {
+        // Arrange
+        var client = await api.LoginAsync(await api.CreateUserAsync());
+        var created = await (await client.PostAsJsonAsync("/api/v1/projects", new { key = "WEB", name = "Website" }, _ct)).ReadAsync<ProjectDto>(HttpStatusCode.Created);
+
+        // Act
+        var fetched = await (await client.GetAsync($"/api/v1/projects/{created.Id}", _ct)).ReadAsync<ProjectDto>();
+        var patched = await (await client.PatchAsJsonAsync($"/api/v1/projects/{created.Id}", new { name = "Renamed" }, _ct)).ReadAsync<ProjectDto>();
+
+        // Assert
+        Assert.Equal("WEB", fetched.Key);
+        Assert.Equal("Renamed", patched.Name);
+    }
+
+    [Fact]
     public async Task Get_by_key_is_case_insensitive_and_returns_the_version_as_etag()
     {
         // Arrange
@@ -101,7 +137,7 @@ public sealed class ProjectEndpointTests(TicketingApiFactory api)
         // Assert
         var project = await response.ReadAsync<ProjectDto>();
         Assert.Equal(created.Id, project.Id);
-        Assert.Equal($"\"{project.Version}\"", response.Headers.ETag?.Tag);
+        Assert.Equal($"\"{project.RowVersion}\"", response.Headers.ETag?.Tag);
     }
 
     [Fact]
@@ -178,7 +214,7 @@ public sealed class ProjectEndpointTests(TicketingApiFactory api)
         // Assert
         var updated = await response.ReadAsync<ProjectDto>();
         Assert.Equal(("Web site", null, ProjectVisibility.Private), (updated.Name, updated.Description, updated.Visibility));
-        Assert.NotEqual(created.Version, updated.Version);
+        Assert.NotEqual(created.RowVersion, updated.RowVersion);
         var fields = await api.WithDbAsync(db => db.ActivityEntries.Where(a => a.Action == "project.field.changed").Select(a => a.Field).ToListAsync(_ct));
         Assert.Equal(["description", "name"], fields.Order());
     }
@@ -193,7 +229,7 @@ public sealed class ProjectEndpointTests(TicketingApiFactory api)
         var stale = new HttpRequestMessage(HttpMethod.Patch, "/api/v1/projects/WEB")
         {
             Content = JsonContent.Create(new { name = "Second edit" }),
-            Headers = { { "If-Match", $"\"{created.Version}\"" } },
+            Headers = { { "If-Match", $"\"{created.RowVersion}\"" } },
         };
 
         // Act

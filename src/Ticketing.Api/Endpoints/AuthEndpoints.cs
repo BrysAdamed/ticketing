@@ -1,14 +1,14 @@
-using Microsoft.AspNetCore.Authentication;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication;
 using Ticketing.Api.Auth;
 using Ticketing.Api.Http;
 using Ticketing.Application.Auth;
 
 namespace Ticketing.Api.Endpoints;
 
-public static class AuthEndpoints
+public sealed class AuthEndpoints : IEndpointModule
 {
-    public static RouteGroupBuilder MapAuthEndpoints(this RouteGroupBuilder api)
+    public void MapEndpoints(RouteGroupBuilder api)
     {
         var auth = api.MapGroup("/auth").WithTags("Auth").AllowAnonymous();
 
@@ -28,9 +28,11 @@ public static class AuthEndpoints
             Xsrf.IssueToken(http);
             return TypedResults.Ok(user);
         })
+        .RequireRateLimiting(RateLimiting.LoginPolicy)
         .WithSummary("Signs in with email and password and starts a cookie session.")
         .ProducesProblem(StatusCodes.Status400BadRequest)
-        .ProducesProblem(StatusCodes.Status423Locked);
+        .ProducesProblem(StatusCodes.Status423Locked)
+        .ProducesProblem(StatusCodes.Status429TooManyRequests);
 
         auth.MapPost("/logout", async (HttpContext http) =>
         {
@@ -40,7 +42,5 @@ public static class AuthEndpoints
             return TypedResults.NoContent();
         })
         .WithSummary("Ends the cookie session.");
-
-        return api;
     }
 }

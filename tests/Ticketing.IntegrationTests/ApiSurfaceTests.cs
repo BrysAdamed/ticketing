@@ -5,7 +5,7 @@ using Ticketing.IntegrationTests.Infrastructure;
 
 namespace Ticketing.IntegrationTests;
 
-[Collection(nameof(ApiCollection))]
+[Collection(nameof(AuthCollection))]
 public sealed class ApiSurfaceTests(TicketingApiFactory api)
 {
     private readonly CancellationToken _ct = TestContext.Current.CancellationToken;

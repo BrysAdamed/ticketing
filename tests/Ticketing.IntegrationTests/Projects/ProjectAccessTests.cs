@@ -9,7 +9,7 @@ using Ticketing.IntegrationTests.Infrastructure;
 namespace Ticketing.IntegrationTests.Projects;
 
 /// <summary>Spec 5.1 and 5.3 against the real database, through <see cref="IProjectAccess"/> as every slice uses it.</summary>
-[Collection(nameof(ApiCollection))]
+[Collection(nameof(ProjectsCollection))]
 public sealed class ProjectAccessTests(TicketingApiFactory api)
 {
     private readonly CancellationToken _ct = TestContext.Current.CancellationToken;

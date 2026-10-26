@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Ticketing.Application.Abstractions;
 using Ticketing.Domain.Activity;
@@ -15,8 +16,11 @@ using Ticketing.Domain.Users;
 
 namespace Ticketing.Infrastructure.Persistence;
 
-public sealed class TicketingDbContext(DbContextOptions<TicketingDbContext> options) : DbContext(options), ITicketingDbContext
+public sealed class TicketingDbContext(DbContextOptions<TicketingDbContext> options) : DbContext(options), ITicketingDbContext, IDataProtectionKeyContext
 {
+    /// <summary>ASP.NET Core Data Protection key ring (cookie and antiforgery keys), shared by all API instances.</summary>
+    public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
+
     public DbSet<User> Users => Set<User>();
 
     public DbSet<PersonalAccessToken> PersonalAccessTokens => Set<PersonalAccessToken>();

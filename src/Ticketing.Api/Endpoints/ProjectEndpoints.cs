@@ -7,10 +7,11 @@ namespace Ticketing.Api.Endpoints;
 /// <summary>
 /// Reference endpoints. They only translate HTTP to a use case and back: route values, query strings and headers
 /// (If-Match, Idempotency-Key) go into the command, the handler does the rest, and errors surface as exceptions.
+/// Projects are addressed by key or id everywhere.
 /// </summary>
-public static class ProjectEndpoints
+public sealed class ProjectEndpoints : IEndpointModule
 {
-    public static RouteGroupBuilder MapProjectEndpoints(this RouteGroupBuilder api)
+    public void MapEndpoints(RouteGroupBuilder api)
     {
         var projects = api.MapGroup("/projects").WithTags("Projects");
 
@@ -23,35 +24,33 @@ public static class ProjectEndpoints
         projects.MapGet("/{projectKeyOrId}", async (string projectKeyOrId, GetProject.Handler handler, HttpResponse response, CancellationToken ct) =>
             {
                 var project = await handler.HandleAsync(new GetProject.Query(projectKeyOrId), ct);
-                response.SetVersion(project.Version);
+                response.SetRowVersion(project.RowVersion);
                 return TypedResults.Ok(project);
             })
-            .WithSummary("A project with its members and linked boards.")
+            .WithSummary("A project (by key or id) with its members and linked boards.")
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         projects.MapPost("", async (CreateProject.Command command, CreateProject.Handler handler, HttpRequest request, CancellationToken ct) =>
             {
                 var project = await handler.HandleAsync(command with { IdempotencyKey = request.IdempotencyKeyHeader() }, ct);
-                request.HttpContext.Response.SetVersion(project.Version);
+                request.HttpContext.Response.SetRowVersion(project.RowVersion);
                 return TypedResults.Created($"/api/v1/projects/{project.Key}", project);
             })
             .WithSummary("Creates a project; the caller becomes its Owner. Accepts an Idempotency-Key header.")
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status409Conflict);
 
-        projects.MapPatch("/{projectKey}", async (
-                string projectKey, UpdateProject.Command command, UpdateProject.Handler handler, HttpRequest request, CancellationToken ct) =>
+        projects.MapPatch("/{projectKeyOrId}", async (
+                string projectKeyOrId, UpdateProject.Command command, UpdateProject.Handler handler, HttpRequest request, CancellationToken ct) =>
             {
                 var project = await handler.HandleAsync(
-                    command with { ProjectKey = projectKey, ExpectedVersion = request.ExpectedVersion() }, ct);
-                request.HttpContext.Response.SetVersion(project.Version);
+                    command with { ProjectKeyOrId = projectKeyOrId, ExpectedVersion = request.ExpectedRowVersion() }, ct);
+                request.HttpContext.Response.SetRowVersion(project.RowVersion);
                 return TypedResults.Ok(project);
             })
-            .WithSummary("Updates name, description or visibility (Owner only). Send If-Match with the version to avoid lost updates.")
+            .WithSummary("Updates name, description or visibility (Owner only). Send If-Match with the rowVersion to avoid lost updates.")
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict);
-
-        return api;
     }
 }

@@ -16,8 +16,9 @@ public static class UpdateProject
 {
     public sealed record Command : IValidatable
     {
+        /// <summary>Project key or id, from the route.</summary>
         [JsonIgnore]
-        public string ProjectKey { get; init; } = string.Empty;
+        public string ProjectKeyOrId { get; init; } = string.Empty;
 
         public Optional<string> Name { get; init; }
 
@@ -45,7 +46,7 @@ public static class UpdateProject
         public async Task<ProjectDto> HandleAsync(Command command, CancellationToken cancellationToken)
         {
             command.EnsureValid();
-            var grant = await access.EnsureOwnerAsync(command.ProjectKey, cancellationToken);
+            var grant = await access.EnsureOwnerAsync(command.ProjectKeyOrId, cancellationToken);
             var project = await db.Projects.SingleAsync(p => p.Id == grant.ProjectId, cancellationToken);
             db.ExpectVersion(project, command.ExpectedVersion);
 
@@ -53,7 +54,7 @@ public static class UpdateProject
             {
                 var oldName = project.Name;
                 project.Rename(command.Name.Value);
-                await EnsureNameIsFreeAsync(project, cancellationToken);
+                await ProjectUniqueness.EnsureNameIsFreeAsync(db, project.Name, project.Id, cancellationToken);
                 activity.RecordChange(ActivityEntityType.Project, project.Id, project.Id, "project.field.changed", "name", oldName, project.Name);
             }
 
@@ -71,15 +72,8 @@ public static class UpdateProject
                 activity.RecordChange(ActivityEntityType.Project, project.Id, project.Id, "project.field.changed", "visibility", oldVisibility, project.Visibility);
             }
 
-            await db.SaveChangesAsync(cancellationToken);
+            await ProjectUniqueness.SaveAsync(db, project, cancellationToken);
             return await GetProject.Handler.LoadAsync(db, grant with { Visibility = project.Visibility }, cancellationToken);
-        }
-
-        private async Task EnsureNameIsFreeAsync(Project project, CancellationToken cancellationToken)
-        {
-            var normalized = project.Name.ToLowerInvariant();
-            if (await db.Projects.AnyAsync(p => p.Id != project.Id && p.DeletedAt == null && p.Name.ToLower() == normalized, cancellationToken))
-                throw AppException.Conflict(ProjectErrors.NameTaken, $"A project named '{project.Name}' already exists.");
         }
     }
 }

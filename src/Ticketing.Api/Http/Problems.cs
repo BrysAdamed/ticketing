@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Ticketing.Application.Common;
 using Ticketing.Domain.Common;
-using Ticketing.Infrastructure.Persistence;
 
 namespace Ticketing.Api.Http;
 

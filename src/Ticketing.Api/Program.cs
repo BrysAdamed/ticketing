@@ -16,7 +16,7 @@ builder.Services
     .AddInfrastructure(builder.Configuration)
     .AddHostedService<DatabaseStartup>()
     .AddTicketingAuth(builder.Configuration)
-    .AddPatRateLimiting(builder.Configuration)
+    .AddTicketingRateLimiting(builder.Configuration)
     .AddTicketingMcp()
     .AddTicketingHealthChecks()
     .AddOpenApi("v1", o => o.ConfigureTicketingSchemas())

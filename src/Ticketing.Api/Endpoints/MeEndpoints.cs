@@ -2,9 +2,9 @@ using Ticketing.Application.Me;
 
 namespace Ticketing.Api.Endpoints;
 
-public static class MeEndpoints
+public sealed class MeEndpoints : IEndpointModule
 {
-    public static RouteGroupBuilder MapMeEndpoints(this RouteGroupBuilder api)
+    public void MapEndpoints(RouteGroupBuilder api)
     {
         var me = api.MapGroup("/me").WithTags("Me");
 
@@ -15,7 +15,5 @@ public static class MeEndpoints
         me.MapGet("/flags", async (GetMyFlags.Handler handler, CancellationToken ct) =>
             TypedResults.Ok(await handler.HandleAsync(new GetMyFlags.Query(), ct)))
             .WithSummary("Feature flag variants for the signed-in user.");
-
-        return api;
     }
 }

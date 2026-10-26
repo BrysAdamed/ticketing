@@ -6,27 +6,28 @@ namespace Ticketing.Application.Access;
 /// Effective project access for the current user (spec 5.1 and 5.3). Every project-scoped handler starts with one of the
 /// Ensure methods; they throw <c>AppException</c>s that map to 404 (cannot read, never 403, so private projects stay
 /// hidden), 403 (can read, may not act; read-only PAT) and 409 (archived project).
+/// The string overloads are the single resolver for user-supplied references: a project key (case-insensitive) or an id.
 /// </summary>
 public interface IProjectAccess
 {
     /// <summary>The caller's effective role, or null when the project does not exist, is deleted or is not readable.</summary>
     Task<ProjectAccessGrant?> FindAsync(Guid projectId, CancellationToken cancellationToken);
 
-    Task<ProjectAccessGrant?> FindAsync(string projectKey, CancellationToken cancellationToken);
+    Task<ProjectAccessGrant?> FindAsync(string projectKeyOrId, CancellationToken cancellationToken);
 
     Task<ProjectAccessGrant> EnsureCanReadAsync(Guid projectId, CancellationToken cancellationToken);
 
-    Task<ProjectAccessGrant> EnsureCanReadAsync(string projectKey, CancellationToken cancellationToken);
+    Task<ProjectAccessGrant> EnsureCanReadAsync(string projectKeyOrId, CancellationToken cancellationToken);
 
     /// <summary>Owner or Member, write-scoped credentials, project not archived.</summary>
     Task<ProjectAccessGrant> EnsureCanWriteAsync(Guid projectId, CancellationToken cancellationToken);
 
-    Task<ProjectAccessGrant> EnsureCanWriteAsync(string projectKey, CancellationToken cancellationToken);
+    Task<ProjectAccessGrant> EnsureCanWriteAsync(string projectKeyOrId, CancellationToken cancellationToken);
 
     /// <summary>Owner (Admins included), write-scoped credentials; archived projects only when <paramref name="allowArchived"/> (unarchive).</summary>
     Task<ProjectAccessGrant> EnsureOwnerAsync(Guid projectId, CancellationToken cancellationToken, bool allowArchived = false);
 
-    Task<ProjectAccessGrant> EnsureOwnerAsync(string projectKey, CancellationToken cancellationToken, bool allowArchived = false);
+    Task<ProjectAccessGrant> EnsureOwnerAsync(string projectKeyOrId, CancellationToken cancellationToken, bool allowArchived = false);
 
     /// <summary>
     /// Non-deleted projects the caller can read. Compose it into any query that touches project data so private projects

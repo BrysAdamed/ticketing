@@ -28,10 +28,10 @@ public sealed class ProjectTools
         handler.HandleAsync(new ListProjects.Query(query, includeArchived, new PageRequest(limit, cursor)), cancellationToken);
 
     [McpServerTool(Name = "get_project", ReadOnly = true, Idempotent = true, Title = "Get project")]
-    [Description("Gets a project by key (for example WEB): fields, members with roles, linked boards and the current version.")]
+    [Description("Gets a project by key (for example WEB) or id: fields, members with roles, linked boards and the current rowVersion.")]
     public static Task<ProjectDto> GetProject(
         GetProject.Handler handler,
-        [Description("Project key, for example WEB.")] string projectKey,
+        [Description("Project key (for example WEB) or project id.")] string projectKey,
         CancellationToken cancellationToken = default) =>
         handler.HandleAsync(new GetProject.Query(projectKey), cancellationToken);
 

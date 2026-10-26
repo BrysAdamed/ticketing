@@ -47,18 +47,13 @@ public static partial class CreateProject
 
         private async Task<ProjectDto> CreateAsync(Command command, CancellationToken cancellationToken)
         {
-            var key = command.Key.Trim();
-            var name = command.Name.Trim();
-            if (await db.Projects.AnyAsync(p => p.Key == key, cancellationToken))
-                throw AppException.Conflict(ProjectErrors.KeyTaken, $"The project key {key} is already in use.", "Project keys are unique forever; pick another key.");
-            var normalizedName = name.ToLowerInvariant();
-            if (await db.Projects.AnyAsync(p => p.DeletedAt == null && p.Name.ToLower() == normalizedName, cancellationToken))
-                throw AppException.Conflict(ProjectErrors.NameTaken, $"A project named '{name}' already exists.");
+            var project = Project.Create(command.Key, command.Name, command.Description, command.Visibility ?? ProjectVisibility.Private, currentUser.Id, clock.Now);
+            await ProjectUniqueness.EnsureKeyIsFreeAsync(db, project.Key, cancellationToken);
+            await ProjectUniqueness.EnsureNameIsFreeAsync(db, project.Name, null, cancellationToken);
 
-            var project = Project.Create(key, name, command.Description, command.Visibility ?? ProjectVisibility.Private, currentUser.Id, clock.Now);
             db.Projects.Add(project);
             activity.Record(ActivityEntityType.Project, project.Id, project.Id, "project.created", new { project.Key, project.Name, project.Visibility });
-            await db.SaveChangesAsync(cancellationToken);
+            await ProjectUniqueness.SaveAsync(db, project, cancellationToken);
 
             var grant = new ProjectAccessGrant(project.Id, project.Key, ProjectRole.Owner, project.Visibility, IsArchived: false);
             return await GetProject.Handler.LoadAsync(db, grant, cancellationToken);

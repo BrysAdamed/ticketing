@@ -11,29 +11,31 @@ internal sealed class ProjectAccess(ITicketingDbContext db, ICurrentUser current
     public Task<ProjectAccessGrant?> FindAsync(Guid projectId, CancellationToken cancellationToken) =>
         FindAsync(p => p.Id == projectId, cancellationToken);
 
-    public Task<ProjectAccessGrant?> FindAsync(string projectKey, CancellationToken cancellationToken)
+    public Task<ProjectAccessGrant?> FindAsync(string projectKeyOrId, CancellationToken cancellationToken)
     {
-        var key = projectKey.Trim().ToUpperInvariant();
+        if (Guid.TryParse(projectKeyOrId, out var id))
+            return FindAsync(id, cancellationToken);
+        var key = projectKeyOrId.Trim().ToUpperInvariant();
         return FindAsync(p => p.Key == key, cancellationToken);
     }
 
     public async Task<ProjectAccessGrant> EnsureCanReadAsync(Guid projectId, CancellationToken cancellationToken) =>
         await FindAsync(projectId, cancellationToken) ?? throw NotFound(projectId.ToString());
 
-    public async Task<ProjectAccessGrant> EnsureCanReadAsync(string projectKey, CancellationToken cancellationToken) =>
-        await FindAsync(projectKey, cancellationToken) ?? throw NotFound(projectKey);
+    public async Task<ProjectAccessGrant> EnsureCanReadAsync(string projectKeyOrId, CancellationToken cancellationToken) =>
+        await FindAsync(projectKeyOrId, cancellationToken) ?? throw NotFound(projectKeyOrId);
 
     public async Task<ProjectAccessGrant> EnsureCanWriteAsync(Guid projectId, CancellationToken cancellationToken) =>
         EnsureWrite(await EnsureCanReadAsync(projectId, cancellationToken));
 
-    public async Task<ProjectAccessGrant> EnsureCanWriteAsync(string projectKey, CancellationToken cancellationToken) =>
-        EnsureWrite(await EnsureCanReadAsync(projectKey, cancellationToken));
+    public async Task<ProjectAccessGrant> EnsureCanWriteAsync(string projectKeyOrId, CancellationToken cancellationToken) =>
+        EnsureWrite(await EnsureCanReadAsync(projectKeyOrId, cancellationToken));
 
     public async Task<ProjectAccessGrant> EnsureOwnerAsync(Guid projectId, CancellationToken cancellationToken, bool allowArchived = false) =>
         EnsureOwner(await EnsureCanReadAsync(projectId, cancellationToken), allowArchived);
 
-    public async Task<ProjectAccessGrant> EnsureOwnerAsync(string projectKey, CancellationToken cancellationToken, bool allowArchived = false) =>
-        EnsureOwner(await EnsureCanReadAsync(projectKey, cancellationToken), allowArchived);
+    public async Task<ProjectAccessGrant> EnsureOwnerAsync(string projectKeyOrId, CancellationToken cancellationToken, bool allowArchived = false) =>
+        EnsureOwner(await EnsureCanReadAsync(projectKeyOrId, cancellationToken), allowArchived);
 
     public IQueryable<Project> ReadableProjects()
     {

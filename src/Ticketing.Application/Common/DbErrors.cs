@@ -9,4 +9,8 @@ public static class DbErrors
     public static bool IsUniqueViolation(this DbUpdateException exception, string? indexName = null) =>
         exception.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation } postgres
         && (indexName is null || postgres.ConstraintName == indexName);
+
+    /// <summary>True when the save failed because a row is still referenced (a restricting foreign key).</summary>
+    public static bool IsForeignKeyViolation(this DbUpdateException exception) =>
+        exception.InnerException is PostgresException { SqlState: PostgresErrorCodes.ForeignKeyViolation };
 }

@@ -96,12 +96,19 @@ public sealed class RegressionSessionItem
         ExecutedById = actorId;
     }
 
-    public void AttachBug(Guid bugTicketId)
+    /// <summary>One bug per item, and only from a failed item (spec 6.11, D-24).</summary>
+    public void EnsureBugCanBeCreated()
     {
         if (BugTicketId is not null)
-            throw DomainException.Conflict(RegressionErrors.BugExists, "A bug was already created from this item.");
+            throw DomainException.Conflict(RegressionErrors.BugExists, $"A bug was already created from {TestCaseKey}.");
         if (Status != RegressionItemStatus.Failed)
-            throw DomainException.Conflict(RegressionErrors.BugRequiresFailure, "Bugs can only be created from failed items.");
+            throw DomainException.Conflict(
+                RegressionErrors.BugRequiresFailure, $"{TestCaseKey} is not failed; bugs can only be created from failed items.", "Record the result as Failed first.");
+    }
+
+    public void AttachBug(Guid bugTicketId)
+    {
+        EnsureBugCanBeCreated();
         BugTicketId = bugTicketId;
     }
 

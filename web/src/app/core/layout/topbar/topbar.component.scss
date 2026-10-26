@@ -1,0 +1,126 @@
+:host {
+  height: var(--tk-topbar-h);
+  flex: none;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  padding: 0 12px 0 20px;
+  border-bottom: 1px solid var(--tk-border);
+  background: var(--tk-bg);
+}
+
+.crumbs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--tk-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+
+  a:hover {
+    color: var(--tk-text);
+  }
+
+  .sep {
+    color: var(--tk-text-disabled);
+  }
+
+  .cur {
+    color: var(--tk-text);
+    font-weight: var(--tk-weight-medium);
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+.search {
+  width: 340px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 6px 0 10px;
+  border: 1px solid var(--tk-border);
+  border-radius: var(--tk-radius-md);
+  background: var(--tk-bg-subtle);
+  color: var(--tk-text-subtle);
+  cursor: pointer;
+  transition: border-color var(--tk-duration-instant);
+
+  &:hover {
+    border-color: var(--tk-border-strong);
+  }
+
+  .k {
+    margin-left: auto;
+  }
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.new-ticket {
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 6px 0 10px;
+  border: 0;
+  border-radius: var(--tk-radius-md);
+  background: var(--tk-accent);
+  color: var(--tk-text-on-solid);
+  font-weight: var(--tk-weight-medium);
+  white-space: nowrap;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--tk-accent-hover);
+  }
+}
+
+.user {
+  display: inline-flex;
+  padding: 2px;
+  margin-left: 2px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+}
+
+.who {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  height: auto;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  opacity: 1;
+}
+
+.who-name {
+  color: var(--tk-text);
+  font-weight: var(--tk-weight-medium);
+}
+
+.who-email {
+  color: var(--tk-text-subtle);
+  font-size: var(--tk-text-sm);
+}
+
+.divider {
+  border: 0;
+  border-top: 1px solid var(--tk-border);
+  margin: 4px 0;
+}
+
+.check {
+  margin-left: auto;
+  color: var(--tk-accent-fg);
+}

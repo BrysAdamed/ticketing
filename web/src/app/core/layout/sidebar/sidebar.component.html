@@ -1,0 +1,144 @@
+<div class="head">
+  <a class="brand" routerLink="/projects" aria-label="Ticketing — all projects">
+    <span class="logo" aria-hidden="true">
+      <svg viewBox="0 0 14 14" width="14" height="14">
+        <circle cx="7" cy="7" r="5" fill="none" stroke="#fff" stroke-width="1.5" />
+        <path d="M7 7 7 4.25A2.75 2.75 0 1 1 4.25 7Z" fill="#fff" />
+      </svg>
+    </span>
+    <span class="name">Ticketing</span>
+  </a>
+  <button
+    type="button"
+    class="tk-icon-btn tk-icon-btn-sm collapse"
+    data-testid="sidebar-toggle"
+    [attr.aria-label]="layout.sidebarCollapsed() ? 'Expand sidebar' : 'Collapse sidebar'"
+    [matTooltip]="(layout.sidebarCollapsed() ? 'Expand' : 'Collapse') + ' sidebar  ['"
+    matTooltipPosition="right"
+    (click)="layout.toggleSidebar()"
+  >
+    <tk-icon name="tablerLayoutSidebar" [size]="14" />
+  </button>
+</div>
+
+<nav class="scroll" aria-label="Main">
+  <a
+    class="nav"
+    routerLink="/my-work"
+    routerLinkActive="active"
+    data-testid="nav-my-work"
+    matTooltip="My work"
+    matTooltipPosition="right"
+    [matTooltipDisabled]="!layout.sidebarCollapsed()"
+  >
+    <tk-icon name="tablerUserCircle" />
+    <span class="label">My work</span>
+  </a>
+
+  <div class="section">
+    <button type="button" class="section-label" (click)="toggleSection('projects')">
+      Projects
+    </button>
+    @if (!isSectionCollapsed('projects')) {
+      @for (project of projects(); track project.id) {
+        <div class="nav-row">
+          <a
+            class="nav"
+            [routerLink]="['/projects', project.key]"
+            [class.current]="project.key === currentProjectKey()"
+            [attr.data-testid]="'nav-project-' + project.key"
+            [matTooltip]="project.name"
+            matTooltipPosition="right"
+            [matTooltipDisabled]="!layout.sidebarCollapsed()"
+          >
+            <tk-project-tile [projectKey]="project.key" />
+            <span class="label">{{ project.name }}</span>
+          </a>
+          <button
+            type="button"
+            class="chev"
+            [attr.aria-label]="(isExpanded(project.key) ? 'Collapse ' : 'Expand ') + project.name"
+            [attr.aria-expanded]="isExpanded(project.key)"
+            (click)="toggleProject(project.key, $event)"
+          >
+            <tk-icon
+              [name]="isExpanded(project.key) ? 'tablerChevronDown' : 'tablerChevronRight'"
+              [size]="14"
+            />
+          </button>
+        </div>
+        @if (isExpanded(project.key) && !layout.sidebarCollapsed()) {
+          @for (item of projectNav; track item.path) {
+            <a
+              class="nav child"
+              [routerLink]="['/projects', project.key, item.path]"
+              routerLinkActive="active"
+              [attr.data-testid]="item.testId"
+            >
+              <tk-icon [name]="item.icon" [size]="14" />
+              <span class="label">{{ item.label }}</span>
+            </a>
+          }
+        }
+      }
+      @if (directory.status() === 'error') {
+        <div class="note" data-testid="sidebar-projects-error">Couldn't load projects</div>
+      } @else if (directory.status() === 'loaded' && projects().length === 0) {
+        <div class="note">No projects yet</div>
+      }
+      <a
+        class="nav subtle"
+        routerLink="/projects"
+        [routerLinkActiveOptions]="{ exact: true }"
+        routerLinkActive="active"
+        data-testid="nav-all-projects"
+        matTooltip="All projects"
+        matTooltipPosition="right"
+        [matTooltipDisabled]="!layout.sidebarCollapsed()"
+      >
+        <tk-icon name="tablerFolders" />
+        <span class="label">{{ hasMoreProjects() ? 'All projects…' : 'All projects' }}</span>
+      </a>
+    }
+  </div>
+
+  <div class="section">
+    <button type="button" class="section-label" (click)="toggleSection('boards')">Boards</button>
+    @if (!isSectionCollapsed('boards')) {
+      <a
+        class="nav"
+        routerLink="/boards"
+        routerLinkActive="active"
+        data-testid="nav-boards"
+        matTooltip="Boards"
+        matTooltipPosition="right"
+        [matTooltipDisabled]="!layout.sidebarCollapsed()"
+      >
+        <tk-icon name="tablerLayoutKanban" />
+        <span class="label">All boards</span>
+      </a>
+    }
+  </div>
+
+  @if (auth.isAdmin()) {
+    <div class="section" data-testid="nav-admin">
+      <button type="button" class="section-label" (click)="toggleSection('admin')">Admin</button>
+      @if (!isSectionCollapsed('admin')) {
+        @for (item of adminNav; track item.path) {
+          <a
+            class="nav"
+            [routerLink]="item.path"
+            routerLinkActive="active"
+            [attr.data-testid]="item.testId"
+            [matTooltip]="item.label"
+            matTooltipPosition="right"
+            [matTooltipDisabled]="!layout.sidebarCollapsed()"
+          >
+            <tk-icon [name]="item.icon" />
+            <span class="label">{{ item.label }}</span>
+          </a>
+        }
+      }
+    </div>
+  }
+</nav>

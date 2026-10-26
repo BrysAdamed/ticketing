@@ -5,7 +5,11 @@ using Ticketing.Domain.Users;
 
 namespace Ticketing.Application.Auth;
 
-/// <summary>Verifies email and password with lockout (spec 6.14). Signing in (the cookie) is the transport's job.</summary>
+/// <summary>
+/// Verifies email and password with lockout (spec 6.14). Attempts for one account are serialised by a row lock
+/// (<c>SELECT … FOR UPDATE</c>), so parallel wrong guesses each count and a correct login during an attack never
+/// conflicts. Signing in (the cookie) is the transport's job.
+/// </summary>
 public static class Login
 {
     public sealed record Command(string Email, string Password) : IValidatable
@@ -24,37 +28,48 @@ public static class Login
         {
             command.EnsureValid();
             var email = command.Email.Trim().ToLowerInvariant();
-            var user = await db.Users.SingleOrDefaultAsync(u => u.Email == email, cancellationToken);
+            var (outcome, user) = await db.InTransactionAsync(ct => AttemptAsync(email, command.Password, ct), cancellationToken);
+            return outcome switch
+            {
+                Outcome.Success => new CurrentUserDto(user!.Id, user.Email, user.DisplayName, user.GlobalRole),
+                Outcome.LockedOut => throw AppException.Locked(AppErrors.LockedOut, "Too many failed sign-in attempts. Try again in 15 minutes."),
+                _ => throw AppException.Unauthenticated(AppErrors.InvalidCredentials, "The email or password is incorrect."),
+            };
+        }
 
+        private async Task<(Outcome, User?)> AttemptAsync(string email, string password, CancellationToken cancellationToken)
+        {
+            var user = (await db.Users.FromSql($"SELECT *, xmin FROM users WHERE email = {email} FOR UPDATE").ToListAsync(cancellationToken)).SingleOrDefault();
             if (user is null || !user.IsActive || user.PasswordHash is null)
             {
-                hasher.Verify(TimingDummy, _timingDummyHash ??= hasher.Hash(TimingDummy, "timing-dummy-password"), command.Password);
-                throw InvalidCredentials();
+                hasher.Verify(TimingDummy, _timingDummyHash ??= hasher.Hash(TimingDummy, "timing-dummy-password"), password);
+                return (Outcome.InvalidCredentials, null);
             }
 
             var now = clock.Now;
             if (user.IsLockedOut(now))
-                throw LockedOut();
+                return (Outcome.LockedOut, null);
 
-            var check = hasher.Verify(user, user.PasswordHash, command.Password);
+            var check = hasher.Verify(user, user.PasswordHash, password);
             if (check == PasswordCheck.Failed)
             {
                 var lockedNow = user.RegisterFailedLogin(now);
                 await db.SaveChangesAsync(cancellationToken);
-                throw lockedNow ? LockedOut() : InvalidCredentials();
+                return (lockedNow ? Outcome.LockedOut : Outcome.InvalidCredentials, null);
             }
 
             if (check == PasswordCheck.SuccessRehashNeeded)
-                user.SetPasswordHash(hasher.Hash(user, command.Password));
+                user.SetPasswordHash(hasher.Hash(user, password));
             user.RegisterSuccessfulLogin(now);
             await db.SaveChangesAsync(cancellationToken);
-            return new CurrentUserDto(user.Id, user.Email, user.DisplayName, user.GlobalRole);
+            return (Outcome.Success, user);
         }
 
-        private static AppException InvalidCredentials() =>
-            AppException.Unauthenticated(AppErrors.InvalidCredentials, "The email or password is incorrect.");
-
-        private static AppException LockedOut() =>
-            AppException.Locked(AppErrors.LockedOut, "Too many failed sign-in attempts. Try again in 15 minutes.");
+        private enum Outcome
+        {
+            Success,
+            InvalidCredentials,
+            LockedOut,
+        }
     }
 }

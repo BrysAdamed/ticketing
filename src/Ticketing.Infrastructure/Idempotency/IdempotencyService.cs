@@ -9,8 +9,8 @@ using Ticketing.Infrastructure.Persistence;
 namespace Ticketing.Infrastructure.Idempotency;
 
 /// <summary>
-/// Runs the create and stores its result in the same transaction. A concurrent duplicate loses on the primary key,
-/// rolls back its own create and replays the winner's result.
+/// Requests with the same (user, key) are serialised by a transaction-scoped advisory lock: the first one runs the
+/// create and stores its result in the same transaction, later ones wait and replay it. Only expired records are replaced.
 /// </summary>
 internal sealed class IdempotencyService(TicketingDbContext db, ICurrentUser currentUser, IClock clock) : IIdempotency
 {
@@ -28,32 +28,26 @@ internal sealed class IdempotencyService(TicketingDbContext db, ICurrentUser cur
         var userId = currentUser.Id;
         var requestHash = Convert.ToHexStringLower(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(request, request.GetType(), Json)));
 
-        var replay = await FindAsync<T>(userId, key, operation, requestHash, cancellationToken);
-        if (replay.Found)
-            return replay.Result!;
+        var (found, replayed) = await FindAsync<T>(userId, key, operation, requestHash, cancellationToken);
+        if (found)
+            return replayed!;
 
-        try
-        {
-            return await db.InTransactionAsync(
-                async ct =>
-                {
-                    await db.IdempotencyRecords.Where(r => r.UserId == userId && r.Key == key).ExecuteDeleteAsync(ct);
-                    var result = await action(ct);
-                    db.IdempotencyRecords.Add(IdempotencyRecord.Create(
-                        userId, key, operation, requestHash, JsonSerializer.Serialize(result, Json), clock.Now));
-                    await db.SaveChangesAsync(ct);
-                    return result;
-                },
-                cancellationToken);
-        }
-        catch (DbUpdateException ex) when (ex.IsUniqueViolation())
-        {
-            db.ChangeTracker.Clear();
-            replay = await FindAsync<T>(userId, key, operation, requestHash, cancellationToken);
-            if (replay.Found)
-                return replay.Result!;
-            throw;
-        }
+        return await db.InTransactionAsync(
+            async ct =>
+            {
+                await AdvisoryLocks.AcquireAsync(db, $"idempotency:{userId}:{key}", ct);
+                var (foundAfterLock, winner) = await FindAsync<T>(userId, key, operation, requestHash, ct);
+                if (foundAfterLock)
+                    return winner!;
+
+                var now = clock.Now;
+                await db.IdempotencyRecords.Where(r => r.UserId == userId && r.Key == key && r.ExpiresAt <= now).ExecuteDeleteAsync(ct);
+                var result = await action(ct);
+                db.IdempotencyRecords.Add(IdempotencyRecord.Create(userId, key, operation, requestHash, JsonSerializer.Serialize(result, Json), now));
+                await db.SaveChangesAsync(ct);
+                return result;
+            },
+            cancellationToken);
     }
 
     private async Task<(bool Found, T? Result)> FindAsync<T>(Guid userId, string key, string operation, string requestHash, CancellationToken cancellationToken)

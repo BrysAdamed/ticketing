@@ -49,7 +49,7 @@ public sealed class BoardLeakTests(TicketingApiFactory api)
         {
             var project = await db.Projects.SingleAsync(p => p.Key == "PRIV", _ct);
             project.Archive(project.CreatedById, DateTimeOffset.UtcNow);
-            project.Delete(project.CreatedById, DateTimeOffset.UtcNow);
+            project.Delete(project.CreatedById, DateTimeOffset.UtcNow, project.Key);
             return await db.SaveChangesAsync(_ct);
         });
 

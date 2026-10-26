@@ -202,9 +202,9 @@ flowchart TD
 Other cascades:
 
 - **Unlink a project from a board:** that project's tickets on the board go to the backlog top, keeping relative order. The UI confirms with the count.
-- **Archive a project:** all its tickets leave all boards, archived boards included, and the project is unlinked from every board. The tickets go to the backlog top as one block, ordered board by board (oldest board first) and by board rank within a board (D-47). Each moved ticket gets a `ticket.moved` entry (`boardId` old → null) and each board a `board.project.unlinked` entry. Unarchiving does not relink boards.
-- **Unarchive a project:** if no active Owner member is left (owners deactivated while it was archived), the acting Admin becomes an Owner (D-47).
-- **Delete a project:** Admin only, archived only, web session only, confirmed by typing the key. Soft delete: the key stays reserved, the name becomes free (D-48).
+- **Archive a project:** all its tickets leave all boards, archived boards included, and the project is unlinked from every board. The tickets go to the backlog top as one block, ordered board by board (oldest board first) and by board rank within a board (D-52). Each moved ticket gets a `ticket.moved` entry (`boardId` old → null) and each board a `board.project.unlinked` entry. Unarchiving does not relink boards.
+- **Unarchive a project:** if no active Owner member is left (owners deactivated while it was archived), the acting Admin becomes an Owner (D-52).
+- **Delete a project:** Admin only, archived only, web session only, confirmed by typing the key. Soft delete: the key stays reserved, the name becomes free (D-53).
 - **Delete a board:** all its tickets, Done included, go to their backlogs (top); the board is soft-deleted.
 - **Project becomes private:** its tickets stay on boards and simply disappear for users who lose access ([§6.5](../product/01-refined-spec.md#65-private-projects-on-shared-boards)).
 

@@ -8,7 +8,7 @@ namespace Ticketing.Application.Projects;
 
 /// <summary>
 /// Archives a project (Owner only, spec 4.3): its tickets on boards return to the backlog top, keeping their relative
-/// order (board by board, oldest board first, then board rank; D-47), the project is unlinked from every board, and the
+/// order (board by board, oldest board first, then board rank; D-52), the project is unlinked from every board, and the
 /// project becomes read-only.
 /// </summary>
 public static class ArchiveProject

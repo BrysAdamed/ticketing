@@ -6,7 +6,7 @@ namespace Ticketing.Application.Projects;
 
 /// <summary>
 /// Unarchives a project (Owner only; the one write allowed on an archived project). Boards are not relinked. If no active
-/// Owner is left, the acting Admin becomes an Owner (D-47).
+/// Owner is left, the acting Admin becomes an Owner (D-52).
 /// </summary>
 public static class UnarchiveProject
 {

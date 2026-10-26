@@ -1,0 +1,39 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+TestResults/
+*.trx
+coverage*/
+
+# Node / Angular
+node_modules/
+dist/
+.angular/
+out-tsc/
+
+# Playwright
+playwright-report/
+test-results/
+blob-report/
+playwright/.cache/
+.auth/
+
+# IDE / OS
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+Thumbs.db
+.DS_Store
+
+# Env
+.env
+*.local.env
+appsettings.Local.json
+
+# Tools
+.serena/cache/
+.serena/project.local.yml

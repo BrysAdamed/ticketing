@@ -1,4 +1,3 @@
-using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Http.Json;
 using Scalar.AspNetCore;
 using Ticketing.Api;
@@ -20,15 +19,14 @@ builder.Services
     .AddPatRateLimiting(builder.Configuration)
     .AddTicketingMcp()
     .AddTicketingHealthChecks()
-    .AddOpenApi("v1")
+    .AddOpenApi("v1", o => o.ConfigureTicketingSchemas())
     .AddProblemDetails(o => o.CustomizeProblemDetails = Problems.Customize)
     .AddExceptionHandler<ApiExceptionHandler>()
-    .Configure<JsonOptions>(o => o.SerializerOptions.Converters.Add(new JsonStringEnumConverter(allowIntegerValues: false)))
+    .Configure<JsonOptions>(o => JsonSetup.Apply(o.SerializerOptions))
     .Configure<RouteHandlerOptions>(o => o.ThrowOnBadRequest = true);
 
 var app = builder.Build();
 
-app.UseForwardedHeaders();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseAuthentication();

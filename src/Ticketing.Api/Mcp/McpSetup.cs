@@ -1,5 +1,4 @@
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
@@ -46,7 +45,7 @@ internal static class McpSetup
     private static JsonSerializerOptions CreateJsonOptions()
     {
         var options = new JsonSerializerOptions(McpJsonUtilities.DefaultOptions);
-        options.Converters.Add(new JsonStringEnumConverter(allowIntegerValues: false));
+        JsonSetup.Apply(options);
         options.MakeReadOnly();
         return options;
     }

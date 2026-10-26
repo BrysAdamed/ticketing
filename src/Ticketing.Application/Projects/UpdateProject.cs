@@ -14,13 +14,20 @@ namespace Ticketing.Application.Projects;
 /// </summary>
 public static class UpdateProject
 {
-    public sealed record Command(
-        [property: JsonIgnore] string ProjectKey,
-        Optional<string> Name = default,
-        Optional<string?> Description = default,
-        Optional<ProjectVisibility> Visibility = default,
-        [property: JsonIgnore] uint? ExpectedVersion = null) : IValidatable
+    public sealed record Command : IValidatable
     {
+        [JsonIgnore]
+        public string ProjectKey { get; init; } = string.Empty;
+
+        public Optional<string> Name { get; init; }
+
+        public Optional<string?> Description { get; init; }
+
+        public Optional<ProjectVisibility> Visibility { get; init; }
+
+        [JsonIgnore]
+        public uint? ExpectedVersion { get; init; }
+
         public void Validate(Validator validator)
         {
             if (Name.HasValue)

@@ -5,7 +5,7 @@ namespace Ticketing.Application.Common;
 
 /// <summary>
 /// A PATCH field: omitted (<see cref="HasValue"/> false) leaves the stored value unchanged; present (including null)
-/// replaces it. Declare PATCH command properties as <c>Optional&lt;T&gt;</c> with a default of <c>default</c>.
+/// replaces it. Declare PATCH commands as records with init-only <c>Optional&lt;T&gt;</c> properties (see <c>UpdateProject</c>).
 /// </summary>
 [JsonConverter(typeof(OptionalJsonConverterFactory))]
 public readonly record struct Optional<T>

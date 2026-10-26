@@ -93,4 +93,21 @@ public sealed class FractionalIndexTests
         Assert.Equal(all.Count, all.Distinct().Count());
         Assert.All(all, r => Assert.True(r.Length <= Ranks.RebalanceThreshold));
     }
+
+    [Theory]
+    [InlineData(0, 0, 3)]
+    [InlineData(5, 2, 4)]
+    [InlineData(5, 5, 2)]
+    public void PlanRebalance_leaves_consecutive_slots_for_a_block(int existing, int insertIndex, int insertCount)
+    {
+        // Act
+        var plan = Ranks.PlanRebalance(existing, insertIndex, insertCount);
+
+        // Assert
+        var all = plan.ExistingRanks.ToList();
+        all.InsertRange(insertIndex, plan.InsertedRanks);
+        Assert.Equal((existing, insertCount), (plan.ExistingRanks.Count, plan.InsertedRanks.Count));
+        Assert.Equal(all.OrderBy(r => r, StringComparer.Ordinal), all);
+        Assert.Equal(all.Count, all.Distinct().Count());
+    }
 }

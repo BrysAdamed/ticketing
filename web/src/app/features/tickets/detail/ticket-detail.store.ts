@@ -18,6 +18,7 @@ import {
   UserRef,
 } from '@core/tickets/ticket.models';
 import { TicketsApi } from '@core/tickets/tickets.api';
+import { Page } from '@core/api/page';
 import { TicketLinkType } from '@shared/domain/enums';
 
 export type SaveResult = 'saved' | 'conflict' | 'failed';
@@ -184,7 +185,7 @@ export class TicketDetailStore {
     let cursor: string | null = null;
     try {
       do {
-        const page = await firstValueFrom(this.api.comments(ticket.key, { limit: 100, cursor }));
+        const page: Page<Comment> = await firstValueFrom(this.api.comments(ticket.key, { limit: 100, cursor }));
         all.push(...page.items);
         cursor = page.nextCursor;
       } while (cursor);
@@ -217,7 +218,7 @@ export class TicketDetailStore {
 
   // Links and children
 
-  /// Links romKey → 	argetKey; one of them is this ticket (inverse kinds such as "is blocked by" link from the other side).
+  /// Links fromKey to targetKey; one of them is this ticket (inverse kinds such as "is blocked by" link from the other side).
   async addLink(fromKey: string, targetKey: string, type: TicketLinkType): Promise<void> {
     try {
       await firstValueFrom(this.api.link(fromKey, targetKey, type));

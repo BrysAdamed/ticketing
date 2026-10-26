@@ -18,8 +18,10 @@ import { NewTicket, TicketSummary } from './ticket.models';
 export interface CreateTicketPrefill extends Partial<NewTicket> {
   /// Project key; defaults to the project in context (route or open ticket).
   projectKey?: string;
-  /// Put the new ticket at the top of the backlog instead of the bottom (bugs from regressions).
-  atTop?: boolean;
+  /// Dialog title, for example "Create bug from WEB-TC-7".
+  heading?: string;
+  /// Replaces the default POST /projects/{key}/tickets, for example to create a bug through a regression item.
+  submit?: (projectKey: string, ticket: NewTicket) => Promise<TicketSummary>;
 }
 
 export const CREATE_TICKET_DIALOG = new InjectionToken<() => Promise<Type<unknown>>>('CREATE_TICKET_DIALOG');

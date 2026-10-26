@@ -12,6 +12,7 @@ import {
 import { IconComponent } from '../icon/icon.component';
 import { LabelChipComponent } from '../domain/label-chip.component';
 
+let nextPanelId = 0;
 const LABEL_PATTERN = /^[a-z0-9][a-z0-9._-]{0,49}$/;
 
 export interface LabelToggle {
@@ -36,6 +37,7 @@ export interface LabelToggle {
         aria-label="Filter or create labels"
         aria-autocomplete="list"
         aria-expanded="true"
+        [attr.aria-controls]="listId"
         placeholder="Add labels…"
         data-testid="labels-picker-input"
         [value]="query()"
@@ -43,7 +45,7 @@ export interface LabelToggle {
         (keydown)="onKeydown($event)"
       />
     </div>
-    <div class="list" role="listbox" aria-label="Labels" aria-multiselectable="true">
+    <div class="list" role="listbox" [id]="listId" aria-label="Labels" aria-multiselectable="true">
       @for (option of options(); track option.label; let i = $index) {
         <div
           class="option"
@@ -146,6 +148,7 @@ export class LabelsPickerPanelComponent {
   readonly queryChange = output<string>();
   readonly dismissed = output<void>();
 
+  protected readonly listId = `tk-labels-picker-${nextPanelId++}`;
   protected readonly query = signal('');
   protected readonly active = signal(0);
   protected readonly options = computed(() => {

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, ElementRef, inject, input, output, signal, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { PeekService } from '@core/layout/peek/peek';
@@ -38,7 +38,7 @@ export interface NewChild {
       }
       @if (canEdit()) {
         <span class="right">
-          <button type="button" class="add" data-testid="children-add" (click)="adding.set(true)">
+          <button type="button" class="add" data-testid="children-add" (click)="startAdding()">
             <tk-icon name="tablerPlus" [size]="14" />New
           </button>
           <button
@@ -76,7 +76,6 @@ export interface NewChild {
             (keydown.enter)="create(title.value); title.value = ''"
             (keydown.escape)="$event.stopPropagation(); adding.set(false)"
             (blur)="!title.value && adding.set(false)"
-            [attr.autofocus]="true"
           />
         </div>
       }
@@ -98,6 +97,7 @@ export class TicketChildrenComponent {
   readonly adopt = output<TicketRef>();
 
   protected readonly adding = signal(false);
+  private readonly newInput = viewChild<ElementRef<HTMLInputElement>>('title');
   protected readonly children = computed(() => this.ticket().children ?? []);
   protected readonly progress = computed<Progress | null>(() => this.ticket().childProgress);
   protected readonly childType = computed<TicketType>(() => (this.ticket().type === 'Epic' ? 'UserStory' : 'Technical'));
@@ -109,6 +109,11 @@ export class TicketChildrenComponent {
         .filter((x) => x.id !== t.id && x.id !== t.parent?.id && !existing.has(x.id) && x.type !== 'Epic')
         .map((x) => ({ value: x, label: `${x.key} ${x.title}` }));
   });
+
+  protected startAdding(): void {
+    this.adding.set(true);
+    setTimeout(() => this.newInput()?.nativeElement.focus());
+  }
 
   protected create(title: string): void {
     const text = title.trim();

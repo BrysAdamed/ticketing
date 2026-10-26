@@ -47,6 +47,7 @@ let nextPanelId = 0;
           tabindex="-1"
           [class.active]="i === active()"
           [class.disabled]="option.disabled"
+          [attr.aria-selected]="i === active()"
           [attr.aria-disabled]="option.disabled || null"
           (mouseenter)="active.set(i)"
           (mousedown)="$event.preventDefault()"

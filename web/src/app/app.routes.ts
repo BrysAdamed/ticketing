@@ -64,6 +64,12 @@ export const routes: Routes = [
         loadChildren: () => import('@features/admin/admin.routes'),
       },
       {
+        path: 'dev/ui-kit',
+        title: 'UI kit · Ticketing',
+        data: { breadcrumb: 'UI kit' },
+        loadChildren: () => import('@features/ui-kit/ui-kit.routes'),
+      },
+      {
         path: '**',
         title: 'Not found · Ticketing',
         loadChildren: () => import('@features/not-found/not-found.routes'),

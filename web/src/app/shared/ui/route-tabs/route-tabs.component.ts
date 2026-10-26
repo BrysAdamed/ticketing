@@ -14,7 +14,14 @@ export interface RouteTab {
   imports: [MatTabsModule, RouterLink, RouterLinkActive],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <nav mat-tab-nav-bar class="tk-tab-nav" [tabPanel]="panel" [attr.aria-label]="ariaLabel()">
+    <nav
+      mat-tab-nav-bar
+      mat-stretch-tabs="false"
+      mat-align-tabs="start"
+      class="tk-tab-nav"
+      [tabPanel]="panel"
+      [attr.aria-label]="ariaLabel()"
+    >
       @for (tab of tabs(); track tab.path) {
         <a
           mat-tab-link

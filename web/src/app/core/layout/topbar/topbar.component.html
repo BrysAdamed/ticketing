@@ -59,7 +59,7 @@
       <tk-avatar [userId]="user.id" [name]="user.displayName" [size]="24" [showTitle]="false" />
     </button>
     <mat-menu #userMenu="matMenu" xPosition="before" class="tk-user-menu">
-      <div class="who" mat-menu-item disabled>
+      <div class="who">
         <span class="who-name">{{ user.displayName }}</span>
         <span class="who-email">{{ user.email }}</span>
       </div>

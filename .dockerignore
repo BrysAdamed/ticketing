@@ -1,0 +1,15 @@
+**/bin/
+**/obj/
+**/TestResults/
+**/node_modules/
+**/dist/
+**/.angular/
+.git/
+.vs/
+.idea/
+.claude/
+.serena/
+.env
+tests/
+docs/
+e2e/

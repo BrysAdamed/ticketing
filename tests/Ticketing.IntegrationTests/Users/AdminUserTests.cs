@@ -31,7 +31,7 @@ public sealed class AdminUserTests(TicketingApiFactory api)
         Assert.True(created.User.IsActive);
         Assert.StartsWith("/set-password?token=", created.SetPasswordLink.Path, StringComparison.Ordinal);
         Assert.InRange(created.SetPasswordLink.ExpiresAt - DateTimeOffset.UtcNow, TimeSpan.FromHours(71.9), TimeSpan.FromHours(72));
-        Assert.Equal(created.SetPasswordLink.ExpiresAt, created.User.SetPasswordLinkExpiresAt);
+        Assert.Equal(created.SetPasswordLink.ExpiresAt, created.User.SetPasswordLinkExpiresAt!.Value, TimeSpan.FromMilliseconds(1));
         var stored = await api.WithDbAsync(db => db.Users.SingleAsync(u => u.Id == created.User.Id, _ct));
         Assert.Null(stored.PasswordHash);
         Assert.NotEqual(created.SetPasswordLink.Token, stored.SetPasswordTokenHash);

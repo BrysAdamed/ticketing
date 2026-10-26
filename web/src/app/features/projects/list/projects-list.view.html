@@ -1,6 +1,18 @@
 <header class="tk-page-header">
   <h1>Projects</h1>
   <span class="tk-page-count">{{ store.counts().all }}</span>
+  <div class="tk-page-actions">
+    <button
+      mat-flat-button
+      type="button"
+      data-testid="projects-new"
+      matTooltip="New project (N)"
+      (click)="createProject()"
+    >
+      <tk-icon class="btn-icon" name="tablerPlus" [size]="16" />
+      New project
+    </button>
+  </div>
 </header>
 
 <div class="tk-toolbar">
@@ -13,7 +25,9 @@
       data-testid="projects-filter"
       [value]="store.query()"
       (input)="store.query.set($any($event.target).value)"
+      (keydown.escape)="store.query.set(''); $any($event.target).blur()"
     />
+    <tk-kbd>/</tk-kbd>
   </label>
   <tk-segmented
     ariaLabel="Project filter"
@@ -22,6 +36,14 @@
     [value]="store.filter()"
     (valueChange)="store.filter.set($event)"
   />
+  <mat-slide-toggle
+    class="archived-toggle"
+    data-testid="projects-show-archived"
+    [checked]="store.showArchived()"
+    (change)="store.setShowArchived($event.checked)"
+  >
+    Show archived
+  </mat-slide-toggle>
 </div>
 
 @if (store.status() === 'error' && !store.hasData()) {
@@ -34,40 +56,131 @@
     <button mat-stroked-button type="button" (click)="store.load()">Retry</button>
   </tk-empty-state>
 } @else if (store.hasData()) {
-  @for (project of store.projects(); track project.id) {
-    <a
-      class="row"
-      [routerLink]="['/projects', project.key]"
-      [attr.data-testid]="'project-row-' + project.key"
+  @if (store.projects().length > 0) {
+    <div class="table" role="table" aria-label="Projects">
+      <div class="head" role="row">
+        <span class="c-name" role="columnheader">Project</span>
+        <span class="c-vis" role="columnheader"><span class="tk-sr-only">Visibility</span></span>
+        <span class="c-lead" role="columnheader">Lead</span>
+        <span class="c-open" role="columnheader">Open</span>
+        <span class="c-progress" role="columnheader">Progress</span>
+        <span class="c-updated" role="columnheader">Updated</span>
+        <span class="c-menu" role="columnheader"><span class="tk-sr-only">Actions</span></span>
+      </div>
+      @for (project of store.projects(); track project.id) {
+        <div
+          class="row"
+          role="row"
+          [class.archived]="!!project.archivedAt"
+          [attr.data-testid]="'project-row-' + project.key"
+        >
+          <span class="c-name" role="cell">
+            <a class="stretched" [routerLink]="['/projects', project.key, 'backlog']">
+              <tk-project-tile [projectKey]="project.key" />
+              <span class="key tnum">{{ project.key }}</span>
+              <span class="name">{{ project.name }}</span>
+            </a>
+            @if (project.archivedAt) {
+              <tk-badge tone="muted" icon="tablerArchive">Archived</tk-badge>
+            }
+            @if (preview(project); as text) {
+              <span class="description">{{ text }}</span>
+            }
+          </span>
+          <span class="c-vis" role="cell">
+            <tk-icon
+              class="visibility"
+              [name]="project.visibility === 'Private' ? 'tablerLock' : 'tablerWorld'"
+              [size]="14"
+              [matTooltip]="
+                project.visibility === 'Private'
+                  ? 'Private: members only'
+                  : 'Public: everyone can see and edit'
+              "
+              [attr.aria-label]="project.visibility"
+            />
+          </span>
+          <span class="c-lead" role="cell">
+            @if (project.lead; as lead) {
+              <tk-avatar [userId]="lead.userId" [name]="lead.displayName" />
+            }
+          </span>
+          <span class="c-open tnum" role="cell" matTooltip="Open tickets">{{
+            project.openTicketCount ?? ''
+          }}</span>
+          <span class="c-progress" role="cell">
+            @if (project.ticketCounts; as counts) {
+              <tk-project-progress [counts]="counts" />
+            }
+          </span>
+          <span class="c-updated tnum" role="cell">{{ project.updatedAt | relativeTime }}</span>
+          <span class="c-menu" role="cell">
+            <button
+              type="button"
+              class="tk-icon-btn"
+              [attr.aria-label]="'Actions for ' + project.name"
+              [attr.data-testid]="'project-menu-' + project.key"
+              [matMenuTriggerFor]="menu"
+              [matMenuTriggerData]="{ project }"
+            >
+              <tk-icon name="tablerDots" [size]="16" />
+            </button>
+          </span>
+        </div>
+      }
+    </div>
+  } @else if (store.isFiltered()) {
+    <tk-empty-state icon="tablerSearch" title="No projects match" description="Try another filter.">
+      <button
+        mat-stroked-button
+        type="button"
+        (click)="store.query.set(''); store.filter.set('all')"
+      >
+        Clear filters
+      </button>
+    </tk-empty-state>
+  } @else {
+    <tk-empty-state
+      icon="tablerFolders"
+      title="No projects yet"
+      description="Projects hold tickets, test cases and regressions."
     >
-      <tk-project-tile [projectKey]="project.key" />
-      <span class="name">{{ project.name }}</span>
-      <span class="key tnum">{{ project.key }}</span>
-      <span class="fill"></span>
-      <tk-icon
-        class="visibility"
-        [name]="project.visibility === 'Private' ? 'tablerLock' : 'tablerWorld'"
-        [size]="14"
-        [matTooltip]="project.visibility"
-      />
-      <span class="role">{{ project.myRole ? roleLabels[project.myRole] : '' }}</span>
-      <span class="open tnum" matTooltip="Open tickets">{{ project.openTicketCount ?? '' }}</span>
-    </a>
-  } @empty {
-    @if (store.query() || store.filter() !== 'all') {
-      <tk-empty-state
-        icon="tablerSearch"
-        title="No projects match"
-        description="Try another filter."
-      />
-    } @else {
-      <tk-empty-state
-        icon="tablerFolders"
-        title="No projects yet"
-        description="Projects hold tickets, test cases and regressions."
-      />
-    }
+      <button mat-flat-button type="button" (click)="createProject()">New project</button>
+      <tk-kbd>N</tk-kbd>
+    </tk-empty-state>
   }
 } @else {
   <tk-skeleton-rows [count]="6" />
 }
+
+<mat-menu #menu="matMenu" xPosition="before">
+  <ng-template matMenuContent let-project="project">
+    <a mat-menu-item [routerLink]="['/projects', project.key, 'settings']">
+      <tk-icon name="tablerSettings" [size]="16" />
+      <span>Settings</span>
+    </a>
+    @if (project.myRole === 'Owner') {
+      @if (project.archivedAt) {
+        <button
+          mat-menu-item
+          type="button"
+          data-testid="project-menu-unarchive"
+          (click)="unarchive(project)"
+        >
+          <tk-icon name="tablerArchiveOff" [size]="16" />
+          <span>Unarchive</span>
+        </button>
+      } @else {
+        <button
+          mat-menu-item
+          type="button"
+          data-testid="project-menu-archive"
+          (click)="archive(project)"
+        >
+          <tk-icon name="tablerArchive" [size]="16" />
+          <span>Archive…</span>
+        </button>
+      }
+    }
+  </ng-template>
+</mat-menu>

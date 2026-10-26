@@ -93,53 +93,84 @@ public sealed partial class Project
         ArchivedById = actorId;
     }
 
-    public void Unarchive()
-    {
-        ArchivedAt = null;
-        ArchivedById = null;
-    }
-
-    public void Delete(Guid actorId, DateTimeOffset now)
+    /// <summary>
+    /// Makes the project writable again. A non-archived project needs an active Owner (spec 4.3), but its owners may have
+    /// been deactivated while it was archived; then the actor (only an Admin can get here) becomes an Owner.
+    /// Returns the membership created or promoted for that, or null.
+    /// </summary>
+    public ProjectMember? Unarchive(Guid actorId, DateTimeOffset now, IReadOnlySet<Guid> activeUserIds)
     {
         if (!IsArchived)
-            throw DomainException.Conflict(ProjectErrors.NotArchived, "Only archived projects can be deleted.");
+            throw DomainException.Conflict(ProjectErrors.NotArchived, $"Project {Key} is not archived.");
+        ArchivedAt = null;
+        ArchivedById = null;
+        if (HasActiveOwnerOtherThan(null, activeUserIds))
+            return null;
+
+        var existing = _members.SingleOrDefault(m => m.UserId == actorId);
+        if (existing is null)
+            return AddMember(actorId, ProjectRole.Owner, actorId, now);
+        existing.ChangeRole(ProjectRole.Owner);
+        return existing;
+    }
+
+    public void Delete(Guid actorId, DateTimeOffset now, string confirmationKey)
+    {
+        if (!IsArchived)
+            throw DomainException.Conflict(ProjectErrors.NotArchived, "Only archived projects can be deleted.", "Archive the project first.");
+        if (!string.Equals(confirmationKey?.Trim(), Key, StringComparison.Ordinal))
+            throw DomainException.Invalid("confirmKey", ProjectErrors.DeleteNotConfirmed, $"Type the project key {Key} to confirm the deletion.");
         DeletedAt = now;
         DeletedById = actorId;
     }
 
+    public bool IsMember(Guid userId) => _members.Any(m => m.UserId == userId);
+
     public ProjectMember AddMember(Guid userId, ProjectRole role, Guid actorId, DateTimeOffset now)
     {
-        if (_members.Any(m => m.UserId == userId))
+        EnsureWritable();
+        if (IsMember(userId))
             throw DomainException.Conflict(ProjectErrors.AlreadyMember, "The user is already a member of this project.");
         var member = ProjectMember.Create(Id, userId, role, actorId, now);
         _members.Add(member);
         return member;
     }
 
-    public void ChangeMemberRole(Guid userId, ProjectRole role)
+    /// <param name="activeUserIds">Members whose user account is active; only they count as owners (spec 4.3).</param>
+    /// <returns>The previous role.</returns>
+    public ProjectRole ChangeMemberRole(Guid userId, ProjectRole role, IReadOnlySet<Guid> activeUserIds)
     {
+        EnsureWritable();
         var member = FindMember(userId);
-        if (member.Role == ProjectRole.Owner && role != ProjectRole.Owner)
-            EnsureAnotherOwner(userId);
+        var previous = member.Role;
+        if (previous == ProjectRole.Owner && role != ProjectRole.Owner)
+            EnsureAnotherActiveOwner(userId, activeUserIds);
         member.ChangeRole(role);
+        return previous;
     }
 
-    public void RemoveMember(Guid userId)
+    /// <param name="activeUserIds">Members whose user account is active; only they count as owners (spec 4.3).</param>
+    public ProjectMember RemoveMember(Guid userId, IReadOnlySet<Guid> activeUserIds)
     {
+        EnsureWritable();
         var member = FindMember(userId);
         if (member.Role == ProjectRole.Owner)
-            EnsureAnotherOwner(userId);
+            EnsureAnotherActiveOwner(userId, activeUserIds);
         _members.Remove(member);
+        return member;
     }
 
     private ProjectMember FindMember(Guid userId) =>
         _members.SingleOrDefault(m => m.UserId == userId)
         ?? throw DomainException.Conflict(ProjectErrors.NotMember, "The user is not a member of this project.");
 
-    private void EnsureAnotherOwner(Guid userId)
+    private bool HasActiveOwnerOtherThan(Guid? userId, IReadOnlySet<Guid> activeUserIds) =>
+        _members.Any(m => m.UserId != userId && m.Role == ProjectRole.Owner && activeUserIds.Contains(m.UserId));
+
+    private void EnsureAnotherActiveOwner(Guid userId, IReadOnlySet<Guid> activeUserIds)
     {
-        if (!_members.Any(m => m.UserId != userId && m.Role == ProjectRole.Owner))
-            throw DomainException.Conflict(ProjectErrors.LastOwner, "A project must keep at least one owner.", "Add another owner first.");
+        if (!HasActiveOwnerOtherThan(userId, activeUserIds))
+            throw DomainException.Conflict(ProjectErrors.LastOwner, "A project must keep at least one active owner.", "Make another active member an Owner first.");
     }
 
     [GeneratedRegex("^[A-Z][A-Z0-9]{1,9}$", RegexOptions.CultureInvariant)]

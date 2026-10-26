@@ -2,8 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using Ticketing.Application.Abstractions;
 using Ticketing.Application.Access;
 using Ticketing.Application.Common;
+using Ticketing.Application.Projects;
 using Ticketing.Domain.Common;
-using Ticketing.Domain.Projects;
 using Ticketing.Domain.Users;
 
 namespace Ticketing.Application.Users;
@@ -60,15 +60,7 @@ internal static class AdminUsers
     /// <summary>Fails with <c>user.lastProjectOwner</c>, listing the project keys in <c>errors.projects</c> (spec 4.1, D-41).</summary>
     public static async Task EnsureNotLastProjectOwnerAsync(ITicketingDbContext db, Guid userId, CancellationToken cancellationToken)
     {
-        // TODO: switch to ProjectOwnership.ProjectsSolelyOwnedByAsync once the projects slice lands on main.
-        var projects = await db.Projects
-            .AsNoTracking()
-            .Where(p => p.DeletedAt == null && p.ArchivedAt == null)
-            .Where(p => p.Members.Any(m => m.UserId == userId && m.Role == ProjectRole.Owner))
-            .Where(p => !p.Members.Any(m => m.UserId != userId && m.Role == ProjectRole.Owner && db.Users.Any(u => u.Id == m.UserId && u.IsActive)))
-            .OrderBy(p => p.Key)
-            .Select(p => p.Key)
-            .ToListAsync(cancellationToken);
+        var projects = await ProjectOwnership.ProjectsSolelyOwnedByAsync(db, userId, cancellationToken);
         if (projects.Count == 0)
             return;
         throw new AppException(

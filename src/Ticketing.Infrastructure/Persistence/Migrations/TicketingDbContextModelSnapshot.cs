@@ -1010,6 +1010,10 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_tickets_project_id_status")
                         .HasFilter("deleted_at IS NULL");
 
+                    b.HasIndex("ProjectId", "Type")
+                        .HasDatabaseName("ix_tickets_project_id_type")
+                        .HasFilter("deleted_at IS NULL");
+
                     b.HasIndex("ProjectId", "UpdatedAt")
                         .HasDatabaseName("ix_tickets_project_id_updated_at")
                         .HasFilter("deleted_at IS NULL");

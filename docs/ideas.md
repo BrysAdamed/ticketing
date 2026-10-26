@@ -72,6 +72,8 @@ Items triaged as LATER in [product/02-improvements-triage.md](product/02-improve
 | --- | --- | --- | --- |
 | I-61 | Burndown, cumulative flow, cycle time | Activity history already holds the data. | M |
 | I-71 | Cross-project dashboards | Portfolio view for managers. | M |
+| I-80 | Dashboard deltas and period selector | KPI tiles with "vs previous period" deltas and sparklines, and a 30/90-day range for created vs resolved (layout-and-screens §3.5 sketches them; spec §7 does not define them). | S |
+| I-81 | Version filter for regression widgets | Sessions have a version too, so "how did 1.4 regress" could filter the regression summary like the ticket widgets (spec §7 limits the filter to tickets). | S |
 
 ## Integrations and LLM
 

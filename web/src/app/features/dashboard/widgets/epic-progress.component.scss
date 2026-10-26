@@ -1,0 +1,134 @@
+:host {
+  display: block;
+}
+
+.head,
+li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 140px 140px;
+  align-items: center;
+  gap: 16px;
+}
+
+.head {
+  height: 20px;
+  font-size: var(--tk-text-xs);
+  color: var(--tk-text-subtle);
+}
+
+ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+li {
+  height: 32px;
+  border-bottom: 1px solid var(--tk-border-subtle);
+}
+
+li:last-child {
+  border-bottom: 0;
+}
+
+.epic {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  margin-left: -6px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: var(--tk-radius-sm);
+  background: transparent;
+  color: var(--tk-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--tk-bg-hover);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--tk-focus);
+    outline-offset: -2px;
+  }
+}
+
+.key {
+  flex: none;
+  color: var(--tk-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.title {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.meter {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: var(--tk-text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.track {
+  flex: 1;
+  height: 6px;
+  margin-right: 8px;
+  border-radius: var(--tk-radius-full);
+  background: var(--tk-success-bg);
+  overflow: hidden;
+}
+
+.fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--tk-radius-full);
+  background: var(--tk-category-done);
+}
+
+.value {
+  color: var(--tk-text);
+  text-decoration: none;
+}
+
+a.value:hover {
+  color: var(--tk-accent-fg);
+  text-decoration: underline;
+}
+
+.of {
+  color: var(--tk-text-subtle);
+}
+
+.more {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+  font-size: var(--tk-text-sm);
+}
+
+.link {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--tk-accent-fg);
+  font: inherit;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.muted {
+  color: var(--tk-text-subtle);
+}

@@ -350,8 +350,8 @@ sequenceDiagram
 
 - The bug description follows the template in [§6.11](../product/01-refined-spec.md#611-regression-session-lifecycle). The server builds the draft, so the UI dialog, REST and MCP (`record_regression_result` with `createBug: true`, which records the result and creates the bug in one call) produce identical bugs.
 - Owners can assign or unassign items for others; only the assignee records results.
-- Bugs are created only while the session is `InProgress`. With `createBug`, the result and the bug are saved together or not at all (D-59).
-- Item writes share-lock the session row; complete and cancel lock it exclusively, so no result lands on a completed session (D-60).
+- Bugs are created only while the session is `InProgress`. With `createBug`, the result and the bug are saved together or not at all (D-62).
+- Item writes share-lock the session row; complete and cancel lock it exclusively, so no result lands on a completed session (D-63).
 
 Completing a session:
 

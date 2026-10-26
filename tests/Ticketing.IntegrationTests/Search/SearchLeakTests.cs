@@ -92,7 +92,7 @@ public sealed class SearchLeakTests(TicketingApiFactory api)
         await api.WithDbAsync(async db =>
         {
             var project = await db.Projects.Include(p => p.Members).SingleAsync(p => p.Id == world.PrivateProjectId, _ct);
-            project.RemoveMember(world.Viewer.Id);
+            project.RemoveMember(world.Viewer.Id, new HashSet<Guid> { world.Owner.Id, world.Viewer.Id });
             return await db.SaveChangesAsync(_ct);
         });
 
@@ -141,7 +141,7 @@ public sealed class SearchLeakTests(TicketingApiFactory api)
         {
             var project = await db.Projects.SingleAsync(p => p.Id == gone, _ct);
             project.Archive(owner.Id, DateTimeOffset.UtcNow);
-            project.Delete(owner.Id, DateTimeOffset.UtcNow);
+            project.Delete(owner.Id, DateTimeOffset.UtcNow, "GONE");
             return await db.SaveChangesAsync(_ct);
         });
         return new World(owner, viewer, outsider, admin, priv);

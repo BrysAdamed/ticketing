@@ -27,6 +27,7 @@ import { AuthService } from '@core/auth/auth.service';
 import { providePeekView } from '@core/layout/peek/peek';
 import { ThemeService } from '@core/theme/theme.service';
 import { provideTicketCreation } from '@core/tickets/create-ticket';
+import { provideTicketDetailSection } from '@core/tickets/ticket-sections';
 import { TICKET_DETAIL_VIEW } from '@features/tickets/tickets.views';
 import { APP_ICONS } from '@shared/ui/icon/app-icons';
 import { routes } from './app.routes';
@@ -52,6 +53,13 @@ export const appConfig: ApplicationConfig = {
     provideIcons(APP_ICONS),
     providePeekView(TICKET_DETAIL_VIEW),
     provideTicketCreation(() => import('@features/tickets/create/create-ticket.dialog').then((m) => m.CreateTicketDialog)),
+    provideTicketDetailSection({
+      id: 'test-cases',
+      order: 10,
+      title: 'Test cases',
+      loadComponent: () =>
+        import('@features/test-cases/ticket-section/ticket-test-cases.component').then((m) => m.TicketTestCasesComponent),
+    }),
     { provide: MAT_RIPPLE_GLOBAL_OPTIONS, useValue: { disabled: true } },
     {
       provide: MAT_FORM_FIELD_DEFAULT_OPTIONS,

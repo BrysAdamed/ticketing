@@ -1,0 +1,192 @@
+<header class="head">
+  @if (store.isNew()) {
+    <span class="key">New test case</span>
+  } @else {
+    <span class="key tnum" data-testid="tc-editor-key">{{ store.key() }}</span>
+  }
+  @if (testCase()?.archivedAt) {
+    <span class="arch" data-testid="tc-editor-archived">Archived</span>
+  }
+  <span class="right">
+    @if (testCase(); as tc) {
+      @if (tc.permissions.canEdit) {
+        <button type="button" class="tk-icon-btn" aria-label="More actions" data-testid="tc-editor-menu" [matMenuTriggerFor]="more">
+          <tk-icon name="tablerDots" [size]="16" />
+        </button>
+        <mat-menu #more="matMenu" xPosition="before">
+          <button mat-menu-item type="button" data-testid="tc-archive" (click)="toggleArchive()">
+            <tk-icon [name]="tc.archivedAt ? 'tablerArrowBackUp' : 'tablerArchive'" [size]="16" />
+            {{ tc.archivedAt ? 'Unarchive' : 'Archive' }}
+          </button>
+          @if (tc.permissions.canDelete) {
+            <button mat-menu-item type="button" class="danger" data-testid="tc-delete" (click)="delete()">
+              <tk-icon name="tablerTrash" [size]="16" />Delete
+            </button>
+          }
+        </mat-menu>
+      }
+    }
+    <button type="button" class="tk-icon-btn" aria-label="Close editor" matTooltip="Close  Esc" data-testid="tc-editor-close" (click)="close()">
+      <tk-icon name="tablerX" [size]="16" />
+    </button>
+  </span>
+</header>
+
+@if (store.status() === 'error') {
+  <tk-empty-state
+    icon="tablerAlertCircle"
+    tone="danger"
+    [title]="store.error()?.isNotFound ? (testCaseKey() ?? '') + ' doesn\'t exist or was deleted' : 'Couldn\'t load the test case'"
+    [description]="store.error()?.title ?? null"
+  />
+} @else if (store.status() !== 'loaded') {
+  <tk-skeleton-rows [count]="8" />
+} @else {
+  <div class="form" [class.readonly]="!store.canEdit()">
+    <textarea
+      class="title"
+      rows="1"
+      placeholder="Test case title"
+      aria-label="Title"
+      data-testid="tc-title"
+      [attr.maxlength]="titleMax"
+      [readOnly]="!store.canEdit()"
+      [value]="store.form().title"
+      (input)="store.update({ title: $any($event.target).value })"
+      (keydown.enter)="$event.preventDefault()"
+    ></textarea>
+    @if (errors().title; as message) {
+      <div class="err" role="alert">{{ message }}</div>
+    }
+
+    <div class="props">
+      <span class="tk-field-label">Status</span>
+      @if (store.canEdit()) {
+        <tk-segmented ariaLabel="Status" testId="tc-editor-status" [options]="statusOptions" [value]="store.form().status" (valueChange)="setStatus($event)" />
+      } @else {
+        <span>{{ store.form().status }}</span>
+      }
+
+      @if (store.form().status === 'Automatic') {
+        <label class="tk-field-label" for="tc-automation">Automation</label>
+        <input
+          id="tc-automation"
+          class="field"
+          placeholder="Test name or file, e.g. e2e/login.spec.ts"
+          data-testid="tc-automation"
+          [attr.maxlength]="automationMax"
+          [readOnly]="!store.canEdit()"
+          [value]="store.form().automationReference"
+          (input)="store.update({ automationReference: $any($event.target).value })"
+        />
+      }
+
+      <span class="tk-field-label">Ticket</span>
+      <span class="ticket-field">
+        @if (store.linkedTicket(); as t) {
+          <button type="button" class="ticket" data-testid="tc-ticket" [matTooltip]="t.title" (click)="openTicket(t.key)">
+            <tk-type-icon [type]="t.type" [size]="14" />
+            <span class="tnum">{{ t.key }}</span>
+            <span class="tt">{{ t.title }}</span>
+          </button>
+          @if (store.canEdit()) {
+            <button type="button" class="tk-icon-btn tk-icon-btn-sm" aria-label="Unlink ticket" data-testid="tc-ticket-clear" (click)="store.linkTicket(null)">
+              <tk-icon name="tablerX" [size]="14" />
+            </button>
+          }
+        } @else if (store.canEdit()) {
+          <button type="button" class="pick" data-testid="tc-ticket-picker" [tkSearchPicker]="ticketSearch" pickerPlaceholder="Link a ticket…" (picked)="pickTicket($event)">
+            <tk-icon name="tablerLink" [size]="14" />Link ticket
+          </button>
+        } @else {
+          <span class="tk-subtle">None</span>
+        }
+      </span>
+    </div>
+
+    <section>
+      <h3>Preconditions</h3>
+      @if (store.canEdit()) {
+        <tk-markdown-editor
+          ariaLabel="Preconditions"
+          placeholder="State before the first step (markdown)…"
+          submitHint="to save"
+          data-testid="tc-preconditions"
+          [minRows]="2"
+          [maxLength]="markdownMax"
+          [value]="store.form().preconditions"
+          (valueChange)="store.update({ preconditions: $event })"
+          (submitted)="save()"
+        />
+      } @else {
+        <tk-markdown [source]="store.form().preconditions || '_None_'" />
+      }
+    </section>
+
+    <section>
+      <h3>Steps <span class="n tnum">{{ store.form().steps.length }}</span></h3>
+      <tk-steps-editor [disabled]="!store.canEdit()" [steps]="store.form().steps" (stepsChange)="store.update({ steps: $event })" />
+      @if (errors().steps; as message) {
+        <div class="err" role="alert" data-testid="tc-steps-error">{{ message }}</div>
+      }
+    </section>
+
+    <section>
+      <h3>Expected result</h3>
+      @if (store.canEdit()) {
+        <tk-markdown-editor
+          ariaLabel="Expected result"
+          placeholder="What should happen (markdown)…"
+          submitHint="to save"
+          data-testid="tc-expected"
+          [minRows]="2"
+          [maxLength]="markdownMax"
+          [value]="store.form().expectedResult"
+          (valueChange)="store.update({ expectedResult: $event })"
+          (submitted)="save()"
+        />
+      } @else {
+        <tk-markdown [source]="store.form().expectedResult || '_Not specified_'" />
+      }
+    </section>
+
+    @if (testCase(); as tc) {
+      <section>
+        <h3>Recent runs <span class="n tnum">{{ tc.sessionCount }}</span></h3>
+        @if (tc.recentRuns.length === 0) {
+          <div class="tk-subtle">Not run in a regression session yet.</div>
+        } @else {
+          <div class="runs" data-testid="tc-runs">
+            @for (run of tc.recentRuns; track run.sessionId) {
+              <a class="run" [routerLink]="['/projects', tc.projectKey, 'regressions', run.sessionKey]" [queryParams]="{ item: tc.key }">
+                <tk-icon [name]="run.autoPassed ? 'tablerRobot' : runIcons[run.status].icon" [size]="16" [style.color]="runIcons[run.status].color" />
+                <span class="tnum sk">{{ run.sessionKey }}</span>
+                <span class="sn">{{ run.sessionName }}@if (run.version) { · {{ run.version }}}</span>
+                <span class="rs">{{ run.autoPassed ? 'Auto-passed' : runLabels[run.status] }}</span>
+                @if (run.bugKey) {
+                  <span class="bug tnum">{{ run.bugKey }}</span>
+                }
+                <span class="when" [title]="run.executedAt ? (run.executedAt | absoluteTime) : ''">{{ run.executedAt ? (run.executedAt | relativeTime) : '' }}</span>
+              </a>
+            }
+          </div>
+        }
+      </section>
+      <div class="meta tk-subtle">Created by {{ tc.createdBy.displayName }} {{ tc.createdAt | relativeTime }} · updated {{ tc.updatedAt | relativeTime }}</div>
+    }
+  </div>
+
+  @if (store.canEdit()) {
+    <footer class="foot">
+      <button mat-flat-button type="button" data-testid="tc-save" [disabled]="store.saving() || (!store.isNew() && !store.dirty())" (click)="save()">
+        {{ store.isNew() ? 'Create test case' : 'Save' }}<tk-kbd tone="on-solid">{{ saveKeys }}</tk-kbd>
+      </button>
+      @if (!store.isNew() && store.dirty()) {
+        <button mat-button type="button" data-testid="tc-revert" (click)="store.revert()">Revert</button>
+      }
+      @if (store.dirty()) {
+        <span class="dirty tk-subtle">Unsaved changes</span>
+      }
+    </footer>
+  }
+}

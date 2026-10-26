@@ -34,10 +34,10 @@ public sealed record BugOverrides : IValidatable
     public void Validate(Validator validator)
     {
         validator
-            .MaxLength("bug.title", Title, Ticket.TitleMaxLength)
-            .MaxLength("bug.description", Description, Ticket.DescriptionMaxLength);
+            .MaxLength("title", Title, Ticket.TitleMaxLength)
+            .MaxLength("description", Description, Ticket.DescriptionMaxLength);
         if (Version.HasValue)
-            validator.MaxLength("bug.version", Version.Value, Ticket.VersionMaxLength);
+            validator.MaxLength("version", Version.Value, Ticket.VersionMaxLength);
     }
 }
 

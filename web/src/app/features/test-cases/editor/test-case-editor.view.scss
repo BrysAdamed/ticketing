@@ -1,0 +1,241 @@
+:host {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.head {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px 0 20px;
+  border-bottom: 1px solid var(--tk-border-subtle);
+  flex: none;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--tk-surface);
+
+  .key {
+    color: var(--tk-text-muted);
+    font-weight: var(--tk-weight-medium);
+  }
+
+  .right {
+    margin-left: auto;
+    display: flex;
+    gap: 2px;
+  }
+}
+
+.arch {
+  padding: 0 6px;
+  border-radius: var(--tk-radius-sm);
+  background: var(--tk-bg-muted);
+  color: var(--tk-text-muted);
+  font-size: var(--tk-text-xs);
+  font-weight: var(--tk-weight-medium);
+  line-height: 18px;
+}
+
+.form {
+  flex: 1;
+  padding: 16px 20px 24px;
+}
+
+.title {
+  width: 100%;
+  padding: 4px 6px;
+  margin-left: -6px;
+  border: 1px solid transparent;
+  border-radius: var(--tk-radius-md);
+  background: none;
+  color: var(--tk-text);
+  font: inherit;
+  font-size: var(--tk-text-xl);
+  line-height: var(--tk-leading-xl);
+  font-weight: var(--tk-weight-semibold);
+  resize: none;
+  outline: 0;
+  field-sizing: content;
+
+  &:hover:not(:read-only) {
+    border-color: var(--tk-border);
+  }
+
+  &:focus:not(:read-only) {
+    border-color: var(--tk-accent);
+  }
+}
+
+.err {
+  margin-top: 4px;
+  color: var(--tk-danger-fg);
+  font-size: var(--tk-text-sm);
+}
+
+.props {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  align-items: center;
+  gap: 10px 12px;
+  margin: 14px 0 6px;
+
+  .tk-field-label {
+    margin: 0;
+  }
+}
+
+.field {
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--tk-border);
+  border-radius: var(--tk-radius-md);
+  background: var(--tk-surface);
+  color: var(--tk-text);
+  font: inherit;
+  outline: 0;
+
+  &:focus {
+    border-color: var(--tk-accent);
+  }
+}
+
+.ticket-field {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.ticket,
+.pick {
+  height: 26px;
+  max-width: 100%;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  border: 1px solid var(--tk-border);
+  border-radius: var(--tk-radius-md);
+  background: var(--tk-surface);
+  color: var(--tk-text);
+  font: inherit;
+  font-size: var(--tk-text-sm);
+  cursor: pointer;
+  min-width: 0;
+
+  &:hover {
+    border-color: var(--tk-border-strong);
+  }
+
+  .tnum {
+    color: var(--tk-text-muted);
+  }
+
+  .tt {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.pick {
+  border-style: dashed;
+  color: var(--tk-text-muted);
+}
+
+section {
+  margin-top: 20px;
+
+  h3 {
+    margin: 0 0 8px;
+    font-size: var(--tk-text-md);
+    font-weight: var(--tk-weight-semibold);
+
+    .n {
+      margin-left: 4px;
+      color: var(--tk-text-subtle);
+      font-weight: var(--tk-weight-medium);
+    }
+  }
+}
+
+.runs {
+  border: 1px solid var(--tk-border);
+  border-radius: var(--tk-radius-lg);
+  overflow: hidden;
+}
+
+.run {
+  height: 32px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  border-bottom: 1px solid var(--tk-border-subtle);
+  color: var(--tk-text);
+  text-decoration: none;
+  font-size: var(--tk-text-sm);
+
+  &:last-child {
+    border-bottom: 0;
+  }
+
+  &:hover {
+    background: var(--tk-bg-hover);
+  }
+
+  .sk {
+    width: 64px;
+    flex: none;
+    color: var(--tk-text-muted);
+  }
+
+  .sn {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .rs {
+    color: var(--tk-text-muted);
+  }
+
+  .bug {
+    color: var(--tk-danger-fg);
+  }
+
+  .when {
+    width: 64px;
+    flex: none;
+    text-align: right;
+    color: var(--tk-text-subtle);
+  }
+}
+
+.meta {
+  margin-top: 16px;
+  font-size: var(--tk-text-sm);
+}
+
+.foot {
+  position: sticky;
+  bottom: 0;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 20px;
+  border-top: 1px solid var(--tk-border);
+  background: var(--tk-surface);
+  flex: none;
+
+  .dirty {
+    margin-left: auto;
+    font-size: var(--tk-text-sm);
+  }
+}

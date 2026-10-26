@@ -1,0 +1,134 @@
+@use './ticket-section';
+
+.feed {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.older {
+  margin: 0 0 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--tk-accent-fg);
+  font: inherit;
+  font-size: var(--tk-text-sm);
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.ev {
+  min-height: 30px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 5px 0 5px 2px;
+  color: var(--tk-text-muted);
+  font-size: var(--tk-text-sm);
+
+  .ic {
+    width: 20px;
+    height: 20px;
+    display: grid;
+    place-items: center;
+    flex: none;
+    border-radius: 50%;
+    background: var(--tk-bg-muted);
+    color: var(--tk-text-subtle);
+  }
+
+  .ev-t {
+    padding-top: 1px;
+  }
+
+  b {
+    color: var(--tk-text);
+    font-weight: var(--tk-weight-medium);
+  }
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 6px;
+  border: 1px solid var(--tk-border);
+  border-radius: var(--tk-radius-sm);
+  background: var(--tk-surface);
+  color: var(--tk-text);
+  font-size: var(--tk-text-xs);
+  font-weight: var(--tk-weight-medium);
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.chan {
+  margin-left: 4px;
+  color: var(--tk-text-subtle);
+}
+
+.when {
+  color: var(--tk-text-subtle);
+  margin-left: 4px;
+}
+
+.cmt {
+  margin: 8px 0;
+  border: 1px solid var(--tk-border);
+  border-radius: var(--tk-radius-lg);
+  background: var(--tk-surface);
+
+  &.deleted {
+    background: none;
+    border-style: dashed;
+  }
+}
+
+.cmt-h {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px 0 12px;
+
+  b {
+    font-weight: var(--tk-weight-medium);
+  }
+
+  .right {
+    margin-left: auto;
+    display: flex;
+    gap: 2px;
+    opacity: 0;
+  }
+}
+
+.cmt:hover .cmt-h .right,
+.cmt-h .right:focus-within {
+  opacity: 1;
+}
+
+.cmt-b {
+  display: block;
+  padding: 0 14px 12px 44px;
+}
+
+.subtle {
+  color: var(--tk-text-subtle);
+}
+
+.none {
+  padding: 8px 0;
+  color: var(--tk-text-subtle);
+}
+
+.composer {
+  margin-top: 12px;
+}

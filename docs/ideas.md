@@ -23,8 +23,8 @@ Items triaged as LATER in [product/02-improvements-triage.md](product/02-improve
 | I-69 | Read-only option for public projects | Some projects want visibility without outside edits. | S |
 | I-63 | Private boards | Board names can reveal private work. | S |
 | I-57 | User anonymization | GDPR erasure for former employees. | S |
-| I-76 | Active sessions list and "sign out everywhere" | Lets users end a session on a lost laptop. The security stamp (D-48) already does the work. | S |
-| I-77 | Breached-password check (HIBP k-anonymity range API) | Catches leaked passwords beyond the bundled list (D-47). Needs outbound internet from the VM. | S |
+| I-78 | Active sessions list and "sign out everywhere" | Lets users end a session on a lost laptop. The security stamp (D-52) already does the work. | S |
+| I-79 | Breached-password check (HIBP k-anonymity range API) | Catches leaked passwords beyond the bundled list (D-51). Needs outbound internet from the VM. | S |
 
 ## Planning and boards
 
@@ -50,6 +50,8 @@ Items triaged as LATER in [product/02-improvements-triage.md](product/02-improve
 | I-41 | Move ticket to another project | New key plus redirect from the old one. | M |
 | I-64 | Project key rename with redirects | Rare, risky, but asked for eventually. | M |
 | I-39 | Query language | Power-user search. | L |
+| I-76 | Bulk update endpoint (`PATCH /tickets` for many keys, all or nothing) | The backlog bulk bar sends one PATCH per ticket today; one call would make partial failures impossible. | S |
+| I-77 | Backlog paging past 10 000 tickets | The backlog is one unpaged response capped at 10 000 rows (D-47). Only needed if a project's open backlog grows past that. | M |
 
 ## Testing and regressions
 

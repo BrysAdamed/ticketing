@@ -1,0 +1,221 @@
+.done-toggle {
+  margin-right: 8px;
+  font-size: var(--tk-text-sm);
+  color: var(--tk-text-muted);
+}
+
+.tk-toolbar {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tk-toolbar .right {
+  margin-left: auto;
+  display: flex;
+  gap: 2px;
+}
+
+.tbtn {
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--tk-radius-md);
+  background: none;
+  color: var(--tk-text-muted);
+  font: inherit;
+  font-size: var(--tk-text-sm);
+  cursor: pointer;
+  white-space: nowrap;
+
+  b {
+    font-weight: var(--tk-weight-medium);
+    color: var(--tk-text);
+  }
+
+  &:hover {
+    background: var(--tk-bg-hover);
+  }
+}
+
+.truncated {
+  margin: 8px 20px 0 24px;
+}
+
+.list-wrap {
+  flex: none;
+  container: backlog / inline-size;
+  position: relative;
+}
+
+.list {
+  height: 100%;
+  overflow-x: hidden;
+}
+
+.ghead {
+  height: var(--tk-row-h);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 20px 0 10px;
+  background: var(--tk-bg-subtle);
+  border-bottom: 1px solid var(--tk-border-subtle);
+  font-weight: var(--tk-weight-medium);
+
+  .chev {
+    width: 20px;
+    height: 20px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    border-radius: var(--tk-radius-sm);
+    background: none;
+    color: var(--tk-text-subtle);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--tk-bg-hover);
+      color: var(--tk-text);
+    }
+  }
+
+  .glabel {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .gcount {
+    color: var(--tk-text-subtle);
+  }
+
+  .gpts {
+    color: var(--tk-text-subtle);
+    font-size: var(--tk-text-sm);
+    font-weight: var(--tk-weight-regular);
+    white-space: nowrap;
+  }
+
+  .add {
+    margin-left: auto;
+  }
+}
+
+.drop-line {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  height: 2px;
+  margin-top: -1px;
+  border-radius: 1px;
+  background: var(--tk-accent);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.drag-preview {
+  height: var(--tk-row-h);
+  max-width: 520px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid var(--tk-border);
+  border-radius: var(--tk-radius-md);
+  background: var(--tk-surface-raised);
+  box-shadow: var(--tk-shadow-lg);
+  transform: scale(1.02);
+
+  .key {
+    color: var(--tk-text-muted);
+  }
+
+  .title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .count {
+    margin-left: auto;
+    padding: 0 6px;
+    border-radius: var(--tk-radius-full);
+    background: var(--tk-accent);
+    color: var(--tk-text-on-solid);
+    font-size: var(--tk-text-xs);
+    font-weight: var(--tk-weight-semibold);
+  }
+}
+
+.drag-placeholder {
+  height: var(--tk-row-h);
+  border: 1px dashed var(--tk-border-strong);
+  background: var(--tk-bg-subtle);
+}
+
+.bulk {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 24px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 6px 0 8px;
+  box-shadow: var(--tk-shadow-lg);
+  z-index: var(--tk-z-bulkbar);
+  white-space: nowrap;
+
+  .n {
+    font-weight: var(--tk-weight-medium);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 6px 0 4px;
+  }
+
+  .cbx {
+    width: 14px;
+    height: 14px;
+    display: grid;
+    place-items: center;
+    border-radius: var(--tk-radius-xs);
+    background: var(--tk-accent);
+    color: var(--tk-text-on-solid);
+  }
+
+  .vsep {
+    width: 1px;
+    height: 20px;
+    background: var(--tk-border);
+    margin: 0 4px;
+  }
+
+  .bbtn {
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 8px;
+    border: 0;
+    border-radius: var(--tk-radius-md);
+    background: none;
+    color: var(--tk-text);
+    font: inherit;
+    font-size: var(--tk-text-sm);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--tk-bg-hover);
+    }
+
+    &.danger {
+      color: var(--tk-danger-fg);
+    }
+  }
+}

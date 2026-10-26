@@ -37,3 +37,6 @@ appsettings.Local.json
 # Tools
 .serena/cache/
 .serena/project.local.yml
+
+# Agent worktrees
+.claude/worktrees/

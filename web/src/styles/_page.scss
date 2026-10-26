@@ -1,0 +1,56 @@
+.tk-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.tk-page-header {
+  height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 20px 0 24px;
+  flex: none;
+
+  h1 {
+    margin: 0;
+    font-size: var(--tk-text-xl);
+    line-height: var(--tk-leading-xl);
+    font-weight: var(--tk-weight-semibold);
+    letter-spacing: var(--tk-tracking-tight);
+  }
+
+  .tk-page-count {
+    color: var(--tk-text-subtle);
+    font-size: var(--tk-text-md);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .tk-page-actions {
+    margin-left: auto;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+}
+
+.tk-toolbar {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 20px 0 24px;
+  border-bottom: 1px solid var(--tk-border);
+  position: sticky;
+  top: 0;
+  background: var(--tk-bg);
+  z-index: var(--tk-z-sticky);
+}
+
+.tk-page-body {
+  padding: 16px 24px 48px;
+}
+
+.tk-tab-nav {
+  padding: 0 20px 0 16px;
+}

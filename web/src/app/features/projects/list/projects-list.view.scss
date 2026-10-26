@@ -1,0 +1,77 @@
+.filter {
+  height: 24px;
+  width: 220px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  border: 1px solid var(--tk-border);
+  border-radius: var(--tk-radius-md);
+  background: var(--tk-surface);
+  color: var(--tk-text-subtle);
+  margin-right: 6px;
+
+  input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: none;
+    color: var(--tk-text);
+    font: inherit;
+    font-size: var(--tk-text-sm);
+  }
+
+  &:focus-within {
+    border-color: var(--tk-accent);
+  }
+}
+
+.row {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 20px 0 24px;
+  border-bottom: 1px solid var(--tk-border-subtle);
+
+  &:hover {
+    background: var(--tk-bg-hover);
+  }
+
+  &:focus-visible {
+    outline-offset: -2px;
+  }
+}
+
+.name {
+  font-weight: var(--tk-weight-medium);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.key {
+  color: var(--tk-text-muted);
+}
+
+.fill {
+  flex: 1;
+}
+
+.visibility {
+  color: var(--tk-text-subtle);
+}
+
+.role {
+  width: 64px;
+  color: var(--tk-text-muted);
+  font-size: var(--tk-text-sm);
+}
+
+.open {
+  width: 40px;
+  text-align: right;
+  color: var(--tk-text-subtle);
+  font-size: var(--tk-text-sm);
+}

@@ -1,0 +1,108 @@
+<nav class="crumbs" aria-label="Breadcrumb" data-testid="breadcrumbs">
+  @for (crumb of crumbs(); track $index; let last = $last) {
+    @if (!$first) {
+      <span class="sep" aria-hidden="true">/</span>
+    }
+    @if (crumb.projectKey) {
+      <tk-project-tile [projectKey]="crumb.projectKey" />
+    }
+    @if (last || !crumb.url) {
+      <span class="cur" [attr.aria-current]="last ? 'page' : null">{{ crumb.label }}</span>
+    } @else {
+      <a [routerLink]="crumb.url">{{ crumb.label }}</a>
+    }
+  }
+</nav>
+
+<button type="button" class="search" data-testid="palette-trigger" (click)="palette.open()">
+  <tk-icon name="tablerSearch" [size]="14" />
+  <span>Search or jump to…</span>
+  <tk-kbd class="k">{{ paletteKeys }}</tk-kbd>
+</button>
+
+<div class="right">
+  @if (createTicket()) {
+    <button type="button" class="new-ticket" data-testid="new-ticket" (click)="runCreateTicket()">
+      <tk-icon name="tablerPlus" [size]="14" />
+      New ticket
+      <tk-kbd tone="on-solid">C</tk-kbd>
+    </button>
+  }
+  <button
+    type="button"
+    class="tk-icon-btn"
+    data-testid="theme-toggle"
+    [attr.aria-label]="theme.theme() === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'"
+    [matTooltip]="theme.theme() === 'dark' ? 'Light theme' : 'Dark theme'"
+    (click)="theme.toggle()"
+  >
+    <tk-icon [name]="theme.theme() === 'dark' ? 'tablerSun' : 'tablerMoon'" />
+  </button>
+  <button
+    type="button"
+    class="tk-icon-btn"
+    aria-label="Keyboard shortcuts"
+    matTooltip="Keyboard shortcuts  ?"
+    data-testid="shortcut-help"
+    (click)="actions.showShortcuts()"
+  >
+    <tk-icon name="tablerHelp" />
+  </button>
+  @if (auth.currentUser(); as user) {
+    <button
+      type="button"
+      class="user"
+      data-testid="user-menu"
+      [attr.aria-label]="'Account: ' + user.displayName"
+      [matMenuTriggerFor]="userMenu"
+    >
+      <tk-avatar [userId]="user.id" [name]="user.displayName" [size]="24" [showTitle]="false" />
+    </button>
+    <mat-menu #userMenu="matMenu" xPosition="before" class="tk-user-menu">
+      <div class="who">
+        <span class="who-name">{{ user.displayName }}</span>
+        <span class="who-email">{{ user.email }}</span>
+      </div>
+      <a mat-menu-item routerLink="/profile" data-testid="menu-profile">
+        <tk-icon name="tablerUserCircle" /> Profile
+      </a>
+      <a mat-menu-item routerLink="/profile/tokens" data-testid="menu-tokens">
+        <tk-icon name="tablerKey" /> Access tokens
+      </a>
+      <button mat-menu-item [matMenuTriggerFor]="themeMenu">
+        <tk-icon name="tablerCircleHalf2" /> Theme
+      </button>
+      <button mat-menu-item [matMenuTriggerFor]="densityMenu">
+        <tk-icon name="tablerList" /> Density
+      </button>
+      <hr class="divider" />
+      <button mat-menu-item data-testid="menu-logout" (click)="auth.logout()">
+        <tk-icon name="tablerLogout" /> Sign out
+      </button>
+    </mat-menu>
+    <mat-menu #themeMenu="matMenu">
+      @for (option of themeOptions; track option.value) {
+        <button mat-menu-item (click)="theme.setPreference(option.value)">
+          <tk-icon [name]="option.icon" /> {{ option.label }}
+          @if (theme.preference() === option.value) {
+            <tk-icon class="check" name="tablerCheck" [size]="14" />
+          }
+        </button>
+      }
+    </mat-menu>
+    <mat-menu #densityMenu="matMenu">
+      <button mat-menu-item (click)="theme.setDensity('comfortable')">
+        Comfortable
+        @if (theme.density() === 'comfortable') {
+          <tk-icon class="check" name="tablerCheck" [size]="14" />
+        }
+      </button>
+      <button mat-menu-item (click)="theme.setDensity('compact')">
+        Compact
+        @if (theme.density() === 'compact') {
+          <tk-icon class="check" name="tablerCheck" [size]="14" />
+        }
+      </button>
+    </mat-menu>
+  }
+</div>

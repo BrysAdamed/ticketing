@@ -1,0 +1,281 @@
+@use '@angular/material' as mat;
+
+html {
+  @include mat.button-overrides(
+    (
+      filled-container-height: 32px,
+      filled-container-shape: var(--tk-radius-md),
+      filled-horizontal-padding: 12px,
+      filled-label-text-weight: var(--tk-weight-medium),
+      outlined-container-height: 32px,
+      outlined-container-shape: var(--tk-radius-md),
+      outlined-horizontal-padding: 12px,
+      outlined-outline-color: var(--tk-border-strong),
+      outlined-label-text-color: var(--tk-text),
+      text-container-height: 32px,
+      text-container-shape: var(--tk-radius-md),
+      text-horizontal-padding: 8px,
+      text-label-text-color: var(--tk-text-muted),
+      filled-touch-target-display: none,
+      outlined-touch-target-display: none,
+      text-touch-target-display: none,
+      tonal-touch-target-display: none,
+      protected-touch-target-display: none,
+    )
+  );
+
+  @include mat.icon-button-overrides(
+    (
+      state-layer-size: 28px,
+      icon-size: 16px,
+      container-shape: var(--tk-radius-md),
+      icon-color: var(--tk-text-muted),
+      touch-target-display: none,
+    )
+  );
+
+  @include mat.form-field-overrides(
+    (
+      container-height: 32px,
+      container-vertical-padding: 6px,
+      container-text-size: var(--tk-text-base),
+      container-text-line-height: var(--tk-leading-base),
+      container-text-tracking: 0,
+      outlined-container-shape: var(--tk-radius-md),
+      outlined-outline-color: var(--tk-border-input),
+      outlined-hover-outline-color: var(--tk-border-input-hover),
+      outlined-focus-outline-color: var(--tk-accent),
+      outlined-focus-outline-width: 1px,
+      outlined-input-text-placeholder-color: var(--tk-text-subtle),
+      outlined-error-outline-color: var(--tk-danger),
+      subscript-text-size: var(--tk-text-sm),
+      subscript-text-line-height: var(--tk-leading-sm),
+      error-text-color: var(--tk-danger-fg),
+    )
+  );
+
+  @include mat.select-overrides(
+    (
+      panel-background-color: var(--tk-surface-raised),
+      container-elevation-shadow: var(--tk-shadow-md),
+      trigger-text-size: var(--tk-text-base),
+      enabled-arrow-color: var(--tk-text-subtle),
+    )
+  );
+
+  @include mat.autocomplete-overrides(
+    (
+      background-color: var(--tk-surface-raised),
+      container-elevation-shadow: var(--tk-shadow-md),
+      container-shape: var(--tk-radius-lg),
+    )
+  );
+
+  @include mat.option-overrides(
+    (
+      label-text-size: var(--tk-text-base),
+      label-text-color: var(--tk-text),
+      hover-state-layer-color: var(--tk-bg-hover),
+      selected-state-layer-color: var(--tk-accent-subtle),
+      selected-state-label-text-color: var(--tk-text),
+    )
+  );
+
+  @include mat.menu-overrides(
+    (
+      container-color: var(--tk-surface-raised),
+      container-shape: var(--tk-radius-lg),
+      container-elevation-shadow: var(--tk-shadow-md),
+      item-label-text-size: var(--tk-text-base),
+      item-label-text-weight: var(--tk-weight-regular),
+      item-icon-size: 16px,
+      item-icon-color: var(--tk-text-muted),
+      item-leading-spacing: 8px,
+      item-trailing-spacing: 8px,
+      item-with-icon-leading-spacing: 8px,
+      item-with-icon-trailing-spacing: 8px,
+      item-spacing: 8px,
+      divider-color: var(--tk-border),
+    )
+  );
+
+  @include mat.dialog-overrides(
+    (
+      container-color: var(--tk-surface-raised),
+      container-shape: var(--tk-radius-xl),
+      container-elevation-shadow: var(--tk-shadow-lg),
+      headline-padding: 16px 20px 8px,
+      content-padding: 0 20px 16px,
+      with-actions-content-padding: 0 20px 16px,
+      actions-padding: 12px 20px,
+      subhead-size: var(--tk-text-lg),
+      subhead-weight: var(--tk-weight-semibold),
+      subhead-color: var(--tk-text),
+      supporting-text-size: var(--tk-text-base),
+      supporting-text-color: var(--tk-text-muted),
+    )
+  );
+
+  @include mat.table-overrides(
+    (
+      background-color: var(--tk-bg),
+      header-container-height: 32px,
+      row-item-container-height: 32px,
+      header-headline-size: var(--tk-text-sm),
+      header-headline-weight: var(--tk-weight-medium),
+      header-headline-color: var(--tk-text-muted),
+      row-item-label-text-size: var(--tk-text-base),
+      row-item-outline-color: var(--tk-border-subtle),
+    )
+  );
+
+  @include mat.tooltip-overrides(
+    (
+      container-color: var(--tk-inverse-bg),
+      supporting-text-color: var(--tk-inverse-text),
+      supporting-text-size: var(--tk-text-sm),
+      container-shape: var(--tk-radius-md),
+    )
+  );
+
+  @include mat.checkbox-overrides(
+    (
+      state-layer-size: 24px,
+      touch-target-display: none,
+      selected-icon-color: var(--tk-accent),
+      selected-hover-icon-color: var(--tk-accent-hover),
+      selected-focus-icon-color: var(--tk-accent),
+      unselected-icon-color: var(--tk-border-input-hover),
+      selected-checkmark-color: var(--tk-text-on-solid),
+    )
+  );
+
+  @include mat.slide-toggle-overrides(
+    (
+      track-width: 28px,
+      track-height: 16px,
+      track-outline-width: 0,
+      selected-handle-size: 12px,
+      unselected-handle-size: 12px,
+      pressed-handle-size: 12px,
+      with-icon-handle-size: 12px,
+      selected-track-color: var(--tk-accent),
+      selected-hover-track-color: var(--tk-accent-hover),
+      selected-focus-track-color: var(--tk-accent),
+      selected-pressed-track-color: var(--tk-accent-active),
+      unselected-track-color: var(--tk-border-strong),
+      unselected-hover-track-color: var(--tk-border-input-hover),
+      unselected-focus-track-color: var(--tk-border-strong),
+      unselected-pressed-track-color: var(--tk-border-input-hover),
+      selected-handle-color: var(--tk-gray-0),
+      unselected-handle-color: var(--tk-gray-0),
+      selected-hover-handle-color: var(--tk-gray-0),
+      unselected-hover-handle-color: var(--tk-gray-0),
+      selected-focus-handle-color: var(--tk-gray-0),
+      unselected-focus-handle-color: var(--tk-gray-0),
+      selected-pressed-handle-color: var(--tk-gray-0),
+      unselected-pressed-handle-color: var(--tk-gray-0),
+      selected-icon-size: 0,
+      unselected-icon-size: 0,
+      state-layer-size: 24px,
+      touch-target-display: none,
+    )
+  );
+
+  @include mat.tabs-overrides(
+    (
+      container-height: 36px,
+      label-text-size: var(--tk-text-base),
+      label-text-weight: var(--tk-weight-medium),
+      active-indicator-height: 2px,
+      active-indicator-color: var(--tk-accent),
+      active-label-text-color: var(--tk-text),
+      inactive-label-text-color: var(--tk-text-muted),
+      divider-color: var(--tk-border),
+    )
+  );
+
+  @include mat.snack-bar-overrides(
+    (
+      container-color: var(--tk-surface-raised),
+      supporting-text-color: var(--tk-text),
+      supporting-text-size: var(--tk-text-base),
+      button-color: var(--tk-accent-fg),
+      container-shape: var(--tk-radius-lg),
+    )
+  );
+
+  @include mat.progress-bar-overrides(
+    (
+      active-indicator-color: var(--tk-accent),
+      track-color: transparent,
+      active-indicator-height: 2px,
+      track-height: 2px,
+    )
+  );
+
+  @include mat.sidenav-overrides(
+    (
+      container-background-color: var(--tk-bg-sidebar),
+      container-divider-color: var(--tk-border),
+      container-shape: 0,
+      content-background-color: var(--tk-bg),
+      scrim-color: var(--tk-overlay-mask),
+    )
+  );
+}
+
+.tk-dense {
+  @include mat.theme(
+    (
+      density: -3,
+    )
+  );
+  @include mat.button-overrides(
+    (
+      filled-container-height: 28px,
+      outlined-container-height: 28px,
+      text-container-height: 28px,
+    )
+  );
+  @include mat.form-field-overrides(
+    (
+      container-height: 28px,
+      container-vertical-padding: 4px,
+    )
+  );
+}
+
+.mat-mdc-form-field.mat-focused .mat-mdc-text-field-wrapper {
+  box-shadow: 0 0 0 3px var(--tk-accent-subtle);
+  border-radius: var(--tk-radius-md);
+}
+
+.mat-mdc-form-field-error-wrapper,
+.mat-mdc-form-field-hint-wrapper {
+  padding: 0 2px;
+}
+
+.mat-mdc-snack-bar-container .mdc-snackbar__surface {
+  border: 1px solid var(--tk-border);
+  box-shadow: var(--tk-shadow-md);
+}
+
+.mat-mdc-select-panel,
+.mat-mdc-autocomplete-panel,
+.mat-mdc-menu-panel {
+  border: 1px solid var(--tk-border);
+  padding: 4px !important;
+}
+
+.mat-mdc-option,
+.mat-mdc-menu-item {
+  min-height: 28px !important;
+  border-radius: var(--tk-radius-sm);
+}
+
+.mat-mdc-menu-item .mat-mdc-menu-item-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}

@@ -35,6 +35,8 @@ web/src/
       shortcuts/        ShortcutService + "?" help dialog
       notify/           ToastService, ConfirmService
       projects/         ProjectDirectory (readable projects), ProjectContext (current project)
+      tickets/          ticket wire types, TicketsApi, TicketCache, TicketEvents, FieldHints, ProjectPeople,
+                        TicketCreator (create dialog), TICKET_DETAIL_SECTIONS (ticket view extension point)
       theme/            ThemeService (light / dark / system, density)
     shared/             presentational UI kit, domain enums, markdown, pipes. Never imports core or features.
     features/<name>/    one folder per feature: <name>.routes.ts, <name>.views.ts, <page>/<page>.store.ts + <page>.view.ts
@@ -123,6 +125,32 @@ Inside project tabs, `inject(ProjectContext)` gives the current project (`projec
 
 Built-in shortcuts: `Ctrl/⌘ K` and `/` open the palette, `?` opens the shortcut sheet, `[` toggles the sidebar, `C` creates a ticket (once registered). With `G` then a letter: `M` My work, `P` Projects, `O` Boards, and, inside a project, `D` dashboard, `B` backlog, `T` test cases, `R` regressions. `Esc` closes the peek panel.
 
+## Tickets: shared services and extension points
+
+The tickets slice (`features/tickets`, `features/backlog`) keeps everything other features need in `core/tickets/`, because features must not import each other.
+
+| Need | Use |
+| --- | --- |
+| Ticket REST calls | `TicketsApi` (`get`, `create`, `update(key, patch, rowVersion?)`, `backlog`, `rank`, `find`, `hints`, comments, links, history). Wire types are in `ticket.models.ts`. |
+| Instant ticket views | `TicketCache.peek/fetch/prefetch(key)`. Lists call `prefetch` after a 150 ms hover, so the peek opens with data already loaded. |
+| Keep lists in sync | `TicketEvents.events` emits `created`, `updated` (with the full ticket) and `deleted`. Emit them after your own ticket writes, and subscribe in list stores (backlog, boards) to patch rows without a refetch. |
+| Open a ticket | `PeekService.open(key)` for the side panel, or route to `/tickets/:key`. |
+| Create a ticket | `TicketCreator.open(prefill)` opens the create dialog with any `NewTicket` fields pre-filled, plus `heading` and an optional `submit(projectKey, ticket)` that replaces the default `POST /projects/{key}/tickets`. The regressions slice uses it for "Create bug" with its own endpoint. It resolves with the created `TicketSummary`, or `null`. The global `C` and the top bar button run the `ticket.create` command registered by `provideTicketCreation` in `app.config.ts`. In the backlog, `C` opens the inline quick-create row instead. |
+| Assignee / label / version pickers | `ProjectPeople.assignable(projectKey)` (active Owners and Members), `FieldHints.get(projectKey, 'labels' \| 'version', prefix)`. |
+
+**Ticket view sections (extension point).** Other features add sections to the ticket view (page and peek) without touching the tickets feature. Register one in `app.config.ts`:
+
+```ts
+provideTicketDetailSection({
+  id: 'test-cases',            // also data-testid="ticket-section-test-cases"
+  order: 10,                   // ascending; rendered after sub-tickets and links, before activity
+  title: 'Test cases',
+  loadComponent: () => import('@features/test-cases/ticket-section/ticket-test-cases.component').then((m) => m.TicketTestCasesComponent),
+}),
+```
+
+The component is lazily loaded, receives the inputs `ticketKey`, `ticketId` and `projectKey` (declare all three, for example `input.required<string>()`, because unknown inputs are reported as errors), and renders its own heading. Reuse the look of the built-in sections (`sec-h` header with an `h2`, a bordered `box` of 34 px rows). While no section with id `test-cases` is registered, the ticket view shows a read-only test case list from `GET /tickets/{key}` itself.
+
 ## UI kit (`shared/`)
 
 Live catalogue: `/dev/ui-kit`. Import components one by one (all standalone, `tk-` prefix). Use them instead of restyling Material for domain values.
@@ -140,6 +168,8 @@ Live catalogue: `/dev/ui-kit`. Import components one by one (all standalone, `tk
 | `tk-skeleton-rows [count]` | Row skeletons. They appear only after 120 ms. |
 | `tk-empty-state icon title description` + projected actions | Empty and error states. `tone="danger"` for errors. |
 | `tk-segmented [options] [(value)]` | Radio-group segmented control. |
+| `[tkSearchPicker]="searchFn" (picked)` | Like the inline picker, but options come from an async, debounced search (tickets by key or title). |
+| `[tkLabelsPicker]="labels" [labelSuggestions]="fn" (labelToggled)` | Multi-select labels popover with suggestions and "create new". Stays open while toggling. |
 | `[tkInlinePicker]="options" [pickerValue] (picked)` | CDK overlay listbox with a filter input, ↑/↓/Home/End/Enter/Esc and digits 1–9. Optional `[pickerOptionTemplate]`. Ready-made options are in `shared/domain/picker-options.ts`. |
 | `tk-markdown [source]` | `renderMarkdown()`: marked (GFM) → raw HTML escaped → DOMPurify, ticket keys linked to `/tickets/KEY` (router navigation), external links open in a new tab. |
 | `tk-markdown-editor [(value)] (submitted) (cancelled)` | Write / Preview tabs. Ctrl/⌘+Enter submits and Esc cancels. Projected content goes in the footer. |

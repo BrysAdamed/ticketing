@@ -13,10 +13,5 @@ public sealed class DashboardEndpoints : IEndpointModule
             .WithSummary("All dashboard widgets of a project (spec 7). The optional version filters the ticket widgets.")
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status404NotFound);
-
-        dashboard.MapGet("/versions", async (string projectKeyOrId, string? prefix, ListDashboardVersions.Handler handler, CancellationToken ct) =>
-                TypedResults.Ok(await handler.HandleAsync(new ListDashboardVersions.Query(projectKeyOrId, prefix), ct)))
-            .WithSummary("Versions for the dashboard filter: used in tickets or regression sessions, most recent first, at most 20.")
-            .ProducesProblem(StatusCodes.Status404NotFound);
     }
 }

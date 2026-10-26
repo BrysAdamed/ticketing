@@ -327,19 +327,12 @@ public sealed class DashboardEndpointTests(TicketingApiFactory api)
 
         // Act
         var dashboard = await client.GetAsync("/api/v1/projects/PRM/dashboard", _ct);
-        var versions = await client.GetAsync("/api/v1/projects/PRM/dashboard/versions", _ct);
 
         // Assert
         if (expected == HttpStatusCode.NotFound)
-        {
             await dashboard.ShouldBeProblemAsync(HttpStatusCode.NotFound, "project.notFound");
-            await versions.ShouldBeProblemAsync(HttpStatusCode.NotFound, "project.notFound");
-        }
         else
-        {
             Assert.Equal(1, (await dashboard.ReadAsync<ProjectDashboardDto>()).Totals.OpenTickets);
-            Assert.Equal(["1.0"], await versions.ReadAsync<string[]>());
-        }
     }
 
     [Fact]
@@ -387,29 +380,6 @@ public sealed class DashboardEndpointTests(TicketingApiFactory api)
         // Assert
         var problem = await response.ShouldBeProblemAsync(HttpStatusCode.BadRequest, "validation");
         Assert.True(problem.GetProperty("errors").TryGetProperty("version", out _));
-    }
-
-    [Fact]
-    public async Task Versions_come_from_tickets_and_sessions_most_recent_first_filtered_by_prefix()
-    {
-        // Arrange
-        var owner = await api.CreateUserAsync();
-        var project = await api.CreateProjectAsync("VRS", owner);
-        var now = DateTimeOffset.UtcNow;
-        await api.AddTicketsAsync(project, owner.Id,
-            new TicketSeed(1) { Version = "1.0", CreatedAt = now.AddDays(-10) },
-            new TicketSeed(2) { Version = "1.1", CreatedAt = now.AddDays(-5) },
-            new TicketSeed(3) { Version = "9.9", Deleted = true });
-        await api.AddSessionAsync(project, "VRS", owner, new SessionSeed(1, RegressionItemStatus.Passed) { Version = "2.0", StartedAt = now.AddDays(-1) });
-        var client = await api.LoginAsync(owner);
-
-        // Act
-        var all = await (await client.GetAsync("/api/v1/projects/VRS/dashboard/versions", _ct)).ReadAsync<string[]>();
-        var prefixed = await (await client.GetAsync("/api/v1/projects/VRS/dashboard/versions?prefix=1.", _ct)).ReadAsync<string[]>();
-
-        // Assert
-        Assert.Equal(["2.0", "1.1", "1.0"], all);
-        Assert.Equal(["1.1", "1.0"], prefixed);
     }
 
     private async Task<ProjectDashboardDto> GetAsync(HttpClient client, string projectKey, string? version = null)

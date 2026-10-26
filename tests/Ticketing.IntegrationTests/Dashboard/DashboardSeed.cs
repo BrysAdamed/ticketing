@@ -70,7 +70,7 @@ public static class DashboardSeeding
         {
             var project = await db.Projects.SingleAsync(p => p.Id == projectId);
             project.Archive(actorId, DateTimeOffset.UtcNow);
-            project.Delete(actorId, DateTimeOffset.UtcNow);
+            project.Delete(actorId, DateTimeOffset.UtcNow, project.Key);
             return await db.SaveChangesAsync();
         });
 

@@ -1,0 +1,153 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: var(--tk-font-sans);
+  font-feature-settings: var(--tk-font-features);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--tk-bg);
+  color: var(--tk-text);
+  font-size: var(--tk-text-base);
+  line-height: var(--tk-leading-base);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--tk-focus);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--tk-accent-subtle-hover);
+}
+
+.cdk-overlay-dark-backdrop {
+  background: var(--tk-overlay-mask);
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --tk-border: var(--tk-border-strong);
+  }
+}
+
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+.tk-muted {
+  color: var(--tk-text-muted);
+}
+
+.tk-subtle {
+  color: var(--tk-text-subtle);
+}
+
+.tk-mono {
+  font-family: var(--tk-font-mono);
+}
+
+.tk-link {
+  color: var(--tk-accent-fg);
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.tk-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.tk-popover {
+  background: var(--tk-surface-raised);
+  border: 1px solid var(--tk-border);
+  border-radius: var(--tk-radius-lg);
+  box-shadow: var(--tk-shadow-md);
+  color: var(--tk-text);
+}
+
+.tk-icon-btn {
+  width: 28px;
+  height: 28px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--tk-radius-md);
+  background: none;
+  color: var(--tk-text-muted);
+  cursor: pointer;
+  transition: background var(--tk-duration-instant);
+
+  &:hover {
+    background: var(--tk-bg-hover);
+    color: var(--tk-text);
+  }
+
+  &.tk-icon-btn-sm {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+.tk-field-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: var(--tk-text-sm);
+  font-weight: var(--tk-weight-medium);
+  color: var(--tk-text-muted);
+}
+
+.tk-callout {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 8px 12px;
+  border-radius: var(--tk-radius-md);
+  border: 1px solid var(--tk-info-border);
+  background: var(--tk-info-bg);
+  color: var(--tk-info-fg);
+
+  &.tk-callout-danger {
+    border-color: var(--tk-danger-border);
+    background: var(--tk-danger-bg);
+    color: var(--tk-danger-fg);
+  }
+
+  &.tk-callout-warning {
+    border-color: var(--tk-warning-border);
+    background: var(--tk-warning-bg);
+    color: var(--tk-warning-fg);
+  }
+}

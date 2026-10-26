@@ -84,12 +84,6 @@ export class MyWorkStore {
     const count = this.entries().length;
     if (count) this.focusIndex.set(Math.min(Math.max(this.focusIndex() + delta, 0), count - 1));
   }
-
-  indexOf(entry: WorkEntry): number {
-    return this.entries().findIndex((e) =>
-      e.kind === 'ticket' && entry.kind === 'ticket' ? e.ticket.id === entry.ticket.id : e.kind === 'item' && entry.kind === 'item' && e.item.itemId === entry.item.itemId,
-    );
-  }
 }
 
 export const REGRESSIONS_GROUP = 'regressions';

@@ -67,6 +67,8 @@ flowchart TD
 
 - A `Resolution` sent with a status other than `Done` is a validation error: resolution is set if and only if the status is `Done`.
 - Moving a ticket to a specific board column changes its status as part of the move ([section 3](#3-backlog-and-board-moves)); the same side effects apply.
+- One PATCH that changes several fields writes one `ticket.field.changed` entry per changed field, all with the same `OccurredAt`. Fields sent with their current value write nothing and do not bump `UpdatedAt`. A reopened ticket that leaves an archived board writes `ticket.moved` (field `boardId`).
+- Opening a deleted ticket answers 404 `ticket.deleted` with "WEB-42 was deleted by X on date" (D-49).
 
 Deleting a ticket (Owner only):
 
@@ -180,6 +182,7 @@ sequenceDiagram
 ```
 
 - Status changes on a move only when the move targets a specific column.
+- Reordering inside the backlog (D-48) moves the selected tickets as one block, in the order sent, right before or after another backlog ticket or to the top or bottom. The neighbours are read under the container lock, and the block gets consecutive ranks; a too-long key rebalances the backlog with free slots. Rank changes write no history.
 - Placing on a board requires: the board links the ticket's project, the board is not archived, and the actor can write to the project.
 
 Board archive with carry-over:

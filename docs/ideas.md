@@ -48,6 +48,8 @@ Items triaged as LATER in [product/02-improvements-triage.md](product/02-improve
 | I-41 | Move ticket to another project | New key plus redirect from the old one. | M |
 | I-64 | Project key rename with redirects | Rare, risky, but asked for eventually. | M |
 | I-39 | Query language | Power-user search. | L |
+| I-76 | Bulk update endpoint (`PATCH /tickets` for many keys, all or nothing) | The backlog bulk bar sends one PATCH per ticket today; one call would make partial failures impossible. | S |
+| I-77 | Backlog paging past 10 000 tickets | The backlog is one unpaged response capped at 10 000 rows (D-47). Only needed if a project's open backlog grows past that. | M |
 
 ## Testing and regressions
 

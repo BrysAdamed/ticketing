@@ -1,0 +1,135 @@
+.tk-md {
+  font-size: var(--tk-text-md);
+  line-height: 22px;
+  max-width: 72ch;
+  overflow-wrap: anywhere;
+
+  > :first-child {
+    margin-top: 0;
+  }
+
+  > :last-child {
+    margin-bottom: 0;
+  }
+
+  p,
+  ul,
+  ol,
+  pre,
+  table,
+  blockquote {
+    margin: 0 0 10px;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-weight: var(--tk-weight-semibold);
+    margin: 18px 0 6px;
+  }
+
+  h1 {
+    font-size: var(--tk-text-xl);
+    line-height: var(--tk-leading-xl);
+  }
+
+  h2,
+  h3 {
+    font-size: var(--tk-text-lg);
+    line-height: var(--tk-leading-lg);
+  }
+
+  h4,
+  h5,
+  h6 {
+    font-size: var(--tk-text-md);
+  }
+
+  ul,
+  ol {
+    padding-left: 22px;
+  }
+
+  li > input[type='checkbox'] {
+    margin: 0 6px 0 -18px;
+    accent-color: var(--tk-accent);
+    vertical-align: -2px;
+  }
+
+  ul:has(> li > input[type='checkbox']) {
+    list-style: none;
+  }
+
+  code {
+    font-family: var(--tk-font-mono);
+    font-size: 12.5px;
+    background: var(--tk-bg-muted);
+    border: 1px solid var(--tk-border-subtle);
+    border-radius: var(--tk-radius-sm);
+    padding: 1px 5px;
+  }
+
+  pre {
+    background: var(--tk-bg-inset);
+    border: 1px solid var(--tk-border);
+    border-radius: var(--tk-radius-md);
+    padding: 10px 12px;
+    overflow-x: auto;
+
+    code {
+      background: none;
+      border: 0;
+      padding: 0;
+    }
+  }
+
+  blockquote {
+    border-left: 3px solid var(--tk-border-strong);
+    padding-left: 12px;
+    color: var(--tk-text-muted);
+  }
+
+  table {
+    border-collapse: collapse;
+    font-size: var(--tk-text-base);
+  }
+
+  th,
+  td {
+    border: 1px solid var(--tk-border);
+    padding: 4px 8px;
+    text-align: left;
+  }
+
+  th {
+    background: var(--tk-bg-subtle);
+    font-weight: var(--tk-weight-medium);
+  }
+
+  img {
+    max-width: 100%;
+    border-radius: var(--tk-radius-md);
+  }
+
+  hr {
+    border: 0;
+    border-top: 1px solid var(--tk-border);
+    margin: 16px 0;
+  }
+
+  a {
+    color: var(--tk-accent-fg);
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  a.tk-keyref {
+    font-weight: var(--tk-weight-medium);
+    font-variant-numeric: tabular-nums;
+  }
+}

@@ -1,0 +1,148 @@
+<header class="tk-page-header">
+  <h1>UI kit</h1>
+</header>
+
+<div class="tk-page-body grid">
+  <section>
+    <h2>Ticket types</h2>
+    <div class="row">
+      @for (type of store.types; track type) {
+        <tk-type-icon [type]="type" [showLabel]="true" />
+      }
+    </div>
+  </section>
+
+  <section>
+    <h2>Statuses</h2>
+    <div class="row">
+      @for (status of store.statuses; track status) {
+        <tk-status-badge [status]="status" />
+      }
+    </div>
+    <div class="row">
+      @for (status of store.statuses; track status) {
+        <tk-status-badge [status]="status" [tinted]="true" />
+      }
+    </div>
+  </section>
+
+  <section>
+    <h2>Priority · severity</h2>
+    <div class="row">
+      @for (priority of store.priorities; track priority) {
+        <span class="pair"><tk-priority-icon [priority]="priority" />{{ priority }}</span>
+      }
+    </div>
+    <div class="row">
+      @for (severity of store.severities; track severity) {
+        <tk-severity-badge [severity]="severity" />
+      }
+    </div>
+  </section>
+
+  <section>
+    <h2>Test cases · regressions</h2>
+    <div class="row">
+      @for (status of store.testCaseStatuses; track status) {
+        <tk-test-case-status-badge [status]="status" />
+      }
+      <tk-regression-session-badge status="InProgress" />
+      <tk-regression-session-badge status="Completed" />
+    </div>
+    <div class="row">
+      @for (status of store.regressionStatuses; track status) {
+        <tk-regression-item-badge [status]="status" />
+      }
+      <tk-regression-item-badge status="Passed" [autoPassed]="true" />
+    </div>
+  </section>
+
+  <section>
+    <h2>Labels · people</h2>
+    <div class="row">
+      @for (label of store.labels; track label) {
+        <tk-label-chip [label]="label" />
+      }
+    </div>
+    <div class="row">
+      @for (user of store.users; track user.id) {
+        <tk-user [user]="user" [size]="24" />
+      }
+      <tk-user [user]="null" />
+      <tk-avatar [userId]="store.users[0].id" [name]="store.users[0].displayName" [size]="32" />
+    </div>
+  </section>
+
+  <section>
+    <h2>Controls</h2>
+    <div class="row">
+      <tk-segmented
+        ariaLabel="Example"
+        [options]="store.segments"
+        [value]="store.segment()"
+        (valueChange)="store.segment.set($event)"
+      />
+      <button
+        type="button"
+        class="field"
+        data-testid="ui-kit-status-picker"
+        [tkInlinePicker]="statusOptions"
+        [pickerValue]="store.status()"
+        [pickerOptionTemplate]="statusTpl"
+        pickerPlaceholder="Change status…"
+        pickerShortcut="S"
+        (picked)="store.status.set($event)"
+      >
+        <tk-status-badge [status]="store.status()" />
+      </button>
+      <ng-template #statusTpl let-option>
+        <tk-status-badge [status]="option.value" />
+      </ng-template>
+      <button
+        type="button"
+        class="field"
+        [tkInlinePicker]="priorityOptions"
+        [pickerValue]="store.priority()"
+        [pickerOptionTemplate]="priorityTpl"
+        pickerPlaceholder="Change priority…"
+        (picked)="store.priority.set($event)"
+      >
+        <tk-priority-icon [priority]="store.priority()" /> {{ store.priority() }}
+      </button>
+      <ng-template #priorityTpl let-option>
+        <tk-priority-icon [priority]="option.value" [showTitle]="false" /> {{ option.label }}
+      </ng-template>
+    </div>
+    <div class="row">
+      <button mat-flat-button type="button" (click)="store.showToast()">Toast</button>
+      <button mat-stroked-button type="button" (click)="store.confirm()">Confirm</button>
+      <button mat-button type="button">Ghost</button>
+      <tk-kbd>Ctrl K</tk-kbd>
+      <span class="tk-subtle">Updated {{ store.updatedAt | relativeTime }}</span>
+    </div>
+  </section>
+
+  <section class="wide">
+    <h2>Markdown</h2>
+    <div class="md-pair">
+      <tk-markdown-editor [value]="store.markdown()" (valueChange)="store.markdown.set($event)" />
+      <tk-markdown [source]="store.markdown()" />
+    </div>
+  </section>
+
+  <section>
+    <h2>Skeleton</h2>
+    <tk-skeleton-rows [count]="4" [delayMs]="0" />
+  </section>
+
+  <section>
+    <h2>Empty state</h2>
+    <tk-empty-state
+      icon="tablerInbox"
+      title="No tickets in backlog"
+      description="Create the first one."
+    >
+      <button mat-flat-button type="button">New ticket</button>
+    </tk-empty-state>
+  </section>
+</div>

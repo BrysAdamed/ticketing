@@ -251,6 +251,11 @@ html {
   border-radius: var(--tk-radius-md);
 }
 
+.mat-mdc-form-field-error-wrapper,
+.mat-mdc-form-field-hint-wrapper {
+  padding: 0 2px;
+}
+
 .mat-mdc-snack-bar-container .mdc-snackbar__surface {
   border: 1px solid var(--tk-border);
   box-shadow: var(--tk-shadow-md);

@@ -97,11 +97,10 @@
 .who {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  height: auto;
-  padding-top: 4px;
-  padding-bottom: 4px;
-  opacity: 1;
+  padding: 6px 8px 8px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--tk-border);
+  min-width: 200px;
 }
 
 .who-name {

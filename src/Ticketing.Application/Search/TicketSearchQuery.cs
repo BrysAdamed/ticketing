@@ -82,20 +82,21 @@ internal sealed class TicketSearchQuery(ITicketingDbContext db, IProjectAccess a
             keyNumber = number;
         }
 
-        if (query.Length < MinTrigramLength)
-        {
-            return tickets.Where(t =>
-                EF.Property<NpgsqlTsVector>(t, TicketSearch.VectorProperty).Matches(EF.Functions.WebSearchToTsQuery(TicketSearch.Configuration, query))
-                || (t.ProjectId == keyProjectId && t.Number == keyNumber));
-        }
-
+        var vector = tickets.Where(t =>
+            EF.Property<NpgsqlTsVector>(t, TicketSearch.VectorProperty).Matches(EF.Functions.WebSearchToTsQuery(TicketSearch.Configuration, query)));
         var pattern = SqlLike.Contains(query);
-        return tickets.Where(t =>
-            EF.Property<NpgsqlTsVector>(t, TicketSearch.VectorProperty).Matches(EF.Functions.WebSearchToTsQuery(TicketSearch.Configuration, query))
-            || EF.Functions.ILike(t.Title, pattern)
-            || (t.ProjectId == keyProjectId && t.Number == keyNumber));
+        return (query.Length >= MinTrigramLength, keyNumber > 0) switch
+        {
+            (true, true) => tickets.Where(t =>
+                EF.Property<NpgsqlTsVector>(t, TicketSearch.VectorProperty).Matches(EF.Functions.WebSearchToTsQuery(TicketSearch.Configuration, query))
+                || EF.Functions.ILike(t.Title, pattern)
+                || (t.ProjectId == keyProjectId && t.Number == keyNumber)),
+            (true, false) => tickets.Where(t =>
+                EF.Property<NpgsqlTsVector>(t, TicketSearch.VectorProperty).Matches(EF.Functions.WebSearchToTsQuery(TicketSearch.Configuration, query))
+                || EF.Functions.ILike(t.Title, pattern)),
+            _ => vector,
+        };
     }
-
     private static IQueryable<Ticket> ApplyEnums(IQueryable<Ticket> tickets, TicketSearchCriteria criteria)
     {
         if (criteria.Types.Count > 0)

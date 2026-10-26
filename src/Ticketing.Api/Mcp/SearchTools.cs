@@ -16,7 +16,7 @@ public sealed class SearchTools
 {
     [McpServerTool(Name = "search_tickets", ReadOnly = true, Idempotent = true, Title = "Search tickets")]
     [Description("Searches tickets in every project you can read. All filters are optional and combined with AND; list values are OR-ed "
-        + "(labels: all of). Returns ticket summaries { items, nextCursor, total } (total only on the first page, capped at 10000).")]
+        + "(labels: all of). Returns ticket summaries { items, nextCursor, total } (total only on the first page, capped at 1000).")]
     public static Task<TicketSearchPage> SearchTickets(
         SearchTickets.Handler handler,
         [Description("Project keys, for example [\"WEB\"]. Default: all readable projects.")] string[]? projectKeys = null,

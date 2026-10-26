@@ -52,12 +52,12 @@ public sealed class ExportTests(TicketingApiFactory api)
 
         // Act
         var csv = await client.GetStringAsync("/api/v1/tickets/search/export.csv", _ct);
-        var total = (await client.SearchAsync("limit=1")).Total;
+        var first = await client.SearchAsync("limit=1");
         var invalid = await client.GetAsync("/api/v1/tickets/search/export.csv?priority=Urgent", _ct);
 
         // Assert
         Assert.Equal(10_001, csv.Split("\r\n", StringSplitOptions.RemoveEmptyEntries).Length);
-        Assert.Equal(10_000, total);
+        Assert.Equal((1000, true), (first.Total, first.TotalCapped));
         await invalid.ShouldBeProblemAsync(HttpStatusCode.BadRequest, "validation");
     }
 }

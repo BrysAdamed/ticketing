@@ -24,7 +24,7 @@ public sealed class SearchEndpoints : IEndpointModule
 
         search.MapGet("", async (HttpRequest request, int? limit, string? cursor, SearchTickets.Handler handler, CancellationToken ct) =>
                 TypedResults.Ok(await handler.HandleAsync(new SearchTickets.Query(Criteria(request), new PageRequest(limit, cursor)), ct)))
-            .WithSummary("Searches tickets across readable projects; total is counted (up to 10 000) on the first page.")
+            .WithSummary("Searches tickets across readable projects; total is counted (up to 1000) on the first page.")
             .WithDescription(FilterHelp)
             .ProducesProblem(StatusCodes.Status400BadRequest);
 

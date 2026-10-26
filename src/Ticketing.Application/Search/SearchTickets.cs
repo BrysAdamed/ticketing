@@ -9,8 +9,8 @@ namespace Ticketing.Application.Search;
 /// <summary>Ticket search over every readable project with structured filters, full text, sort and keyset paging (spec 6.8, I-03).</summary>
 public static class SearchTickets
 {
-    /// <summary>Results are counted up to this many; above it the total reads "10 000+" (also the export limit).</summary>
-    public const int CountLimit = ExportTickets.MaxRows;
+    /// <summary>Results are counted up to this many (cheap even for common words); above it the UI shows "1 000+".</summary>
+    public const int CountLimit = 1000;
 
     public sealed record Query(TicketSearchCriteria Criteria, PageRequest? Page = null);
 

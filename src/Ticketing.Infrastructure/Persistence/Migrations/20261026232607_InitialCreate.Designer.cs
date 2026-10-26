@@ -14,7 +14,7 @@ using Ticketing.Infrastructure.Persistence;
 namespace Ticketing.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(TicketingDbContext))]
-    [Migration("20261026220312_InitialCreate")]
+    [Migration("20261026232607_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -997,6 +997,11 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_tickets_board_rank")
                         .HasFilter("board_id IS NOT NULL AND deleted_at IS NULL");
 
+                    b.HasIndex("CreatedAt", "Id")
+                        .IsDescending()
+                        .HasDatabaseName("ix_tickets_created_search")
+                        .HasFilter("deleted_at IS NULL");
+
                     b.HasIndex("ProjectId", "CreatedAt")
                         .HasDatabaseName("ix_tickets_project_id_created_at")
                         .HasFilter("deleted_at IS NULL");
@@ -1020,6 +1025,11 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                     b.HasIndex("ProjectId", "Version")
                         .HasDatabaseName("ix_tickets_project_id_version")
                         .HasFilter("deleted_at IS NULL AND version IS NOT NULL");
+
+                    b.HasIndex("UpdatedAt", "Id")
+                        .IsDescending()
+                        .HasDatabaseName("ix_tickets_updated_search")
+                        .HasFilter("deleted_at IS NULL");
 
                     b.HasIndex("ProjectId", "BoardId", "Rank")
                         .HasDatabaseName("ix_tickets_container_rank")

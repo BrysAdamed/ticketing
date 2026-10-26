@@ -33,6 +33,12 @@ public sealed class TicketEndpoints : IEndpointModule
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict);
 
+        project.MapGet("/tickets/find", async (
+                string projectKeyOrId, string? text, TicketType[]? type, int? limit, FindTickets.Handler handler, CancellationToken ct) =>
+            TypedResults.Ok(await handler.HandleAsync(new FindTickets.Query(projectKeyOrId, text, type, limit), ct)))
+            .WithSummary("Up to 20 tickets of the project matching a key or title, for pickers.")
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
         project.MapPost("/tickets/batch", async (
                 string projectKeyOrId, CreateTickets.Command command, CreateTickets.Handler handler, HttpRequest request, CancellationToken ct) =>
             TypedResults.Created(

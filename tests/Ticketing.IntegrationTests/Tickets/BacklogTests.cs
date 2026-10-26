@@ -219,6 +219,28 @@ public sealed class BacklogTests(TicketingApiFactory api)
         await bad.ShouldBeProblemAsync(HttpStatusCode.BadRequest, "validation");
     }
 
+    [Fact]
+    public async Task Find_returns_tickets_by_key_or_title_with_exact_key_first()
+    {
+        // Arrange
+        var client = await api.LoginAsync(await api.CreateUserAsync());
+        await client.CreateProjectAsync("WEB");
+        await client.CreateTicketAsync("WEB", "Checkout epic", "Epic");
+        await client.CreateTicketAsync("WEB", "Checkout story");
+        await client.CreateTicketAsync("WEB", "Ticket number 1 mention");
+        var outsider = await api.LoginAsync(await api.CreateUserAsync());
+
+        // Act
+        var byTitle = await (await client.GetAsync("/api/v1/projects/WEB/tickets/find?text=checkout&type=Epic", _ct)).ReadAsync<TicketRefDto[]>();
+        var byKey = await (await client.GetAsync("/api/v1/projects/WEB/tickets/find?text=WEB-1", _ct)).ReadAsync<TicketRefDto[]>();
+        var hidden = await outsider.GetAsync("/api/v1/projects/WEB/tickets/find?text=checkout", _ct);
+
+        // Assert
+        Assert.Equal(["WEB-1"], byTitle.Select(t => t.Key));
+        Assert.Equal("WEB-1", byKey[0].Key);
+        await hidden.ShouldBeProblemAsync(HttpStatusCode.NotFound, ProjectErrors.NotFound);
+    }
+
     private async Task Rank(HttpClient client, object body) =>
         await (await client.PostAsJsonAsync("/api/v1/projects/WEB/backlog/rank", body, _ct)).ShouldHaveStatusAsync(HttpStatusCode.NoContent);
 

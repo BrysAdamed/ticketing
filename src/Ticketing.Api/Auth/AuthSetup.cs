@@ -67,21 +67,22 @@ internal static class AuthSetup
     }
 
     /// <summary>
-    /// Re-reads the user on every cookie request, so deactivation ends sessions immediately (spec 4.1) and role or name
-    /// changes apply without a new login.
+    /// Re-reads the user on every cookie request, so deactivation and password changes end sessions immediately
+    /// (spec 4.1, 6.14) and role or name changes apply without a new login.
     /// </summary>
     private static async Task RevalidateSessionAsync(CookieValidatePrincipalContext context)
     {
         var id = context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
+        var stamp = context.Principal?.FindFirstValue(TicketingClaims.SecurityStamp);
         var store = context.HttpContext.RequestServices.GetRequiredService<IAuthenticationStore>();
         var user = Guid.TryParse(id, out var userId) ? await store.FindActiveUserAsync(userId, context.HttpContext.RequestAborted) : null;
-        if (user is null)
+        if (user is null || !string.Equals(user.SecurityStamp, stamp, StringComparison.Ordinal))
         {
             context.RejectPrincipal();
             await context.HttpContext.SignOutAsync(AuthSchemes.Cookie);
             return;
         }
-        context.ReplacePrincipal(TicketingPrincipal.ForSession(user));
+        context.ReplacePrincipal(TicketingPrincipal.ForSession(user.User, user.SecurityStamp));
     }
 
     private static Task SetStatus(HttpResponse response, int statusCode)

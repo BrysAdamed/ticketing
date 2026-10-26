@@ -1,4 +1,5 @@
 using System.Net.Mail;
+using System.Security.Cryptography;
 using Ticketing.Domain.Common;
 
 namespace Ticketing.Domain.Users;
@@ -7,13 +8,17 @@ public sealed class User
 {
     public const int EmailMaxLength = 254;
     public const int DisplayNameMaxLength = 100;
+    public const int SecurityStampLength = 32;
     public const int MaxFailedLogins = 5;
     public static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(15);
+    public static readonly TimeSpan NewUserSetPasswordLinkLifetime = TimeSpan.FromHours(72);
+    public static readonly TimeSpan ResetSetPasswordLinkLifetime = TimeSpan.FromHours(24);
 
     private User()
     {
         Email = null!;
         DisplayName = null!;
+        SecurityStamp = null!;
     }
 
     public Guid Id { get; private set; }
@@ -32,6 +37,9 @@ public sealed class User
 
     public DateTimeOffset? SetPasswordTokenExpiresAt { get; private set; }
 
+    /// <summary>Changes whenever the password is (re)set; cookie sessions carrying an older stamp are rejected.</summary>
+    public string SecurityStamp { get; private set; }
+
     public int FailedLoginCount { get; private set; }
 
     public DateTimeOffset? LockedUntil { get; private set; }
@@ -48,6 +56,8 @@ public sealed class User
 
     public uint RowVersion { get; private set; }
 
+    public bool HasPassword => PasswordHash is not null;
+
     public static User Create(string email, string displayName, GlobalRole role, Guid? createdById, DateTimeOffset now) => new()
     {
         Id = EntityId.New(),
@@ -55,6 +65,7 @@ public sealed class User
         DisplayName = Text.SingleLine(displayName, "displayName", DisplayNameMaxLength),
         GlobalRole = role,
         IsActive = true,
+        SecurityStamp = NewSecurityStamp(),
         CreatedAt = now,
         CreatedById = createdById,
     };
@@ -63,7 +74,7 @@ public sealed class User
     {
         var normalized = Text.Required(email, "email", EmailMaxLength).ToLowerInvariant();
         if (!MailAddress.TryCreate(normalized, out var parsed) || parsed.Address != normalized)
-            throw DomainException.Invalid("email", "user.email.invalid", "Email is not a valid address.");
+            throw DomainException.Invalid("email", UserErrors.EmailInvalid, "Email is not a valid address.");
         return normalized;
     }
 
@@ -87,18 +98,33 @@ public sealed class User
         LastLoginAt = now;
     }
 
+    /// <summary>
+    /// Sets a new password: consumes any pending set-password link, lifts a lockout and rotates the security stamp, so
+    /// every other cookie session of the user ends.
+    /// </summary>
     public void SetPasswordHash(string passwordHash)
     {
         PasswordHash = passwordHash;
         SetPasswordTokenHash = null;
         SetPasswordTokenExpiresAt = null;
+        FailedLoginCount = 0;
+        LockedUntil = null;
+        SecurityStamp = NewSecurityStamp();
     }
+
+    /// <summary>Stores a stronger hash of the same password (after a successful login); sessions stay valid.</summary>
+    public void UpgradePasswordHash(string passwordHash) => PasswordHash = passwordHash;
 
     public void IssueSetPasswordToken(string tokenHash, DateTimeOffset expiresAt)
     {
+        if (!IsActive)
+            throw DomainException.Conflict(UserErrors.Inactive, "Reactivate the user before issuing a set-password link.");
         SetPasswordTokenHash = tokenHash;
         SetPasswordTokenExpiresAt = expiresAt;
     }
+
+    public bool CanRedeemSetPasswordToken(DateTimeOffset now) =>
+        IsActive && SetPasswordTokenHash is not null && SetPasswordTokenExpiresAt is { } expiresAt && expiresAt > now;
 
     public void ChangeDisplayName(string displayName) =>
         DisplayName = Text.SingleLine(displayName, "displayName", DisplayNameMaxLength);
@@ -106,19 +132,21 @@ public sealed class User
     public void ChangeRole(GlobalRole role, Guid actorId)
     {
         if (actorId == Id && role != GlobalRole)
-            throw DomainException.Conflict("user.selfRoleChange", "You cannot change your own global role.");
+            throw DomainException.Conflict(UserErrors.SelfRoleChange, "You cannot change your own global role.", "Ask another administrator.");
         GlobalRole = role;
     }
 
     public void Deactivate(Guid actorId, DateTimeOffset now)
     {
         if (actorId == Id)
-            throw DomainException.Conflict("user.selfDeactivation", "You cannot deactivate yourself.");
+            throw DomainException.Conflict(UserErrors.SelfDeactivation, "You cannot deactivate yourself.", "Ask another administrator.");
         if (!IsActive)
             return;
         IsActive = false;
         DeactivatedAt = now;
         DeactivatedById = actorId;
+        SetPasswordTokenHash = null;
+        SetPasswordTokenExpiresAt = null;
     }
 
     public void Reactivate()
@@ -127,4 +155,6 @@ public sealed class User
         DeactivatedAt = null;
         DeactivatedById = null;
     }
+
+    private static string NewSecurityStamp() => Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(SecurityStampLength / 2));
 }

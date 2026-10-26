@@ -25,7 +25,7 @@ export interface RouteTab {
       @for (tab of tabs(); track tab.path) {
         <a
           mat-tab-link
-          [routerLink]="tab.path"
+          [routerLink]="tab.path || '.'"
           routerLinkActive
           #rla="routerLinkActive"
           [routerLinkActiveOptions]="{ exact: tab.exact ?? false }"

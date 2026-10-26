@@ -19,19 +19,19 @@ public static class Login
             .Required("password", Password, 1024);
     }
 
-    public sealed class Handler(ITicketingDbContext db, IPasswordHasher hasher, IClock clock) : IHandler<Command, CurrentUserDto>
+    public sealed class Handler(ITicketingDbContext db, IPasswordHasher hasher, IClock clock) : IHandler<Command, SessionIdentity>
     {
         private static readonly User TimingDummy = User.Create("timing@invalid.local", "Timing", GlobalRole.User, null, DateTimeOffset.UnixEpoch);
         private static string? _timingDummyHash;
 
-        public async Task<CurrentUserDto> HandleAsync(Command command, CancellationToken cancellationToken)
+        public async Task<SessionIdentity> HandleAsync(Command command, CancellationToken cancellationToken)
         {
             command.EnsureValid();
             var email = command.Email.Trim().ToLowerInvariant();
             var (outcome, user) = await db.InTransactionAsync(ct => AttemptAsync(email, command.Password, ct), cancellationToken);
             return outcome switch
             {
-                Outcome.Success => new CurrentUserDto(user!.Id, user.Email, user.DisplayName, user.GlobalRole),
+                Outcome.Success => SessionIdentity.For(user!),
                 Outcome.LockedOut => throw AppException.Locked(AppErrors.LockedOut, "Too many failed sign-in attempts. Try again in 15 minutes."),
                 _ => throw AppException.Unauthenticated(AppErrors.InvalidCredentials, "The email or password is incorrect."),
             };
@@ -59,7 +59,7 @@ public static class Login
             }
 
             if (check == PasswordCheck.SuccessRehashNeeded)
-                user.SetPasswordHash(hasher.Hash(user, password));
+                user.UpgradePasswordHash(hasher.Hash(user, password));
             user.RegisterSuccessfulLogin(now);
             await db.SaveChangesAsync(cancellationToken);
             return (Outcome.Success, user);

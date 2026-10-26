@@ -7,14 +7,15 @@ namespace Ticketing.Api.Auth;
 
 public static class TicketingPrincipal
 {
-    public static ClaimsPrincipal ForSession(CurrentUserDto user) =>
-        Create(new AuthenticatedUser(user.Id, user.Email, user.DisplayName, user.GlobalRole), AuthSchemes.Cookie);
+    public static ClaimsPrincipal ForSession(SessionIdentity session) =>
+        ForSession(new AuthenticatedUser(session.User.Id, session.User.Email, session.User.DisplayName, session.User.GlobalRole), session.SecurityStamp);
 
-    public static ClaimsPrincipal ForSession(AuthenticatedUser user) => Create(user, AuthSchemes.Cookie);
+    /// <param name="securityStamp">The user's stamp when the session starts; revalidation rejects the session once it changes.</param>
+    public static ClaimsPrincipal ForSession(AuthenticatedUser user, string securityStamp) => Create(user, AuthSchemes.Cookie, securityStamp);
 
-    public static ClaimsPrincipal ForPat(PatAuthentication pat) => Create(pat.User, AuthSchemes.Pat, pat);
+    public static ClaimsPrincipal ForPat(PatAuthentication pat) => Create(pat.User, AuthSchemes.Pat, securityStamp: null, pat);
 
-    private static ClaimsPrincipal Create(AuthenticatedUser user, string authenticationType, PatAuthentication? pat = null)
+    private static ClaimsPrincipal Create(AuthenticatedUser user, string authenticationType, string? securityStamp, PatAuthentication? pat = null)
     {
         var claims = new List<Claim>
         {
@@ -23,6 +24,8 @@ public static class TicketingPrincipal
             new(ClaimTypes.Name, user.DisplayName),
             new(ClaimTypes.Role, user.Role.ToString()),
         };
+        if (securityStamp is not null)
+            claims.Add(new Claim(TicketingClaims.SecurityStamp, securityStamp));
         if (pat is not null)
         {
             claims.Add(new Claim(TicketingClaims.PatId, pat.TokenId.ToString()));

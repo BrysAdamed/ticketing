@@ -43,7 +43,7 @@ public sealed partial class FeatureFlag
     {
         var normalized = key?.Trim() ?? string.Empty;
         if (normalized.Length > KeyMaxLength || !KeyPattern().IsMatch(normalized))
-            throw DomainException.Invalid("key", "flag.key.invalid", "Flag keys are lower case words separated by '.' or '-', for example board.swimlanes.");
+            throw DomainException.Invalid("key", FeatureFlagErrors.KeyInvalid, "Flag keys are lower case words separated by '.' or '-', for example board.swimlanes.");
 
         return new FeatureFlag
         {
@@ -63,10 +63,10 @@ public sealed partial class FeatureFlag
         Guid? actorId, DateTimeOffset now)
     {
         if (rolloutPercentage is < 0 or > 100)
-            throw DomainException.Invalid("rolloutPercentage", "flag.rollout.range", "Rollout percentage must be between 0 and 100.");
+            throw DomainException.Invalid("rolloutPercentage", FeatureFlagErrors.RolloutRange, "Rollout percentage must be between 0 and 100.");
         var users = targetUserIds.Distinct().ToList();
         if (users.Count > MaxTargetUsers)
-            throw DomainException.Invalid("targetUserIds", "flag.targetUsers.tooMany", $"A flag can target at most {MaxTargetUsers} users.");
+            throw DomainException.Invalid("targetUserIds", FeatureFlagErrors.TooManyTargetUsers, $"A flag can target at most {MaxTargetUsers} users.");
 
         Description = Text.Optional(description, "description", DescriptionMaxLength);
         Enabled = enabled;

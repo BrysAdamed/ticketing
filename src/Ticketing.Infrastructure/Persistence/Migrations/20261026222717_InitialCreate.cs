@@ -85,6 +85,7 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                     password_hash = table.Column<string>(type: "text", nullable: true),
                     set_password_token_hash = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true),
                     set_password_token_expires_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    security_stamp = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
                     failed_login_count = table.Column<int>(type: "integer", nullable: false),
                     locked_until = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
                     created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),

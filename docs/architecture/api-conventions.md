@@ -29,6 +29,12 @@ Cookie-authenticated unsafe requests (`POST`, `PUT`, `PATCH`, `DELETE`) must sen
 | `POST /api/v1/auth/logout` | – | `204` | – |
 | `GET /api/v1/me` | – | `200 CurrentUser` | `401` |
 | `GET /api/v1/me/flags` | – | `200 { "flags": { "<key>": "on" \| "off" } }` | `401` |
+| `POST /api/v1/auth/set-password/inspect` | `{ token }` | `200 { email, displayName, isNewUser, expiresAt }` | `404 user.setPasswordToken.invalid` |
+| `POST /api/v1/auth/set-password` | `{ token, password }` | `204`, ends the user's sessions | `400 user.password.*`, `404 user.setPasswordToken.invalid` |
+| `PATCH /api/v1/me` | `{ displayName }` | `200 CurrentUser` (cookie only) | `400`, `403 auth.cookieSessionRequired` |
+| `POST /api/v1/me/password` | `{ currentPassword, newPassword }` | `204`, re-issues this session, ends the others (cookie only) | `400 user.password.*` |
+
+User administration (`/admin/users`), tokens (`/me/tokens`, `/admin/tokens`), flags (`/admin/flags`) and the audit trail (`/admin/audit`) are documented in the OpenAPI document; all of them accept only the cookie session.
 
 ```jsonc
 // CurrentUser

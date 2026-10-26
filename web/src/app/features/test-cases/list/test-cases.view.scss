@@ -162,7 +162,10 @@
   }
 
   .key {
-    width: 76px;
+    width: 104px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     flex: none;
     color: var(--tk-text-muted);
     text-decoration: none;

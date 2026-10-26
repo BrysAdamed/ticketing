@@ -57,6 +57,7 @@
   line-height: var(--tk-leading-xl);
   font-weight: var(--tk-weight-semibold);
   resize: none;
+  overflow: hidden;
   outline: 0;
   field-sizing: content;
 
@@ -188,7 +189,8 @@ section {
   }
 
   .sk {
-    width: 64px;
+    width: 84px;
+    white-space: nowrap;
     flex: none;
     color: var(--tk-text-muted);
   }

@@ -199,6 +199,7 @@ export class RegressionSessionView {
     if (!recorded) return;
     this.failing.set(false);
     if (this.createBug() && !recorded.bug) await this.store.createBug(recorded);
+    this.store.focusNextWaiting();
   }
 
   protected async complete(): Promise<void> {

@@ -103,6 +103,7 @@ import { FormStep, MAX_STEPS, moveStep, newStep, STEP_MAX } from './test-case-fo
       color: var(--tk-text);
       font: inherit;
       resize: none;
+      overflow: hidden;
       outline: 0;
     }
     textarea:focus {

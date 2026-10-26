@@ -147,7 +147,10 @@ import { RUN_STATUS_ICONS, TEST_CASE_ICONS } from '../test-case-icons';
       flex: none;
     }
     .key {
-      width: 76px;
+      width: 104px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
       flex: none;
       color: var(--tk-text-muted);
     }

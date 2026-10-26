@@ -192,6 +192,7 @@
 
   .key {
     flex: none;
+    white-space: nowrap;
     color: var(--tk-text-subtle);
     font-size: var(--tk-text-sm);
   }

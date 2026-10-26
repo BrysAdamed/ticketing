@@ -4,7 +4,9 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   effect,
+  ElementRef,
   inject,
   input,
   signal,
@@ -116,6 +118,8 @@ export class BacklogView {
   protected readonly labelSuggestions = (prefix: string) => this.hints.get(this.store.projectKey(), 'labels', prefix);
 
   private readonly viewport = viewChild(CdkVirtualScrollViewport);
+  private readonly listWrap = viewChild<ElementRef<HTMLElement>>('listWrap');
+  protected readonly listHeight = signal(480);
   private readonly filtersBar = viewChild(BacklogFiltersComponent);
   private readonly quickCreate = viewChild(QuickCreateRowComponent);
   private readonly queryParams = toSignal(this.route.queryParams, { initialValue: {} as Params });
@@ -131,6 +135,17 @@ export class BacklogView {
         void this.people.assignable(key).then((users) => this.assignable.set(users)).catch(() => undefined);
       });
     });
+
+    effect(() => {
+      const wrap = this.listWrap();
+      if (wrap) untracked(() => this.measure(wrap.nativeElement));
+    });
+    const onResize = () => {
+      const wrap = this.listWrap();
+      if (wrap) this.measure(wrap.nativeElement);
+    };
+    window.addEventListener('resize', onResize);
+    inject(DestroyRef).onDestroy(() => window.removeEventListener('resize', onResize));
 
     effect(() => {
       const focus = this.store.focusId();
@@ -342,6 +357,11 @@ export class BacklogView {
     if (this.store.creatingIn() !== null) this.store.closeCreate();
     else if (this.selectionCount() > 0) this.store.clearSelection();
     else if (this.peek.isOpen()) this.peek.close();
+  }
+
+  /// The virtual list needs a definite height: fill the window below the toolbar.
+  private measure(element: HTMLElement): void {
+    requestAnimationFrame(() => this.listHeight.set(Math.max(240, window.innerHeight - element.getBoundingClientRect().top)));
   }
 
   private scrollIntoView(viewport: CdkVirtualScrollViewport, id: string): void {

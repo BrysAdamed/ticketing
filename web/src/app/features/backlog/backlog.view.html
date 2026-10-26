@@ -76,7 +76,7 @@
     </tk-empty-state>
   }
 } @else {
-  <div class="list-wrap" [class.selecting]="selectionCount() > 0">
+  <div #listWrap class="list-wrap" [class.selecting]="selectionCount() > 0" [style.height.px]="listHeight()">
     <cdk-virtual-scroll-viewport
       class="list"
       role="grid"

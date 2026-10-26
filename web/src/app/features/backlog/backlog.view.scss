@@ -1,12 +1,12 @@
-:host {
-  height: 100%;
-  min-height: 0;
-}
-
 .done-toggle {
   margin-right: 8px;
   font-size: var(--tk-text-sm);
   color: var(--tk-text-muted);
+}
+
+.tk-toolbar {
+  overflow-x: auto;
+  scrollbar-width: none;
 }
 
 .tk-toolbar .right {
@@ -45,13 +45,14 @@
 }
 
 .list-wrap {
-  flex: 1;
-  min-height: 0;
+  flex: none;
+  container: backlog / inline-size;
   position: relative;
 }
 
 .list {
   height: 100%;
+  overflow-x: hidden;
 }
 
 .ghead {

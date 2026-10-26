@@ -6,6 +6,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltip } from '@angular/material/tooltip';
 import { Router, RouterLink } from '@angular/router';
 import { provideIcons } from '@ng-icons/core';
+import { Breadcrumbs } from '@core/layout/breadcrumbs';
 import { PeekService } from '@core/layout/peek/peek';
 import { ConfirmService } from '@core/notify/confirm.service';
 import { ToastService } from '@core/notify/toast.service';
@@ -75,6 +76,7 @@ export class TicketDetailView {
   private readonly router = inject(Router);
   private readonly peek = inject(PeekService);
   private readonly document = inject(DOCUMENT);
+  private readonly breadcrumbs = inject(Breadcrumbs);
 
   readonly ticketKey = input.required<string>();
   readonly presentation = input<TicketPresentation>('page');
@@ -100,6 +102,18 @@ export class TicketDetailView {
     effect(() => {
       const key = this.ticketKey();
       untracked(() => void this.store.load(key));
+    });
+
+    effect(() => {
+      const ticket = this.store.ticket();
+      if (this.presentation() !== 'page' || !ticket) return;
+      const parent = ticket.parent;
+      untracked(() =>
+        this.breadcrumbs.setTail([
+          ...(parent ? [{ label: `${parent.key} ${parent.title}`, url: `/tickets/${parent.key}` }] : []),
+          { label: ticket.key, url: null },
+        ]),
+      );
     });
 
     effect(() => {

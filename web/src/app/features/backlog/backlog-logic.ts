@@ -152,8 +152,9 @@ export interface GroupContext {
   users: ReadonlyMap<string, UserRef>;
   parents: ReadonlyMap<string, BacklogParent>;
   collapsed: ReadonlySet<string>;
-  /// Groups shown even when empty (status groups that are visible under the current filters).
   showEmpty: boolean;
+  /// A group shown even when empty (the quick-create target).
+  keepGroup?: string | null;
 }
 
 /// Flattens items into header + ticket rows for the virtual-scroll list.
@@ -176,7 +177,7 @@ export function buildRows(items: readonly BacklogItem[], groupBy: GroupBy, conte
 
   const rows: BacklogRow[] = [];
   for (const [id, group] of groups) {
-    if (group.items.length === 0 && !context.showEmpty) continue;
+    if (group.items.length === 0 && !context.showEmpty && id !== context.keepGroup) continue;
     const collapsed = context.collapsed.has(id);
     rows.push({
       ...group.header,

@@ -90,7 +90,8 @@ export class BacklogStore {
       users: this.users(),
       parents: this.parents(),
       collapsed: this.collapsed(),
-      showEmpty: this.creatingIn() !== null,
+      showEmpty: false,
+      keepGroup: this.creatingIn(),
     });
     const creating = this.creatingIn();
     if (creating === null) return rows;
@@ -329,7 +330,7 @@ export class BacklogStore {
   // Quick create
 
   openCreate(groupId: string | null): void {
-    const target = groupId ?? (this.groupBy() === 'none' ? 'all' : this.groupOf(this.focusId()) ?? this.firstGroupId());
+    const target = groupId ?? (this.groupBy() === 'none' ? 'all' : this.groupBy() === 'status' ? 'status:ToDo' : (this.groupOf(this.focusId()) ?? this.firstGroupId()));
     if (target !== 'all') this.collapsed.update((set) => new Set([...set].filter((g) => g !== target)));
     this.creatingIn.set(target);
   }

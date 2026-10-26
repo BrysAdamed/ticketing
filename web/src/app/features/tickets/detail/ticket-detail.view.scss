@@ -89,6 +89,12 @@
 }
 
 .dside {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  min-height: calc(100vh - 44px);
+  max-height: calc(100vh - 44px);
+  overflow-y: auto;
   padding: 16px 20px;
   border-left: 1px solid var(--tk-border-subtle);
   background: var(--tk-bg-subtle);

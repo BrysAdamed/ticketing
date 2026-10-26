@@ -243,3 +243,17 @@
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+
+@container backlog (max-width: 1000px) {
+  .metas,
+  .ver {
+    display: none;
+  }
+}
+
+@container backlog (max-width: 760px) {
+  .tags,
+  .date {
+    display: none;
+  }
+}

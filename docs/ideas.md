@@ -23,6 +23,11 @@ Items triaged as LATER in [product/02-improvements-triage.md](product/02-improve
 | I-69 | Read-only option for public projects | Some projects want visibility without outside edits. | S |
 | I-63 | Private boards | Board names can reveal private work. | S |
 | I-57 | User anonymization | GDPR erasure for former employees. | S |
+| I-78 | Active sessions list and "sign out everywhere" | Lets users end a session on a lost laptop. The security stamp (D-55) already does the work. | S |
+| I-79 | Breached-password check (HIBP k-anonymity range API) | Catches leaked passwords beyond the bundled list (D-54). Needs outbound internet from the VM. | S |
+| – | "Leave project" for non-owners | Today only Owners remove members; a member who no longer needs a private project asks an Owner. | S |
+| – | Remember board links on project archive and offer to relink on unarchive | Unarchive restores the project but not its board links (D-52). | S |
+| – | Project favourites and recently viewed in the sidebar | The design's sidebar orders projects by favourites, then recent. v1 lists projects by key. | S |
 
 ## Planning and boards
 

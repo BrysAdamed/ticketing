@@ -1,0 +1,48 @@
+.summary {
+  font-size: var(--tk-text-sm);
+}
+
+.fill {
+  flex: 1;
+}
+
+.tokens {
+  width: 100%;
+}
+
+.name {
+  font-weight: var(--tk-weight-medium);
+}
+
+.mono {
+  font-family: var(--tk-font-mono);
+  font-size: var(--tk-text-sm);
+}
+
+.actions {
+  width: 1%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.revoke {
+  --mat-button-text-label-text-color: var(--tk-danger-fg);
+}
+
+tr.ended td {
+  color: var(--tk-text-subtle);
+}
+
+.footnote {
+  padding: 12px 24px;
+  margin: 0;
+  font-size: var(--tk-text-sm);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}

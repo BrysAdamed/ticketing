@@ -1,0 +1,19 @@
+:host {
+  display: block;
+}
+
+.section-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--tk-border);
+
+  h2 {
+    margin: 0;
+    font-size: var(--tk-text-lg);
+    line-height: var(--tk-leading-lg);
+    font-weight: var(--tk-weight-semibold);
+  }
+}

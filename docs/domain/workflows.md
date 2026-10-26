@@ -205,7 +205,9 @@ flowchart TD
 Other cascades:
 
 - **Unlink a project from a board:** that project's tickets on the board go to the backlog top, keeping relative order. The UI confirms with the count.
-- **Archive a project:** all its tickets leave all boards (backlog top, relative order kept) and the project is unlinked from every board.
+- **Archive a project:** all its tickets leave all boards, archived boards included, and the project is unlinked from every board. The tickets go to the backlog top as one block, ordered board by board (oldest board first) and by board rank within a board (D-52). Each moved ticket gets a `ticket.moved` entry (`boardId` old → null) and each board a `board.project.unlinked` entry. Unarchiving does not relink boards.
+- **Unarchive a project:** if no active Owner member is left (owners deactivated while it was archived), the acting Admin becomes an Owner (D-52).
+- **Delete a project:** Admin only, archived only, web session only, confirmed by typing the key. Soft delete: the key stays reserved, the name becomes free (D-53).
 - **Delete a board:** all its tickets, Done included, go to their backlogs (top); the board is soft-deleted.
 - **Project becomes private:** its tickets stay on boards and simply disappear for users who lose access ([§6.5](../product/01-refined-spec.md#65-private-projects-on-shared-boards)).
 
@@ -418,7 +420,7 @@ sequenceDiagram
         end
     else No bearer header
         S->>K: Forward
-        K->>K: Valid tkt_session cookie and active user?
+        K->>K: Valid tkt_session cookie, active user, security stamp unchanged?
         Note over K: Unsafe methods also need X-XSRF-TOKEN matching the XSRF-TOKEN cookie, else 400
     end
     S->>Z: Endpoint policy
@@ -454,7 +456,7 @@ sequenceDiagram
         API-->>N: Link no longer valid, ask the Admin for a new one
     else Valid
         API->>API: Policy: 12 to 128 chars, not the email, not in the 10 000 most common
-        API->>DB: PasswordHash set, token cleared
+        API->>DB: PasswordHash set, token cleared, lockout lifted, SecurityStamp rotated (other sessions end)
         API-->>N: Password set
         N->>API: Sign in (email, password)
         API->>DB: Not locked, active, password verifies?
@@ -485,7 +487,9 @@ stateDiagram-v2
     end note
 ```
 
-`AwaitingPassword` and `Locked` are not stored states: they follow from `PasswordHash` being null and from `LockedUntil` being in the future. A reactivated user who never set a password still needs a set-password link.
+`AwaitingPassword` and `Locked` are not stored states: they follow from `PasswordHash` being null and from `LockedUntil` being in the future. A reactivated user who never set a password still needs a set-password link: deactivation clears a pending one.
+
+Users change their own password with the current one. That rotates the security stamp: every other cookie session ends at its next request, and the current session is re-issued with the new stamp (D-55). Unknown, used, expired and deactivated users' links all give the same 404 (D-56).
 
 ## 8. Feature flag evaluation and view variants
 

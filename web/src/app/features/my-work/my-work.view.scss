@@ -1,4 +1,5 @@
 .list {
+  container-type: inline-size;
   border-top: 1px solid var(--tk-border);
   padding-bottom: 48px;
 }
@@ -114,4 +115,8 @@ a.glabel:hover {
     font-size: var(--tk-text-sm);
     white-space: nowrap;
   }
+}
+
+.tk-page-actions tk-icon {
+  margin-right: 6px;
 }

@@ -95,7 +95,7 @@ export interface TicketRowData {
       color: var(--tk-text-muted);
     }
     .key {
-      width: 76px;
+      width: 96px;
       flex: none;
       color: var(--tk-text-muted);
       overflow: hidden;
@@ -129,6 +129,17 @@ export interface TicketRowData {
       width: 128px;
       flex: none;
       display: flex;
+    }
+    @container (max-width: 980px) {
+      .labels {
+        display: none;
+      }
+    }
+    @container (max-width: 720px) {
+      .status,
+      .date {
+        display: none;
+      }
     }
     .date {
       width: 52px;

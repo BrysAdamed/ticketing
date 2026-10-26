@@ -111,6 +111,10 @@ export function describeEntry(entry: ActivityEntry, users: ReadonlyMap<string, U
       return { ...base, icon: 'tablerArrowsExchange', verb: entry.newValue ? 'moved the ticket to a board' : 'moved the ticket to the backlog' };
     case 'comment.added':
       return { ...base, icon: 'tablerMessage', verb: 'commented' };
+    case 'attachment.added':
+      return { ...base, icon: 'tablerPlus', verb: `attached ${attachmentName(entry.newValue)}` };
+    case 'attachment.removed':
+      return { ...base, icon: 'tablerTrash', verb: `removed the attachment ${attachmentName(entry.newValue)}` };
     case 'comment.edited':
       return { ...base, icon: 'tablerPencil', verb: 'edited a comment' };
     case 'comment.deleted':
@@ -174,4 +178,9 @@ function asStrings(value: unknown): string[] {
 
 function plural(word: string, items: readonly unknown[]): string {
   return items.length === 1 ? word : `${word}s`;
+}
+
+
+function attachmentName(value: unknown): string {
+  return typeof value === 'object' && value !== null && 'fileName' in value ? String((value as { fileName: unknown }).fileName) : 'a file';
 }

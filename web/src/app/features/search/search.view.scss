@@ -86,6 +86,7 @@ a.disabled {
 .list-wrap {
   flex: none;
   position: relative;
+  container-type: inline-size;
   transition: opacity var(--tk-duration-fast);
 
   &.stale {
@@ -97,3 +98,8 @@ a.disabled {
   height: 100%;
   overflow-x: hidden;
 }
+
+.tk-page-actions tk-icon {
+  margin-right: 6px;
+}
+

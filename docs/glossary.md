@@ -8,7 +8,7 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Archive (board)**: Makes a board read-only. The owner chooses where non-Done tickets go (their backlogs or another board); Done tickets stay as a record. Unarchive is allowed. [§6.4](product/01-refined-spec.md#64-backlog-and-boards)
 
-**Archive (project)**: Makes a project read-only for everyone; the only allowed action is unarchive. Its tickets leave all boards and the project is unlinked from them. [§4.3](product/01-refined-spec.md#43-project)
+**Archive (project)**: Makes a project read-only for everyone; the only allowed action is unarchive. Its tickets leave all boards and the project is unlinked from them. Writes on an archived project fail with 409 `project.archived`. [§4.3](product/01-refined-spec.md#43-project)
 
 **Archive (test case)**: Hides a test case from default lists and from future regression sessions without deleting it. [§6.10](product/01-refined-spec.md#610-test-case-lifecycle)
 

@@ -1,0 +1,204 @@
+<div class="tk-toolbar">
+  <label class="filter">
+    <tk-icon name="tablerSearch" [size]="14" />
+    <input
+      #search
+      type="search"
+      placeholder="Search name or email"
+      aria-label="Search users"
+      data-testid="users-search"
+      [value]="store.query()"
+      (input)="onSearch($any($event.target).value)"
+    />
+  </label>
+  <tk-segmented
+    ariaLabel="Status"
+    testId="users-active"
+    [options]="activeOptions"
+    [value]="store.activeFilter()"
+    (valueChange)="setActiveFilter($event)"
+  />
+  <tk-segmented
+    ariaLabel="Role"
+    testId="users-role"
+    [options]="roleOptions"
+    [value]="store.roleFilter()"
+    (valueChange)="setRoleFilter($event)"
+  />
+  <span class="fill"></span>
+  <button mat-flat-button type="button" data-testid="users-new" (click)="create()">
+    <tk-icon name="tablerPlus" [size]="14" />
+    New user
+  </button>
+</div>
+
+@if (store.status() === 'error' && store.users().length === 0) {
+  <tk-empty-state
+    icon="tablerAlertCircle"
+    tone="danger"
+    title="Couldn't load users"
+    [description]="store.error()?.title ?? null"
+  >
+    <button mat-stroked-button type="button" (click)="store.load()">Retry</button>
+  </tk-empty-state>
+} @else if (store.status() === 'loaded' || store.users().length > 0) {
+  @if (store.users().length === 0) {
+    @if (store.hasFilters()) {
+      <tk-empty-state
+        icon="tablerSearch"
+        title="No users match"
+        description="Try another search or filter."
+      >
+        <button mat-stroked-button type="button" (click)="clearFilters()">Clear filters</button>
+      </tk-empty-state>
+    } @else {
+      <tk-empty-state
+        icon="tablerUsers"
+        title="No users yet"
+        description="Create a user and hand them their set-password link."
+      >
+        <button mat-stroked-button type="button" (click)="create()">New user</button>
+      </tk-empty-state>
+    }
+  } @else {
+    <table
+      mat-table
+      [dataSource]="store.users()"
+      class="users"
+      [class.refreshing]="store.status() === 'loading'"
+      aria-label="Users"
+      data-testid="users-table"
+    >
+      <ng-container matColumnDef="user">
+        <th mat-header-cell *matHeaderCellDef>Name</th>
+        <td mat-cell *matCellDef="let u">
+          <span class="who">
+            <tk-avatar [userId]="u.id" [name]="u.displayName" [size]="20" [showTitle]="false" />
+            <span class="name" [class.inactive]="!u.isActive">{{ u.displayName }}</span>
+            @if (u.id === meId()) {
+              <tk-badge tone="muted">You</tk-badge>
+            }
+          </span>
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="email">
+        <th mat-header-cell *matHeaderCellDef>Email</th>
+        <td mat-cell *matCellDef="let u" class="tk-muted email">{{ u.email }}</td>
+      </ng-container>
+      <ng-container matColumnDef="role">
+        <th mat-header-cell *matHeaderCellDef>Role</th>
+        <td mat-cell *matCellDef="let u">
+          @if (u.globalRole === 'Admin') {
+            <tk-badge tone="violet" icon="tablerShieldLock">Admin</tk-badge>
+          } @else {
+            <span class="tk-muted">{{ roleLabel(u.globalRole) }}</span>
+          }
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="status">
+        <th mat-header-cell *matHeaderCellDef>Status</th>
+        <td mat-cell *matCellDef="let u">
+          <tk-badge
+            [tone]="stateOf(u).tone"
+            [dot]="true"
+            [matTooltip]="stateOf(u).hint"
+            [attr.data-testid]="'user-status-' + u.email"
+            >{{ stateOf(u).label }}</tk-badge
+          >
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="lastLogin">
+        <th mat-header-cell *matHeaderCellDef>Last sign-in</th>
+        <td mat-cell *matCellDef="let u" class="tk-muted" [title]="u.lastLoginAt | absoluteTime">
+          {{ u.lastLoginAt ? (u.lastLoginAt | relativeTime) : '—' }}
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="tokens">
+        <th mat-header-cell *matHeaderCellDef class="num">Tokens</th>
+        <td mat-cell *matCellDef="let u" class="num tnum tk-muted">
+          {{ u.activeTokenCount || '' }}
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef><span class="sr-only">Actions</span></th>
+        <td mat-cell *matCellDef="let u" class="actions">
+          <button
+            type="button"
+            class="tk-icon-btn"
+            [matMenuTriggerFor]="menu"
+            [matMenuTriggerData]="{ user: u }"
+            [disabled]="store.isBusy(u)"
+            [attr.aria-label]="'Actions for ' + u.displayName"
+            [attr.data-testid]="'user-actions-' + u.email"
+          >
+            <tk-icon name="tablerDots" [size]="16" />
+          </button>
+        </td>
+      </ng-container>
+      <tr mat-header-row *matHeaderRowDef="columns; sticky: true"></tr>
+      <tr
+        mat-row
+        *matRowDef="let u; columns: columns"
+        [attr.data-testid]="'user-row-' + u.email"
+        (dblclick)="edit(u)"
+      ></tr>
+    </table>
+
+    @if (store.nextCursor()) {
+      <div class="more">
+        <button
+          mat-stroked-button
+          type="button"
+          [disabled]="store.loadingMore()"
+          (click)="store.loadMore()"
+        >
+          {{ store.loadingMore() ? 'Loading…' : 'Load more' }}
+        </button>
+      </div>
+    }
+  }
+} @else {
+  <tk-skeleton-rows [count]="8" />
+}
+
+<mat-menu #menu="matMenu" xPosition="before">
+  <ng-template matMenuContent let-user="user">
+    <button mat-menu-item type="button" data-testid="user-menu-edit" (click)="edit(user)">
+      <tk-icon name="tablerPencil" [size]="16" />
+      <span>Edit name and role</span>
+    </button>
+    @if (user.isActive) {
+      <button mat-menu-item type="button" data-testid="user-menu-link" (click)="issueLink(user)">
+        <tk-icon name="tablerKey" [size]="16" />
+        <span>New set-password link</span>
+      </button>
+    }
+    <button mat-menu-item type="button" data-testid="user-menu-tokens" (click)="showTokens(user)">
+      <tk-icon name="tablerLock" [size]="16" />
+      <span>Access tokens</span>
+    </button>
+    @if (user.isActive) {
+      <button
+        mat-menu-item
+        type="button"
+        class="danger"
+        data-testid="user-menu-deactivate"
+        [disabled]="user.id === meId()"
+        (click)="deactivate(user)"
+      >
+        <tk-icon name="tablerBan" [size]="16" />
+        <span>Deactivate</span>
+      </button>
+    } @else {
+      <button
+        mat-menu-item
+        type="button"
+        data-testid="user-menu-reactivate"
+        (click)="reactivate(user)"
+      >
+        <tk-icon name="tablerCircleCheck" [size]="16" />
+        <span>Reactivate</span>
+      </button>
+    }
+  </ng-template>
+</mat-menu>

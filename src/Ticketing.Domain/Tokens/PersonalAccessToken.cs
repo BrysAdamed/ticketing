@@ -11,6 +11,14 @@ public sealed class PersonalAccessToken
     public const int MaxActivePerUser = 20;
     public static readonly TimeSpan MaxLifetime = TimeSpan.FromDays(365);
     public static readonly TimeSpan LastUsedResolution = TimeSpan.FromMinutes(5);
+    public static readonly TimeSpan DefaultLifetime = TimeSpan.FromDays(90);
+    public static readonly IReadOnlyList<int> LifetimePresetDays = [7, 30, 90, 365];
+
+    /// <summary>Revoked and expired tokens stay listed this long, then the retention job purges them (spec 6.12).</summary>
+    public static readonly TimeSpan Retention = TimeSpan.FromDays(90);
+
+    /// <summary>Tokens expiring within this window get a warning badge.</summary>
+    public static readonly TimeSpan ExpiryWarning = TimeSpan.FromDays(7);
 
     private PersonalAccessToken()
     {
@@ -47,7 +55,7 @@ public sealed class PersonalAccessToken
         Guid userId, string name, PatScope scope, string prefix, string tokenHash, DateTimeOffset expiresAt, DateTimeOffset now)
     {
         if (expiresAt <= now || expiresAt > now + MaxLifetime)
-            throw DomainException.Invalid("expiresAt", "pat.expiry.invalid", "Expiry must be in the future and at most 365 days away.");
+            throw DomainException.Invalid("expiresAt", PatErrors.ExpiryInvalid, "Expiry must be in the future and at most 365 days away.");
 
         return new PersonalAccessToken
         {
@@ -63,6 +71,11 @@ public sealed class PersonalAccessToken
     }
 
     public bool IsActive(DateTimeOffset now) => RevokedAt is null && ExpiresAt > now;
+
+    public static PatStatus StatusOf(DateTimeOffset? revokedAt, DateTimeOffset expiresAt, DateTimeOffset now) =>
+        revokedAt is not null ? PatStatus.Revoked
+        : expiresAt <= now ? PatStatus.Expired
+        : PatStatus.Active;
 
     public void Revoke(Guid actorId, DateTimeOffset now)
     {

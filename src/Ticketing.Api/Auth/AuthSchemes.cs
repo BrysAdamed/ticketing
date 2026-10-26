@@ -22,4 +22,5 @@ public static class TicketingClaims
     public const string PatId = "pat_id";
     public const string PatScope = "pat_scope";
     public const string PatExpiresAt = "pat_expires_at";
+    public const string SecurityStamp = "security_stamp";
 }

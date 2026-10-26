@@ -8,13 +8,16 @@ namespace Ticketing.Infrastructure.Auth;
 
 public sealed record AuthenticatedUser(Guid Id, string Email, string DisplayName, GlobalRole Role);
 
+/// <summary>An active user and the security stamp their cookie sessions must carry.</summary>
+public sealed record ActiveUser(AuthenticatedUser User, string SecurityStamp);
+
 public sealed record PatAuthentication(AuthenticatedUser User, Guid TokenId, PatScope Scope, DateTimeOffset ExpiresAt);
 
 /// <summary>Data access for the authentication handlers: session revalidation and PAT lookup.</summary>
 public interface IAuthenticationStore
 {
-    /// <summary>The user's current identity, or null when the user no longer exists or is deactivated.</summary>
-    Task<AuthenticatedUser?> FindActiveUserAsync(Guid userId, CancellationToken cancellationToken);
+    /// <summary>The user's current identity and security stamp, or null when the user no longer exists or is deactivated.</summary>
+    Task<ActiveUser?> FindActiveUserAsync(Guid userId, CancellationToken cancellationToken);
 
     /// <summary>Validates a bearer token (active, unexpired, owner active) and records its use at most every 5 minutes.</summary>
     Task<PatAuthentication?> AuthenticatePatAsync(string token, CancellationToken cancellationToken);
@@ -22,11 +25,11 @@ public interface IAuthenticationStore
 
 internal sealed class AuthenticationStore(TicketingDbContext db, IPatTokenGenerator tokens, TimeProvider time) : IAuthenticationStore
 {
-    public Task<AuthenticatedUser?> FindActiveUserAsync(Guid userId, CancellationToken cancellationToken) =>
+    public Task<ActiveUser?> FindActiveUserAsync(Guid userId, CancellationToken cancellationToken) =>
         db.Users
             .AsNoTracking()
             .Where(u => u.Id == userId && u.IsActive)
-            .Select(u => new AuthenticatedUser(u.Id, u.Email, u.DisplayName, u.GlobalRole))
+            .Select(u => new ActiveUser(new AuthenticatedUser(u.Id, u.Email, u.DisplayName, u.GlobalRole), u.SecurityStamp))
             .SingleOrDefaultAsync(cancellationToken);
 
     public async Task<PatAuthentication?> AuthenticatePatAsync(string token, CancellationToken cancellationToken)

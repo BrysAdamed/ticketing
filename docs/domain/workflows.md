@@ -184,7 +184,7 @@ sequenceDiagram
 - Status changes on a move only when the move targets a specific column.
 - Reordering inside the backlog (D-48) moves the selected tickets as one block, in the order sent, right before or after another backlog ticket or to the top or bottom. The neighbours are read under the container lock, and the block gets consecutive ranks; a too-long key rebalances the backlog with free slots. Rank changes write no history.
 - Placing on a board requires: the board links the ticket's project, the board is not archived, and the actor can write to the project.
-- Every move is one call, `POST /tickets/move` or MCP `move_ticket` (D-52): 1..50 keys in their final order, a target (`backlog` or a board id), an optional status (the column) and an optional `beforeKey` / `afterKey`. Without an anchor, tickets go to the bottom of the board (so the bottom of their column) or to the top of their own project backlog. With target `backlog`, tickets of several projects each go to their own backlog; an anchor then requires them all to be in the anchor's project.
+- Every move is one call, `POST /tickets/move` or MCP `move_ticket` (D-60): 1..50 keys in their final order, a target (`backlog` or a board id), an optional status (the column) and an optional `beforeKey` / `afterKey`. Without an anchor, tickets go to the bottom of the board (so the bottom of their column) or to the top of their own project backlog. With target `backlog`, tickets of several projects each go to their own backlog; an anchor then requires them all to be in the anchor's project.
 - On a board, a column is the board order filtered by status, so "before WEB-7" in the Review column means right before WEB-7 in board order; cards of other columns in between do not matter.
 - Tickets on an archived board cannot be moved by users (the board is read-only). They only leave it when they leave `Done` (backlog top), when the board is deleted, or when their project is archived.
 - History: a container change writes `ticket.moved` (field `boardId`, old and new board id, null for the backlog); a status change writes the usual `ticket.field.changed` entries for `status` and `resolution`; a reorder inside the same container writes nothing and does not bump `UpdatedAt`.
@@ -209,11 +209,13 @@ flowchart TD
 Other cascades:
 
 - **Unlink a project from a board:** that project's tickets on the board, Done included, go to the backlog top, keeping relative order. The UI confirms with the count. A user cannot unlink a board's last project (`board.projects.required`); archive the board instead.
-- **Archive a project:** all its tickets leave all boards (backlog top, relative order kept) and the project is unlinked from every board.
+- **Archive a project:** all its tickets leave all boards, archived boards included, and the project is unlinked from every board. The tickets go to the backlog top as one block, ordered board by board (oldest board first) and by board rank within a board (D-52). Each moved ticket gets a `ticket.moved` entry (`boardId` old → null) and each board a `board.project.unlinked` entry. Unarchiving does not relink boards.
+- **Unarchive a project:** if no active Owner member is left (owners deactivated while it was archived), the acting Admin becomes an Owner (D-52).
+- **Delete a project:** Admin only, archived only, web session only, confirmed by typing the key. Soft delete: the key stays reserved, the name becomes free (D-53).
 - **Delete a board:** all its tickets, Done included, go to their backlogs (top); the board is soft-deleted. Archived boards can be deleted too.
 - **Project becomes private:** its tickets stay on boards and simply disappear for users who lose access ([§6.5](../product/01-refined-spec.md#65-private-projects-on-shared-boards)).
 
-Board archive, unlink and delete move tickets of projects the acting board owner may not be able to read or write. They only change placement, so they do not check per-ticket write access; each moved ticket gets a `ticket.moved` entry with the actor (D-44). The archive result counts only tickets the actor can read (D-53).
+Board archive, unlink and delete move tickets of projects the acting board owner may not be able to read or write. They only change placement, so they do not check per-ticket write access; each moved ticket gets a `ticket.moved` entry with the actor (D-44). The archive result counts only tickets the actor can read (D-61).
 
 ## 4. Test case lifecycle
 
@@ -422,7 +424,7 @@ sequenceDiagram
         end
     else No bearer header
         S->>K: Forward
-        K->>K: Valid tkt_session cookie and active user?
+        K->>K: Valid tkt_session cookie, active user, security stamp unchanged?
         Note over K: Unsafe methods also need X-XSRF-TOKEN matching the XSRF-TOKEN cookie, else 400
     end
     S->>Z: Endpoint policy
@@ -458,7 +460,7 @@ sequenceDiagram
         API-->>N: Link no longer valid, ask the Admin for a new one
     else Valid
         API->>API: Policy: 12 to 128 chars, not the email, not in the 10 000 most common
-        API->>DB: PasswordHash set, token cleared
+        API->>DB: PasswordHash set, token cleared, lockout lifted, SecurityStamp rotated (other sessions end)
         API-->>N: Password set
         N->>API: Sign in (email, password)
         API->>DB: Not locked, active, password verifies?
@@ -489,7 +491,9 @@ stateDiagram-v2
     end note
 ```
 
-`AwaitingPassword` and `Locked` are not stored states: they follow from `PasswordHash` being null and from `LockedUntil` being in the future. A reactivated user who never set a password still needs a set-password link.
+`AwaitingPassword` and `Locked` are not stored states: they follow from `PasswordHash` being null and from `LockedUntil` being in the future. A reactivated user who never set a password still needs a set-password link: deactivation clears a pending one.
+
+Users change their own password with the current one. That rotates the security stamp: every other cookie session ends at its next request, and the current session is re-issued with the new stamp (D-55). Unknown, used, expired and deactivated users' links all give the same 404 (D-56).
 
 ## 8. Feature flag evaluation and view variants
 

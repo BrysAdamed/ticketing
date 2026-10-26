@@ -51,6 +51,22 @@ public sealed class Comment
         return previous;
     }
 
+    /// <summary>Only the author edits a comment (spec 6.9).</summary>
+    public string EditBy(Guid actorId, string body, DateTimeOffset now)
+    {
+        if (actorId != AuthorId)
+            throw DomainException.Forbidden(CommentErrors.NotAuthor, "Only the author can edit a comment.");
+        return Edit(body, now);
+    }
+
+    /// <summary>The author deletes their own comment; project Owners delete any comment (spec 6.9).</summary>
+    public void DeleteBy(Guid actorId, bool actorIsProjectOwner, DateTimeOffset now)
+    {
+        if (actorId != AuthorId && !actorIsProjectOwner)
+            throw DomainException.Forbidden(CommentErrors.NotAuthor, "Only the author or a project owner can delete this comment.");
+        Delete(actorId, now);
+    }
+
     public void Delete(Guid actorId, DateTimeOffset now)
     {
         if (IsDeleted)
@@ -63,6 +79,6 @@ public sealed class Comment
     private void EnsureNotDeleted()
     {
         if (IsDeleted)
-            throw DomainException.Conflict("comment.deleted", "The comment was deleted.");
+            throw DomainException.Conflict(CommentErrors.Deleted, "The comment was deleted.");
     }
 }

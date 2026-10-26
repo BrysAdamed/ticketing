@@ -45,6 +45,26 @@ public sealed class TicketLabelsTests
     }
 
     [Fact]
+    public void Edit_adds_and_removes_case_insensitively()
+    {
+        // Act
+        var labels = TicketLabels.Edit(["api", "backend"], ["UI", "api"], ["BACKEND", "missing"]);
+
+        // Assert
+        Assert.Equal(["api", "ui"], labels);
+    }
+
+    [Fact]
+    public void Edit_still_enforces_the_limit()
+    {
+        // Arrange
+        var twenty = Enumerable.Range(0, 20).Select(i => $"l{i}").ToList();
+
+        // Act / Assert
+        Assert.Equal(TicketErrors.LabelsTooMany, Assert.Throws<DomainException>(() => TicketLabels.Edit(twenty, ["extra"], null)).Code);
+    }
+
+    [Fact]
     public void Ticket_stores_normalized_labels()
     {
         // Arrange

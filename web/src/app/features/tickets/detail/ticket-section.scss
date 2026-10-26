@@ -1,0 +1,151 @@
+:host {
+  display: block;
+  margin-top: 28px;
+}
+
+.sec-h {
+  height: 28px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+
+  h2 {
+    margin: 0;
+    font-size: var(--tk-text-md);
+    font-weight: var(--tk-weight-semibold);
+  }
+
+  .n {
+    color: var(--tk-text-subtle);
+    font-weight: var(--tk-weight-medium);
+  }
+
+  .right {
+    margin-left: auto;
+    display: flex;
+    gap: 2px;
+  }
+}
+
+.prog {
+  width: 80px;
+  height: 4px;
+  display: flex;
+  overflow: hidden;
+  border-radius: var(--tk-radius-full);
+  background: var(--tk-bg-muted);
+
+  i {
+    display: block;
+    height: 100%;
+  }
+
+  .done {
+    background: var(--tk-category-done);
+  }
+
+  .wip {
+    background: var(--tk-category-inprogress);
+  }
+}
+
+.add {
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--tk-radius-md);
+  background: none;
+  color: var(--tk-text-muted);
+  font: inherit;
+  font-size: var(--tk-text-sm);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--tk-bg-hover);
+    color: var(--tk-text);
+  }
+}
+
+.box {
+  border: 1px solid var(--tk-border);
+  border-radius: var(--tk-radius-lg);
+  overflow: hidden;
+  background: var(--tk-surface);
+}
+
+.lrow {
+  height: 34px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px 0 12px;
+  border-bottom: 1px solid var(--tk-border-subtle);
+  color: var(--tk-text);
+  text-decoration: none;
+
+  &:last-child {
+    border-bottom: 0;
+  }
+
+  &:hover {
+    background: var(--tk-bg-hover);
+  }
+
+  &.done .t {
+    color: var(--tk-text-muted);
+    text-decoration: line-through;
+    text-decoration-color: var(--tk-text-disabled);
+  }
+
+  .key {
+    width: 64px;
+    flex: none;
+    color: var(--tk-text-muted);
+    text-decoration: none;
+  }
+
+  .t {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .rel {
+    width: 104px;
+    flex: none;
+    color: var(--tk-text-muted);
+    font-size: var(--tk-text-sm);
+  }
+
+  .remove {
+    opacity: 0;
+  }
+
+  &:hover .remove,
+  .remove:focus-visible {
+    opacity: 1;
+  }
+}
+
+.new-input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: none;
+  color: var(--tk-text);
+  font: inherit;
+}
+
+.empty {
+  padding: 9px 12px;
+  color: var(--tk-text-subtle);
+}

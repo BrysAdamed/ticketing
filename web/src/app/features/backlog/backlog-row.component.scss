@@ -1,0 +1,259 @@
+:host {
+  height: var(--tk-row-h);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 20px 0 12px;
+  border-bottom: 1px solid var(--tk-border-subtle);
+  position: relative;
+  cursor: default;
+  background: var(--tk-bg);
+  user-select: none;
+}
+
+:host:hover {
+  background: var(--tk-bg-hover);
+}
+
+:host(.sel) {
+  background: var(--tk-selection);
+}
+
+:host(.focus) {
+  background: var(--tk-bg-hover);
+}
+
+:host(.focus)::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: -1px;
+  bottom: 0;
+  width: 2px;
+  background: var(--tk-accent);
+}
+
+:host(.flash) {
+  animation: flash 1.2s ease-out;
+}
+
+:host(.done) .title {
+  color: var(--tk-text-muted);
+}
+
+@keyframes flash {
+  from {
+    background: var(--tk-accent-subtle);
+  }
+}
+
+.c-check {
+  width: 18px;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+.cb {
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border: 1px solid var(--tk-border-input-hover);
+  border-radius: var(--tk-radius-xs);
+  background: var(--tk-surface);
+  display: grid;
+  place-items: center;
+  color: var(--tk-text-on-solid);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--tk-duration-instant);
+}
+
+.cb.on {
+  background: var(--tk-accent);
+  border-color: var(--tk-accent);
+  opacity: 1;
+}
+
+:host:hover .cb,
+:host-context(.selecting) .cb,
+.cb:focus-visible {
+  opacity: 1;
+}
+
+.cell-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 22px;
+  padding: 0 2px;
+  border: 0;
+  border-radius: var(--tk-radius-sm);
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  flex: none;
+
+  &:hover:not(:disabled) {
+    background: var(--tk-bg-active);
+  }
+
+  &:disabled {
+    cursor: default;
+  }
+}
+
+.key {
+  width: 58px;
+  color: var(--tk-text-muted);
+  flex: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 0 1 auto;
+  color: var(--tk-text);
+}
+
+.fill {
+  flex: 1 1 0;
+  min-width: 12px;
+}
+
+.tags {
+  display: flex;
+  gap: 4px;
+  flex: none;
+  align-items: center;
+}
+
+.parent {
+  height: 20px;
+  max-width: 170px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 7px 0 5px;
+  border: 1px solid var(--tk-border);
+  border-radius: var(--tk-radius-sm);
+  font-size: var(--tk-text-xs);
+  font-weight: var(--tk-weight-medium);
+  color: var(--tk-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  flex: none;
+
+  span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+.labels {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 20px;
+  min-height: 22px;
+  padding: 0 2px;
+  border: 0;
+  border-radius: var(--tk-radius-sm);
+  background: none;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: var(--tk-bg-active);
+  }
+}
+
+.more {
+  font-size: var(--tk-text-xs);
+  color: var(--tk-text-subtle);
+  font-weight: var(--tk-weight-medium);
+}
+
+.metas {
+  display: flex;
+  gap: 10px;
+  width: 112px;
+  justify-content: flex-end;
+  flex: none;
+}
+
+.cnt {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--tk-text-subtle);
+  font-size: var(--tk-text-xs);
+  font-weight: var(--tk-weight-medium);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.pslot {
+  width: 30px;
+}
+
+.pts {
+  min-width: 20px;
+  height: 18px;
+  padding: 0 5px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: var(--tk-radius-full);
+  background: var(--tk-bg-muted);
+  border: 1px solid var(--tk-border-subtle);
+  font-size: var(--tk-text-xs);
+  font-weight: var(--tk-weight-medium);
+  color: var(--tk-text-muted);
+  font-variant-numeric: tabular-nums;
+
+  &.none {
+    background: none;
+    border-color: transparent;
+    color: var(--tk-text-disabled);
+  }
+}
+
+.ver {
+  width: 44px;
+  color: var(--tk-text-subtle);
+  font-size: var(--tk-text-sm);
+  font-variant-numeric: tabular-nums;
+  flex: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.date {
+  width: 48px;
+  text-align: right;
+  color: var(--tk-text-subtle);
+  font-size: var(--tk-text-sm);
+  flex: none;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+@container backlog (max-width: 1000px) {
+  .metas,
+  .ver {
+    display: none;
+  }
+}
+
+@container backlog (max-width: 760px) {
+  .tags,
+  .date {
+    display: none;
+  }
+}

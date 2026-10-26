@@ -3,7 +3,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { RouterLink } from '@angular/router';
 import { ConfirmService } from '@core/notify/confirm.service';
 import { ActivityEntry, Comment, UserRef } from '@core/tickets/ticket.models';
-import { MarkdownEditorComponent } from '@shared/markdown/markdown-editor.component';
+import { MarkdownEditorComponent, MarkdownUploadHandler } from '@shared/markdown/markdown-editor.component';
 import { MarkdownViewerComponent } from '@shared/markdown/markdown-viewer.component';
 import { AbsoluteTimePipe, RelativeTimePipe } from '@shared/pipes/relative-time.pipe';
 import { AvatarComponent } from '@shared/ui/domain/avatar.component';
@@ -78,7 +78,7 @@ type FeedItem = { kind: 'comment'; at: string; comment: Comment } | { kind: 'his
             @if (c.deleted) {
               <div class="cmt-b subtle">Comment deleted</div>
             } @else if (editingId() === c.id) {
-              <tk-markdown-editor ariaLabel="Edit comment" submitHint="to save" [maxLength]="20000" [(value)]="editDraft" (submitted)="saveEdit(c)" (cancelled)="editingId.set(null)">
+              <tk-markdown-editor ariaLabel="Edit comment" submitHint="to save" [maxLength]="20000" [uploadHandler]="uploadHandler()" [(value)]="editDraft" (submitted)="saveEdit(c)" (cancelled)="editingId.set(null)">
                 <button mat-button type="button" (click)="editingId.set(null)">Cancel</button>
                 <button mat-flat-button type="button" data-testid="comment-save" (click)="saveEdit(c)">Save</button>
               </tk-markdown-editor>
@@ -126,6 +126,7 @@ type FeedItem = { kind: 'comment'; at: string; comment: Comment } | { kind: 'his
         submitHint="to comment"
         [minRows]="2"
         [maxLength]="20000"
+        [uploadHandler]="uploadHandler()"
         [(value)]="draft"
         (submitted)="submit()"
       >
@@ -146,6 +147,7 @@ export class TicketActivityComponent {
   readonly historyLoading = input(false);
   readonly canComment = input(false);
   readonly add = input.required<(body: string) => Promise<boolean>>();
+  readonly uploadHandler = input<MarkdownUploadHandler | null>(null);
 
   readonly tabChange = output<ActivityTab>();
   readonly loadMoreHistory = output<void>();

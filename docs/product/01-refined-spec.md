@@ -211,7 +211,7 @@ Comments are listed oldest first. Rules in 6.9.
 | Sha256 | text(64) | |
 | UploadedAt, UploadedById | timestamptz, uuid | |
 
-At most 50 attachments per ticket. Content is stored in PostgreSQL (table `attachment_content`, `bytea`) behind an `IAttachmentStore` interface so it can move to a volume or blob store later (D-15). Downloads send `X-Content-Type-Options: nosniff`. Images are served inline, everything else as `Content-Disposition: attachment`. Pasting or dropping an image into a markdown editor uploads it and inserts `![name](/attachments/{id})`. Delete removes the record and content. Allowed for the uploader and for project Owners.
+At most 50 attachments per ticket. Content is stored in PostgreSQL (table `attachment_content`, `bytea`) behind an `IAttachmentStore` interface so it can move to a volume or blob store later (D-15). Downloads send `X-Content-Type-Options: nosniff`. Images are served inline, everything else as `Content-Disposition: attachment`. Pasting or dropping an image into a markdown editor uploads it and inserts `![name](/api/v1/attachments/{id})` (D-63). Delete removes the record and content. Allowed for the uploader and for project Owners.
 
 ### 4.9 TestCase
 

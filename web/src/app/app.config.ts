@@ -27,6 +27,8 @@ import { AuthService } from '@core/auth/auth.service';
 import { providePeekView } from '@core/layout/peek/peek';
 import { ThemeService } from '@core/theme/theme.service';
 import { provideTicketCreation } from '@core/tickets/create-ticket';
+import { provideAttachments } from '@features/attachments/attachments.providers';
+import { provideSearch } from '@features/search/search.providers';
 import { TICKET_DETAIL_VIEW } from '@features/tickets/tickets.views';
 import { APP_ICONS } from '@shared/ui/icon/app-icons';
 import { routes } from './app.routes';
@@ -51,6 +53,8 @@ export const appConfig: ApplicationConfig = {
     }),
     provideIcons(APP_ICONS),
     providePeekView(TICKET_DETAIL_VIEW),
+    provideSearch(),
+    provideAttachments(),
     provideTicketCreation(() => import('@features/tickets/create/create-ticket.dialog').then((m) => m.CreateTicketDialog)),
     { provide: MAT_RIPPLE_GLOBAL_OPTIONS, useValue: { disabled: true } },
     {

@@ -1,8 +1,10 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Ticketing.Application.Common;
 using Ticketing.Application.Regressions;
+using Ticketing.Application.Tickets;
 using Ticketing.Domain.Activity;
 using Ticketing.Domain.Projects;
 using Ticketing.Domain.Regressions;
@@ -261,7 +263,7 @@ public sealed class RegressionEndpointTests(TicketingApiFactory api)
         var user = await api.CreateUserAsync(displayName: "Jane Doe");
         var client = await api.LoginAsync(user);
         var project = await client.CreateProjectAsync("WEB");
-        await api.CreateTicketAsync(project, 1);
+        await client.CreateStoryAsync(project.Key);
         await client.CreateTestCaseAsync("WEB", "Log in", new
         {
             status = "Manual", steps = new[] { "Open login", "Submit" }, expectedResult = "Dashboard opens", ticketKey = "WEB-1",
@@ -284,6 +286,66 @@ public sealed class RegressionEndpointTests(TicketingApiFactory api)
         Assert.Contains("## Steps to reproduce\n1. Open login\n2. Submit\n", draft.Description, StringComparison.Ordinal);
         Assert.EndsWith("## Actual result\nNothing happens", draft.Description, StringComparison.Ordinal);
         await notFailed.ShouldBeProblemAsync(HttpStatusCode.Conflict, RegressionErrors.BugRequiresFailure);
+    }
+
+    [Fact]
+    public async Task Create_bug_puts_a_templated_bug_on_top_of_the_backlog_linked_to_the_ticket_once()
+    {
+        // Arrange
+        var user = await api.CreateUserAsync(displayName: "Jane Doe");
+        var client = await api.LoginAsync(user);
+        await client.CreateProjectAsync("WEB");
+        var story = await client.CreateStoryAsync("WEB");
+        await client.CreateStoryAsync("WEB", "Existing backlog item");
+        await client.CreateTestCaseAsync("WEB", "Log in", new { status = "Manual", steps = new[] { "Open login", "Submit" }, ticketKey = story });
+        await client.StartSessionAsync("WEB", new { version = "1.4.0" });
+        await client.RecordAsync("WEB-R-1", "WEB-TC-1", "Failed", "Nothing happens");
+
+        // Act
+        var response = await client.PostAsJsonAsync("/api/v1/regression-sessions/WEB-R-1/items/WEB-TC-1/bug", new { severity = "Critical" }, _ct);
+        var again = await client.PostAsJsonAsync("/api/v1/regression-sessions/WEB-R-1/items/WEB-TC-1/bug", new { }, _ct);
+        var draftAgain = await client.GetAsync("/api/v1/regression-sessions/WEB-R-1/items/WEB-TC-1/bug-draft", _ct);
+        var bug = await (await client.GetAsync("/api/v1/tickets/WEB-3", _ct)).ReadAsync<TicketDto>();
+        var backlog = await (await client.GetAsync("/api/v1/projects/WEB/backlog", _ct)).ReadAsync<JsonElement>();
+
+        // Assert
+        var change = await response.ReadAsync<RegressionItemChangeDto>(HttpStatusCode.Created);
+        Assert.Equal("WEB-3", change.CreatedBug?.Key);
+        Assert.Equal(("WEB-3", false), (change.Item.Bug?.Key, change.Item.Bug!.Deleted));
+        Assert.Equal(1, change.Summary.BugsCreated);
+        Assert.Equal(("[Regression] Log in", TicketType.Bug, Severity.Critical, Priority.High, "1.4.0"), (bug.Title, bug.Type, bug.Severity, bug.Priority, bug.Version));
+        Assert.Equal(["regression"], bug.Labels);
+        Assert.Equal((user.Id, (Guid?)null), (bug.Reporter.Id, bug.Assignee?.Id));
+        Assert.Contains("## Steps to reproduce\n1. Open login\n2. Submit", bug.Description, StringComparison.Ordinal);
+        Assert.Equal((TicketLinkType.RelatesTo, story), (Assert.Single(bug.Links!).Type, bug.Links![0].Ticket.Key));
+        Assert.Equal("WEB-3", backlog.GetProperty("items")[0].GetProperty("key").GetString());
+        await again.ShouldBeProblemAsync(HttpStatusCode.Conflict, RegressionErrors.BugExists);
+        await draftAgain.ShouldBeProblemAsync(HttpStatusCode.Conflict, RegressionErrors.BugExists);
+    }
+
+    [Fact]
+    public async Task Record_with_create_bug_is_all_or_nothing()
+    {
+        // Arrange
+        var client = await api.LoginAsync(await api.CreateUserAsync());
+        await client.CreateProjectAsync("WEB");
+        await client.CreateManualCaseAsync("WEB", "Export");
+        await client.StartSessionAsync("WEB");
+        const string url = "/api/v1/regression-sessions/WEB-R-1/items/WEB-TC-1/result";
+
+        // Act
+        var passedWithBug = await client.PostAsJsonAsync(url, new { status = "Passed", createBug = true }, _ct);
+        var badAssignee = await client.PostAsJsonAsync(url, new { status = "Failed", note = "Broken", createBug = true, bug = new { assignee = "nobody@x.test" } }, _ct);
+        var afterFailure = await client.GetSessionAsync("WEB-R-1");
+        var created = await (await client.PostAsJsonAsync(url, new { status = "Failed", note = "Broken", createBug = true, bug = new { title = "Export is broken" } }, _ct))
+            .ReadAsync<RegressionItemChangeDto>();
+
+        // Assert
+        await passedWithBug.ShouldBeProblemAsync(HttpStatusCode.BadRequest, "validation");
+        await badAssignee.ShouldHaveStatusAsync(HttpStatusCode.BadRequest);
+        Assert.Equal(RegressionItemStatus.WaitingForExecution, afterFailure.Items[0].Status);
+        Assert.Equal(("Export is broken", RegressionItemStatus.Failed), (created.CreatedBug?.Title, created.Item.Status));
+        Assert.Equal(created.CreatedBug?.Key, created.Item.Bug?.Key);
     }
 
     [Fact]

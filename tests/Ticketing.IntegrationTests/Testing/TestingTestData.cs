@@ -5,7 +5,7 @@ using Ticketing.Application.Projects;
 using Ticketing.Application.Regressions;
 using Ticketing.Application.TestCases;
 using Ticketing.Domain.Projects;
-using Ticketing.Domain.Tickets;
+using Ticketing.Application.Tickets;
 using Ticketing.IntegrationTests.Infrastructure;
 
 namespace Ticketing.IntegrationTests.Testing;
@@ -38,14 +38,12 @@ public static class TestingTestData
             return await db.SaveChangesAsync();
         });
 
-    /// <summary>Creates a ticket directly in the database (ticket endpoints belong to another slice) and returns its key.</summary>
-    public static Task<string> CreateTicketAsync(this TicketingApiFactory api, ProjectDto project, int number, string title = "Login page") =>
-        api.WithDbAsync(async db =>
-        {
-            db.Tickets.Add(Ticket.Create(project.Id, number, title, TicketType.UserStory, project.Members[0].UserId, $"a{number}", DateTimeOffset.UtcNow));
-            await db.SaveChangesAsync();
-            return $"{project.Key}-{number}";
-        });
+    /// <summary>Creates a user story through the tickets API and returns its key.</summary>
+    public static async Task<string> CreateStoryAsync(this HttpClient client, string projectKey, string title = "Login page")
+    {
+        var response = await client.PostAsJsonAsync($"/api/v1/projects/{projectKey}/tickets", new { title, type = "UserStory" }, HttpAssertions.Json);
+        return (await response.ReadAsync<TicketSummaryDto>(HttpStatusCode.Created)).Key;
+    }
 
     public static async Task<TestCaseDto> CreateTestCaseAsync(this HttpClient client, string projectKey, string title, object? extra = null)
     {

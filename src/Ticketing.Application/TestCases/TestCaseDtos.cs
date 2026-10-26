@@ -1,11 +1,9 @@
+using Ticketing.Application.Tickets;
 using Ticketing.Domain.Regressions;
 using Ticketing.Domain.TestCases;
 using Ticketing.Domain.Tickets;
 
 namespace Ticketing.Application.TestCases;
-
-// TODO: replace with Ticketing.Application.Tickets.UserRefDto (same shape) once feat/tickets is on main.
-public sealed record UserRefDto(Guid Id, string Email, string DisplayName, bool IsActive);
 
 /// <summary>The ticket a test case was written for (same project, never deleted: deleting the ticket unlinks it).</summary>
 public sealed record LinkedTicketDto(Guid Id, string Key, string Title, TicketType Type, TicketStatus Status);

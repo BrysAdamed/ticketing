@@ -23,7 +23,7 @@ public sealed class TestCaseEndpointTests(TicketingApiFactory api)
         var owner = await api.CreateUserAsync();
         var client = await api.LoginAsync(owner);
         var project = await client.CreateProjectAsync("WEB");
-        var ticketKey = await api.CreateTicketAsync(project, 4);
+        var ticketKey = await client.CreateStoryAsync(project.Key);
 
         // Act
         var response = await client.PostAsJsonAsync("/api/v1/projects/WEB/test-cases", new
@@ -33,7 +33,7 @@ public sealed class TestCaseEndpointTests(TicketingApiFactory api)
             steps = new[] { " Open the login page ", "Submit valid credentials" },
             expectedResult = "The dashboard opens",
             status = "Manual",
-            ticketKey = "web-4",
+            ticketKey = "web-1",
         }, _ct);
         var fetched = await (await client.GetAsync("/api/v1/test-cases/web-tc-1", _ct)).ReadAsync<TestCaseDto>();
 
@@ -58,7 +58,7 @@ public sealed class TestCaseEndpointTests(TicketingApiFactory api)
         var client = await api.LoginAsync(await api.CreateUserAsync());
         await client.CreateProjectAsync("WEB");
         var otherProject = await client.CreateProjectAsync("APP");
-        await api.CreateTicketAsync(otherProject, 1);
+        await client.CreateStoryAsync(otherProject.Key);
 
         // Act
         var invalid = await client.PostAsJsonAsync("/api/v1/projects/WEB/test-cases",
@@ -83,7 +83,7 @@ public sealed class TestCaseEndpointTests(TicketingApiFactory api)
         // Arrange
         var client = await api.LoginAsync(await api.CreateUserAsync());
         var project = await client.CreateProjectAsync("WEB");
-        await api.CreateTicketAsync(project, 1);
+        await client.CreateStoryAsync(project.Key);
         var created = await client.CreateTestCaseAsync("WEB", "Export", new { preconditions = "Data exists", ticketKey = "WEB-1" });
 
         // Act
@@ -132,7 +132,7 @@ public sealed class TestCaseEndpointTests(TicketingApiFactory api)
         // Arrange
         var client = await api.LoginAsync(await api.CreateUserAsync());
         var project = await client.CreateProjectAsync("WEB");
-        await api.CreateTicketAsync(project, 1);
+        await client.CreateStoryAsync(project.Key);
         await client.CreateManualCaseAsync("WEB", "Login works");
         await client.CreateAutomaticCaseAsync("WEB", "Logout works");
         await client.CreateTestCaseAsync("WEB", "Export draft", new { ticketKey = "WEB-1" });
@@ -169,8 +169,8 @@ public sealed class TestCaseEndpointTests(TicketingApiFactory api)
         // Arrange
         var client = await api.LoginAsync(await api.CreateUserAsync());
         var project = await client.CreateProjectAsync("WEB");
-        await api.CreateTicketAsync(project, 1);
-        await api.CreateTicketAsync(project, 2);
+        await client.CreateStoryAsync(project.Key);
+        await client.CreateStoryAsync(project.Key);
         await client.CreateTestCaseAsync("WEB", "First", new { ticketKey = "WEB-1" });
         await client.CreateTestCaseAsync("WEB", "Other ticket", new { ticketKey = "WEB-2" });
         var archived = await client.CreateTestCaseAsync("WEB", "Archived", new { ticketKey = "WEB-1" });
@@ -227,7 +227,7 @@ public sealed class TestCaseEndpointTests(TicketingApiFactory api)
         var priv = await ownerClient.CreateProjectAsync("PRIV");
         await ownerClient.CreateProjectAsync("PUB", ProjectVisibility.Public);
         await api.AddMemberAsync(priv.Id, viewer, ProjectRole.Viewer);
-        var privateTicket = await api.CreateTicketAsync(priv, 1);
+        var privateTicket = await ownerClient.CreateStoryAsync(priv.Key);
         var privateCase = await ownerClient.CreateTestCaseAsync("PRIV", "Secret", new { status = "Manual", steps = new[] { "Step" }, ticketKey = privateTicket });
 
         // Act

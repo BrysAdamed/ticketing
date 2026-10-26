@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Ticketing.Application.Abstractions;
 using Ticketing.Application.Access;
 using Ticketing.Application.Common;
+using Ticketing.Application.Tickets;
 using Ticketing.Domain.Common;
 using Ticketing.Domain.Regressions;
 using Ticketing.Domain.TestCases;

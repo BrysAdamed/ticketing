@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Ticketing.Application.Abstractions;
 using Ticketing.Application.TestCases;
+using Ticketing.Application.Tickets;
 using Ticketing.Domain.Common;
 using Ticketing.Domain.Regressions;
 using Ticketing.Domain.Tickets;
@@ -140,7 +141,7 @@ public static class RegressionQueries
         {
             var item = r.Item;
             var bug = item.BugTicketId is { } bugId && r.BugNumber is { } bugNumber
-                ? new RegressionBugRefDto(bugId, HumanKeys.Ticket(projectKey, bugNumber), r.BugTitle!, r.BugStatus!.Value, r.BugDeleted, $"/tickets/{HumanKeys.Ticket(projectKey, bugNumber)}")
+                ? new RegressionBugRefDto(bugId, HumanKeys.Ticket(projectKey, bugNumber), r.BugTitle!, r.BugStatus!.Value, r.BugDeleted, TicketQueries.Url(HumanKeys.Ticket(projectKey, bugNumber)))
                 : null;
             return new RegressionItemDto(
                 item.Id, item.TestCaseId, item.TestCaseKey, item.Order, item.Title, item.Preconditions, item.Steps, item.ExpectedResult,
@@ -150,8 +151,11 @@ public static class RegressionQueries
     }
 
     public static async Task<RegressionItemChangeDto> ItemChangeAsync(
-        ITicketingDbContext db, RegressionTarget session, Guid itemId, CancellationToken cancellationToken) =>
-        new((await ItemsAsync(db, session, ItemFilter.Single(itemId), cancellationToken))[0], await SummaryAsync(db, session.Id, cancellationToken));
+        ITicketingDbContext db, RegressionTarget session, Guid itemId, CancellationToken cancellationToken, Guid? createdBugId = null) =>
+        new(
+            (await ItemsAsync(db, session, ItemFilter.Single(itemId), cancellationToken))[0],
+            await SummaryAsync(db, session.Id, cancellationToken),
+            createdBugId is { } bugId ? (await TicketQueries.SummariesAsync(db, [bugId], cancellationToken))[0] : null);
 
     internal sealed record SessionRow(
         Guid Id, int Number, string Name, string? Version, RegressionSessionStatus Status, DateTimeOffset StartedAt, UserRefDto StartedBy,

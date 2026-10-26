@@ -1,4 +1,5 @@
 using Ticketing.Application.TestCases;
+using Ticketing.Application.Tickets;
 using Ticketing.Domain.Regressions;
 using Ticketing.Domain.Tickets;
 
@@ -82,5 +83,8 @@ public sealed record RegressionSessionDto(
     string Url,
     uint RowVersion);
 
-/// <summary>The result of an item change: the item and the refreshed session summary, so clients can update progress without a refetch.</summary>
-public sealed record RegressionItemChangeDto(RegressionItemDto Item, RegressionSummaryDto Summary);
+/// <summary>
+/// The result of an item change: the item and the refreshed session summary, so clients can update progress without a
+/// refetch, plus the ticket summary of a bug created by the same call.
+/// </summary>
+public sealed record RegressionItemChangeDto(RegressionItemDto Item, RegressionSummaryDto Summary, TicketSummaryDto? CreatedBug = null);

@@ -65,7 +65,7 @@ public sealed class TestingMcpTests(TicketingApiFactory api)
         var assigned = await CallAsync(mcp, "assign_regression_item", new() { ["sessionKey"] = "WEB-R-1", ["testCaseKey"] = "WEB-TC-2", ["assignee"] = user.Email });
         var failed = await CallAsync(mcp, "record_regression_result", new()
         {
-            ["sessionKey"] = "WEB-R-1", ["testCaseKey"] = "WEB-TC-1", ["status"] = "Failed", ["note"] = "Error 500",
+            ["sessionKey"] = "WEB-R-1", ["testCaseKey"] = "WEB-TC-1", ["status"] = "Failed", ["note"] = "Error 500", ["createBug"] = true, ["bugSeverity"] = "Blocker",
         });
         var missingNote = await mcp.CallToolAsync("record_regression_result", new Dictionary<string, object?>
         {
@@ -82,6 +82,8 @@ public sealed class TestingMcpTests(TicketingApiFactory api)
         Assert.Equal(user.Email, taken.GetProperty("item").GetProperty("assignee").GetProperty("email").GetString());
         Assert.Equal(user.Email, assigned.GetProperty("item").GetProperty("assignee").GetProperty("email").GetString());
         Assert.Equal(nameof(RegressionItemStatus.Failed), failed.GetProperty("item").GetProperty("status").GetString());
+        Assert.Equal(("WEB-2", "Blocker"), (failed.GetProperty("createdBug").GetProperty("key").GetString(), failed.GetProperty("createdBug").GetProperty("severity").GetString()));
+        Assert.Equal("WEB-2", failed.GetProperty("item").GetProperty("bug").GetProperty("key").GetString());
         Assert.True(missingNote.IsError);
         Assert.Equal(RegressionErrors.NoteRequired, Payload(missingNote).GetProperty("code").GetString());
         Assert.Equal(["WEB-TC-1"], mine.GetProperty("items").EnumerateArray().Select(i => i.GetProperty("testCaseKey").GetString()));
@@ -150,8 +152,9 @@ public sealed class TestingMcpTests(TicketingApiFactory api)
     private async Task<(McpClient Mcp, TestUser User)> SetUpAsync()
     {
         var user = await api.CreateUserAsync();
-        var project = await (await api.LoginAsync(user)).CreateProjectAsync("WEB");
-        await api.CreateTicketAsync(project, 1);
+        var client = await api.LoginAsync(user);
+        await client.CreateProjectAsync("WEB");
+        await client.CreateStoryAsync("WEB");
         return (await api.CreateMcpClientAsync(await api.CreatePatAsync(user)), user);
     }
 

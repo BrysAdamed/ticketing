@@ -15,7 +15,9 @@ public sealed class RegressionTools
     private const string SessionStatuses = "InProgress, Completed or Cancelled";
     private const string ItemStatuses = "WaitingForExecution, Passed, Failed or Skipped";
     private const string SessionKey = "Session key, for example WEB-R-3, or id.";
-    private const string TestCaseKey = "Test case key of the item, for example WEB-TC-7 (item id or test case id also work).";
+    private const string BugSeverities = "Severity: Blocker, Critical, Major, Minor or Trivial.";
+    private const string BugPriorities = "Priority: Highest, High, Medium, Low or Lowest.";
+    private const string TestCaseKey ="Test case key of the item, for example WEB-TC-7 (item id or test case id also work).";
 
     [McpServerTool(Name = "list_regression_sessions", ReadOnly = true, Idempotent = true, Title = "List regression sessions")]
     [Description("Lists a project's regression sessions, newest first, with summary counts (total, passed manual/automatic, failed, skipped, waiting, "
@@ -78,15 +80,34 @@ public sealed class RegressionTools
     [Authorize(Policy = AuthPolicies.CanWrite)]
     [McpServerTool(Name = "record_regression_result", Destructive = false, Title = "Record regression result")]
     [Description($"Records an item result: {ItemStatuses} (WaitingForExecution resets it). Failed requires a note with the actual result. "
-        + "Only the assignee records; an unassigned item is assigned to you first. Returns the item and the refreshed session summary.")]
+        + "Only the assignee records; an unassigned item is assigned to you first. With createBug (Failed only, once per item) it also creates a Bug "
+        + "at the top of the backlog: title '[Regression] <test case title>', templated repro steps, Severity Major, Priority High, the session version, "
+        + "label regression, linked RelatesTo the test case's ticket; bugTitle, bugSeverity, bugPriority and bugAssignee override the defaults. "
+        + "Returns the item, the refreshed session summary and the created bug.")]
     public static Task<RegressionItemChangeDto> RecordRegressionResult(
         RecordRegressionResult.Handler handler,
         [Description(SessionKey)] string sessionKey,
         [Description(TestCaseKey)] string testCaseKey,
         [Description($"Result: {ItemStatuses}.")] RegressionItemStatus status,
         [Description("Markdown note, at most 4000 characters; required for Failed (the actual result).")] string? note = null,
+        [Description("Also create the bug for this failure. Default false.")] bool createBug = false,
+        [Description("Bug title instead of '[Regression] <test case title>'.")] string? bugTitle = null,
+        [Description(BugSeverities + " Default Major.")] Domain.Tickets.Severity? bugSeverity = null,
+        [Description(BugPriorities + " Default High.")] Domain.Tickets.Priority? bugPriority = null,
+        [Description("Bug assignee email, id or 'me'. Default unassigned.")] string? bugAssignee = null,
         CancellationToken cancellationToken = default) =>
-        handler.HandleAsync(new RecordRegressionResult.Command(status, note, sessionKey, testCaseKey), cancellationToken);
+        handler.HandleAsync(
+            new RecordRegressionResult.Command(
+                status, note, createBug,
+                new BugOverrides
+                {
+                    Title = bugTitle,
+                    Severity = bugSeverity is { } severity ? new Optional<Domain.Tickets.Severity?>(severity) : default,
+                    Priority = bugPriority,
+                    Assignee = bugAssignee,
+                },
+                sessionKey, testCaseKey),
+            cancellationToken);
 
     [Authorize(Policy = AuthPolicies.CanWrite)]
     [McpServerTool(Name = "complete_regression_session", Destructive = false, Title = "Complete regression session")]

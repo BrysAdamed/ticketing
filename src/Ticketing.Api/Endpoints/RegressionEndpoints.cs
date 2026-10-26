@@ -83,5 +83,17 @@ public sealed class RegressionEndpoints : IEndpointModule
             TypedResults.Ok(await handler.HandleAsync(new GetRegressionBugDraft.Query(sessionKeyOrId, item), ct)))
             .WithSummary("The pre-filled bug for a failed item (title, templated description, severity, priority, version, labels, related ticket).")
             .ProducesProblem(StatusCodes.Status409Conflict);
+
+        item.MapPost("/bug", async (
+                string sessionKeyOrId, string item, BugOverrides? overrides, CreateRegressionBug.Handler handler, HttpRequest request, CancellationToken ct) =>
+            {
+                var change = await handler.HandleAsync(new CreateRegressionBug.Command(overrides, sessionKeyOrId, item), ct);
+                return TypedResults.Created(change.CreatedBug is { } bug ? $"/api/v1/tickets/{bug.Key}" : null, change);
+            })
+            .WithSummary("Creates the bug for a failed item (once): the draft from bug-draft plus any field you send, at the top of the backlog, "
+                + "linked RelatesTo the test case's ticket. Returns the item, the session summary and the created bug.")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status409Conflict);
     }
 }

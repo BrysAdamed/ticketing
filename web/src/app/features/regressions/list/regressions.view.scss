@@ -1,0 +1,115 @@
+.list {
+  padding-bottom: 32px;
+}
+
+.row {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 20px 0 24px;
+  border-bottom: 1px solid var(--tk-border-subtle);
+  color: var(--tk-text);
+  text-decoration: none;
+
+  &:hover {
+    background: var(--tk-bg-hover);
+  }
+
+  .badge {
+    width: 96px;
+    flex: none;
+  }
+
+  .key {
+    width: 64px;
+    flex: none;
+    color: var(--tk-text-muted);
+  }
+
+  .name {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    .n {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-weight: var(--tk-weight-medium);
+    }
+
+    .ver {
+      flex: none;
+      padding: 0 6px;
+      border-radius: var(--tk-radius-sm);
+      background: var(--tk-bg-muted);
+      color: var(--tk-text-muted);
+      font-size: var(--tk-text-xs);
+      line-height: 18px;
+    }
+  }
+
+  .prog {
+    width: 240px;
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    tk-session-progress {
+      width: 180px;
+      flex: none;
+    }
+
+    .done {
+      color: var(--tk-text-muted);
+      font-size: var(--tk-text-sm);
+    }
+  }
+
+  .failed {
+    width: 64px;
+    flex: none;
+    font-size: var(--tk-text-sm);
+
+    &.has {
+      color: var(--tk-danger-fg);
+      font-weight: var(--tk-weight-medium);
+    }
+  }
+
+  .rate {
+    width: 44px;
+    flex: none;
+    text-align: right;
+    color: var(--tk-text-muted);
+    font-size: var(--tk-text-sm);
+  }
+
+  .by {
+    width: 200px;
+    flex: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: right;
+    color: var(--tk-text-subtle);
+    font-size: var(--tk-text-sm);
+  }
+}
+
+.more {
+  display: block;
+  margin: 12px auto;
+  padding: 4px 12px;
+  border: 1px solid var(--tk-border);
+  border-radius: var(--tk-radius-md);
+  background: var(--tk-surface);
+  color: var(--tk-text-muted);
+  font: inherit;
+  font-size: var(--tk-text-sm);
+  cursor: pointer;
+}

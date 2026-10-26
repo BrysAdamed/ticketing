@@ -1,0 +1,213 @@
+<header class="tk-page-header">
+  <h1>Dashboard</h1>
+  @if (store.data(); as d) {
+    <span class="updated" [title]="d.generatedAt">Updated {{ d.generatedAt | relativeTime }}</span>
+  }
+  <div class="tk-page-actions">
+    <tk-version-filter
+      [version]="versionFilter()"
+      [versions]="store.versions()"
+      (changed)="setVersion($event)"
+    />
+  </div>
+</header>
+
+<div class="tk-page-body">
+  @switch (store.phase()) {
+    @case ('error') {
+      <tk-empty-state
+        tone="danger"
+        icon="tablerAlertCircle"
+        title="Couldn't load the dashboard"
+        [description]="
+          store.error()?.traceId
+            ? 'Correlation id ' + store.error()?.traceId
+            : 'Check your connection and try again.'
+        "
+      >
+        <button mat-stroked-button type="button" (click)="store.retry()">Retry</button>
+      </tk-empty-state>
+    }
+    @case ('skeleton') {
+      <div class="grid" aria-busy="true">
+        <tk-kpi-tiles class="span-12" [data]="null" [links]="store.links()" />
+        <tk-dashboard-card class="span-5" title="Status" [loading]="true" [lines]="9" />
+        <tk-dashboard-card
+          class="span-7"
+          title="Created vs resolved"
+          [loading]="true"
+          shape="chart"
+        />
+        <tk-dashboard-card class="span-4" title="Open by type" [loading]="true" />
+        <tk-dashboard-card class="span-4" title="Open by priority" [loading]="true" />
+        <tk-dashboard-card
+          class="span-4"
+          title="Open bugs by severity"
+          [loading]="true"
+          [lines]="6"
+        />
+      </div>
+    }
+    @case ('ready') {
+      @if (store.isEmpty()) {
+        <tk-empty-state
+          icon="tablerChartBar"
+          title="Nothing to chart yet"
+          description="Create tickets, test cases or regression sessions and this dashboard fills in by itself."
+          data-testid="dashboard-empty"
+        >
+          <button mat-flat-button type="button" (click)="createTicket()">
+            New ticket <tk-kbd tone="on-solid">C</tk-kbd>
+          </button>
+          <a mat-stroked-button [routerLink]="['/projects', store.projectKey(), 'backlog']"
+            >Open backlog</a
+          >
+        </tk-empty-state>
+      } @else if (store.data(); as d) {
+        <div class="grid" [class.refreshing]="store.refreshing()" data-testid="dashboard-grid">
+          <tk-kpi-tiles class="span-12" [data]="d" [links]="store.links()" />
+
+          <tk-dashboard-card class="span-5" title="Status" note="All tickets">
+            <tk-status-distribution [data]="d" [links]="store.links()" />
+          </tk-dashboard-card>
+
+          <tk-dashboard-card
+            class="span-7"
+            title="Created vs resolved"
+            note="Per ISO week, last 12 weeks"
+          >
+            @defer (on viewport; prefetch on idle) {
+              <tk-created-resolved-chart [weeks]="d.createdVsResolved" [links]="store.links()" />
+            } @placeholder {
+              <div class="chart-placeholder"></div>
+            }
+          </tk-dashboard-card>
+
+          <tk-dashboard-card class="span-4" title="Open by type">
+            <tk-bar-list [items]="types()" label="Open tickets by type" testIdPrefix="type-" />
+          </tk-dashboard-card>
+          <tk-dashboard-card class="span-4" title="Open by priority">
+            <tk-bar-list
+              [items]="priorities()"
+              label="Open tickets by priority"
+              testIdPrefix="priority-"
+            />
+          </tk-dashboard-card>
+          <tk-dashboard-card
+            class="span-4"
+            title="Open bugs by severity"
+            [note]="openBugs() + ' open bugs'"
+          >
+            <tk-bar-list
+              [items]="severities()"
+              label="Open bugs by severity"
+              testIdPrefix="severity-"
+            />
+          </tk-dashboard-card>
+
+          @defer (on viewport; prefetch on idle) {
+            <tk-dashboard-card class="span-4" title="Open by assignee">
+              <tk-bar-list
+                [items]="assignees()"
+                label="Open tickets by assignee"
+                testIdPrefix="assignee-"
+              />
+            </tk-dashboard-card>
+
+            <tk-dashboard-card
+              class="span-8"
+              title="Stale tickets"
+              [note]="'Open, not updated for ' + d.stale.olderThanDays + '+ days'"
+            >
+              <a
+                cardActions
+                class="count-link"
+                [routerLink]="store.links().stale(d.stale.updatedBefore).path"
+                [queryParams]="store.links().stale(d.stale.updatedBefore).query"
+                data-testid="stale-count"
+                >{{ d.stale.count }} stale</a
+              >
+              @if (d.stale.oldest.length > 0) {
+                <tk-dashboard-ticket-list
+                  [tickets]="d.stale.oldest"
+                  label="Oldest stale tickets"
+                  [showAge]="true"
+                />
+              } @else {
+                <p class="calm">
+                  Nothing stale. Every open ticket moved in the last
+                  {{ d.stale.olderThanDays }} days.
+                </p>
+              }
+            </tk-dashboard-card>
+
+            <tk-dashboard-card
+              class="span-8"
+              title="Epic progress"
+              note="Direct children of open epics"
+            >
+              @if (d.epicProgress.epics.length > 0) {
+                <tk-epic-progress
+                  [epics]="d.epicProgress.epics"
+                  [openEpics]="d.epicProgress.openEpics"
+                  [links]="store.links()"
+                />
+              } @else {
+                <p class="calm">
+                  No open epics{{ d.version ? ' with version ' + d.version : '' }}.
+                </p>
+              }
+            </tk-dashboard-card>
+
+            <tk-dashboard-card class="span-4" title="Test cases" [note]="versionNote()">
+              @if (d.testCases.total > 0) {
+                <tk-test-cases-widget [stats]="d.testCases" [links]="store.links()" />
+              } @else {
+                <p class="calm">No test cases yet.</p>
+              }
+            </tk-dashboard-card>
+
+            <tk-dashboard-card class="span-7" title="Regressions" [note]="versionNote()">
+              <tk-regressions-widget
+                [latest]="d.regressions.latest"
+                [recent]="d.regressions.recentPassRates"
+                [links]="store.links()"
+              />
+            </tk-dashboard-card>
+
+            <tk-dashboard-card class="span-5" title="Open regression bugs">
+              <a
+                cardActions
+                class="count-link"
+                [routerLink]="store.links().openRegressionBugs().path"
+                [queryParams]="store.links().openRegressionBugs().query"
+                data-testid="regression-bugs-count"
+                >{{ d.regressionBugs.count }} open</a
+              >
+              @if (d.regressionBugs.items.length > 0) {
+                <tk-dashboard-ticket-list
+                  [tickets]="d.regressionBugs.items"
+                  label="Open regression bugs"
+                  [showSeverity]="true"
+                  [showType]="false"
+                />
+              } @else {
+                <p class="calm">No open bugs from regression runs.</p>
+              }
+            </tk-dashboard-card>
+          } @placeholder {
+            <div class="span-12 row">
+              <tk-dashboard-card class="span-4" title="Open by assignee" [loading]="true" />
+              <tk-dashboard-card
+                class="span-8"
+                title="Stale tickets"
+                [loading]="true"
+                shape="rows"
+              />
+            </div>
+          }
+        </div>
+      }
+    }
+  }
+</div>

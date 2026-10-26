@@ -1,0 +1,114 @@
+@if (latest(); as session) {
+  <section class="latest" aria-label="Latest regression session">
+    <div class="title-row">
+      <a
+        class="name"
+        [routerLink]="links().regressionSession(session.key).path"
+        data-testid="latest-regression"
+        >{{ session.name }}</a
+      >
+      <span class="muted">{{ session.key }}</span>
+      @if (session.version) {
+        <span class="version">{{ session.version }}</span>
+      }
+      <tk-regression-session-badge [status]="session.status" />
+      <span class="muted when">started {{ session.startedAt | relativeTime }}</span>
+    </div>
+    <div class="figures">
+      <div>
+        <span class="figure">{{
+          session.passRate === null ? '–' : (session.passRate | percent: '1.0-0')
+        }}</span>
+        <span class="caption">pass rate</span>
+      </div>
+      <div>
+        <span class="figure">{{ session.total }}</span>
+        <span class="caption">cases</span>
+      </div>
+      <div>
+        <span class="figure">{{ session.bugsCreated }}</span>
+        <span class="caption">bugs created</span>
+      </div>
+    </div>
+    <div
+      class="stack"
+      role="img"
+      [attr.aria-label]="
+        session.passed +
+        ' passed, ' +
+        session.failed +
+        ' failed, ' +
+        session.skipped +
+        ' skipped, ' +
+        session.waiting +
+        ' waiting'
+      "
+    >
+      @for (segment of segments(); track segment.id) {
+        @if (segment.count > 0) {
+          <span
+            [style.flex-grow]="segment.count"
+            [style.background]="segment.color"
+            [title]="segment.label + ': ' + segment.count"
+          ></span>
+        }
+      }
+    </div>
+    <ul class="legend">
+      @for (segment of segments(); track segment.id) {
+        <li>
+          <span class="key" [style.background]="segment.color"></span>
+          {{ segment.label }} <strong>{{ segment.count }}</strong>
+          @if (segment.id === 'passed' && session.passedAutomatic > 0) {
+            <span class="muted">({{ session.passedAutomatic }} auto)</span>
+          }
+        </li>
+      }
+    </ul>
+  </section>
+} @else {
+  <p class="empty">No regression sessions yet. Start one from the Regressions tab.</p>
+}
+
+<section class="trend" aria-label="Pass rate of the last completed sessions">
+  <h3>Pass rate, last {{ recent().length || 5 }} completed</h3>
+  @if (recent().length > 0) {
+    <p class="scale">Scale {{ floor() | percent: '1.0-0' }}–100%</p>
+  }
+  @if (recent().length > 0) {
+    <svg
+      [attr.viewBox]="'0 0 ' + width + ' ' + height"
+      [attr.width]="width"
+      [attr.height]="height"
+      role="img"
+      [attr.aria-label]="sparkLabel()"
+    >
+      <path class="line" [attr.d]="path()" />
+      @for (point of points(); track point.key) {
+        @if (point.passRate !== null) {
+          <circle [class.last]="point.last" [attr.cx]="point.x" [attr.cy]="point.y" r="4">
+            <title>{{ point.name }}: {{ point.passRate | percent: '1.0-0' }}</title>
+          </circle>
+        }
+      }
+    </svg>
+    <ol class="values" [style.width.px]="width">
+      @for (point of points(); track point.key) {
+        <li [style.left.px]="point.x">
+          <a
+            [routerLink]="links().regressionSession(point.key).path"
+            [class.last]="point.last"
+            [title]="point.name"
+          >
+            <strong>{{
+              point.passRate === null ? '–' : (point.passRate | percent: '1.0-0')
+            }}</strong>
+            <span>{{ shortKey(point.key) }}</span>
+          </a>
+        </li>
+      }
+    </ol>
+  } @else {
+    <p class="empty">Completed sessions will show their pass rate here.</p>
+  }
+</section>

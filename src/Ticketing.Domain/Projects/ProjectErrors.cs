@@ -12,4 +12,5 @@ public static class ProjectErrors
     public const string AlreadyMember = "project.member.exists";
     public const string NotMember = "project.member.notFound";
     public const string LastOwner = "project.lastOwner";
+    public const string DeleteNotConfirmed = "project.delete.notConfirmed";
 }

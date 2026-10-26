@@ -59,7 +59,7 @@ Ties are broken by ticket id in the same direction, so paging is stable. `key` o
 
 ## Paging (API only)
 
-`limit` (1..100, default 25) and `cursor` (opaque `nextCursor` from the previous page). The cursor is bound to the sort; changing `sort` or `order` with an old cursor gives `400 validation`. The export ignores both and returns at most 10 000 rows in the requested order.
+`limit` (1..100, default 25) and `cursor` (opaque `nextCursor` from the previous page). The cursor is bound to the sort; changing `sort` or `order` with an old cursor gives `400 validation`. The response is `{ items, nextCursor, total, totalCapped }`: `total` is counted on the first page only (null on later pages), capped at 1000 (`totalCapped: true` means "1000+"). The export ignores paging and returns at most 10 000 rows in the requested order.
 
 ## UI-only parameters (search page)
 

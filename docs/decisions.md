@@ -310,6 +310,21 @@ Format: question, options considered, decision, rationale. "PO" marks decisions 
 - Decision: for `user.lastProjectOwner`, another Owner must be an active member with the `Owner` role; an Admin's implicit Owner access does not count. The error lists the project keys in `errors.projects`. User search (`GET /users`, MCP `find_users`) matches an email prefix or the start of any word of the display name, returns at most 20, and hides deactivated users on REST unless `includeInactive=true`. MCP `find_users` without `projectKey` includes them (with `isActive`), so an LLM can resolve names on old tickets. With a project, only active users who can write there are returned.
 - Rationale: an implicit Admin owner would let a project become ownerless as soon as the Admin is demoted.
 
+### D-59 Search URL format, references and counts
+
+- Question: how are search filters encoded so the search page, the API, the CSV export and dashboard links share them, and what happens to references the caller cannot read?
+- Decision: one query-string format ([search-url-format.md](architecture/search-url-format.md)): short parameter names, comma-separated lists, plain dates meaning whole UTC days. The SPA copies its URL to `GET /tickets/search` unchanged. Project keys, users, parents and boards that are unknown or unreadable match nothing instead of failing, so a link never reveals that a private project exists. The dashboard needs got their own filters: `resolvedFrom/To`, `assigneeNot`, `fromRegression`, `severity=none` and `version=none`. The first page carries `total`, counted up to 1000 (`totalCapped`); counting to 10 000 cost up to 190 ms for common words at 200 000 tickets. Pages use keyset cursors on (sort key, id) that are bound to the sort. Text matching is OR-ed: full text (`websearch_to_tsquery('english')`, title A, description B), a title substring through the trigram index (3+ characters), and an exact ticket key.
+- Rationale: one format means one parser (`SearchQueryParser`), which REST and MCP both use. The capped count keeps every search under 150 ms (verified with EXPLAIN ANALYZE on 200 000 seeded tickets, `SearchPerformanceTests`). That needed two global sort indexes, `(updated_at DESC, id DESC)` and `(created_at DESC, id DESC)` where not deleted.
+
+### D-60 Attachment URLs and content checks
+
+- Decision: attachment content lives at `/api/v1/attachments/{id}`, and markdown embeds it as `![name](/api/v1/attachments/{id})` (the spec said `/attachments/{id}`, which nginx would route to the SPA). The stored type is the declared type when it is allow-listed (common aliases such as `image/jpg` are mapped). For generic declarations (`application/octet-stream`, empty, Excel's CSV type) it comes from the extension. The bytes must then agree: binary types by signature, text types as UTF-8 with no binary signature, and JSON must parse. SVG and HTML are never accepted. Downloads send `nosniff`, a `sandbox` CSP and a private cache header. Images are inline unless `?download=true`. The ticket row is locked (`FOR UPDATE`) while counting toward the 50-file limit.
+- Rationale: the URL works through the existing `/api` proxy and cookie session. Mapping by extension accepts what browsers actually send (Windows labels `.csv` as `application/vnd.ms-excel`) without trusting it.
+
+### D-61 My work bounds
+
+- Decision: `GET /me/work` returns at most 500 open tickets (projects by key, then priority, then most recently updated) with `truncated`, plus up to 200 waiting regression items from running sessions. Projects the user can no longer read are left out, even when tickets there are still assigned to them.
+- Rationale: the page stays fast. The full list is the search link `assignee=me&category=ToDo,InProgress`.
 ## Needs product owner
 
 None of these block v1. The implementation follows each recommendation provisionally; the product owner confirms or overrides them at the v1 review.

@@ -45,6 +45,10 @@ Items triaged as LATER in [product/02-improvements-triage.md](product/02-improve
 | --- | --- | --- | --- |
 | I-38 | Saved and shared filters | Named searches beyond bookmarks. | S |
 | I-65 | Search in comments | Finds discussions, not just descriptions. | S |
+| - | Relevance sort for text search | 	s_rank ordering needs a cursor on a float; v1 sorts by updated. | S |
+| - | Custom date ranges in the search UI | v1 offers presets; any range works through the URL. | S |
+| - | Server-side image thumbnails | The attachments list scales full images down in the browser. | S |
+| - | Attachment upload over MCP | Spec 9.3 LATER; needs a size-safe transport. | S |
 | I-42 | Clone ticket | Convenience for repeated work. | S |
 | I-43 | Description templates per ticket type | Better bug reports. | S |
 | I-46 | Due dates | Some teams track deadlines. | S |

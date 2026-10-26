@@ -415,7 +415,7 @@ sequenceDiagram
         end
     else No bearer header
         S->>K: Forward
-        K->>K: Valid tkt_session cookie and active user?
+        K->>K: Valid tkt_session cookie, active user, security stamp unchanged?
         Note over K: Unsafe methods also need X-XSRF-TOKEN matching the XSRF-TOKEN cookie, else 400
     end
     S->>Z: Endpoint policy
@@ -451,7 +451,7 @@ sequenceDiagram
         API-->>N: Link no longer valid, ask the Admin for a new one
     else Valid
         API->>API: Policy: 12 to 128 chars, not the email, not in the 10 000 most common
-        API->>DB: PasswordHash set, token cleared
+        API->>DB: PasswordHash set, token cleared, lockout lifted, SecurityStamp rotated (other sessions end)
         API-->>N: Password set
         N->>API: Sign in (email, password)
         API->>DB: Not locked, active, password verifies?
@@ -482,7 +482,9 @@ stateDiagram-v2
     end note
 ```
 
-`AwaitingPassword` and `Locked` are not stored states: they follow from `PasswordHash` being null and from `LockedUntil` being in the future. A reactivated user who never set a password still needs a set-password link.
+`AwaitingPassword` and `Locked` are not stored states: they follow from `PasswordHash` being null and from `LockedUntil` being in the future. A reactivated user who never set a password still needs a set-password link: deactivation clears a pending one.
+
+Users change their own password with the current one. That rotates the security stamp: every other cookie session ends at its next request, and the current session is re-issued with the new stamp (D-48). Unknown, used, expired and deactivated users' links all give the same 404 (D-49).
 
 ## 8. Feature flag evaluation and view variants
 

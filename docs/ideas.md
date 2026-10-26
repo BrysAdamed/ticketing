@@ -23,6 +23,8 @@ Items triaged as LATER in [product/02-improvements-triage.md](product/02-improve
 | I-69 | Read-only option for public projects | Some projects want visibility without outside edits. | S |
 | I-63 | Private boards | Board names can reveal private work. | S |
 | I-57 | User anonymization | GDPR erasure for former employees. | S |
+| I-76 | Active sessions list and "sign out everywhere" | Lets users end a session on a lost laptop. The security stamp (D-48) already does the work. | S |
+| I-77 | Breached-password check (HIBP k-anonymity range API) | Catches leaked passwords beyond the bundled list (D-47). Needs outbound internet from the VM. | S |
 
 ## Planning and boards
 

@@ -1,0 +1,95 @@
+<h2 mat-dialog-title>{{ data.heading ?? 'New ticket' }}</h2>
+<mat-dialog-content class="content">
+  <div class="row two">
+    <div class="field">
+      <span class="tk-field-label" id="create-project-label">Project</span>
+      <mat-form-field>
+        <mat-select data-testid="create-project" aria-labelledby="create-project-label" [value]="projectKey()" (valueChange)="setProject($event)">
+          @for (project of projects(); track project.key) {
+            <mat-option [value]="project.key">{{ project.name }} <span class="subtle">{{ project.key }}</span></mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+    <div class="field">
+      <span class="tk-field-label">Type</span>
+      <button
+        type="button"
+        class="pick"
+        data-testid="create-type"
+        [tkInlinePicker]="typeOptions"
+        [pickerValue]="type()"
+        pickerPlaceholder="Ticket type…"
+        (picked)="type.set($event)"
+      >
+        <tk-type-icon [type]="type()" [showLabel]="true" [size]="14" />
+        <tk-icon class="chev" name="tablerChevronDown" [size]="14" />
+      </button>
+    </div>
+  </div>
+
+  <label class="field">
+    <span class="tk-field-label">Title</span>
+    <mat-form-field>
+      <input
+        matInput
+        data-testid="create-title"
+        maxlength="255"
+        placeholder="What needs to be done?"
+        cdkFocusInitial
+        [value]="title()"
+        (input)="title.set($any($event.target).value)"
+      />
+      @if (fieldErrors()['title']) {
+        <mat-error>{{ fieldErrors()['title'] }}</mat-error>
+      }
+    </mat-form-field>
+  </label>
+
+  <div class="field">
+    <span class="tk-field-label">Description</span>
+    <tk-markdown-editor
+      data-testid="create-description"
+      ariaLabel="Description"
+      placeholder="Markdown supported. Ticket keys link automatically."
+      submitHint="to create"
+      [minRows]="4"
+      [maxRows]="14"
+      [maxLength]="50000"
+      [(value)]="description"
+      (submitted)="create()"
+    />
+  </div>
+
+  <div class="props">
+    <button type="button" class="chip" data-testid="create-priority" [tkInlinePicker]="priorityOptions" [pickerValue]="priority()" pickerPlaceholder="Priority…" (picked)="priority.set($event)">
+      <tk-priority-icon [priority]="priority()" />{{ priorityLabels[priority()] }}
+    </button>
+    <button type="button" class="chip" data-testid="create-severity" [tkInlinePicker]="severityOptions" [pickerValue]="severity()" pickerPlaceholder="Severity…" (picked)="severity.set($event)">
+      <tk-icon name="tablerAlertTriangle" [size]="14" />{{ severity() ? severityLabels[severity()!] : 'Severity' }}
+    </button>
+    <button type="button" class="chip" data-testid="create-assignee" [tkInlinePicker]="assigneeOptions()" [pickerValue]="assignee()?.id ?? null" pickerPlaceholder="Assign to…" (picked)="setAssignee($event)">
+      <tk-user [user]="assignee()" />
+    </button>
+    <button type="button" class="chip" data-testid="create-parent" [disabled]="type() === 'Epic'" [tkSearchPicker]="parentSearch" pickerPlaceholder="Parent ticket…" (picked)="setParent($event)">
+      <tk-icon name="tablerHierarchy" [size]="14" />{{ parentKey() ? parentKey() + (parent() ? ' ' + parent()!.title : '') : 'Parent' }}
+    </button>
+    <button type="button" class="chip" data-testid="create-labels" [tkLabelsPicker]="labels()" [labelSuggestions]="labelSuggestions" (labelToggled)="toggleLabel($event)">
+      <tk-icon name="tablerTag" [size]="14" />
+      @for (label of labels(); track label) {
+        <tk-label-chip [label]="label" />
+      } @empty {
+        Labels
+      }
+    </button>
+  </div>
+
+  @if (error()) {
+    <div class="tk-callout tk-callout-danger" role="alert" data-testid="create-error">{{ error() }}</div>
+  }
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <span class="hint"><tk-kbd>{{ submitKeys }}</tk-kbd> create · <tk-kbd>⇧</tk-kbd><tk-kbd>{{ submitKeys }}</tk-kbd> create &amp; open</span>
+  <button mat-button type="button" (click)="cancel()">Cancel</button>
+  <button mat-flat-button type="button" data-testid="create-submit" [disabled]="!canSubmit()" (click)="create()">Create</button>
+</mat-dialog-actions>

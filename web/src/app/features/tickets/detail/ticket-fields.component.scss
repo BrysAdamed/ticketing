@@ -1,0 +1,133 @@
+:host {
+  display: block;
+}
+
+.side-h {
+  padding: 0 0 12px;
+}
+
+.assign-me {
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border: 1px solid var(--tk-border);
+  border-radius: var(--tk-radius-md);
+  background: var(--tk-surface);
+  color: var(--tk-text);
+  font: inherit;
+  font-size: var(--tk-text-sm);
+  font-weight: var(--tk-weight-medium);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--tk-bg-hover);
+  }
+}
+
+.fgroup {
+  padding: 6px 0;
+  border-top: 1px solid var(--tk-border-subtle);
+
+  &:first-of-type {
+    border-top: 0;
+  }
+}
+
+.field {
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fl {
+  width: 96px;
+  flex: none;
+  color: var(--tk-text-muted);
+  font-size: var(--tk-text-sm);
+}
+
+.fv {
+  min-height: 28px;
+  min-width: 0;
+  max-width: 100%;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  margin-left: -8px;
+  border: 0;
+  border-radius: var(--tk-radius-md);
+  background: none;
+  color: var(--tk-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: var(--tk-bg-hover);
+  }
+
+  &:disabled {
+    cursor: default;
+  }
+
+  &.wrap {
+    flex-wrap: wrap;
+  }
+
+  &.nowrap {
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  &.plain {
+    cursor: default;
+    color: var(--tk-text-muted);
+  }
+
+  .sub {
+    color: var(--tk-text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .add {
+    color: var(--tk-text-subtle);
+  }
+}
+
+.empty {
+  color: var(--tk-text-subtle);
+}
+
+.pts {
+  min-width: 20px;
+  height: 18px;
+  padding: 0 5px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: var(--tk-radius-full);
+  background: var(--tk-bg-muted);
+  border: 1px solid var(--tk-border-subtle);
+  font-size: var(--tk-text-xs);
+  font-weight: var(--tk-weight-medium);
+  color: var(--tk-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+:host(.grid) {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 16px;
+
+  .fgroup {
+    display: contents;
+  }
+
+  .fl {
+    width: 84px;
+  }
+}

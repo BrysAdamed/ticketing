@@ -1,0 +1,97 @@
+<button
+  type="button"
+  class="tk-icon-btn theme"
+  data-testid="theme-toggle"
+  [attr.aria-label]="theme.theme() === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'"
+  (click)="theme.toggle()"
+>
+  <tk-icon [name]="theme.theme() === 'dark' ? 'tablerSun' : 'tablerMoon'" />
+</button>
+
+<main class="panel">
+  <div class="brand">
+    <span class="logo" aria-hidden="true">
+      <svg viewBox="0 0 14 14" width="20" height="20">
+        <circle cx="7" cy="7" r="5" fill="none" stroke="#fff" stroke-width="1.5" />
+        <path d="M7 7 7 4.25A2.75 2.75 0 1 1 4.25 7Z" fill="#fff" />
+      </svg>
+    </span>
+    <h1>Sign in to Ticketing</h1>
+    <p>Use the account your administrator created for you.</p>
+  </div>
+
+  <form class="card" novalidate [formGroup]="form" (ngSubmit)="submit()" data-testid="login-form">
+    @if (store.error(); as error) {
+      <div class="tk-callout tk-callout-danger" role="alert" data-testid="login-error">
+        <tk-icon name="tablerAlertCircle" [size]="16" />
+        <span>{{ error }}</span>
+      </div>
+    }
+
+    <div class="field">
+      <label class="tk-field-label" for="login-email">Email</label>
+      <mat-form-field>
+        <input
+          matInput
+          id="login-email"
+          type="email"
+          formControlName="email"
+          autocomplete="username"
+          placeholder="you@example.com"
+          data-testid="login-email"
+          #email
+        />
+        @if (form.controls.email.hasError('required')) {
+          <mat-error>Enter your email.</mat-error>
+        } @else if (form.controls.email.hasError('email')) {
+          <mat-error>Enter a valid email address.</mat-error>
+        }
+      </mat-form-field>
+      @if (serverEmailError(); as message) {
+        <div class="server-error">{{ message }}</div>
+      }
+    </div>
+
+    <div class="field">
+      <label class="tk-field-label" for="login-password">Password</label>
+      <mat-form-field>
+        <input
+          matInput
+          id="login-password"
+          formControlName="password"
+          autocomplete="current-password"
+          data-testid="login-password"
+          [type]="showPassword() ? 'text' : 'password'"
+        />
+        <button
+          matSuffix
+          type="button"
+          class="tk-icon-btn tk-icon-btn-sm reveal"
+          [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
+          [attr.aria-pressed]="showPassword()"
+          (click)="showPassword.set(!showPassword())"
+        >
+          <tk-icon [name]="showPassword() ? 'tablerEyeOff' : 'tablerEye'" [size]="14" />
+        </button>
+        @if (form.controls.password.hasError('required')) {
+          <mat-error>Enter your password.</mat-error>
+        }
+      </mat-form-field>
+      @if (serverPasswordError(); as message) {
+        <div class="server-error">{{ message }}</div>
+      }
+    </div>
+
+    <button
+      mat-flat-button
+      type="submit"
+      class="submit"
+      data-testid="login-submit"
+      [disabled]="store.submitting()"
+    >
+      {{ store.submitting() ? 'Signing in…' : 'Sign in' }}
+    </button>
+  </form>
+
+  <p class="footnote">Forgot your password? Ask an administrator for a new set-password link.</p>
+</main>

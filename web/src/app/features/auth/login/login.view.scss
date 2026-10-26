@@ -1,0 +1,88 @@
+:host {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 48px 16px;
+  background: var(--tk-bg-sidebar);
+  position: relative;
+}
+
+.theme {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+}
+
+.panel {
+  width: 100%;
+  max-width: 360px;
+}
+
+.brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 20px;
+
+  .logo {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: var(--tk-accent);
+    display: grid;
+    place-items: center;
+    margin-bottom: 16px;
+    box-shadow: var(--tk-shadow-sm);
+  }
+
+  h1 {
+    margin: 0;
+    font-size: var(--tk-text-xl);
+    line-height: var(--tk-leading-xl);
+    font-weight: var(--tk-weight-semibold);
+    letter-spacing: var(--tk-tracking-tight);
+  }
+
+  p {
+    margin: 4px 0 0;
+    color: var(--tk-text-muted);
+  }
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 24px;
+  background: var(--tk-surface);
+  border: 1px solid var(--tk-border);
+  border-radius: var(--tk-radius-xl);
+  box-shadow: var(--tk-shadow-sm);
+}
+
+.field mat-form-field {
+  width: 100%;
+}
+
+.reveal {
+  margin-right: 4px;
+}
+
+.server-error {
+  margin-top: 4px;
+  font-size: var(--tk-text-sm);
+  color: var(--tk-danger-fg);
+}
+
+.submit {
+  width: 100%;
+  margin-top: 4px;
+}
+
+.footnote {
+  margin: 16px 0 0;
+  text-align: center;
+  color: var(--tk-text-subtle);
+  font-size: var(--tk-text-sm);
+}

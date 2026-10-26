@@ -1,0 +1,173 @@
+# Frontend development
+
+The Angular 22 SPA lives in `web/`. It uses standalone components, zoneless change detection, signals, Angular Material 22 + CDK restyled with our tokens, Tabler icons via `@ng-icons`, Vitest unit tests and Playwright e2e tests (`e2e/`). Product rules come from [the spec](../product/01-refined-spec.md), the REST contract from [api-conventions.md](../architecture/api-conventions.md) and the look from [docs/design](../design/).
+
+## Run it
+
+| Command (in `web/`) | What it does |
+| --- | --- |
+| `npm start` | `ng serve` on :4200. `proxy.conf.json` forwards `/api`, `/mcp`, `/scalar` and `/health` to the API on `http://localhost:5080`. |
+| `npm run start:mock` | Tiny Node stand-in for the API on :5080 (auth, `/me`, `/me/flags`, projects). Use it when the backend isn't running, and stop it before you start the real API, because both use port 5080. Sign in as `admin@ticketing.local` / `ChangeMe-Admin-2026!`. |
+| `npm run build` | Production build into `dist/ticketing-web/browser`. It fails over the bundle budget. |
+| `npm test` | Vitest run, once. `npm run test:watch` keeps watching. |
+| `npm run lint` | ESLint (angular-eslint, template a11y and the architecture import rules below). |
+| `npm run format` | Prettier. |
+
+Node 24 (`.nvmrc`). TypeScript must stay on 6.0.x (Angular 22 requirement).
+
+Docker: `docker build -t ticketing-web web` builds the app with Node, then serves it with `nginx-unprivileged` on port 8080 (`web/nginx/`). nginx serves the SPA with an `index.html` fallback. It proxies `/api`, `/mcp` (no buffering, 1 h timeouts), `/openapi`, `/scalar` and `/health` to `${API_UPSTREAM}` (default `api:8080`, resolved at request time, so the container starts even when the API isn't up yet). Hashed assets are cached for a year and `index.html` is `no-cache`. Responses are gzipped and carry security headers, including a CSP: `script-src 'self'` (no inline scripts; the theme bootstrap is `public/theme-init.js`), and `style-src 'self' 'unsafe-inline'` because Angular injects component styles at runtime. In compose, the `web` service publishes host port 8080.
+
+## Structure
+
+```
+web/src/
+  styles/               tokens (_tokens.scss = copy of docs/design/tokens.scss), Material theme + overrides, base, markdown
+  app/
+    app.routes.ts       top-level routes only (login, set-password, shell + one lazy entry per feature)
+    app.config.ts       providers: router, HTTP (XSRF, error interceptor), app initializer, icons, peek view, Material defaults
+    core/               app-wide services and the shell. Never imports features.
+      api/              ApiClient, ApiError, error interceptor, Page<T>
+      auth/             AuthService, authGuard / adminGuard / guestGuard
+      flags/            FeatureFlagService, *tkFeature, featureGuard, flagBucket()
+      views/            view registry (defineView, viewRoute, ViewRegistry, exposure hook)
+      layout/           shell, sidebar, top bar, breadcrumbs, peek panel, NavigationContext
+      commands/         command palette + CommandRegistry
+      shortcuts/        ShortcutService + "?" help dialog
+      notify/           ToastService, ConfirmService
+      projects/         ProjectDirectory (readable projects), ProjectContext (current project)
+      theme/            ThemeService (light / dark / system, density)
+    shared/             presentational UI kit, domain enums, markdown, pipes. Never imports core or features.
+    features/<name>/    one folder per feature: <name>.routes.ts, <name>.views.ts, <page>/<page>.store.ts + <page>.view.ts
+```
+
+ESLint enforces the boundaries: `core` and `shared` may not import `@features/*`, `shared` may not import `@core/*`, and a feature may not statically import another feature (`@features/*`). Inside a feature, use relative imports. Path aliases: `@core/*`, `@shared/*`, `@features/*`.
+
+## Routes
+
+| URL | Feature folder | View id |
+| --- | --- | --- |
+| `/login` | `auth` (implemented) | `auth.login` |
+| `/set-password?token=` | `auth` | `auth.set-password` |
+| `/my-work` | `my-work` | `my-work.list` |
+| `/projects` | `projects` (list implemented) | `projects.list` |
+| `/projects/:projectKey` → `dashboard` | `projects` (layout with tabs) + `dashboard` | `project.layout`, `project.dashboard` |
+| `/projects/:projectKey/backlog` | `backlog` | `backlog.list` |
+| `/projects/:projectKey/test-cases` | `test-cases` | `testcases.list` |
+| `/projects/:projectKey/regressions[/:sessionKey]` | `regressions` | `regressions.list`, `regressions.session` |
+| `/projects/:projectKey/settings` | `project-settings` | `project.settings` |
+| `/tickets/:ticketKey` | `tickets` | `ticket.detail` (presentation `page`) |
+| `?peek=KEY` on any shell URL | `tickets` | `ticket.detail` (presentation `peek`) |
+| `/boards`, `/boards/:boardId` | `boards` | `boards.list`, `board.kanban` |
+| `/search` | `search` | `search.results` |
+| `/profile`, `/profile/tokens` | `profile` | `profile.layout`, `profile.general`, `profile.tokens` |
+| `/admin/users \| flags \| audit` (Admins only; others get 404) | `admin` | `admin.layout`, `admin.users`, `admin.flags`, `admin.audit` |
+| `/dev/ui-kit` | `ui-kit` | `dev.ui-kit` (UI kit catalogue) |
+| anything else | `not-found` | `app.not-found` |
+
+Route params arrive as component inputs (`withComponentInputBinding`, `paramsInheritanceStrategy: 'always'`), so a project tab can declare `projectKey = input.required<string>()`.
+
+**Ticket side panel.** We chose a query parameter over a named outlet: `?peek=PAY-128` (`PeekService.open(key)` / `close()`), as `layout-and-screens.md` specifies. It survives reloads, can be shared, and keeps the list route untouched. The shell renders the view registered through `providePeekView(TICKET_DETAIL_VIEW)` with inputs `ticketKey` and `presentation: 'peek'`. Esc or the × button closes it. At 1440 px and wider the panel pushes the content; below that it overlays it.
+
+## Adding or building a page
+
+Each routed page is a **store** (state + API calls, `@Injectable()` provided by the view) plus a **view** (the component, presentational, reads the store). An A/B variant later is another view over the same store.
+
+1. Store, `features/backlog/backlog.store.ts`:
+
+   ```ts
+   @Injectable()
+   export class BacklogStore {
+     private readonly api = inject(ApiClient);
+     readonly tickets = signal<TicketRow[]>([]);
+     readonly status = signal<LoadStatus>('idle');
+     async load({ projectKey }: { projectKey: string }) { … this.api.get<…>(`/projects/${projectKey}/backlog`) … }
+   }
+   ```
+
+2. View, `features/backlog/backlog.view.ts`: `providers: [BacklogStore]`, inputs from route params, `effect(() => this.store.load({ projectKey: this.projectKey() }))`.
+3. Register it in `features/backlog/backlog.views.ts`:
+
+   ```ts
+   export const BACKLOG_VIEW = defineView({
+     viewId: 'backlog.list',                 // stable seam for A/B, lower-case dotted
+     flag: 'backlog.v2',                     // optional: variant = the flag's value
+     variants: {
+       default: () => import('./backlog.view').then((m) => m.BacklogView),
+       on: () => import('./backlog-v2.view').then((m) => m.BacklogV2View),   // later, if ever
+     },
+   });
+   ```
+
+4. Route it in your own `features/backlog/backlog.routes.ts`: `export default [viewRoute(BACKLOG_VIEW, { path: '' })]`. `viewRoute` sets `loadComponent` to resolve through `ViewRegistry`. It picks the variant whose name equals the flag's evaluated value (`on`/`off` in v1) and falls back to `default` when that variant is missing or fails to load. The router caches the choice for the session. Never put `component`/`loadComponent` on a page route directly.
+5. Only touch shared files for a new top-level area (one entry in `app.routes.ts`) or a new project tab (one entry in `features/projects/projects.routes.ts` plus the tab list in `projects/layout/project-layout.view.ts`).
+
+Exposure analytics: `provideViewExposure((e) => …)` in `app.config.ts` receives `{ viewId, variant, flag }` every time a view is shown (route activation or peek).
+
+Inside project tabs, `inject(ProjectContext)` gives the current project (`project()`, `name()`, `isOwner()`, `rowVersion`), loaded once by the project layout. `ProjectDirectory.reload()` refreshes the sidebar and palette after you create or archive a project.
+
+## Core services
+
+| Need | Use |
+| --- | --- |
+| REST call | `ApiClient` (`get`, `list` → `{ items, nextCursor }`, `post`, `patch(path, body, { rowVersion })` → `If-Match`, `delete`, `idempotencyKey`). Paths are relative to `/api/v1`. XSRF: Angular sends `X-XSRF-TOKEN` from the `XSRF-TOKEN` cookie on unsafe requests. |
+| Errors | Every HTTP failure is an `ApiError` (`status`, `code` such as `ticket.parent.cycle`, `title`, `fieldErrors`, `fieldError(name)`, `isConflict`, `isNotFound`, `isValidation`, `traceId`, `retryAfterSeconds`). A 401 sends the user to `/login?returnUrl=…`, except for requests that set the `SKIP_AUTH_REDIRECT` context token. On `409 concurrency.conflict`, refetch. |
+| Current user | `AuthService.currentUser()`, `isAdmin()`. Startup runs `GET /auth/csrf`, then `GET /me`, then `GET /me/flags` (`provideAppInitializer`). |
+| Guards | `authGuard` (shell), `adminGuard` (`canMatch`, so non-admins fall through to 404), `guestGuard` (login page), `featureGuard('flag.key', 'on')`. |
+| Feature flags | `FeatureFlagService.isOn(key)` / `variant(key)` (missing = `off`). Refreshes on window focus when older than 5 minutes. In templates: `<x *tkFeature="'board.swimlanes'; else old" />` or `*tkFeature="'k'; variant: 'b'"`. `flagBucket(flagKey, userId)` matches the C# bucketing, and both are tested against `docs/architecture/flag-bucketing-vectors.json`. |
+| Toasts | `ToastService.show / success / warning / error(err)` with an optional `{ action: { label: 'Undo', run } }`. |
+| Confirm | `await ConfirmService.confirm({ title, message, confirmLabel, danger, requireText })`. |
+| Palette | `CommandRegistry.registerCommands([...], destroyRef)` or `provideCommands(() => [...])` in route providers. Use `registerSearchProvider({ id, remote: true, minQueryLength, search(q, signal) })` for API-backed results (debounced 120 ms, aborted when the query changes). Registering the command id `ticket.create` shows the top-bar "New ticket" button and turns on the global `C`. |
+| Shortcuts | `ShortcutService.registerScoped([{ keys, description, section, handler, allowInInputs }])` for the component's lifetime. The latest registration of the same keys wins (a page can take over `/`). Notation: `mod+k` (Ctrl or ⌘), `shift+enter`, `g b` (sequence), `escape`, `?`. Single keys are ignored while typing in a field unless `allowInInputs` is set. Everything registered appears in the `?` sheet. |
+| Breadcrumbs | `data: { breadcrumb: 'Backlog' }` or `(route) => ({ label, projectKey })` on routes. Pages can call `Breadcrumbs.setTail([...])` for dynamic crumbs. |
+| Theme | `ThemeService.setPreference('light' \| 'dark' \| 'system')`, `toggle()`, `setDensity('compact')`. Stored in localStorage (`tk-theme`, `tk-density`) and applied as `data-theme` / `data-density` on `<html>` before Angular boots. |
+
+Built-in shortcuts: `Ctrl/⌘ K` and `/` open the palette, `?` opens the shortcut sheet, `[` toggles the sidebar, `C` creates a ticket (once registered). With `G` then a letter: `M` My work, `P` Projects, `O` Boards, and, inside a project, `D` dashboard, `B` backlog, `T` test cases, `R` regressions. `Esc` closes the peek panel.
+
+## UI kit (`shared/`)
+
+Live catalogue: `/dev/ui-kit`. Import components one by one (all standalone, `tk-` prefix). Use them instead of restyling Material for domain values.
+
+| Component / API | Notes |
+| --- | --- |
+| `tk-icon name size` | Wrapper over ng-icons (Tabler). App-wide icons are in `shared/ui/icon/app-icons.ts`. Register feature-only icons with `viewProviders: [provideIcons({ … })]`. |
+| `tk-type-icon [type] [showLabel]` | Epic / User Story / Technical / Spike / Bug glyphs in type colors. |
+| `tk-status-icon [status]`, `tk-status-badge [status] [tinted]` | Progress ring for the 8 statuses. The tinted badge uses the status category colour. |
+| `tk-priority-icon [priority]` | Signal bars; the label goes to aria-label and title. |
+| `tk-severity-badge`, `tk-test-case-status-badge`, `tk-regression-item-badge [autoPassed]`, `tk-regression-session-badge`, `tk-badge [tone] [icon] [dot]` | Badges (20 px, tint only). |
+| `tk-label-chip [label]` | Stable colour from FNV-1a(label) mod 8. |
+| `tk-avatar [userId] [name] [size]`, `tk-user [user]` | Initials on a stable tint. No user shows "Unassigned"; inactive users show "(deactivated)". |
+| `tk-project-tile [projectKey]` | 16 px coloured key tile. |
+| `tk-skeleton-rows [count]` | Row skeletons. They appear only after 120 ms. |
+| `tk-empty-state icon title description` + projected actions | Empty and error states. `tone="danger"` for errors. |
+| `tk-segmented [options] [(value)]` | Radio-group segmented control. |
+| `[tkInlinePicker]="options" [pickerValue] (picked)` | CDK overlay listbox with a filter input, ↑/↓/Home/End/Enter/Esc and digits 1–9. Optional `[pickerOptionTemplate]`. Ready-made options are in `shared/domain/picker-options.ts`. |
+| `tk-markdown [source]` | `renderMarkdown()`: marked (GFM) → raw HTML escaped → DOMPurify, ticket keys linked to `/tickets/KEY` (router navigation), external links open in a new tab. |
+| `tk-markdown-editor [(value)] (submitted) (cancelled)` | Write / Preview tabs. Ctrl/⌘+Enter submits and Esc cancels. Projected content goes in the footer. |
+| `tk-route-tabs [tabs]` | Material tab nav bar over child routes. Project the `<router-outlet />`. |
+| `tk-kbd`, `relativeTime` / `absoluteTime` pipes | Keyboard hints; "3h ago" / "Oct 22". |
+| `shared/domain/enums.ts` | Every spec §3 enum as a const array, a union type and a `*_LABELS` map, plus `statusCategory()`. `keys.ts` holds the key regexes. |
+
+Global CSS helpers (`styles/`): `.tk-page`, `.tk-page-header` (+ `.tk-page-count`, `.tk-page-actions`), `.tk-toolbar`, `.tk-page-body`, `.tk-icon-btn`, `.tk-field-label` (labels sit above fields, no floating labels), `.tk-callout[-danger|-warning]`, `.tk-popover`, `.tnum`, `.tk-muted`, `.tk-subtle`.
+
+## Theming
+
+`styles/_tokens.scss` is a verbatim copy of `docs/design/tokens.scss`; when the design tokens change, copy the file again. `_material-theme.scss` maps every M3 system token to a `--tk-*` variable (`mat.theme` + `mat.theme-overrides`, verified against the installed Material 22.2). `_material-overrides.scss` pins component sizes: 32 px controls, 28 px icon buttons, 32 px table rows, no ripples. Wrap toolbars in `.tk-dense` for 28 px controls. Components use semantic tokens only (`--tk-bg`, `--tk-text-muted`, `--tk-status-*`), never primitives, so dark mode works without extra code. Buttons: `mat-flat-button` is primary (at most one per view), `mat-stroked-button` secondary, `mat-button` ghost.
+
+## Testing
+
+- **Unit (Vitest + TestBed, zoneless)**: `*.spec.ts` next to the code. Write them Arrange / Act / Assert. The current suite covers flag bucketing (shared vectors), view registry resolution and fallback, markdown sanitizing and key autolinks, auth guards, ApiError mapping and shortcuts.
+- **E2E (`e2e/`, Playwright 1.64)**: `npm install && npx playwright install chromium`, then `npm test`. It runs against an already running stack (`E2E_BASE_URL`, default `http://localhost:8080`, i.e. docker compose web → api; use `http://localhost:4200` with `ng serve`). The `setup` project signs in as the bootstrap admin (`E2E_ADMIN_EMAIL` / `E2E_ADMIN_PASSWORD`, falling back to `TICKETING_BOOTSTRAP_ADMIN_*`, default `admin@ticketing.local` / `ChangeMe-Admin-2026!`) and saves `.auth/admin.json`, so specs start signed in. To test anonymously, use `test.use({ storageState: { cookies: [], origins: [] } })`.
+  - Import `test` and `expect` from `e2e/support/fixtures.ts`. It provides page objects (`loginPage`, `shell`) and `api`.
+  - `api` (`e2e/support/api.ts`) uses the admin cookie session and handles XSRF itself (it reads the `XSRF-TOKEN` cookie and echoes it as `X-XSRF-TOKEN`). Seed data through it (`api.createProject()`, `api.post(...)`), never through the UI. Use `uniqueProjectKey()` so parallel tests don't collide.
+  - Page objects live in `e2e/pages/*.page.ts`. They expose locators and intent-level methods, never assertions about business rules.
+
+### `data-testid` conventions
+
+Use `getByTestId` (configured to `data-testid`) for anything the e2e tests drive; use roles and labels for accessibility assertions.
+
+- kebab-case, `<area>-<element>`: `login-email`, `login-submit`, `topbar`, `sidebar`, `user-menu`, `menu-logout`, `theme-toggle`, `palette-trigger`, `command-palette-input`, `peek-panel`, `toast`.
+- Sidebar links: `nav-<target>` (`nav-my-work`, `nav-project-PAY`, `nav-project-backlog`, `nav-admin-flags`). Project tabs: `project-tab-<path>`.
+- Every routed view host: `view-<viewId>` (`view-backlog.list`), so a test can wait for the page.
+- Repeated items: `<thing>-row-<stable key>` (`project-row-PAY`). Use the business key, never an index.
+- Palette items: `palette-item-<id>`. Segmented options: `<testId>-<value>`.
+- Test ids are part of the e2e contract: keep them when you refactor markup, and don't put them on purely visual elements.

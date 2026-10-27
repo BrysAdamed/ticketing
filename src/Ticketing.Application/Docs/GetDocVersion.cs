@@ -1,0 +1,54 @@
+using System.Globalization;
+using Microsoft.EntityFrameworkCore;
+using Ticketing.Application.Abstractions;
+using Ticketing.Application.Access;
+using Ticketing.Application.Common;
+using Ticketing.Application.Tickets;
+using Ticketing.Domain.Docs;
+
+namespace Ticketing.Application.Docs;
+
+/// <summary>
+/// One published version of a page or diagram with its full content (the base of a 3-way merge, history views) and what that
+/// content mentions and embeds, resolved for the reader.
+/// </summary>
+public static class GetDocVersion
+{
+    public sealed record Query(string KeyOrId, int Number);
+
+    public sealed class Handler(ITicketingDbContext db, IProjectAccess access) : IHandler<Query, DocVersionDto>
+    {
+        public async Task<DocVersionDto> HandleAsync(Query request, CancellationToken cancellationToken)
+        {
+            var target = await DocLookup.ReadAsync(db, access, request.KeyOrId, cancellationToken);
+            var version = await LoadAsync(db, target, request.Number, cancellationToken);
+            var nodeId = target.Id;
+            var format = await db.DocNodes.AsNoTracking().Where(n => n.Id == nodeId).Select(n => n.DiagramFormat).SingleAsync(cancellationToken);
+            var (references, embeds) = await DocReferenceQueries.ReferencesOfContentAsync(
+                db, access, nodeId, version.Content, target.Kind, format, cancellationToken);
+            return version with { References = references, Embeds = embeds };
+        }
+    }
+
+    /// <summary>Version <paramref name="number"/> of a resolved doc, or <c>doc.version.notFound</c>.</summary>
+    internal static async Task<DocVersionDto> LoadAsync(ITicketingDbContext db, DocTarget target, int number, CancellationToken cancellationToken)
+    {
+        var nodeId = target.Id;
+        var key = target.Key;
+        var row = await (
+                from v in db.DocVersions.AsNoTracking()
+                where v.NodeId == nodeId && v.Number == number
+                join u in db.Users on v.AuthorId equals u.Id
+                select new
+                {
+                    Version = new DocVersionDto(
+                        key, v.Number, v.Title, v.Content, v.ChangeNote, new UserRefDto(u.Id, u.Email, u.DisplayName, u.IsActive), v.Channel,
+                        v.CreatedAt, v.RestoredFrom),
+                    HasSnapshot = v.SnapshotSvg != null,
+                })
+            .SingleOrDefaultAsync(cancellationToken)
+            ?? throw AppException.NotFound(
+                DocErrors.VersionNotFound, string.Create(CultureInfo.InvariantCulture, $"{key} has no version {number}."));
+        return row.HasSnapshot ? row.Version with { SnapshotUrl = DocQueries.SnapshotUrl(key, number) } : row.Version;
+    }
+}

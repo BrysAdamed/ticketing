@@ -33,8 +33,10 @@ import { provideTicketCreation } from '@core/tickets/create-ticket';
 import { provideTicketHeaderAction } from '@core/tickets/ticket-header-actions';
 import { provideTicketDetailSection } from '@core/tickets/ticket-sections';
 import { provideAttachments } from '@features/attachments/attachments.providers';
+import { provideDocsTicketSection } from '@features/docs/docs.providers';
 import { provideSearch } from '@features/search/search.providers';
 import { TICKET_DETAIL_VIEW } from '@features/tickets/tickets.views';
+import { DIAGRAM_THEME } from '@shared/diagrams/diagram-theme.token';
 import { APP_ICONS } from '@shared/ui/icon/app-icons';
 import { PICKER_SHORTCUT_AVAILABLE } from '@shared/ui/inline-picker/picker-option';
 import { routes } from './app.routes';
@@ -61,6 +63,7 @@ export const appConfig: ApplicationConfig = {
     providePeekView(TICKET_DETAIL_VIEW),
     provideSearch(),
     provideAttachments(),
+    provideDocsTicketSection(),
     provideTicketCreation(() =>
       import('@features/tickets/create/create-ticket.dialog').then((m) => m.CreateTicketDialog),
     ),
@@ -89,6 +92,7 @@ export const appConfig: ApplicationConfig = {
         return (keys: string) => shortcuts.isRegistered(keys);
       },
     },
+    { provide: DIAGRAM_THEME, useFactory: () => inject(ThemeService).theme },
     { provide: MAT_RIPPLE_GLOBAL_OPTIONS, useValue: { disabled: true } },
     {
       provide: MAT_FORM_FIELD_DEFAULT_OPTIONS,

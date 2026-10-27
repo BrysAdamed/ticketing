@@ -1,3 +1,5 @@
+import { docPathSegments, docUrl } from '@core/docs/doc-links';
+import { docKindIcon } from '@core/docs/doc-search.api';
 import {
   Priority,
   PRIORITY_LABELS,
@@ -137,6 +139,33 @@ export function assigneeItems(data: ProjectDashboard, links: DashboardLinks): Ba
     });
   }
   return items;
+}
+
+export interface RecentDocRow {
+  key: string;
+  title: string;
+  icon: string;
+  folder: string;
+  url: string;
+  editor: { id: string; name: string };
+  updatedAt: string;
+}
+
+/// Rows of the "Recent docs" widget: kind icon, title, the folder part of the path ("Top level"
+/// at the root) and the SPA link.
+export function recentDocRows(data: ProjectDashboard): RecentDocRow[] {
+  return data.recentDocs.items.map((doc) => {
+    const segments = docPathSegments(doc.path);
+    return {
+      key: doc.key,
+      title: doc.title,
+      icon: docKindIcon(doc.kind, doc.diagramFormat),
+      folder: segments.length > 1 ? segments.slice(0, -1).join(' / ') : 'Top level',
+      url: docUrl(doc.key, doc.title),
+      editor: { id: doc.updatedBy.id, name: doc.updatedBy.displayName },
+      updatedAt: doc.updatedAt,
+    };
+  });
 }
 
 export function sum(items: readonly { count: number }[]): number {

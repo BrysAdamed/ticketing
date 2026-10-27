@@ -7,9 +7,14 @@ using Ticketing.Domain.Attachments;
 
 namespace Ticketing.Application.Attachments;
 
-/// <summary>Deletes an attachment and its content (spec 4.8, 5.3): the uploader with write access, or a project Owner.</summary>
+/// <summary>
+/// Deletes an attachment and its content (spec 4.8, 5.3; docs refinement 1.5): the uploader with write access, or a project
+/// Owner. A ticket attachment touches the ticket; a doc attachment leaves the doc as it is.
+/// </summary>
 public static class DeleteAttachment
 {
+    public const string DocAction = "doc.attachment.deleted";
+
     public sealed record Command(Guid AttachmentId);
 
     public sealed class Handler(
@@ -25,12 +30,19 @@ public static class DeleteAttachment
 
             return await db.InTransactionAsync(async ct =>
             {
-                var ticket = await db.Tickets.SingleAsync(t => t.Id == target.TicketId, ct);
                 await store.DeleteAsync(target.Id, ct);
                 await db.Attachments.Where(a => a.Id == target.Id).ExecuteDeleteAsync(ct);
-                ticket.Touch(clock.Now);
-                activity.Record(ActivityEntityType.Ticket, target.TicketId, target.ProjectId, "attachment.removed",
-                    new { attachmentId = target.Id, fileName = target.FileName });
+                var details = new { attachmentId = target.Id, fileName = target.FileName };
+                if (target.TicketId is { } ticketId)
+                {
+                    var ticket = await db.Tickets.SingleAsync(t => t.Id == ticketId, ct);
+                    ticket.Touch(clock.Now);
+                    activity.Record(ActivityEntityType.Ticket, ticketId, target.ProjectId, "attachment.removed", details);
+                }
+                else
+                {
+                    activity.Record(ActivityEntityType.Doc, target.DocNodeId!.Value, target.ProjectId, DocAction, details);
+                }
                 await db.SaveChangesAsync(ct);
                 return true;
             }, cancellationToken);

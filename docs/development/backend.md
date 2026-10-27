@@ -51,8 +51,24 @@ Configuration (environment variables override `appsettings*.json`):
 | `TICKETING_PUBLIC_URL` | This instance's public origin, for example `http://localhost:8090`. Agent prompts build `{{instance.url}}` and `{{ticket.url}}` from it, never from request headers ([spec §13.4](../product/01-refined-spec.md#134-template-language)). While it is unset, agent delegation is off for everyone (`agent.disabled`, [spec §13.2](../product/01-refined-spec.md#132-feature-flag)); a value that is not an absolute http(s) URL stops startup. Compose passes it from `.env`; `appsettings.Development.json` sets `http://localhost:4200` for `ng serve`. |
 | `TICKETING_SEED_DEMO` | `true` seeds [demo data](#demo-data) at startup into a workspace without projects (default false; development and demos only) |
 | `TICKETING_DEMO_PASSWORD` | Password of the demo users (12+ characters, not a common password); without it their set-password links are logged |
+| `Pdf__Password` | Basic-auth password of the PDF renderer (compose: `PDF_RENDERER_PASSWORD`, shared with the `pdf` service). Empty: PDF export answers 503 `doc.export.unavailable` and the `pdf` container idles. |
+| `Pdf__Url`, `Pdf__Username` | Gotenberg (default `http://pdf:3000`, `ticketing`) |
+| `Pdf__BundlePath` | The print bundle (`print.js`, `print.css`, fonts); `/app/print` in the image, `../../web/dist/print` in Development |
+| `Pdf__WarmUp` | Render a small page after startup so the first export is fast (default true) |
 
 Logs are JSON on the console (`simple` in Development).
+
+### PDF export (D-111, D-127)
+
+The API image builds the print bundle in a Node stage (`npm run build:print` → `/app/print`) and posts exports to the `pdf` service (Gotenberg 8.39 Chromium) on the internal `render` network, which has no egress and no published port. To try exports with `dotnet run`, build the bundle once (`cd web && npm run build:print`), start a renderer and pass the same password:
+
+```bash
+docker run --rm -p 127.0.0.1:3010:3000 -e GOTENBERG_API_BASIC_AUTH_USERNAME=ticketing -e GOTENBERG_API_BASIC_AUTH_PASSWORD=dev-pdf \
+  gotenberg/gotenberg:8.39.0-chromium gotenberg --api-enable-basic-auth --chromium-allow-list='^file:///tmp/.*' --chromium-deny-public-ips --chromium-deny-private-ips
+Pdf__Password=dev-pdf dotnet run --project src/Ticketing.Api      # Development points Pdf__Url at localhost:3010
+```
+
+**Upgrading an existing installation**: add `PDF_RENDERER_PASSWORD=<long random value>` to `.env` (see `.env.example`), then `docker compose up -d --build`. Without it the stack still starts and only PDF export is off. Integration tests replace the renderer with `FakePdfRenderer` (assert on the posted bundle); `DocExportGotenbergTests` runs the real one when `TICKETING_PDF_TESTS=1` (trait `Category=Pdf`, needs the built bundle).
 
 ## Demo data
 
@@ -64,6 +80,7 @@ For development, screenshots and demos only, never on a real installation. The s
 - Boards `Sprint 42` (PAY + WEB) and `Ops Kanban` (OPS).
 - 26 test cases (Manual, Automatic and New) and two PAY regression sessions: `Release 1.4.0` (completed, one failed item with its bug) and `Release 1.5.0` (in progress).
 - 3 feature flags.
+- A docs tree per project (24 docs): two folders, four pages with callouts, tables, code, ticket mentions and doc links, a Mermaid and a Canvas diagram embedded in a page (the Canvas with its picture, so PDF export prints it), later versions with change notes and 8 page comments (D-128).
 
 Trigger it explicitly, in either way:
 
@@ -79,10 +96,10 @@ docker compose run --rm api seed-demo                  # in compose
 Rules:
 
 - It runs only while the database has **no project** (deleted ones included), so it never touches real data and a second run is a no-op. It takes a PostgreSQL advisory lock, so several instances starting together seed once.
-- It needs an active Admin (the bootstrap admin) and acts as the demo users through the real use cases (`DemoData/DemoWorkspace.cs`): ticket keys, ranks, hierarchy rules, activity history, board moves and regression snapshots are all genuine.
+- It needs an active Admin (the bootstrap admin) and acts as the demo users through the real use cases (`DemoData/DemoWorkspace.cs`): ticket keys, ranks, hierarchy rules, activity history, board moves, regression snapshots, doc versions and the doc reference index are all genuine.
 - Timestamps are backdated over the last 12 weeks (working hours, weekdays) by a controllable clock. The seeder builds its own service provider with the application and infrastructure registrations, a `TimeProvider` it sets before each call and an `ICurrentUser` for the acting user. The plan uses a fixed random seed (`DemoScript.RandomSeed`); dates are relative to the moment of seeding, so dashboards always show recent activity.
 - Without `TICKETING_DEMO_PASSWORD` each demo user gets a set-password link (valid 24 hours) written to the log as a warning; open `<web origin>/set-password?token=...`.
-- Content lives in `src/Ticketing.Api/DemoData/DemoContent.cs` (titles, hand-written descriptions, test cases, cross links) and `DemoTexts.cs` (generated descriptions and comments). `tests/Ticketing.IntegrationTests/DemoData` checks the counts, idempotency and the PAY dashboard.
+- Content lives in `src/Ticketing.Api/DemoData/DemoContent.cs` (titles, hand-written descriptions, test cases, cross links) and `DemoTexts.cs` (generated descriptions and comments); docs in `DemoDocs.cs` (content written with `IDemoDocRefs`, so ticket and doc keys are real; each doc, version and comment is scheduled after what it mentions) and `DemoCanvas.cs` (boxes and arrows as an Excalidraw scene plus its SVG picture). `tests/Ticketing.IntegrationTests/DemoData` checks the counts, idempotency and the PAY dashboard.
 
 ## Where things live
 
@@ -142,9 +159,9 @@ Rules:
    - `IClock.Now` is fixed for the request, so the entity and its activity entries share one timestamp.
    - Collaboration side effects (watchers now, notifications later) are derived from these entries inside the save by `IActivityObserver`s (`Collaboration/CollaborationProjector`, D-93). Don't call them from handlers; record the activity and add a rule there. Activity is saved with `SaveChangesAsync` only.
 6. **Use the shared helpers for numbering, ranking and retries.**
-   - Numbered entities (tickets, test cases, sessions): call `IProjectCounters.NextAsync(projectId, CounterKind.X)` inside `db.InTransactionAsync(...)`, together with the insert.
+   - Numbered entities (tickets, test cases, sessions, docs): call `IProjectCounters.NextAsync(projectId, CounterKind.X)` inside `db.InTransactionAsync(...)`, together with the insert.
    - Placement: every user-driven placement change (backlog reorder, backlog to board and back, board to board, column change) goes through `MoveTickets.Handler` (`POST /tickets/move`, MCP `move_ticket`, D-77). Don't add another endpoint that ranks or moves tickets; extend `MoveTickets.Command` instead. Board-level relocations (archive carry-over, unlink, delete, project archive) use `BoardRelocation`.
-   - Ranks: use `ITicketRanker` (`BottomAsync`, `TopAsync`, `BetweenAsync`, and `PlaceManyAsync` for a block of tickets at a `RankAnchor`: top, bottom, before or after a ticket) inside the same transaction; it throws without one.
+   - Ranks: use `ITicketRanker` (`BottomAsync`, `TopAsync`, `BetweenAsync`, and `PlaceManyAsync` for a block of tickets at a `RankAnchor`: top, bottom, before or after a ticket) inside the same transaction; it throws without one. Docs use the same ranker with `RankContainer.DocFolder(projectId, parentId)`; their tree changes go through `DocTree.LockAsync` first (D-109).
    - Tickets: resolve user input with `TicketLookup.ReadAsync/WriteAsync/OwnerAsync` (key or id; 404 for unreadable, `ticket.deleted` for deleted). Features that create tickets (bugs from regressions) inject `CreateTicket.Handler` and call `HandleAsync`, or `CreateAsync` inside their own transaction; `Placement = BacklogPlacement.Top` puts the ticket at the backlog top.
      - Each call takes a per-container advisory lock held until commit, so parallel placements get distinct ranks.
      - Pass the tickets being moved as `movingTicketIds`. They are excluded from neighbour lookup and from rebalancing.

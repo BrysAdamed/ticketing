@@ -24,6 +24,7 @@ function dashboard(version: string | null): ProjectDashboard {
     testCases: { total: 0, byStatus: [], automationRatio: null },
     regressions: { latest: null, recentPassRates: [] },
     regressionBugs: { count: 0, items: [] },
+    recentDocs: { total: 0, items: [] },
   };
 }
 
@@ -128,5 +129,25 @@ describe('DashboardStore', () => {
 
     // Assert
     expect(store.isEmpty()).toBe(true);
+  });
+
+  it('does not treat a project that only has docs as empty', async () => {
+    // Arrange
+    const docsOnly = dashboard(null);
+    docsOnly.totals = {
+      openTickets: 0,
+      doneTickets: 0,
+      openStoryPoints: 0,
+      unassignedOpenTickets: 0,
+    };
+    docsOnly.recentDocs = { total: 1, items: [] };
+
+    // Act
+    store.load('WEB', null);
+    await respond(0, docsOnly);
+    await vi.waitFor(() => expect(store.phase()).toBe('ready'));
+
+    // Assert
+    expect(store.isEmpty()).toBe(false);
   });
 });

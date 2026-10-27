@@ -13,6 +13,7 @@ function notification(id: string, createdAt: Date): UserNotification {
     projectKey: 'PAY',
     ticket: { key: 'PAY-1', title: 'Pay', deleted: false },
     regression: null,
+    doc: null,
     url: '/tickets/PAY-1',
     createdAt: createdAt.toISOString(),
     updatedAt: createdAt.toISOString(),

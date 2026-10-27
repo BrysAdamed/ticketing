@@ -38,6 +38,12 @@ import { IconComponent } from '@shared/ui/icon/icon.component';
 import { KbdComponent } from '@shared/ui/kbd/kbd.component';
 import { SkeletonRowsComponent } from '@shared/ui/skeleton/skeleton-rows.component';
 import { TicketRowComponent } from '@shared/ui/ticket-row/ticket-row.component';
+import {
+  SegmentedControlComponent,
+  SegmentOption,
+} from '@shared/ui/segmented/segmented-control.component';
+import { DocSearchComponent } from './doc-search.component';
+import { parseDocSearchParams, scopeOf, SearchScope } from './doc-search-query';
 import { SearchFilterBarComponent } from './search-filter-bar.component';
 import {
   effectiveOrder,
@@ -73,6 +79,8 @@ const PREFETCH_DELAY_MS = 150;
     SkeletonRowsComponent,
     TicketRowComponent,
     SearchFilterBarComponent,
+    SegmentedControlComponent,
+    DocSearchComponent,
   ],
   providers: [SearchStore],
   viewProviders: [
@@ -116,10 +124,16 @@ export class SearchView {
   );
   protected readonly trackKey = (_: number, ticket: TicketSummary) => ticket.id;
 
+  protected readonly scopes: SegmentOption<SearchScope>[] = [
+    { value: 'tickets', label: 'Tickets' },
+    { value: 'docs', label: 'Docs' },
+  ];
+
   private readonly params = toSignal(this.route.queryParams, { initialValue: {} as Params });
+  protected readonly scope = computed(() => scopeOf(this.params()));
   private readonly viewport = viewChild(CdkVirtualScrollViewport);
   private readonly listWrap = viewChild<ElementRef<HTMLElement>>('listWrap');
-  private readonly textInput = viewChild.required<ElementRef<HTMLInputElement>>('textInput');
+  private readonly textInput = viewChild<ElementRef<HTMLInputElement>>('textInput');
   private textTimer: ReturnType<typeof setTimeout> | null = null;
   private prefetchTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -127,11 +141,13 @@ export class SearchView {
     void inject(ProjectDirectory).load();
 
     effect(() => {
-      const filters = parseSearchParams(this.params());
+      const params = this.params();
+      if (scopeOf(params) === 'docs') return;
+      const filters = parseSearchParams(params);
       untracked(() => {
         if (this.store.status() !== 'idle' && sameFilters(filters, this.store.filters())) return;
         if (
-          document.activeElement !== this.textInput().nativeElement ||
+          document.activeElement !== this.textInput()?.nativeElement ||
           filters.q !== this.text().trim()
         )
           this.text.set(filters.q);
@@ -220,8 +236,20 @@ export class SearchView {
   protected submitText(): void {
     if (this.textTimer) clearTimeout(this.textTimer);
     this.navigate({ ...this.store.filters(), q: this.text().trim() }, true);
-    this.textInput().nativeElement.blur();
+    this.textInput()?.nativeElement.blur();
     if (this.store.focusIndex() < 0 && this.store.items().length) this.store.focusIndex.set(0);
+  }
+
+  protected setScope(scope: SearchScope): void {
+    const params = this.route.snapshot.queryParams;
+    const q =
+      scope === 'docs'
+        ? this.store.filters().q || this.text().trim()
+        : parseDocSearchParams(params).q;
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: scope === 'docs' ? { scope: 'docs', ...(q ? { q } : {}) } : q ? { q } : {},
+    });
   }
 
   protected setFilters(filters: SearchFilters): void {
@@ -265,8 +293,8 @@ export class SearchView {
   }
 
   private focusText(): void {
-    this.textInput().nativeElement.focus();
-    this.textInput().nativeElement.select();
+    this.textInput()?.nativeElement.focus();
+    this.textInput()?.nativeElement.select();
   }
 
   private openFocused(fullPage: boolean): void {

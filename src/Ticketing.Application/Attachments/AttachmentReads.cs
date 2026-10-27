@@ -2,6 +2,7 @@ using System.Text;
 using Ticketing.Application.Abstractions;
 using Ticketing.Application.Access;
 using Ticketing.Application.Common;
+using Ticketing.Application.Docs;
 using Ticketing.Application.Tickets;
 using Ticketing.Domain.Attachments;
 
@@ -18,6 +19,21 @@ public static class ListAttachments
         {
             var target = await TicketLookup.ReadAsync(db, access, request.TicketKeyOrId, cancellationToken);
             return await AttachmentQueries.ListAsync(db, currentUser, target.Grant, target.Id, null, cancellationToken);
+        }
+    }
+}
+
+/// <summary>Attachments of a doc, oldest first (at most 200 per page, so not paged); folders and diagrams have none.</summary>
+public static class ListDocAttachments
+{
+    public sealed record Query(string DocKeyOrId);
+
+    public sealed class Handler(ITicketingDbContext db, IProjectAccess access, ICurrentUser currentUser) : IHandler<Query, IReadOnlyList<DocAttachmentDto>>
+    {
+        public async Task<IReadOnlyList<DocAttachmentDto>> HandleAsync(Query request, CancellationToken cancellationToken)
+        {
+            var target = await DocLookup.ReadAsync(db, access, request.DocKeyOrId, cancellationToken);
+            return await AttachmentQueries.ListForDocAsync(db, currentUser, target.Grant, target.Id, target.Key, null, cancellationToken);
         }
     }
 }
@@ -59,7 +75,7 @@ public static class GetAttachmentText
             if (!AttachmentContentType.IsText(target.ContentType))
                 throw new AppException(ErrorKind.Validation, AttachmentErrors.NotText,
                     $"{target.FileName} is {target.ContentType}; only text, CSV and JSON attachments can be read as text.",
-                    "Use the download URL from list_attachments for binary files.");
+                    "Use the download URL from list_attachments or list_doc_attachments for binary files.");
 
             await using var content = await store.OpenReadAsync(target.Id, cancellationToken) ?? throw AttachmentQueries.NotFound();
             var buffer = new byte[Math.Min(target.SizeBytes, MaxBytes)];

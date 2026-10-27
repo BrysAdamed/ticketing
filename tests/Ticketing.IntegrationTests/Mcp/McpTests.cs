@@ -76,7 +76,10 @@ public sealed class McpTests(TicketingApiFactory api)
         // Arrange
         var user = await api.CreateUserAsync();
         await using var mcp = await api.CreateMcpClientAsync(await api.CreatePatAsync(user, PatScope.ReadWrite));
-        string[] expected = ["archive_board", "cancel_regression_session", "delete_comment", "delete_ticket", "unlink_tickets"];
+        string[] expected =
+        [
+            "archive_board", "cancel_regression_session", "delete_comment", "delete_doc", "delete_doc_comment", "delete_ticket", "unlink_tickets",
+        ];
 
         // Act
         var tools = (await mcp.ListToolsAsync(cancellationToken: _ct)).Select(t => t.ProtocolTool).ToList();

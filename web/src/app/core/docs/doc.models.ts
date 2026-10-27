@@ -1,0 +1,289 @@
+import { ProjectRole, TicketStatus, TicketType } from '@shared/domain/enums';
+import { UserRef } from '../tickets/ticket.models';
+
+export const DOC_KINDS = ['Folder', 'Page', 'Diagram'] as const;
+export type DocKind = (typeof DOC_KINDS)[number];
+
+export const DIAGRAM_FORMATS = ['Mermaid', 'Canvas'] as const;
+export type DiagramFormat = (typeof DIAGRAM_FORMATS)[number];
+
+/// Limits the server enforces on the tree (spec 12.2); the client mirrors them to refuse a move
+/// before it is sent.
+export const DOC_TREE_LIMITS = {
+  maxDepth: 6,
+  maxFolderChildren: 500,
+  maxProjectDocs: 5000,
+  titleMaxLength: 200,
+} as const;
+
+/// One node of the flat, depth-first tree (root children have depth 1), in manual sibling order.
+export interface DocTreeItem {
+  id: string;
+  key: string;
+  kind: DocKind;
+  diagramFormat: DiagramFormat | null;
+  title: string;
+  parentKey: string | null;
+  depth: number;
+  version: number;
+  childCount: number;
+  updatedAt: string;
+  hasMyDraft: boolean;
+  canDelete: boolean;
+  commentCount: number;
+}
+
+export interface DocTree {
+  projectKey: string;
+  myRole: ProjectRole | null;
+  canWrite: boolean;
+  canManageTrash: boolean;
+  total: number;
+  items: DocTreeItem[];
+}
+
+export interface DocCrumb {
+  key: string;
+  title: string;
+}
+
+export interface DocPermissions {
+  canEdit: boolean;
+  canDelete: boolean;
+}
+
+export interface DocEditor {
+  user: UserRef;
+  since: string;
+  lastActiveAt: string;
+}
+
+export interface DocMyDraft {
+  baseVersion: number;
+  updatedAt: string;
+}
+
+/// A doc with its latest published content (`GET /docs/{key}`). `version` is the content version
+/// sent back as `baseVersion`; `rowVersion` changes on every write, renames and moves included.
+export interface Doc {
+  id: string;
+  key: string;
+  projectId: string;
+  projectKey: string;
+  kind: DocKind;
+  diagramFormat: DiagramFormat | null;
+  title: string;
+  path: string;
+  parentKey: string | null;
+  breadcrumb: DocCrumb[];
+  content: string | null;
+  version: number;
+  createdBy: UserRef;
+  createdAt: string;
+  updatedBy: UserRef;
+  updatedAt: string;
+  myRole: ProjectRole | null;
+  permissions: DocPermissions;
+  editors: DocEditor[];
+  myDraft: DocMyDraft | null;
+  children: DocTreeItem[] | null;
+  url: string;
+  rowVersion: number;
+  /// Comments that are not deleted (0 for folders).
+  commentCount: number;
+  references: DocReferences;
+  embeds: DocEmbed[];
+  backlinks: DocMentions;
+  /// Canvas only: labels and arrows of the content, one per line (`API → DB`).
+  outline?: string | null;
+  /// Canvas only: the SVG picture of the shown version; null while it has none (written over MCP).
+  snapshotUrl?: string | null;
+}
+
+/// A mentioned ticket the reader may see (what a ticket chip shows).
+export interface DocTicketReference {
+  id: string;
+  key: string;
+  title: string;
+  type: TicketType;
+  status: TicketStatus;
+  url: string;
+}
+
+/// A mentioned or linked doc the reader may see; a deleted one has only its key.
+export interface DocLinkReference {
+  id: string;
+  key: string;
+  projectKey: string;
+  kind: DocKind;
+  diagramFormat: DiagramFormat | null;
+  title: string | null;
+  deleted: boolean;
+  url: string | null;
+}
+
+/// What the latest content mentions, filtered for the reader (spec 1.9).
+export interface DocReferences {
+  tickets: DocTicketReference[];
+  docs: DocLinkReference[];
+}
+
+/// A diagram embedded with `![caption](KEY)` that the reader may see; `content` is the Mermaid
+/// source (null for Canvas, which shows the picture at `snapshotUrl`, null until it is rendered).
+export interface DocEmbed {
+  id: string;
+  key: string;
+  projectKey: string;
+  title: string;
+  diagramFormat: DiagramFormat;
+  version: number;
+  content: string | null;
+  url: string;
+  snapshotUrl?: string | null;
+}
+
+/// Docs that mention a ticket or link to a doc, newest first; `total` counts beyond the page.
+export interface DocMentions {
+  total: number;
+  items: DocSummary[];
+}
+
+/// A recently updated page or diagram (Docs home).
+export interface DocSummary {
+  id: string;
+  key: string;
+  projectKey: string;
+  kind: DocKind;
+  diagramFormat: DiagramFormat | null;
+  title: string;
+  path: string;
+  version: number;
+  updatedBy: UserRef;
+  updatedAt: string;
+  url: string;
+}
+
+/// A group deleted together, shown by its root; `count` includes the root.
+export interface DocTrashItem {
+  id: string;
+  key: string;
+  kind: DocKind;
+  diagramFormat: DiagramFormat | null;
+  title: string;
+  formerPath: string;
+  count: number;
+  deletedBy: UserRef;
+  deletedAt: string;
+}
+
+export interface DeletedDoc {
+  id: string;
+  key: string;
+  deletedCount: number;
+  deletedAt: string;
+  undoUntil: string;
+}
+
+export type DocPosition = 'Top' | 'Bottom';
+
+/// Where a doc goes: `parent` is a folder key or `root`; at most one of `position`, `beforeKey`
+/// and `afterKey` (the default is the bottom of the folder).
+export interface DocPlacement {
+  parent?: string;
+  position?: DocPosition;
+  beforeKey?: string;
+  afterKey?: string;
+}
+
+export interface NewDoc extends DocPlacement {
+  kind: DocKind;
+  title: string;
+  diagramFormat?: DiagramFormat;
+  content?: string;
+}
+
+export const DOC_ROOT = 'root';
+
+/// Most characters a page may hold (spec 12.2).
+export const PAGE_CONTENT_MAX_LENGTH = 100_000;
+
+/// Most characters a Mermaid diagram's source may hold (spec 12.2).
+export const MERMAID_SOURCE_MAX_LENGTH = 20_000;
+
+/// The caller's private, unpublished edit of a page or diagram (`GET|PUT /docs/{key}/draft`).
+/// `title` may be empty while it is being typed.
+export interface DocDraft {
+  docKey: string;
+  baseVersion: number;
+  currentVersion: number;
+  title: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SaveDocDraft {
+  baseVersion: number;
+  title: string;
+  content: string;
+}
+
+/// `PATCH /docs/{key}`: a rename and/or new content; `content` needs `baseVersion`, and a stale
+/// one answers 409 `doc.version.conflict`.
+export interface UpdateDoc {
+  title?: string;
+  content?: string;
+  baseVersion?: number;
+  changeNote?: string | null;
+  /// Canvas only, with `content`: its SVG picture, stored with the version.
+  snapshot?: string;
+}
+
+export type WriteChannel = 'Web' | 'Api' | 'Mcp';
+
+/// One published version with its full content (`GET /docs/{key}/versions/{n}`).
+export interface DocVersion {
+  docKey: string;
+  number: number;
+  title: string;
+  content: string | null;
+  changeNote: string | null;
+  author: UserRef;
+  channel: WriteChannel;
+  createdAt: string;
+  restoredFrom: number | null;
+  /// Canvas only: the SVG picture of this version; null while it has none.
+  snapshotUrl?: string | null;
+  /// What this version's content mentions and embeds, as the reader may see them.
+  references: DocReferences;
+  embeds: DocEmbed[];
+}
+
+/// `PUT /docs/{key}/versions/{n}/snapshot`: `stored` is false when the version already had one.
+export interface StoredDocSnapshot {
+  docKey: string;
+  version: number;
+  stored: boolean;
+  snapshotUrl: string;
+}
+
+/// Most characters a Canvas diagram's source may hold, and most elements (spec 12.2, 1.8).
+export const CANVAS_SOURCE_MAX_LENGTH = 2_000_000;
+export const CANVAS_MAX_ELEMENTS = 10_000;
+
+/// A file attached to a page (`GET /docs/{key}/attachments`); pasted images embed `url`.
+export interface DocAttachment {
+  id: string;
+  docKey: string;
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+  sha256: string;
+  isImage: boolean;
+  uploadedAt: string;
+  uploadedBy: UserRef;
+  url: string;
+  canDelete: boolean;
+}
+
+export const MAX_ATTACHMENTS_PER_PAGE = 200;

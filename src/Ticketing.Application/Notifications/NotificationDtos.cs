@@ -8,13 +8,17 @@ public sealed record NotificationTicketDto(string Key, string Title, bool Delete
 
 public sealed record NotificationRegressionDto(string SessionKey, string SessionName, string TestCaseKey);
 
+/// <param name="Deleted">The doc was deleted since; it is still named so the notification makes sense.</param>
+public sealed record NotificationDocDto(string Key, string Title, bool Deleted);
+
 /// <summary>One notification of the caller, newest first in lists (D-94).</summary>
 /// <param name="Summary">What the actor did, to be shown after the actor's name ("commented").</param>
 /// <param name="EventCount">How many events were merged into this notification (1 or more).</param>
 /// <param name="Actor">Who acted; null for system changes.</param>
 /// <param name="Ticket">The ticket, for ticket notifications.</param>
 /// <param name="Regression">The session and test case, for regression item assignments.</param>
-/// <param name="Url">Where the web app opens it: the ticket or the regression item.</param>
+/// <param name="Doc">The page or diagram, for doc comments.</param>
+/// <param name="Url">Where the web app opens it: the ticket, the regression item or the doc's comments.</param>
 public sealed record NotificationDto(
     Guid Id,
     NotificationKind Kind,
@@ -24,6 +28,7 @@ public sealed record NotificationDto(
     string ProjectKey,
     NotificationTicketDto? Ticket,
     NotificationRegressionDto? Regression,
+    NotificationDocDto? Doc,
     string Url,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,

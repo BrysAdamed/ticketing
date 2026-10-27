@@ -1,3 +1,4 @@
+import { DocSummary } from '@core/docs/doc.models';
 import {
   Priority,
   RegressionSessionStatus,
@@ -33,6 +34,8 @@ export interface ProjectDashboard {
   };
   regressions: { latest: RegressionSessionSummary | null; recentPassRates: RegressionPassRate[] };
   regressionBugs: { count: number; items: DashboardTicket[] };
+  /// Widget 13: pages and diagrams (no folders), the 5 latest by `updatedAt`.
+  recentDocs: { total: number; items: DocSummary[] };
 }
 
 export interface DashboardTotals {

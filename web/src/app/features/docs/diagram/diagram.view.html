@@ -1,0 +1,110 @@
+@if (editing()) {
+  @if (editor(); as component) {
+    <ng-container *ngComponentOutlet="component; inputs: { doc: doc() }" />
+  } @else {
+    <div
+      class="edit-skeleton"
+      role="status"
+      aria-label="Loading the editor"
+      data-testid="doc-editor-loading"
+    >
+      <div class="sk-bar"></div>
+      <div class="sk-split">
+        <div class="sk-pane">
+          @for (width of lines; track $index) {
+            <span class="sk" [style.width.%]="width"></span>
+          }
+        </div>
+        <div class="sk-pane"><span class="sk sk-figure"></span></div>
+      </div>
+    </div>
+  }
+} @else {
+  @let diagram = doc();
+  <article class="dbody">
+    @if (diagram.myDraft && diagram.permissions.canEdit) {
+      <tk-doc-draft-banner [doc]="diagram" (continue)="edit()" />
+    }
+    <h1 class="ptitle" data-testid="doc-title">{{ diagram.title }}</h1>
+    <div class="pmeta" data-testid="doc-meta">
+      <span class="key tnum">{{ diagram.key }}</span>
+      <span class="dot">·</span>
+      <span class="tnum">v{{ diagram.version }}</span>
+      <span class="dot">·</span>
+      <span [title]="diagram.updatedAt | absoluteTime"
+        >Edited by {{ diagram.updatedBy.displayName }}, {{ diagram.updatedAt | relativeTime }}</span
+      >
+      <span class="dot">·</span>
+      <span class="path" [title]="diagram.path">{{ diagram.path }}</span>
+      <tk-doc-presence class="presence" [editors]="diagram.editors" />
+    </div>
+    @let rendered = state();
+    <figure class="dgm" data-testid="doc-diagram" [attr.data-state]="rendered.kind">
+      <div class="dgm-h">
+        <tk-icon [name]="icon()" [size]="16" />
+        <span data-testid="doc-diagram-label">{{ label() }}</span>
+        <div class="right">
+          @if (diagram.diagramFormat === 'Mermaid' && diagram.content) {
+            <button
+              type="button"
+              class="tk-icon-btn"
+              aria-label="Copy the Mermaid source"
+              matTooltip="Copy source"
+              data-testid="doc-diagram-copy-source"
+              (click)="copySource()"
+            >
+              <tk-icon name="tablerCopy" [size]="16" />
+            </button>
+          }
+        </div>
+      </div>
+      @switch (rendered.kind) {
+        @case ('ready') {
+          @if (rendered.kind === 'ready') {
+            <tk-diagram-viewport [content]="rendered.content" />
+          }
+        }
+        @case ('loading') {
+          <div class="dgm-sk" role="status" aria-label="Rendering the diagram"></div>
+        }
+        @case ('error') {
+          @if (rendered.kind === 'error') {
+            <div class="dgm-error tk-md">
+              <div class="tk-mermaid-error" role="alert" data-testid="doc-diagram-error">
+                <p class="tk-mermaid-error-title">
+                  {{
+                    diagram.diagramFormat === 'Mermaid'
+                      ? 'Mermaid syntax error'
+                      : "Couldn't draw this diagram"
+                  }}
+                </p>
+                <div class="tk-mermaid-error-message">{{ rendered.message }}</div>
+              </div>
+              @if (diagram.diagramFormat === 'Mermaid') {
+                <pre data-testid="doc-diagram-source"><code>{{ diagram.content }}</code></pre>
+              }
+            </div>
+          }
+        }
+        @case ('unsupported') {
+          <p class="dgm-empty">This diagram can't be shown here yet.</p>
+        }
+        @default {
+          <div class="dgm-empty" data-testid="doc-diagram-empty">
+            <p>This diagram is empty.</p>
+            @if (diagram.permissions.canEdit) {
+              <button mat-stroked-button type="button" (click)="edit()">
+                Start drawing <tk-kbd>E</tk-kbd>
+              </button>
+            }
+          </div>
+        }
+      }
+    </figure>
+    @if (latest()) {
+      <div class="footer">
+        <tk-doc-page-sections placement="footer" [doc]="diagram" />
+      </div>
+    }
+  </article>
+}

@@ -13,7 +13,15 @@ import { TicketCreator } from '@core/tickets/create-ticket';
 import { RelativeTimePipe } from '@shared/pipes/relative-time.pipe';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { KbdComponent } from '@shared/ui/kbd/kbd.component';
-import { assigneeItems, priorityItems, severityItems, sum, typeItems } from './dashboard-widgets';
+import { docsHomeUrl } from '@core/docs/doc-links';
+import {
+  assigneeItems,
+  priorityItems,
+  recentDocRows,
+  severityItems,
+  sum,
+  typeItems,
+} from './dashboard-widgets';
 import { DashboardLinks } from './dashboard-links';
 import { ProjectDashboard } from './dashboard.model';
 import { DashboardStore } from './dashboard.store';
@@ -22,6 +30,7 @@ import { CreatedResolvedChartComponent } from './widgets/created-resolved-chart.
 import { DashboardCardComponent } from './widgets/dashboard-card.component';
 import { EpicProgressComponent } from './widgets/epic-progress.component';
 import { KpiTilesComponent } from './widgets/kpi-tiles.component';
+import { RecentDocsComponent } from './widgets/recent-docs.component';
 import { RegressionsWidgetComponent } from './widgets/regressions-widget.component';
 import { StatusDistributionComponent } from './widgets/status-distribution.component';
 import { TestCasesWidgetComponent } from './widgets/test-cases-widget.component';
@@ -44,6 +53,7 @@ import { VersionFilterComponent } from './widgets/version-filter.component';
     DashboardTicketListComponent,
     EpicProgressComponent,
     KpiTilesComponent,
+    RecentDocsComponent,
     RegressionsWidgetComponent,
     StatusDistributionComponent,
     TestCasesWidgetComponent,
@@ -70,6 +80,11 @@ export class DashboardView {
   protected readonly severities = computed(() => this.map(severityItems));
   protected readonly assignees = computed(() => this.map(assigneeItems));
   protected readonly openBugs = computed(() => sum(this.severities()));
+  protected readonly recentDocs = computed(() => {
+    const data = this.store.data();
+    return data ? recentDocRows(data) : [];
+  });
+  protected readonly docsHome = computed(() => docsHomeUrl(this.store.projectKey()));
   protected readonly versionNote = computed(() =>
     this.versionFilter() === null ? null : 'All versions',
   );

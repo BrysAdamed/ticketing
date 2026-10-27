@@ -2,12 +2,16 @@ using Ticketing.Domain.Common;
 
 namespace Ticketing.Domain.Attachments;
 
-/// <summary>Attachment metadata. The bytes live behind the application's attachment store (spec 4.8, D-15).</summary>
+/// <summary>
+/// Attachment metadata. The bytes live behind the application's attachment store (spec 4.8, D-15). An attachment belongs
+/// to exactly one owner: a ticket or a doc page (D-108).
+/// </summary>
 public sealed class Attachment
 {
     public const int FileNameMaxLength = 255;
     public const int MaxSizeBytes = 10 * 1024 * 1024;
     public const int MaxPerTicket = 50;
+    public const int MaxPerDoc = 200;
 
     public static readonly IReadOnlySet<string> AllowedContentTypes = new HashSet<string>(StringComparer.Ordinal)
     {
@@ -24,7 +28,9 @@ public sealed class Attachment
 
     public Guid Id { get; private set; }
 
-    public Guid TicketId { get; private set; }
+    public Guid? TicketId { get; private set; }
+
+    public Guid? DocNodeId { get; private set; }
 
     public string FileName { get; private set; }
 
@@ -40,7 +46,14 @@ public sealed class Attachment
 
     public bool IsImage => ContentType.StartsWith("image/", StringComparison.Ordinal);
 
-    public static Attachment Create(Guid ticketId, string fileName, string contentType, long sizeBytes, string sha256, Guid uploadedById, DateTimeOffset now)
+    public static Attachment Create(Guid ticketId, string fileName, string contentType, long sizeBytes, string sha256, Guid uploadedById, DateTimeOffset now) =>
+        New(ticketId, null, fileName, contentType, sizeBytes, sha256, uploadedById, now);
+
+    public static Attachment CreateForDoc(Guid docNodeId, string fileName, string contentType, long sizeBytes, string sha256, Guid uploadedById, DateTimeOffset now) =>
+        New(null, docNodeId, fileName, contentType, sizeBytes, sha256, uploadedById, now);
+
+    private static Attachment New(
+        Guid? ticketId, Guid? docNodeId, string fileName, string contentType, long sizeBytes, string sha256, Guid uploadedById, DateTimeOffset now)
     {
         if (!AllowedContentTypes.Contains(contentType))
             throw DomainException.Invalid("file", AttachmentErrors.TypeNotAllowed, $"Files of type '{contentType}' are not allowed.");
@@ -51,6 +64,7 @@ public sealed class Attachment
         {
             Id = EntityId.New(),
             TicketId = ticketId,
+            DocNodeId = docNodeId,
             FileName = SanitizeFileName(fileName),
             ContentType = contentType,
             SizeBytes = (int)sizeBytes,

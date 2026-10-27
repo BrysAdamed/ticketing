@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { adminGuard, authGuard, guestGuard } from '@core/auth/auth.guards';
+import { projectKeyOfDoc } from '@core/docs/doc-links';
 import { ShellComponent } from '@core/layout/shell/shell.component';
 
 /// Top-level routes only. Every feature owns its sub-tree in `features/<feature>/*.routes.ts`
@@ -37,6 +38,21 @@ export const routes: Routes = [
       {
         path: 'tickets',
         loadChildren: () => import('@features/tickets/tickets.routes'),
+      },
+      {
+        path: 'docs/:docKey',
+        redirectTo: ({ params }) =>
+          `/projects/${projectKeyOfDoc(params['docKey'])}/docs/${params['docKey'].toUpperCase()}`,
+      },
+      { path: 'p/:projectKey/docs', pathMatch: 'full', redirectTo: '/projects/:projectKey/docs' },
+      {
+        path: 'p/:projectKey/docs/:docKey',
+        pathMatch: 'full',
+        redirectTo: '/projects/:projectKey/docs/:docKey',
+      },
+      {
+        path: 'p/:projectKey/docs/:docKey/:slug',
+        redirectTo: '/projects/:projectKey/docs/:docKey/:slug',
       },
       {
         path: 'boards',

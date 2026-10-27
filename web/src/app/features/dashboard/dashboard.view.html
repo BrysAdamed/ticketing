@@ -195,6 +195,29 @@
                 <p class="calm">No open bugs from regression runs.</p>
               }
             </tk-dashboard-card>
+
+            <tk-dashboard-card
+              class="span-12"
+              title="Recent docs"
+              data-testid="dashboard-recent-docs"
+            >
+              <a
+                cardActions
+                class="count-link"
+                [routerLink]="docsHome()"
+                data-testid="recent-docs-count"
+                >{{ d.recentDocs.total }} {{ d.recentDocs.total === 1 ? 'doc' : 'docs' }}</a
+              >
+              @if (recentDocs().length > 0) {
+                <tk-recent-docs [docs]="recentDocs()" />
+              } @else {
+                <p class="calm">
+                  No pages or diagrams yet.
+                  <a [routerLink]="docsHome()" data-testid="recent-docs-empty">Open Docs</a> to
+                  write the first one.
+                </p>
+              }
+            </tk-dashboard-card>
           } @placeholder {
             <div class="span-12 row">
               <tk-dashboard-card class="span-4" title="Open by assignee" [loading]="true" />

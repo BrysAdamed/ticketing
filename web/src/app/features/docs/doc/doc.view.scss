@@ -1,0 +1,140 @@
+:host {
+  display: block;
+  min-height: 100%;
+}
+
+:host(.editing) {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.edit {
+  margin-left: 6px;
+
+  tk-icon {
+    margin-right: 6px;
+  }
+
+  tk-kbd {
+    margin-left: 6px;
+  }
+}
+
+.pbar {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px 0 24px;
+  background: var(--tk-bg);
+  border-bottom: 1px solid var(--tk-border-subtle);
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--tk-text-muted);
+  font-size: var(--tk-text-sm);
+  white-space: nowrap;
+}
+
+.i {
+  flex: none;
+  color: var(--tk-text-subtle);
+}
+
+.crumb {
+  color: var(--tk-text-muted);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  &:hover {
+    color: var(--tk-text);
+    text-decoration: underline;
+  }
+}
+
+.sep {
+  color: var(--tk-text-disabled);
+}
+
+.who {
+  color: var(--tk-text);
+}
+
+.badge {
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 6px;
+  border-radius: var(--tk-radius-sm);
+  background: var(--tk-gray-bg);
+  color: var(--tk-gray-fg);
+  font-size: var(--tk-text-xs);
+  font-weight: var(--tk-weight-medium);
+}
+
+button.badge {
+  border: 0;
+  font-family: inherit;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--tk-text);
+  }
+}
+
+.right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.skeleton {
+  opacity: 0;
+  animation: tk-doc-appear 0s linear 120ms forwards;
+}
+
+.sk-body {
+  max-width: 808px;
+  margin: 0 auto;
+  padding: 32px 48px 64px;
+}
+
+.sk {
+  display: block;
+  height: 10px;
+  margin-bottom: 12px;
+  border-radius: var(--tk-radius-sm);
+  background: var(--tk-skeleton);
+}
+
+.pbar .sk {
+  margin: 0;
+}
+
+.sk-title {
+  width: 55%;
+  height: 22px;
+  margin: 4px 0 14px;
+}
+
+.sk-meta {
+  width: 30%;
+  margin-bottom: 32px;
+}
+
+@keyframes tk-doc-appear {
+  to {
+    opacity: 1;
+  }
+}

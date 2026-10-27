@@ -1,0 +1,239 @@
+// The PDF print stylesheet (D-111): the app's light tokens and markdown styles plus print rules
+// (spec 1.11). Built by scripts/build-print.mjs next to print.js.
+@use '../styles/tokens';
+@use '../styles/markdown';
+
+@font-face {
+  font-family: 'Inter Variable';
+  font-style: normal;
+  font-display: block;
+  font-weight: 100 900;
+  src: url('inter-latin.woff2') format('woff2-variations');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Inter Variable';
+  font-style: normal;
+  font-display: block;
+  font-weight: 100 900;
+  src: url('inter-latin-ext.woff2') format('woff2-variations');
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
+}
+
+@page {
+  size: A4 portrait;
+  margin: 22mm 18mm 20mm;
+}
+
+html {
+  color-scheme: light;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+body {
+  margin: 0;
+  background: #fff;
+  color: var(--tk-text);
+  font-family: var(--tk-font-sans);
+  font-feature-settings: var(--tk-font-features);
+  font-size: var(--tk-text-md);
+}
+
+.tk-md {
+  max-width: none;
+
+  pre,
+  code {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  pre {
+    background: var(--tk-bg-subtle);
+  }
+
+  th {
+    background: var(--tk-bg-subtle);
+  }
+
+  a {
+    color: var(--tk-accent-fg);
+    text-decoration: underline;
+  }
+
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+
+  .tk-doc-embed-body {
+    min-height: 0;
+  }
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  break-after: avoid;
+}
+
+figure,
+img,
+tr,
+blockquote,
+.tk-md-callout,
+.tk-doc-embed,
+.tk-mermaid {
+  break-inside: avoid;
+}
+
+thead {
+  display: table-header-group;
+}
+
+article.doc,
+.folder-head,
+nav.toc {
+  break-before: page;
+}
+
+.mode-single article.doc:first-of-type,
+.folder-head + article.doc {
+  break-before: auto;
+}
+
+.cover {
+  height: 230mm;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  break-after: page;
+}
+
+.cover-project,
+.cover-path,
+.cover-meta {
+  margin: 4px 0;
+  color: var(--tk-text-muted);
+}
+
+.cover-title {
+  margin: 8px 0;
+  font-size: 32px;
+  line-height: 1.2;
+}
+
+.toc-title {
+  margin: 0 0 16px;
+  font-size: 22px;
+}
+
+.toc ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  line-height: 1.9;
+}
+
+.toc li {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+
+  a {
+    color: var(--tk-text);
+    text-decoration: none;
+  }
+}
+
+.toc .toc-folder a {
+  font-weight: var(--tk-weight-semibold);
+}
+
+@for $depth from 2 through 6 {
+  .toc .toc-d#{$depth} {
+    padding-left: ($depth - 1) * 16px;
+  }
+}
+
+.toc-key {
+  margin-left: auto;
+  color: var(--tk-text-subtle);
+  font-size: var(--tk-text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.folder-head {
+  margin-bottom: 24px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--tk-border);
+}
+
+.folder-title {
+  margin: 0;
+  font-size: 18px;
+  color: var(--tk-text-muted);
+}
+
+.folder-path {
+  margin: 2px 0 0;
+  color: var(--tk-text-subtle);
+  font-size: var(--tk-text-sm);
+}
+
+.doc-head {
+  margin-bottom: 20px;
+}
+
+.doc-title {
+  margin: 0 0 4px;
+  font-size: 26px;
+  line-height: 1.25;
+}
+
+.doc-meta {
+  margin: 0;
+  color: var(--tk-text-muted);
+  font-size: var(--tk-text-sm);
+}
+
+.doc-diagram {
+  margin: 0;
+  display: grid;
+  place-items: center;
+
+  svg,
+  img {
+    width: 100%;
+    max-height: 215mm;
+    height: auto;
+    object-fit: contain;
+  }
+}
+
+.landscape .doc-diagram {
+  svg,
+  img {
+    max-height: 135mm;
+  }
+}
+
+.tk-doc-embed-body img,
+.tk-doc-embed-body svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.empty {
+  color: var(--tk-text-muted);
+}

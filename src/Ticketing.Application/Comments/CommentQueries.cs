@@ -61,7 +61,7 @@ public static class CommentQueries
         var canWrite = grant.CanWrite && !grant.IsArchived && currentUser.PatScope != PatScope.ReadOnly && !c.IsDeleted;
         var isAuthor = c.AuthorId == currentUser.Id;
         return new CommentDto(
-            c.Id, c.TicketId, row.Author, c.Body, c.CreatedAt, c.EditedAt, c.IsDeleted, c.DeletedAt,
+            c.Id, c.TicketId!.Value, row.Author, c.Body, c.CreatedAt, c.EditedAt, c.IsDeleted, c.DeletedAt,
             canWrite && isAuthor, canWrite && (isAuthor || grant.IsOwner), MentionedUsers.In(c.Body, mentioned));
     }
 
@@ -81,11 +81,11 @@ internal static class CommentLookup
     public static async Task<(Comment Comment, TicketTarget Ticket)> WriteAsync(
         ITicketingDbContext db, IProjectAccess access, Guid commentId, CancellationToken cancellationToken)
     {
-        var comment = await db.Comments.SingleOrDefaultAsync(c => c.Id == commentId, cancellationToken) ?? throw NotFound();
+        var comment = await db.Comments.SingleOrDefaultAsync(c => c.Id == commentId && c.TicketId != null, cancellationToken) ?? throw NotFound();
         var projectId = await db.Tickets.Where(t => t.Id == comment.TicketId).Select(t => t.ProjectId).SingleAsync(cancellationToken);
         if (await access.FindAsync(projectId, cancellationToken) is null)
             throw NotFound();
-        var target = await TicketLookup.WriteAsync(db, access, comment.TicketId.ToString(), cancellationToken);
+        var target = await TicketLookup.WriteAsync(db, access, comment.TicketId!.Value.ToString(), cancellationToken);
         return (comment, target);
     }
 

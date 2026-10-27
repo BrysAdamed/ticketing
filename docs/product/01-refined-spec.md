@@ -495,7 +495,7 @@ Rules in 5.4. Additionally:
 
 ### 6.8 Search, lists and export
 
-- Quick jump (Ctrl+K or `/`): typing a ticket or test case key opens it directly. Otherwise it searches ticket titles across readable projects and shows the top 10 (I-03, I-04).
+- Quick jump (Ctrl+K or `/`): typing a ticket, test case or doc key opens it directly. Otherwise it searches ticket titles across readable projects and shows the top 10, then the top 5 docs (12.7) (I-03, I-04).
 - Ticket search filters: projects, text, type, status, status category, priority, severity, assignee (including "unassigned" and "me"), reporter, labels (all of), version, parent, location (backlog, any board, a given board), created and updated date ranges, watching (tickets I watch, 6.15), include deleted = no. Sort: updated, created, priority, key, rank.
 - Text search uses PostgreSQL full text (`websearch_to_tsquery('english', ...)`) over title (weight A) and description (weight B), plus a trigram index on title for partial words. Comments are not searched in v1.
 - Every filter state is in the URL, so searches can be bookmarked and shared (I-21).
@@ -620,13 +620,14 @@ Flag changes write ActivityEntries. Admin UI: list, create, edit, delete; shows 
   - Assigned: a ticket created with you as assignee, or reassigned to you.
   - RegressionItemAssigned: a regression item assigned to you by someone else (taking an item or recording a result assigns it to yourself and notifies nobody).
   - Mentioned: someone newly @mentions you in a ticket description or comment (6.9, D-96): "mentioned you in the description" / "mentioned you in a comment". On a ticket you watch, a new comment that mentions you notifies Mentioned instead of Commented.
+  - On a page or diagram you created or commented on (comments that are not deleted): a new comment (Commented, "commented"), see 12.9.
   - On a ticket you watch (6.15): a new comment (Commented), a status change by PATCH or by moving to a board column (StatusChanged), a priority change to High or Highest from a lower priority (PriorityRaised; lowering or reaching Medium or below notifies nobody), a move between backlog and boards or between boards, including board archive carry-over and board deletion (Moved), and deletion (Deleted).
 - The actor is never notified about their own action. Recipients must be active and able to read the project (5.1) at the time of the change; others get nothing.
-- Collapsing: a change by the same actor on the same ticket (or regression session) within 5 minutes of the first change of an unread notification is merged into it: `eventCount` grows, `updatedAt` moves, and the headline (kind and summary) is replaced only by a higher-ranked kind (section 3). Several changes in one save collapse the same way. A read notification is never reopened; the next change starts a new one.
+- Collapsing: a change by the same actor on the same ticket (or regression session, or doc) within 5 minutes of the first change of an unread notification is merged into it: `eventCount` grows, `updatedAt` moves, and the headline (kind and summary) is replaced only by a higher-ranked kind (section 3). Several changes in one save collapse the same way. A read notification is never reopened; the next change starts a new one.
 - Listing re-checks read access: notifications about projects the user can no longer read (removed membership, project made private, project deleted) are left out of the list and the unread count, and come back if access returns. Deleted tickets stay listed, flagged `deleted`.
 - Mark read: some (1 to 100 ids) or all of the caller's notifications; ids of other users' notifications are ignored. Read time is kept on repeat. Needs write-scoped credentials.
 - Retention: notifications older than 90 days are deleted by the hourly retention job.
-- REST (`/api/v1/me/notifications`): `GET ?unread=true&cursor=&limit=` returns `{ items, nextCursor }`, newest first by `createdAt`; `GET /unread-count` returns `{ count }`; `POST /read` with `{ "ids": [...] }` or `{ "all": true }` returns `{ unreadCount }`. An item is `{ id, kind, summary, eventCount, actor, projectKey, ticket: { key, title, deleted } | null, regression: { sessionKey, sessionName, testCaseKey } | null, url, createdAt, updatedAt, readAt }`; `url` is the SPA path of the ticket or regression item.
+- REST (`/api/v1/me/notifications`): `GET ?unread=true&cursor=&limit=` returns `{ items, nextCursor }`, newest first by `createdAt`; `GET /unread-count` returns `{ count }`; `POST /read` with `{ "ids": [...] }` or `{ "all": true }` returns `{ unreadCount }`. An item is `{ id, kind, summary, eventCount, actor, projectKey, ticket: { key, title, deleted } | null, regression: { sessionKey, sessionName, testCaseKey } | null, doc: { key, title, deleted } | null, url, createdAt, updatedAt, readAt }`; `url` is the SPA path of the ticket, the regression item or the doc's comments (`/p/{PK}/docs/{KEY}/{slug}#comments`).
 - Performance: list (all or unread, first page) and unread count p95 under 50 ms with 100 000 notifications for one user.
 
 ## 7. Project dashboard
@@ -647,6 +648,7 @@ Shown on the project's home page. All numbers exclude deleted tickets. A single 
 | 10 | Test cases | Non-archived count per `TestCaseStatus`; automation ratio = Automatic / (Manual + Automatic). |
 | 11 | Regressions | Latest non-cancelled session summary (6.11), and pass rate of the last 5 completed sessions. |
 | 12 | Regression bugs | Open tickets created from regression items. |
+| 13 | Recent docs | Non-deleted pages and diagrams (not folders): total count and the 5 most recently updated, linking to the docs (12.15). Not filtered by version. |
 
 Every count links to the search that produces it. Target: dashboard loads in under 500 ms for a project with 50 000 tickets (queries run against indexed columns; no precomputed tables in v1).
 
@@ -663,7 +665,7 @@ Every count links to the search that produces it. Target: dashboard loads in und
 
 - Streamable HTTP MCP endpoint at `/mcp`, hosted in the same API process. No local install. Claude Code connects with `claude mcp add --transport http ticketing https://<host>/mcp --header "Authorization: Bearer tkt_..."`.
 - Every call runs as the PAT's user with that user's permissions and channel `Mcp`.
-- `tools/list` returns only tools allowed by the token scope. Read tools carry `readOnlyHint: true`. `delete_ticket`, `delete_comment`, `unlink_tickets`, `cancel_regression_session` and `archive_board` carry `destructiveHint: true` and `_meta["anthropic/requiresUserInteraction"]: true`, so Claude Code asks the user before every call even in a session that would otherwise run tools unasked (D-102). Every destructive tool carries both; an integration test on `tools/list` keeps the two sets equal.
+- `tools/list` returns only tools allowed by the token scope. Read tools carry `readOnlyHint: true`. `delete_ticket`, `delete_comment`, `unlink_tickets`, `cancel_regression_session`, `archive_board`, `delete_doc` and `delete_doc_comment` carry `destructiveHint: true` and `_meta["anthropic/requiresUserInteraction"]: true`, so Claude Code asks the user before every call even in a session that would otherwise run tools unasked (D-102). Every destructive tool carries both; an integration test on `tools/list` keeps the two sets equal.
 
 ### 9.2 Conventions for all tools
 
@@ -700,7 +702,7 @@ Tickets
 | Tool | Inputs | Output |
 | --- | --- | --- |
 | `search_tickets` | any filter from 6.8 (`projectKeys`, `text`, `types`, `statuses`, `statusCategory`, `priorities`, `severities`, `assignee` (email, `me` or `unassigned`), `reporter`, `labels`, `version`, `parentKey`, `location` (`backlog`, `board`, or a board id), date ranges, `watching`), `sort`, `limit`, `cursor` | Ticket summaries. |
-| `get_ticket` | `key`, optional `include` (any of `comments`, `children`, `links`, `testCases`, `attachments`, `watchers`; default all) | Full ticket incl. description, resolution, reporter, timestamps, rowVersion, and the included collections (latest 50 comments; watchers as `{ count, watching, users }`), and `mentions` (users mentioned in the description who are active and can read the project). |
+| `get_ticket` | `key`, optional `include` (any of `comments`, `children`, `links`, `testCases`, `attachments`, `watchers`, `docs`; default all) | Full ticket incl. description, resolution, reporter, timestamps, rowVersion, and the included collections (latest 50 comments; watchers as `{ count, watching, users }`; docs as `{ total, items }`, the 20 latest readable docs mentioning the ticket, 12.11), and `mentions` (users mentioned in the description who are active and can read the project). |
 | `watch_ticket` | `key` | `{ count, watching, users }`. Read access is enough (6.15). |
 | `unwatch_ticket` | `key` | `{ count, watching, users }`. |
 | `create_ticket` | `projectKey`, `title`, `type`, optional `description`, `status`, `priority`, `severity`, `storyPoints`, `version`, `labels`, `parentKey`, `assignee`, `boardId`, `idempotencyKey` | Created ticket (summary + rowVersion). |
@@ -723,7 +725,7 @@ Comments
 | `update_comment` | `commentId`, `body` | Updated comment. Own only. |
 | `delete_comment` | `commentId` | Confirmation. Own, or Owner. |
 
-Attachments: `list_attachments` (`key`) returns metadata and download URLs. `get_attachment_text` (`attachmentId`) returns the content of `text/*` and `application/json` attachments up to 200 KB. Uploading through MCP is LATER.
+Attachments: `list_attachments` (`key`) returns metadata and download URLs; `list_doc_attachments` (Docs, below) does the same for a page. `get_attachment_text` (`attachmentId`) returns the content of `text/*` and `application/json` attachments of tickets and pages up to 200 KB. Uploading through MCP is LATER.
 
 Test cases
 
@@ -764,6 +766,31 @@ Notifications (6.16)
 | `list_notifications` | optional `unreadOnly`, `cursor`, `limit` | `{ items, nextCursor }` of notifications, newest first, in the REST shape (6.16). |
 | `mark_notifications_read` | `ids` (1..100) or `all` (true) | `{ unreadCount }`. Write-scoped tokens only. |
 
+Docs (12)
+
+| Tool | Inputs | Output |
+| --- | --- | --- |
+| `list_docs` | `projectKey`, optional `folder` (key or path), `depth` (1..6), `kinds` | The tree, flat and depth-first in manual order: key, kind, diagramFormat, title, parentKey, depth, version, childCount, updatedAt, commentCount. No content. |
+| `get_doc` | `docKey`, or `projectKey` + `path`, optional `version` | The doc (12.6) with raw `content`; folders also list `children`. With `version`, `content` is that version's and `atVersion` describes it (12.10); `references`, `embeds` and `backlinks` resolved for the caller (12.11). |
+| `get_doc_history` | `docKey`, optional `limit`, `cursor` | `{ docKey, currentVersion, items, nextCursor }`: versions and other activity, newest first (12.10). |
+| `list_doc_comments` | `docKey`, optional `cursor`, `limit` | `{ items, nextCursor }`: the comments of a page or diagram, oldest first (12.9). |
+| `add_doc_comment` | `docKey`, `body` | The comment. Notifies the doc's author and earlier commenters. |
+| `update_doc_comment` | `commentId`, `body` | The comment; your own only. |
+| `delete_doc_comment` | `commentId` | The placeholder. Destructive. |
+| `list_doc_attachments` | `docKey` | The page's attachments, oldest first (12.6). Read text ones with `get_attachment_text`. |
+| `create_folder` | `projectKey`, `title`, optional `parent` (key, path or `root`), `position` (`Top`, `Bottom`) or `beforeKey`/`afterKey`, `idempotencyKey` | The folder. |
+| `create_page` | as `create_folder`, plus `content` (markdown), `changeNote` | The page at version 1. |
+| `create_diagram` | as `create_folder`, plus `format` (`Mermaid`, the default, or `Canvas`), `source`, `changeNote` | The diagram at version 1 (12.12). The description lists the supported Mermaid types and prefers Mermaid for LLM-written diagrams. |
+| `update_doc` | `docKey`, any of `title`, `content` (needs `baseVersion`), `changeNote` | The doc. Stale `baseVersion`: `doc.version.conflict` with `currentVersion`, `updatedBy`, `updatedAt`. |
+| `edit_doc` | `docKey`, `edits` (1..50 of `{ oldText, newText, replaceAll? }`), `changeNote` | The doc at its new version. `doc.edit.noMatch`, `doc.edit.ambiguous`; all or nothing. |
+| `restore_doc_version` | `docKey`, `version`, optional `changeNote` | The doc at its new version (`restoredFrom` set), or unchanged when the latest version already equals it (12.10). |
+| `move_doc` | `docKey`, optional `parent` (key, path or `root`; omitted keeps the folder), `position` or `beforeKey`/`afterKey` | The doc. |
+| `delete_doc` | `docKey` | `{ id, key, deletedCount, deletedAt, undoUntil }`. Destructive. |
+| `search_docs` | optional `text`, `projectKeys`, `kinds`, `folder` (key or id), `mentions` (ticket key), `updatedFrom`/`updatedTo`, `sort` (`Relevance`, `Updated`), `limit`, `cursor` | `{ items, nextCursor, total, totalCapped, sort }` (12.7); each item has key, kind, title, path, folderPath, version, updatedBy, updatedAt, url and a plain-text `snippet` with highlight ranges. |
+| `get_doc_export_link` | `docKey`, optional `version` | `{ docKey, version, url, expiresAt }`: a server-relative PDF link with a signed token, valid 15 minutes (12.14). |
+
+Restoring deleted docs stays REST and UI only (D-82).
+
 Out of MCP in v1: user administration, PAT management, feature flags, project deletion, board deletion. These stay in the web UI.
 
 ## 10. Non-functional requirements
@@ -776,8 +803,177 @@ Out of MCP in v1: user administration, PAT management, feature flags, project de
 | Keyboard | `c` create, `/` or Ctrl+K quick jump, `j`/`k` next/previous in lists, `Enter` open, `e` edit, `s`/`p`/`t`/`a`/`l` status, priority, type, assignee and labels picker, `i` assign to me (with Undo), `m` move to…, `Del`/`⌘⌫` delete with Undo (D-81, D-82), `?` shortcut help (I-04). |
 | Browsers | Latest Chrome, Edge and Firefox. Desktop first, minimum width 1280 px. |
 | Accessibility | All actions reachable by keyboard; visible focus; WCAG 2.1 AA colour contrast. |
-| Operations | Docker Compose with `api`, `web` and `db` services. `/health/live` and `/health/ready` endpoints. Structured JSON logs. Database migrations applied on API start. Documented `pg_dump` backup procedure, attachments included. |
+| Operations | Docker Compose with `api`, `web` and `db` services, plus the internal `pdf` renderer for PDF export (12.14). `/health/live` and `/health/ready` endpoints. Structured JSON logs. Database migrations applied on API start. Documented `pg_dump` backup procedure, attachments included. |
 | Security | All writes authorised server-side. Private-project data never leaks through search, boards, links, hints, dashboards or MCP. Tests cover each of these paths. |
+
+## 12. Docs
+
+Each project has documentation: a tree of folders, markdown pages and diagrams (Mermaid or Canvas). The full feature spec, including the UI, links, search, history and PDF export, is [03-docs-refinement.md §1](03-docs-refinement.md#1-refined-v1-of-docs-spec); this section states the rules as built (epic TKT-10: TKT-12 to TKT-22, decisions D-108 to D-128).
+
+### 12.1 Model and keys
+
+- `DocNode` (one table for all kinds): `Kind` (`Folder`, `Page`, `Diagram`), `DiagramFormat` (`Mermaid`, `Canvas`; required for diagrams only), `ParentId` (null = project root, otherwise a folder of the same project), `Rank`, `Title`, `Content` (latest published copy; null for folders), `Outline` (Canvas labels for search), `CurrentVersion` (0 for folders), created/updated by and at, soft delete with `DeletedRootId`.
+- Keys are `{PK}-D-{n}` (`WEB-D-12`), from one per-project counter for every kind, allocated race-free like ticket numbers and never reused. Lookup is case-insensitive; a key or an id is accepted everywhere.
+- `DocVersion`: an immutable full snapshot (title, content, change note, author, channel, time, `RestoredFrom`) per publish; content columns use lz4 TOAST compression. `DocDraft`: one private draft per user and doc. `DocReference`: the derived ticket/doc mention index, rebuilt on every publish (12.11).
+- Paths: titles joined by `/`, case-insensitive, `/` inside a title written `\/` and `\` written `\\`.
+
+### 12.2 Tree rules
+
+| Rule | Code |
+| --- | --- |
+| At most 6 levels (root children are level 1), checked for the whole moved subtree | `doc.tree.depth` |
+| A folder cannot move into itself or its subtree | `doc.tree.cycle` |
+| At most 500 docs in one folder (the root is limited only by the project limit) | `doc.tree.folderFull` |
+| At most 5 000 non-deleted docs per project | `doc.project.limit` |
+| Titles: 1..200 characters, one line, unique among non-deleted siblings ignoring case (also enforced by a unique index) | `doc.title.duplicate` |
+| The parent must be a folder of the same project | `doc.parent.invalid` (400) |
+| `beforeKey`/`afterKey` must be a sibling in the target folder | `doc.rank.anchor` |
+
+- Every tree change takes the project's docs tree lock first and ranks through the shared ranker (D-109), so concurrent creates and moves cannot break the limits.
+- Create places at the bottom unless `position: Top` or an anchor is given. Duplicate (pages and diagrams) places "Copy of …" (then " (2)" …) right after the original at version 1. Move without `parent` reorders inside the current folder.
+
+### 12.3 Permissions
+
+Section [1.5 of the refinement](03-docs-refinement.md#15-permissions-mapped-to-5) applies as written: readers read everything, Owners and Members write (on public projects every signed-in user), Viewers and read-only tokens get 403, archived projects 409 `project.archived` on every write including drafts, unreadable projects 404 on every path. Members delete only docs they created (`doc.delete.forbidden`), folders only while empty (`doc.folder.notEmpty`). The trash is for Owners.
+
+### 12.4 Content, versions and drafts
+
+- Size limits: page 100 000 characters, Mermaid 20 000, Canvas 2 000 000 (`doc.content.tooLong`). Line endings are stored as `\n`. Folders have no content (`doc.kind.unsupported`).
+- Replacing content requires `baseVersion` (`doc.baseVersion.required`); a stale one is 409 `doc.version.conflict` with `currentVersion`, `updatedBy` (the latest version's author) and `updatedAt`. Content equal to the current one creates no version. A rename creates no version; the next version snapshots the new title.
+- Find/replace edits (`POST /docs/{key}/edits`, MCP `edit_doc`) apply to the latest version without `baseVersion`, 1..50 per call, in order, all or nothing; pages and Mermaid only. A diagram's `content` is its source (Mermaid text or Canvas JSON); MCP `create_diagram` creates one (12.12).
+- Publishing deletes the publisher's own draft. A draft (`baseVersion` 1..current, title may be empty while typing, same size limits) is never visible to others; `GET /docs/{key}` lists as `editors` the other users whose draft changed in the last 10 minutes.
+- `GET /docs/{key}/versions/{n}` returns one version with its full content (the base of the web editor's 3-way merge); a number the doc does not have is 404 `doc.version.notFound`.
+- Activity (`EntityType = Doc`, with channel): `doc.created`, `doc.updated` (new version number), `doc.renamed` (title), `doc.moved` (parent key; parent changes only), `doc.deleted` (`deletedRootId`, `count`), `doc.restored`, `doc.version.restored` (`version`, `restoredFrom`; instead of `doc.updated`), `doc.attachment.added` and `doc.attachment.deleted` (`attachmentId`, `fileName`), `doc.comment.added` and `doc.comment.deleted` (`commentId`), `doc.comment.edited` (field `comment`, old value `{ commentId, body }` with the previous body).
+- Pages (not folders or diagrams: `doc.kind.unsupported`, 409) take attachments with the ticket rules of 4.8 and D-63: the same store, allow-list, content sniffing, 1 byte..10 MiB and `/api/v1/attachments/{id}` download URL, at most 200 per page (`attachment.limitReached`, counted under the page's row lock). Writers upload; the uploader or an Owner deletes (`attachment.forbidden`); archived projects answer 409 `project.archived`.
+- An upload or delete creates no version and leaves the page's `updatedAt` as it is. Attachments of a deleted page answer 404 `attachment.notFound`, like those of an unreadable project.
+- `GET /docs/{key}/export.md` downloads the latest page markdown: `text/markdown; charset=utf-8`, `Content-Disposition: attachment` with the title as file name (path and reserved characters dropped; the key when nothing is left), `nosniff`. Every reader can export, Viewers and archived projects included. Pages only.
+
+### 12.5 Delete and restore
+
+- Delete is immediate and soft. A folder takes its subtree with it; all nodes deleted together share `DeletedRootId`. Versions, drafts and attachments stay.
+- `POST /docs/{key}/restore` restores the whole group of that doc: the deleter within 10 minutes (`doc.restore.expired` after, `doc.restore.forbidden` for others), Owners at any time. The group returns to its former folder if that still exists, otherwise to the root; a title clash appends " (restored)". Nothing is purged in v1.
+
+### 12.6 REST
+
+| Method and path | Purpose |
+| --- | --- |
+| `GET /projects/{pk}/docs/tree?folder=&depth=&kind=` | The tree, unpaged, depth-first: `{ projectKey, myRole, canWrite, canManageTrash, total, items }`, each item with key, kind, diagramFormat, title, parentKey, depth, version, childCount, updatedAt, `hasMyDraft`, `canDelete`, `commentCount` (comments not deleted, counted inside the one tree query) |
+| `GET /projects/{pk}/docs/recent?limit=10` | Latest updated pages and diagrams (1..50); the dashboard returns the 5 latest itself (12.15) |
+| `GET /projects/{pk}/docs/by-path?path=` | A doc by path |
+| `GET /projects/{pk}/docs/trash?limit=&cursor=` | Delete groups, newest first (Owners) |
+| `POST /projects/{pk}/docs` | Create: `kind`, `title`, `parent`, `position` or `beforeKey`/`afterKey`, `content`, `diagramFormat`, `changeNote`, `snapshot` (Canvas, 12.13); `Idempotency-Key` |
+| `GET /docs/{key}?version=` | The doc: key, kind, diagramFormat, title, path, parentKey, breadcrumb, content, version, created/updated by and at, myRole, permissions, editors, myDraft, children (folders), url, rowVersion, `references`, `embeds`, `backlinks` (12.11); Canvas also `outline` and `snapshotUrl` (12.13) |
+| `PATCH /docs/{key}` | `title`, `content` + `baseVersion`, `changeNote`, `snapshot` (Canvas); `If-Match` optional |
+| `POST /docs/{key}/edits` | `{ edits, changeNote }` |
+| `POST /docs/{key}/move` | `{ parent, position, beforeKey, afterKey }` |
+| `POST /docs/{key}/duplicate` | Copy next to it |
+| `DELETE /docs/{key}` | `{ id, key, deletedCount, deletedAt, undoUntil }` |
+| `POST /docs/{key}/restore` | Restore the delete group |
+| `GET`, `PUT`, `DELETE /docs/{key}/draft` | My draft: `{ baseVersion, title, content }`; 404 `doc.draft.notFound` when none |
+| `GET /docs/{key}/history?limit=&cursor=` | Versions merged with the other activity, newest first (12.10) |
+| `POST /docs/{key}/versions/{n}/restore` | Optional `{ changeNote }`; publishes version n again as a new version (12.10) |
+| `GET /docs/{key}/versions/{n}` | One version: `{ docKey, number, title, content, changeNote, author, channel, createdAt, restoredFrom, snapshotUrl, references, embeds }` (that version's references, 12.10); 404 `doc.version.notFound` |
+| `GET /docs/{key}/versions/{n}/snapshot.svg` | The Canvas picture of version n (`image/svg+xml`, sandbox CSP); 404 `doc.snapshot.notFound` while it has none (12.13) |
+| `PUT /docs/{key}/versions/{n}/snapshot` | `{ svg }`: stores the picture of a Canvas version that has none (writers; first one wins) |
+| `GET /docs/{key}/attachments` | The page's attachments, oldest first, unpaged: `{ id, docKey, fileName, contentType, sizeBytes, sha256, isImage, uploadedAt, uploadedBy, url, canDelete }` |
+| `POST /docs/{key}/attachments` | Upload one file (multipart field `file`); 201 with the attachment, `Location` = its `url` |
+| `GET /docs/{key}/export.md` | The latest markdown as a `{title}.md` download |
+| `GET /docs/{key}/export.pdf?version=&tz=` | A page, diagram or folder as an A4 PDF for the caller (12.14); also `?token=` from an export link |
+| `POST /docs/{key}/export-link` | Optional `{ version }`: `{ docKey, version, url, expiresAt }`, a signed `GET` link valid 15 minutes (12.14) |
+| `GET /docs/{key}/comments?limit=&cursor=` | The comment thread, oldest first: `{ items, nextCursor }`, each `{ id, docKey, author, body, createdAt, editedAt, deleted, deletedAt, canEdit, canDelete }` (12.9) |
+| `POST /docs/{key}/comments` | `{ body }`; 201 with the comment |
+| `PATCH`, `DELETE /docs/comments/{id}` | Edit (author) or delete (author or Owner) a doc comment; both return the comment |
+| `GET /tickets/{key}/docs?limit=` | Readable docs mentioning the ticket, newest first (limit 1..100, default 20): `{ total, items }` (12.11) |
+
+Downloading (`GET /attachments/{id}`) and deleting (`DELETE /attachments/{id}`) a page attachment use the ticket attachment endpoints.
+
+The doc URL in the SPA is `/projects/{PK}/docs/{KEY}/{slug}`; the slug is cosmetic and replaced when stale. `/docs/{KEY}` and the `/p/{PK}/docs/{KEY}/{slug}` form that the API returns as `url` redirect to it (D-113).
+
+### 12.7 Search
+
+- `GET /docs/search?project=&q=&kind=&folder=&mentions=&updatedFrom=&updatedTo=&sort=&limit=&cursor=` and MCP `search_docs` search the title (weight A), the latest published content of pages and Mermaid diagrams and the Canvas outline (weight B) of non-deleted docs in readable projects. Drafts are never searched. The encoding follows [search-url-format.md](../architecture/search-url-format.md#docs-search); unreadable projects, folders and tickets match nothing.
+- `q` uses `websearch_to_tsquery('english')` syntax, also matches a case-insensitive substring of the title (from 3 characters) and a doc key. `folder` is a folder key or id and covers its whole subtree (a non-folder doc is 400 `validation`); `mentions` is a ticket key and uses the reference index (12.1).
+- Sort `relevance` (the default with `q`): an exact key first, then titles containing the text, then `ts_rank`; at most 100 (`limit`), no cursor (a cursor is 400). Sort `updated` (the default without `q`): newest first by `updatedAt`, `id` with a keyset cursor. The response is `{ items, nextCursor, total, totalCapped, sort }`; `total` is counted on the first page only, capped at 1 000.
+- Each item: id, key, projectKey, kind, diagramFormat, title, path, folderPath, version, updatedBy, updatedAt, url and `snippet: { text, highlights: [{ start, length }] }` (null for folders and empty docs). The snippet is plain text, never HTML: up to 30 words around the best match (`ts_headline`), whitespace collapsed, markdown emphasis and heading marks removed, at most 240 characters; ranges are UTF-16 offsets. Without `q` it is the start of the doc.
+- Quick jump (`GET /quick-jump`, 6.8) also answers doc keys (exact match first) and lists up to 5 docs by relevance after the tickets, each with `docKind`, `diagramFormat`, `folderPath` and `snippet`.
+- `scope=Docs` keeps only docs (an exact doc key, then up to 20 by relevance) and `scope=Tickets` only tickets (an exact ticket key, then up to 20 by title); any other value is 400. In the command palette the prefixes `p:` and `t:` set these scopes: only the Docs or the Tickets group (and its "Search … for" row) is shown, commands are hidden, `p:` alone lists the recent docs, and the palette footer shows both hints (D-115).
+- p95 under 150 ms with 20 000 docs and 200 000 tickets (`DocSearchPerformanceTests`, D-114).
+
+
+### 12.8 Reading and editing pages (web)
+
+- **Reader** (`docs.page`): title, a meta line (key, `vN`, "Edited by X, 2 h ago", path, "3 comments" linking to the thread, and who else is editing), the rendered markdown, "On this page" (h1–h3, scroll spy) in a 220 px right rail from 1440 px (`]` hides it, remembered per browser; whenever it is not shown, a page bar button opens it as a popover, and below 1440 px `]` toggles that popover; D-122), and the page sections (attachments, "Tickets mentioned", "Linked from" and comments; 12.9, 12.11). Headings get stable ids (`#heading-slug`, duplicates `-2`, `-3`); hovering one shows `#`, which scrolls there and copies the link. GFM alerts (`> [!NOTE]`, `TIP`, `IMPORTANT`, `WARNING`, `CAUTION`) render as callouts everywhere markdown renders. Fenced code with a known language is highlighted (highlight.js, loaded lazily, tickets included); doc pages add a header with the language and Copy. The page bar has Download .md and Edit (`E`); `Ctrl .` / `Ctrl Shift .` copy the doc's key / link, and `Ctrl \` hides or shows the tree panel (remembered per browser; D-120). The open doc is refetched every 30 s, so "Jane is editing" appears within 30 s of her first autosave and disappears 10 minutes after her last one.
+- **Draft banner**: when I have a draft, the reader shows "You have unpublished changes from 10:42" with Continue editing and Discard (confirmed); the tree shows the pencil dot.
+- **Editor** (`?mode=edit`, writers only; `docs.page.edit`, a lazy chunk): edit bar (draft status, base version, "Jane published v8", presence, Write / Split / Preview with `Mod+Shift+P`, Discard, Close `Esc`, Publish `Mod+S`), toolbar (heading, bold, italic, code, link, lists, task list, code block, table, callout, image), inline title, optional change note, a CodeMirror 6 markdown source and a live preview (the reader's renderer, 150 ms after typing stops, scroll synced through the headings). `/` at the start of a line opens the block menu. `Mod+Enter` publishes and closes; `Esc` closes and keeps the draft.
+- **Draft autosave**: 1 s after the last change, on blur, when the tab is hidden, before leaving the editor and on unload (a keepalive request; a draft over 60 KB, too large for one, is saved with a normal request and the browser asks before leaving, D-126). Status: Editing, Unsaved changes, Saving draft…, Draft saved, Couldn't save draft · Retry, Publishing…, Published vN, Conflicting changes.
+- **Publishing** sends `content`, `baseVersion` and `changeNote`, and the title only when it differs from the base version's title, so a concurrent rename survives. On 409 `doc.version.conflict` the client loads the latest doc and the base version (`GET /docs/{key}/versions/{n}`) and merges line by line: changes to different parts (at least one unchanged line between them) merge and are published with the toast "Merged with Jane's changes (v8)"; the same change on both sides counts once; overlapping or touching changes open the conflict view with "Theirs (vN)" and "Mine" side by side, clashing lines marked, and Keep editing on latest (my text stays in a side panel), Overwrite with mine, Discard mine (D-116).
+- **Images**: pasting, dropping or picking files uploads them to the page and inserts `![name](/api/v1/attachments/{id})` (other types a download link) in place of an "Uploading…" placeholder.
+- Budgets (e2e `docs-pages.perf.spec.ts`, run alone: `E2E_PERF=1 npx playwright test --project=perf`): a 100 000-character page renders in under 500 ms; typing in it costs under 16 ms of main-thread CPU time per keystroke. Measured on the reference laptop: render 100–130 ms, editor open about 200 ms, typing 9–12 ms per keystroke, longest key handler 2–5 ms.
+
+### 12.9 Comments
+
+- Pages and diagrams (not folders: 409 `doc.kind.unsupported` on add, an empty list on read) have one comment thread below the content, oldest first, with the rules of ticket comments (6.9): markdown 1..20 000 characters rendered by the shared renderer (ticket keys link), writers add (Owners and Members; on public projects every signed-in user), the author edits (`EditedAt`, "edited" marker; the previous body goes to the doc's activity), the author or an Owner deletes (the body is cleared and a "Comment deleted" placeholder keeps its place), `comment.notAuthor` (403) and `comment.deleted` (409) as for tickets. Viewers and read-only tokens read only; archived projects answer 409 `project.archived` on every write. @mentions and watching docs are not part of v1 (the "Docs collaboration" follow-up, I-85, I-86).
+- Doc comments share the `comments` table with ticket comments through a nullable owner pair (`ticket_id` or `doc_node_id`, exactly one; D-117). Ticket comment endpoints and tools never see doc comments and the doc ones never see ticket comments (404 `comment.notFound`). Unreadable projects answer 404 like a missing doc or comment; search and quick jump never read comments.
+- Adding, editing or deleting a comment creates no version and leaves the doc's `updatedAt` and row version as they are. `GET /docs/{key}`, the tree items (`GET …/docs/tree`, `list_docs`) and a folder's `children` return `commentCount` (comments that are not deleted); the tree row tooltip shows it ("3 comments") for pages and diagrams. Comments stay with a deleted doc (its comment routes answer 404 `doc.deleted`) and return with it on restore.
+- Notifications (6.16): a new comment notifies the doc's creator and the authors of the doc's earlier comments that are not deleted, never the actor, only while they can read the project; edits and deletes notify nobody.
+- Web: the `comments` footer section (`provideDocPageSection`, order 90, pages and diagrams) with the thread, edit and delete on hover, a composer for writers (`Shift+C` focuses it, `Mod+Enter` posts), optimistic add, edit and delete with rollback, and `#comments` scrolling to it.
+
+### 12.10 Version history
+
+- `GET /docs/{key}/history` (MCP `get_doc_history`) lists, newest first, the versions (`type: Version`: `version`, `title`, `changeNote`, `restoredFrom`, `linesAdded` / `linesRemoved` against the version before it (computed at publish, null for Canvas diagrams; D-123), `actor`, `channel`, `at`) merged with every other activity entry of the doc (`type: Activity`: `action`, `field`, `oldValue`, `newValue`, `actor`, `channel`, `at`). `doc.updated`, `doc.version.restored` and, for pages and diagrams, `doc.created` are not listed: the version rows are those events. Paged with `limit` (1..100, default 25) and one `cursor` over both; `currentVersion` is the latest version (0 for folders). Every reader may read it, Viewers and archived projects included (D-118).
+- `GET /docs/{key}?version=n` (MCP `get_doc` with `version`) returns the doc as it is now with `content` of version n and `atVersion` (`number`, `title`, `changeNote`, `author`, `channel`, `createdAt`, `restoredFrom`); `title`, `path` and `version` stay the current ones. `references` and `embeds` are those of version n, resolved from its content for the reader (the index covers only the latest content; same rules and read filter, 12.11), and so are those of `GET /docs/{key}/versions/{n}`; `backlinks` stay the doc's. A missing version is 404 `doc.version.notFound`.
+- `POST /docs/{key}/versions/{n}/restore` (MCP `restore_doc_version`; writers only, 409 `project.archived` on archived projects) publishes version n's title and content as a new version with `restoredFrom = n` and `doc.version.restored`; no `baseVersion` is needed. A folder is 409 `doc.kind.unsupported`; a sibling now holding the old title is 409 `doc.title.duplicate`. When the latest version already has that title and content nothing is written. The restorer's draft is kept (the editor merges it onto the new version on publish).
+- **Web** (`?history=n[&with=m]`, `docs.history`, a lazy chunk): `H`, the History button or the `vN` badge opens it; `Esc` or `H` closes it. A 320 px panel lists the history by day: versions with avatar (a robot for MCP), author, time, channel, change note, "Restored from vN" and `Current`; activity as one line (renamed, moved, deleted, restored, attachments, comments). Clicking an older version compares it with the current one; clicking the current one shows its own changes; Shift+click picks a second version; ↑/↓ move through versions. The main area shows `Changes` (a unified or side-by-side line diff with word highlights inside paired lines, unchanged runs folded to "··· n unchanged lines", `+a −r lines` and a changed title) or `Rendered` (the selected version, read-only); Canvas diagrams show both versions rendered side by side. Writers get `Restore vN` (confirmed). Copy link copies the `?v=n` URL.
+- `?v=n` (`docs.version`) renders one version read-only under "You are viewing v3 of 7 · Back to latest", with Compare with current and, for writers, Restore this version.
+- Diffs are computed in the browser and two 100 KB versions diff in under 300 ms; a pathological pair falls back after 250 ms to "the changed part as replaced".
+
+### 12.11 Links, backlinks and ticket mentions
+
+- **Index.** Every publish (create, update, find/replace edit, duplicate, version restore) rebuilds the doc's rows in `doc_references` inside the publish transaction (`DocPublisher`, D-119). Pages are scanned as markdown: upper-case ticket keys (`WEB-42`) and doc keys (`WEB-D-12`) in text, in `[text](KEY)` links and in `![caption](KEY)` embeds count; keys inside code spans, fenced or indented code blocks and URLs do not, and test case and session keys (`WEB-TC-7`, `WEB-R-3`) are not tickets. Mermaid sources are scanned as plain text; Canvas diagrams and folders have no references. Keys must name an existing ticket or doc in any project (deleted ones included, so a restore needs no re-index; unknown keys are dropped); a doc never references itself; at most 500 tickets and 500 docs per content.
+- **Reading** is filtered per caller with `ReadableProjects()`. `GET /docs/{key}` (and every doc a write returns) carries:
+  - `references.tickets`: mentioned, non-deleted tickets the caller can read: `{ id, key, title, type, status, url }`;
+  - `references.docs`: mentioned or linked docs the caller can read; a deleted one has only `{ key, deleted: true }` (no title or url);
+  - `embeds`: diagrams embedded with `![caption](KEY)` that are readable and not deleted, in order of appearance: `{ id, key, projectKey, title, diagramFormat, version, content, url, snapshotUrl }`, `content` being the Mermaid source (null for Canvas, which has `snapshotUrl`, 12.13);
+  - `backlinks`: `{ total, items }`, the 50 most recently updated readable, non-deleted docs whose content links here (summaries with path).
+  A ticket or doc the caller cannot read is absent everywhere, so it never shows a title or status and is not counted.
+- **A ticket's docs**: `GET /tickets/{key}/docs` and MCP `get_ticket` with `include: docs` (the MCP default includes it; the REST ticket read leaves it out unless `include=docs` is asked for) list readable, non-deleted docs mentioning the ticket, newest first, at most 20 plus `total`. An unreadable ticket answers 404 like a missing one. The docs search `mentions` filter (12.7) reads the same index.
+- **Rendering** (`renderMarkdown` with `references`, the reader and the PDF): a readable ticket key becomes a chip with its status ring (title and status on hover); a readable doc key or `[text](KEY)` links to the doc with its title on hover; a deleted doc renders struck through as `KEY (deleted)`; an unreadable or unknown key renders as plain text (the custom text of a link stays). `![caption](KEY)` of a readable diagram becomes a figure (`figure.tk-doc-embed` with `data-doc-key`, `data-diagram-format`, `data-version`, a header linking the diagram, an empty `.tk-doc-embed-body` for the diagram renderer and the caption); anything else shows "Diagram not available" without key, title or caption. The editor preview links keys it cannot resolve yet and shows unresolved embeds as a link until the page is published. Markdown outside docs (tickets, comments) links ticket keys to `/tickets/KEY` and doc keys (also as `[text](KEY)` and `![caption](KEY)`) to `/docs/KEY`.
+- **Web**: page footer sections "Tickets mentioned" (status ring, key, title; opens the ticket peek) and "Linked from" (title, folder path, updated; "and N more" past 50), both from the GET and hidden when empty; the ticket view's "Docs mentioning this ticket" section (`provideTicketDetailSection`, after attachments; title, folder path, last editor and time; "and N more" opens docs search `mentions=KEY`), hidden when empty. A row opens the doc at `#mention-KEY`: the reader scrolls to the first chip of the ticket and flashes it with `--tk-accent-subtle` for 600 ms (a mention only inside a diagram just opens the doc). Writers of the ticket's project get "Write doc" in its header: a page at the top level titled "KEY Ticket title" (" (2)", " (3)" … when taken) with the content `Related: KEY`, opened in the editor (D-125). In the editor `[[` + title text offers docs (the current project first; recent docs while empty) and inserts `[Title](KEY)`; `#` + key or title text offers tickets and inserts the key; the toolbar ("Link a doc", "Mention a ticket") and the `/` menu ("Doc link", "Ticket mention") open the same pickers.
+
+### 12.12 Mermaid diagrams (web, MCP)
+
+- **Supported types** (tested, offered as templates and named in the MCP descriptions): `flowchart`, `sequenceDiagram`, `classDiagram`, `stateDiagram-v2`, `erDiagram`, `gantt`, `mindmap`. Mermaid 12.2.0 renders more; those work but are not promised. The source is not validated on the server (I-104); the web editor warns before publishing a source that does not parse.
+- **Rendering** (one renderer for screen and PDF, free of Angular): `securityLevel: 'strict'`, no HTML labels, dagre layout, the app palette per theme, and a DOMPurify SVG pass (D-110). Mermaid is a lazy chunk loaded on the first diagram.
+- **Inline blocks**: ```` ```mermaid ```` fences render as diagrams in pages, the editor preview, ticket descriptions and comments (every markdown surface). A block renders when it comes within 600 px of the viewport; until then it is a skeleton of the height it had last time on this device (kept in localStorage) or of an estimate from its type and size, so later renders don't shift the page. A block that does not parse stays as code with a danger box "Mermaid syntax error" and the parser message (with the line). In the editor preview a block keeps its last good render, dimmed, above the error box. Diagrams re-render when the theme changes; rendered SVGs are cached per source and theme (64), so the preview and theme toggles don't flicker.
+- **Diagram docs** (`docs.diagram`): title, meta line, draft banner, a figure with the type ("Mermaid · sequence"), Copy source, and the diagram fitted to the width (never enlarged, at most 70 % of the window high) with zoom: buttons, `=` / `-`, `0` fit, `1` 100 %, Ctrl/⌘ + wheel around the pointer, drag to pan. A source that does not parse shows the error and the source; an empty one "This diagram is empty" with Start drawing `E`. The footer page sections follow (comments).
+- **Mermaid editor** (`?mode=edit`, `docs.diagram.mermaid.edit`, a lazy chunk with CodeMirror): the page editor's edit bar (draft status, base version, presence, Discard, Close `Esc`, Publish `Mod+S`, `Mod+Enter` publish and close), a Template menu (the seven types; replacing a non-empty source asks first), a Syntax link, the type label, the change note, the inline title, the source with line numbers and Mermaid token colours, and a zoomable live preview 300 ms after typing stops. A syntax error shows in a strip under the preview while the last good render stays (dimmed). Drafts, autosave, publishing, the 3-way merge and the conflict view are the page's (12.8). Limit 20 000 characters.
+- **Page editor**: the Diagram toolbar button and the `/` commands "Mermaid diagram" (an inline flowchart fence) and "Embed diagram" open a picker: the project's diagrams by title (Enter picks the first), "New Mermaid diagram '…'" (created next to the page, then embedded) and "Inline Mermaid block". Embeds are written `![Title](KEY)`; the embed's data, placeholder and leak rules are TKT-16's, the drawing of an embedded diagram uses the same renderers (lazy, reserved height).
+- Budgets (e2e `docs-diagrams.spec.ts`): one diagram renders in under 1 s (`tk-diagram-render` measure; about 200 ms on first load, 20–80 ms after); a page with ten diagrams shifts its content by a CLS under 0.05 on the first visit and not at all on a revisit.
+
+### 12.13 Canvas diagrams (web, MCP)
+
+- **Source**: Excalidraw's file JSON (D-110). Every publish checks it (D-124): a JSON object with `type: "excalidraw"` and an `elements` array, else 400 `doc.diagram.invalidSource`; at most 10 000 elements (`doc.diagram.tooManyElements`) and 2 000 000 characters (`doc.content.tooLong`); no `image` elements and empty `files` (`doc.diagram.embeddedFiles`); no `embeddable`/`iframe` elements and element links only `http(s)://` or app-relative (`doc.diagram.invalidSource`). Empty source is an empty canvas. Drafts are not checked. Find/replace edits are not available (`doc.kind.unsupported`).
+- **Outline**: on publish the server extracts the labels (reading order) and the relations of bound arrows (`API → DB (label)`, `↔` two heads, `—` none) one per line; it feeds search (12.7) and is returned as `outline` by `GET /docs/{key}` and MCP `get_doc` (for `?version=n`, that version's).
+- **Picture**: each version may hold a light SVG (`snapshot` with `content` on create and `PATCH`; at most 5 000 000 characters, an SVG without scripts, foreign objects, frames, event handlers or links other than fragment, `data:image/`, `http(s)` and app-relative, else 400 `doc.snapshot.invalid`; `snapshot` on a non-Canvas doc is 400 `doc.kind.unsupported`). `GET /docs/{key}/versions/{n}/snapshot.svg` serves it to readers as `image/svg+xml` with a sandbox CSP; 404 `doc.snapshot.notFound` while the version has none. `snapshotUrl` in the doc, its versions and its embeds points there (null while missing). `PUT /docs/{key}/versions/{n}/snapshot` `{ svg }` lets a writer store the picture of a version that has none (versions written over MCP); it creates no version and no activity, the first picture wins (`{ docKey, version, stored, snapshotUrl }`), non-Canvas docs are 409 `doc.kind.unsupported`. Restore and duplicate copy the picture of the copied version.
+- **Diagram view** (`docs.diagram`): "Canvas" in the figure header and the picture in the zoomable viewport, CSS-inverted in dark mode. Without a stored picture the browser exports one from the source (loading Excalidraw) and, for writers on the latest version, stores it. An empty canvas offers Start drawing `E`.
+- **Canvas editor** (`?mode=edit`, `docs.diagram.canvas.edit`; React and Excalidraw 0.18.1 are lazy chunks with self-hosted fonts): the edit bar (draft status, base version, presence, Discard, Close, Publish `Mod+S`, `Mod+Enter` publish and close), the title, "Images go in pages", the change note, and Excalidraw: shapes, bound arrows, text, free draw, zoom and pan, undo and redo; image tool, open, save, export and the AI features are off, pasted or dropped images are refused. Excalidraw keeps its own keys (single-key tools, `Esc`); app shortcuts other than `Mod+S`/`Mod+Enter` are silent while it is shown. Drafts autosave as for pages; Publish sends the source with its picture. A concurrent publish opens the conflict view with both drawings: Overwrite with mine or Discard mine (no merge). New Canvas docs (tree `Shift+D` → Canvas, or the page editor's Diagram picker "New Canvas drawing") open in the editor.
+- **Embeds** `![caption](KEY)` show the picture fitted to the width, linked to the diagram; "Preview not rendered yet" while it has none. **History** compares two versions as pictures side by side.
+- Budget (e2e `docs-canvas.perf.spec.ts`): a 2 000-element canvas opens in the editor and in the reader in under 1.5 s.
+
+### 12.14 PDF export (web, REST, MCP)
+
+- **What**: a page or a diagram (latest, or `?version=n`), or a folder with its whole subtree depth-first in tree order, deleted docs excluded. Every reader can export: Viewers and archived projects included. Exports write no activity; the API logs user, doc, documents, bytes and time.
+- **How** (D-111, D-127): the API resolves everything for the caller (content, references, embeds, Canvas pictures, page images that are readable image attachments), writes it as JSON into an offline print page and posts it with the print bundle to the `pdf` service (Gotenberg Chromium, internal network, basic auth). The page renders with the SPA's own `renderMarkdown` and Mermaid renderer, always light, A4 portrait (a single wide diagram turns landscape and scales to the page). Canvas diagrams print their stored picture ("Preview not rendered yet" without one); Excalidraw never runs. Tickets, docs and diagrams the caller cannot read are absent from the data: plain text, or "Diagram not available".
+- **Layout** (D-112): a single doc has a title block (title, key, version, last edited by and on, path). A folder has a cover (project, folder title and path, document count and key, exported by and on), a linked contents page (indented like the tree; no page numbers), then each document on a new page, subfolders as headings over their documents. Links to docs inside the export jump within the PDF; any other app link is absolute. Header: `PK · title` and the folder path; footer: "Exported {date time} by {name}" (+ "Private project"), `{KEY} v{n}` or `{KEY} · N documents`, "Page x of y". Dates use `tz` (an IANA zone from the browser), else UTC. Bookmarks come from the headings.
+- **Limits**: at most 300 documents and 100 MB of files or output (400 `doc.export.tooLarge`); 2 exports run at once per API process and 10 wait, beyond that 429 `doc.export.busy` with `Retry-After: 15`; 2 minutes per export (503 `doc.export.timeout`). Without `PDF_RENDERER_PASSWORD` or with the renderer down: 503 `doc.export.unavailable`; a print failure is 409 `doc.export.failed`. `version` on a folder is 400.
+- **Export links**: `POST /docs/{key}/export-link` and MCP `get_doc_export_link` return a server-relative `GET` URL with a signed token (Data Protection, 15 minutes) bound to the caller and the doc (and version). Using it needs no other credentials; the export runs as that user, so access is checked again. An expired or tampered link, one used on another doc, one whose user was deactivated or changed their password, or whose user lost access answers 404 `doc.notFound`. Dates in link exports are UTC.
+- **Web**: Export PDF in the page bar of pages, diagrams (the shown version with `?v=n`) and folders, `Mod+P` (replaces the browser's print), and in the tree's `…` menu. A page or diagram downloads directly. A folder exports in the background: a toast says so, the user keeps working, and a "ready" toast offers Download. One export per doc at a time; errors show the server's message.
+- Budget: single page p95 < 3 s and a 50-document folder < 30 s on the reference VM (measured in the TKT-11 spike; the API warms Chromium up after start).
+
+### 12.15 Dashboard and demo data
+
+- **Dashboard widget 13 "Recent docs"** (section 7): `GET /projects/{pk}/dashboard` and MCP `get_project_stats` return `recentDocs: { total, items }`: the number of non-deleted pages and diagrams and the 5 most recently updated (the `GET …/docs/recent` summary: key, kind, diagramFormat, title, path, version, updatedBy, updatedAt, url). Docs belong to the dashboard's project, so whoever can read the dashboard can read them; the version filter does not apply (D-128). The web card sits at the end of the lazily loaded part of the grid: rows with the kind icon, title, folder ("Top level" at the root), last editor and time, open the doc; "N docs" in the header and the empty state link to the Docs home. A project with docs but no tickets is not shown as an empty dashboard.
+- **Demo data** (D-85): the demo seeder writes a docs tree into each demo project through the use cases: two folders, four pages with callouts, tables, code blocks, ticket mentions and doc links, a Mermaid and a Canvas diagram embedded in a page (the Canvas with its picture, so embeds and PDFs show it at once), later versions with change notes for the history, and a few comments.
 
 ## 13. Agent delegation
 

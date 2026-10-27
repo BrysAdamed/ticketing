@@ -88,6 +88,32 @@ module.exports = defineConfig([
     },
   },
   {
+    files: ['src/print/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: [
+                '@angular/*',
+                '@core/*',
+                '@features/*',
+                '**/app/core/**',
+                '**/app/features/**',
+                'react',
+                'react-dom',
+                '@excalidraw/*',
+              ],
+              message:
+                'The PDF print bundle (D-111) stays framework-free: import only Angular-free code from @shared, never Excalidraw.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ['src/**/*.ts'],
     ignores: ['src/app/shared/markdown/markdown-viewer.component.ts'],
     rules: {

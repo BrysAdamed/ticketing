@@ -10,9 +10,18 @@ RUN dotnet restore src/Ticketing.Api/Ticketing.Api.csproj
 COPY src/ src/
 RUN dotnet publish src/Ticketing.Api/Ticketing.Api.csproj -c Release -o /app --no-restore
 
+# The PDF print bundle (D-111): the SPA's markdown and Mermaid renderers as one framework-free script, posted to the renderer.
+FROM node:24.22.1-alpine AS print
+WORKDIR /web
+COPY web/package.json web/package-lock.json ./
+RUN npm ci --no-audit --no-fund
+COPY web/ ./
+RUN npm run build:print -- /print
+
 FROM mcr.microsoft.com/dotnet/aspnet:10.0.14-noble-chiseled-extra AS runtime
 WORKDIR /app
 COPY --from=build /app .
+COPY --from=print /print ./print
 ENV ASPNETCORE_HTTP_PORTS=8080
 EXPOSE 8080
 ENTRYPOINT ["dotnet", "Ticketing.Api.dll"]

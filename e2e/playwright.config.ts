@@ -6,6 +6,8 @@ const CI = !!process.env.CI;
 /// The agent specs switch the instance-wide `agent.delegate` flag on and off, so they run one at a time.
 const AGENT_SPECS = /agents[\\/].*\.spec\.ts/;
 
+const PERF_SPECS = /\.perf\.spec\.ts$/;
+
 const CHROMIUM = {
     ...devices['Desktop Chrome'],
     viewport: { width: 1440, height: 900 },
@@ -35,7 +37,7 @@ export default defineConfig({
         { name: 'setup', testMatch: /global\.setup\.ts/ },
         {
             name: 'chromium',
-            testIgnore: AGENT_SPECS,
+            testIgnore: [AGENT_SPECS, PERF_SPECS],
             use: CHROMIUM,
             dependencies: ['setup'],
         },
@@ -44,6 +46,13 @@ export default defineConfig({
             testMatch: AGENT_SPECS,
             fullyParallel: false,
             workers: 1,
+            use: CHROMIUM,
+            dependencies: ['setup'],
+        },
+        {
+            name: 'perf',
+            testMatch: PERF_SPECS,
+            fullyParallel: false,
             use: CHROMIUM,
             dependencies: ['setup'],
         },

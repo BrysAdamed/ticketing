@@ -1,0 +1,162 @@
+@let status = session.status();
+<div class="ebar">
+  <tk-doc-edit-status [editors]="presence()" />
+  <div class="seg" role="radiogroup" aria-label="Editor layout">
+    @for (option of layouts; track option) {
+      <button
+        type="button"
+        role="radio"
+        [class.on]="layout() === option"
+        [attr.aria-checked]="layout() === option"
+        [attr.data-testid]="'doc-editor-layout-' + option"
+        [matTooltip]="'Cycle layouts (' + shortcutLabel('mod+shift+p') + ')'"
+        (click)="setLayout(option)"
+      >
+        <tk-icon
+          [name]="
+            option === 'write'
+              ? 'tablerPencil'
+              : option === 'split'
+                ? 'tablerLayoutColumns'
+                : 'tablerEye'
+          "
+          [size]="14"
+        />{{ option === 'write' ? 'Write' : option === 'split' ? 'Split' : 'Preview' }}
+      </button>
+    }
+  </div>
+  <div class="r">
+    <button mat-button type="button" data-testid="doc-editor-discard" (click)="discard()">
+      Discard
+    </button>
+    <button mat-stroked-button type="button" data-testid="doc-editor-close" (click)="close()">
+      Close <tk-kbd>Esc</tk-kbd>
+    </button>
+    <button
+      mat-flat-button
+      type="button"
+      data-testid="doc-editor-publish"
+      [disabled]="status === 'publishing' || !!session.conflict()"
+      (click)="publish(false)"
+    >
+      Publish
+      @for (key of shortcutKeys('mod+s'); track $index) {
+        <tk-kbd tone="on-solid">{{ key }}</tk-kbd>
+      }
+    </button>
+  </div>
+</div>
+<div class="etool" role="toolbar" aria-label="Formatting">
+  @for (item of toolbar; track item.id) {
+    <button
+      type="button"
+      class="tk-icon-btn"
+      [attr.aria-label]="item.label"
+      [attr.data-testid]="'doc-editor-tool-' + item.id"
+      [matTooltip]="item.tooltip"
+      (click)="item.run()"
+    >
+      <tk-icon [name]="item.icon" [size]="16" />
+    </button>
+  }
+  @if (uploading() > 0) {
+    <span class="hint" role="status" data-testid="doc-editor-uploading">Uploading…</span>
+  }
+  <div class="right">
+    @if (tooLong()) {
+      <span class="bad tnum" data-testid="doc-editor-too-long"
+        >{{ session.content().length.toLocaleString() }} / {{ maxLength.toLocaleString() }}</span
+      >
+    }
+    <span class="hint"><tk-kbd>/</tk-kbd> for blocks</span>
+    <input
+      class="note"
+      type="text"
+      maxlength="200"
+      placeholder="Change note (optional)"
+      aria-label="Change note"
+      data-testid="doc-editor-change-note"
+      [value]="changeNote()"
+      (input)="changeNote.set($any($event.target).value)"
+    />
+  </div>
+</div>
+<div class="body">
+  <div class="title-row">
+    <input
+      class="title"
+      type="text"
+      maxlength="200"
+      placeholder="Untitled"
+      aria-label="Title"
+      data-testid="doc-editor-title"
+      [value]="session.title()"
+      (input)="onTitle($any($event.target).value)"
+      (blur)="session.flush()"
+    />
+  </div>
+  <div class="split" [attr.data-layout]="layout()">
+    <div class="src" #source></div>
+    <div class="pv" #preview aria-label="Preview">
+      <div class="pvlabel"><tk-icon name="tablerEye" [size]="12" />Preview · scroll synced</div>
+      <div class="pbody">
+        <h1 class="ptitle">{{ session.title() || 'Untitled' }}</h1>
+        <tk-doc-markdown
+          data-testid="doc-editor-preview"
+          mode="preview"
+          [docKey]="doc().key"
+          [references]="doc().references"
+          [embeds]="doc().embeds"
+          [source]="previewSource()"
+        />
+      </div>
+    </div>
+    @if (session.reference(); as mine) {
+      <aside
+        class="reference"
+        aria-label="Your text before the merge"
+        data-testid="doc-editor-reference"
+      >
+        <div class="ref-h">
+          <span>Your text</span>
+          <button
+            type="button"
+            class="tk-icon-btn"
+            aria-label="Copy your text"
+            (click)="copyReference()"
+          >
+            <tk-icon name="tablerCopy" [size]="14" />
+          </button>
+          <button
+            type="button"
+            class="tk-icon-btn"
+            aria-label="Close your text"
+            (click)="session.closeReference()"
+          >
+            <tk-icon name="tablerX" [size]="14" />
+          </button>
+        </div>
+        <pre>{{ mine.content }}</pre>
+      </aside>
+    }
+  </div>
+  @if (session.conflict(); as conflict) {
+    <tk-doc-conflict
+      data-testid="doc-conflict"
+      [conflict]="conflict"
+      [busy]="status === 'publishing'"
+      (keep)="keepEditingOnLatest()"
+      (overwrite)="overwriteWithMine()"
+      (discard)="discardMine()"
+    />
+  }
+</div>
+<input
+  #files
+  type="file"
+  multiple
+  hidden
+  accept="image/png,image/jpeg,image/gif,image/webp,.pdf,.txt,.csv,.json,.zip"
+  data-testid="doc-editor-file-input"
+  (change)="onFilesPicked(files)"
+/>

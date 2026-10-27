@@ -94,6 +94,12 @@ export class ShellActions {
           description: 'Project regressions',
           handler: goProject('regressions'),
         },
+        {
+          keys: 'g w',
+          section: 'Go to',
+          description: 'Project docs',
+          handler: goProject('docs'),
+        },
       ],
       destroyRef,
     );

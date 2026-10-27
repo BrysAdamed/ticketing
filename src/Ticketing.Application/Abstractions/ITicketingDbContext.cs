@@ -7,6 +7,7 @@ using Ticketing.Domain.Attachments;
 using Ticketing.Domain.Boards;
 using Ticketing.Domain.Collaboration;
 using Ticketing.Domain.Comments;
+using Ticketing.Domain.Docs;
 using Ticketing.Domain.FeatureFlags;
 using Ticketing.Domain.Idempotency;
 using Ticketing.Domain.Projects;
@@ -69,6 +70,14 @@ public interface ITicketingDbContext
     DbSet<AgentPromptTemplate> AgentPromptTemplates { get; }
 
     DbSet<AgentPromptTemplateVersion> AgentPromptTemplateVersions { get; }
+
+    DbSet<DocNode> DocNodes { get; }
+
+    DbSet<DocVersion> DocVersions { get; }
+
+    DbSet<DocDraft> DocDrafts { get; }
+
+    DbSet<DocReference> DocReferences { get; }
 
     DatabaseFacade Database { get; }
 

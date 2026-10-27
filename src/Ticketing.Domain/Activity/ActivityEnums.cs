@@ -11,6 +11,7 @@ public enum ActivityEntityType
     PersonalAccessToken = 7,
     FeatureFlag = 8,
     AgentPrompt = 9,
+    Doc = 10,
 }
 
 public enum WriteChannel

@@ -4,6 +4,7 @@ using Ticketing.Application.Abstractions;
 using Ticketing.Application.Access;
 using Ticketing.Application.Agents;
 using Ticketing.Application.Collaboration;
+using Ticketing.Application.Docs;
 using Ticketing.Application.FeatureFlags;
 
 namespace Ticketing.Application;
@@ -21,6 +22,8 @@ public static class DependencyInjection
         services.AddScoped<AgentPromptDefaults>();
         services.AddScoped<AgentPromptComposer>();
         services.AddScoped<AgentPromptAccess>();
+        services.AddScoped<DocPublisher>();
+        services.AddSingleton<DocExportQueue>();
         services.AddHandlers(typeof(DependencyInjection).Assembly);
         return services;
     }

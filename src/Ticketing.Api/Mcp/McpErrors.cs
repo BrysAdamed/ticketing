@@ -18,6 +18,8 @@ internal static class McpErrors
         };
         if (error.Errors.Count > 0)
             payload["errors"] = JsonSerializer.SerializeToNode(error.Errors);
+        foreach (var (name, value) in error.Details ?? new Dictionary<string, object?>())
+            payload[name] = JsonSerializer.SerializeToNode(value, McpSetup.Json);
 
         return new CallToolResult
         {

@@ -13,7 +13,14 @@ export interface Command {
   available?: () => boolean;
 }
 
-/// One row in the command palette results.
+/// A part of a palette text to emphasise (UTF-16 `start` and `length`).
+export interface PaletteRange {
+  start: number;
+  length: number;
+}
+
+/// One row in the command palette results. A row with `detail` or `snippet` is drawn on two lines:
+/// the label with `detail` muted beside it, then the snippet with its matches emphasised.
 export interface PaletteItem {
   id: string;
   label: string;
@@ -21,6 +28,9 @@ export interface PaletteItem {
   icon?: string;
   hint?: string;
   shortcut?: string;
+  labelHighlights?: readonly PaletteRange[];
+  detail?: string;
+  snippet?: { text: string; highlights: readonly PaletteRange[] };
   run: () => void;
 }
 
@@ -30,12 +40,40 @@ export interface PaletteItem {
 export interface SearchProvider {
   id: string;
   remote?: boolean;
-  /// Minimum trimmed query length before `search` is called (default 0).
+  /// Minimum trimmed query length (without a scope prefix) before `search` is called (default 0).
   minQueryLength?: number;
+  /// Ids of the palette scopes this provider also answers; without them it runs for unscoped queries only.
+  scopes?: readonly string[];
+  /// `query` comes without the scope prefix; `scope` is the active scope's id, or null.
   search(
     query: string,
     signal: AbortSignal,
+    scope: string | null,
   ): readonly PaletteItem[] | Promise<readonly PaletteItem[]>;
+}
+
+/// A query prefix that narrows the palette to one kind of result (`p:` docs, `t:` tickets). While it
+/// leads the query, commands are hidden and only providers listing the scope's `id` run. Its `hint`
+/// is shown in the palette footer.
+export interface PaletteScope {
+  id: string;
+  prefix: string;
+  hint: string;
+}
+
+export interface PaletteQuery {
+  text: string;
+  scope: PaletteScope | null;
+}
+
+/// Splits a leading scope prefix (any case, leading spaces ignored) off a palette query.
+export function parsePaletteQuery(query: string, scopes: readonly PaletteScope[]): PaletteQuery {
+  const trimmed = query.trimStart();
+  const lower = trimmed.toLowerCase();
+  const scope = scopes.find((s) => lower.startsWith(s.prefix.toLowerCase()));
+  return scope
+    ? { scope, text: trimmed.slice(scope.prefix.length).trimStart() }
+    : { scope: null, text: query };
 }
 
 /// Subsequence match score (higher is better), or -1 when `query` doesn't match `text`.

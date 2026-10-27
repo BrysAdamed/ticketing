@@ -2,14 +2,16 @@ using System.ComponentModel;
 using ModelContextProtocol.Server;
 using Ticketing.Application.Attachments;
 using Ticketing.Application.Common;
+using Ticketing.Application.Docs;
 using Ticketing.Application.Search;
+using Ticketing.Domain.Docs;
 using Ticketing.Domain.Tickets;
 
 namespace Ticketing.Api.Mcp;
 
 /// <summary>
-/// Search and attachment tools (spec 9.3). <c>search_tickets</c> feeds its arguments through the same parser as the REST
-/// query string, so both transports apply identical rules and validation.
+/// Search and attachment tools (spec 9.3). <c>search_tickets</c> and <c>search_docs</c> feed their arguments through the same parsers as the REST
+/// query strings, so both transports apply identical rules and validation.
 /// </summary>
 [McpServerToolType]
 public sealed class SearchTools
@@ -82,6 +84,44 @@ public sealed class SearchTools
         return handler.HandleAsync(new SearchTickets.Query(SearchQueryParser.Parse(query), new PageRequest(limit, cursor)), cancellationToken);
     }
 
+    [McpServerTool(Name = "search_docs", ReadOnly = true, Idempotent = true, Title = "Search docs")]
+    [Description("Searches docs (folders, pages, diagrams) in every project you can read: title, latest published content and Canvas labels; drafts "
+        + "and deleted docs never match. Filters are combined with AND. With text the default sort is relevance (at most 100 results, no cursor); "
+        + "otherwise newest first, paged. Each item has key, kind, title, path, folderPath, version, updatedBy, updatedAt, url and a plain-text "
+        + "snippet { text, highlights: [{ start, length }] }. Returns { items, nextCursor, total, totalCapped, sort }. Read a hit with get_doc.")]
+    public static Task<DocSearchPage> SearchDocs(
+        SearchDocs.Handler handler,
+        [Description("Full text (web search syntax: \"phrase\", -exclude, or) plus partial title match; a doc key (WEB-D-12) also matches.")] string? text = null,
+        [Description("Project keys, for example [\"WEB\"]. Default: all readable projects.")] string[]? projectKeys = null,
+        [Description("Any of: Folder, Page, Diagram.")] DocKind[]? kinds = null,
+        [Description("Folder key (for example WEB-D-3) or id: only docs anywhere below it.")] string? folder = null,
+        [Description("Ticket key (for example WEB-42): only docs whose latest content mentions it.")] string? mentions = null,
+        [Description("Updated on/after: date (2026-10-01, whole UTC day) or UTC timestamp.")] string? updatedFrom = null,
+        [Description("Updated on/before: date (inclusive) or UTC timestamp (exclusive).")] string? updatedTo = null,
+        [Description("Relevance (default with text) or Updated (default without text; newest first).")] DocSearchSort? sort = null,
+        [Description("Page size 1..100, default 25.")] int? limit = null,
+        [Description("nextCursor from the previous page (sort Updated only).")] string? cursor = null,
+        CancellationToken cancellationToken = default)
+    {
+        var query = new Dictionary<string, IReadOnlyList<string?>>(StringComparer.Ordinal);
+        void Add(string name, IEnumerable<string?>? values)
+        {
+            if (values is not null)
+                query[name] = [.. values];
+        }
+
+        Add("project", projectKeys);
+        Add("q", text is null ? null : [text]);
+        Add("kind", kinds?.Select(k => k.ToString()));
+        Add("folder", folder is null ? null : [folder]);
+        Add("mentions", mentions is null ? null : [mentions]);
+        Add("updatedFrom", updatedFrom is null ? null : [updatedFrom]);
+        Add("updatedTo", updatedTo is null ? null : [updatedTo]);
+        Add("sort", sort is null ? null : [sort.Value.ToString()]);
+
+        return handler.HandleAsync(new SearchDocs.Query(DocSearchQueryParser.Parse(query), new PageRequest(limit, cursor)), cancellationToken);
+    }
+
     [McpServerTool(Name = "list_attachments", ReadOnly = true, Idempotent = true, Title = "List attachments")]
     [Description("Lists a ticket's attachments, oldest first: id, fileName, contentType, sizeBytes, uploadedBy, uploadedAt and the download url "
         + "(relative to the server, needs the same bearer token). Read text, CSV and JSON files with get_attachment_text.")]
@@ -96,7 +136,7 @@ public sealed class SearchTools
         + "Images, PDF and ZIP files cannot be read this way.")]
     public static Task<AttachmentTextDto> GetAttachmentText(
         GetAttachmentText.Handler handler,
-        [Description("Attachment id from list_attachments.")] Guid attachmentId,
+        [Description("Attachment id from list_attachments or list_doc_attachments.")] Guid attachmentId,
         CancellationToken cancellationToken = default) =>
         handler.HandleAsync(new GetAttachmentText.Query(attachmentId), cancellationToken);
 }

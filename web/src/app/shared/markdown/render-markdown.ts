@@ -1,21 +1,39 @@
 import DOMPurify from 'dompurify';
 import { Marked, Tokens, TokenizerAndRendererExtension } from 'marked';
-import { TICKET_KEY_IN_TEXT } from '@shared/domain/keys';
-import { initialsOf } from '@shared/ui/domain/avatar.component';
+import { initialsOf } from '@shared/util/initials';
 import { paletteIndex } from '@shared/util/hash';
+import { linkReferences, MarkdownReferences } from './link-references';
 import { MENTION_AT_START, MentionUser } from './mentions';
 
-export const TICKET_ROUTE_PREFIX = '/tickets/';
+export { TICKET_ROUTE_PREFIX } from './link-references';
 export const INTERNAL_LINK_ATTR = 'data-tk-route';
 
 export interface RenderOptions {
   /// Users that mention tokens may show as chips (current display name); any other token renders as
   /// the plain text `@StoredName`.
   mentions?: Iterable<MentionUser> | null;
+  /// Gives headings stable ids (`#heading-slug`, duplicates `-2`, `-3`) and an empty
+  /// `a.tk-anchor` link to them (docs pages); off for tickets, where several renders share a page.
+  headingAnchors?: boolean;
+  /// The tickets, docs and diagrams the reader may see (docs): known ticket keys become chips with
+  /// their status, doc keys links with the title on hover, `![caption](KEY)` diagram embeds, and
+  /// other keys plain text. Without it every key links to its route (tickets, comments).
+  references?: MarkdownReferences | null;
 }
 
+export const CALLOUT_KINDS = ['note', 'tip', 'important', 'warning', 'caution'] as const;
+export type CalloutKind = (typeof CALLOUT_KINDS)[number];
+
+const CALLOUT_MARKER = /^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\][ \t]*/i;
+const CALLOUT_TITLES: Record<CalloutKind, string> = {
+  note: 'Note',
+  tip: 'Tip',
+  important: 'Important',
+  warning: 'Warning',
+  caution: 'Caution',
+};
+
 const MENTION_ATTR = 'data-tk-mention';
-const SKIP_AUTOLINK = new Set(['A', 'CODE', 'PRE']);
 const SERVER_PATHS = /^\/(\/|api\/|attachments\/|mcp|scalar|health)/;
 
 /// The only URLs a rendered link or image may carry: http(s), mailto and scheme-less (relative,
@@ -57,9 +75,11 @@ const marked = new Marked({
 });
 
 /// Renders user markdown (CommonMark + GFM) to sanitized HTML: raw HTML is shown as text,
-/// output goes through DOMPurify with only `SAFE_URL` links and images, ticket keys become links to /tickets/KEY, external links
-/// open in a new tab and mention tokens of the given users become chips (D-96; built after
-/// sanitizing, names as text). Safe to bind with [innerHTML] after DomSanitizer bypass.
+/// output goes through DOMPurify with only `SAFE_URL` links and images, ticket and doc keys become
+/// links (`linkReferences`), external links open in a new tab, GFM alerts (`> [!NOTE]` …) become
+/// callouts and mention tokens of the given users become chips (D-96; built after sanitizing,
+/// names as text). Safe to bind with [innerHTML] after DomSanitizer bypass. It must stay free of
+/// Angular imports: the PDF print bundle uses it too (D-111).
 export function renderMarkdown(
   source: string | null | undefined,
   options: RenderOptions = {},
@@ -73,8 +93,10 @@ export function renderMarkdown(
     ALLOWED_URI_REGEXP: SAFE_URL,
   });
   renderMentions(fragment, options.mentions);
-  linkTicketKeys(fragment);
+  renderCallouts(fragment);
+  linkReferences(fragment, options.references);
   decorateLinks(fragment);
+  if (options.headingAnchors) anchorHeadings(fragment);
   const container = fragment.ownerDocument.createElement('div');
   container.appendChild(fragment);
   return container.innerHTML;
@@ -112,42 +134,64 @@ function mentionChip(doc: Document, user: MentionUser): HTMLElement {
   return chip;
 }
 
-function linkTicketKeys(root: DocumentFragment): void {
+/// The anchor of a heading text: lower case, letters, digits, `-` and `_` kept, spaces become
+/// dashes, everything else dropped (as GitHub does); `section` when nothing is left.
+export function headingSlug(text: string): string {
+  const slug = text
+    .trim()
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s_-]/gu, '')
+    .replace(/\s/g, '-');
+  return slug || 'section';
+}
+
+function anchorHeadings(root: DocumentFragment): void {
   const doc = root.ownerDocument;
-  const walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-  const textNodes: Text[] = [];
-  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-    if (!hasSkippedAncestor(node)) textNodes.push(node as Text);
-  }
-  for (const node of textNodes) {
-    const text = node.data;
-    TICKET_KEY_IN_TEXT.lastIndex = 0;
-    if (!TICKET_KEY_IN_TEXT.test(text)) continue;
-    TICKET_KEY_IN_TEXT.lastIndex = 0;
-    const parts = doc.createDocumentFragment();
-    let last = 0;
-    for (const match of text.matchAll(TICKET_KEY_IN_TEXT)) {
-      const index = match.index ?? 0;
-      if (index > last) parts.appendChild(doc.createTextNode(text.slice(last, index)));
-      const anchor = doc.createElement('a');
-      anchor.href = `${TICKET_ROUTE_PREFIX}${match[0]}`;
-      anchor.className = 'tk-keyref';
-      anchor.setAttribute(INTERNAL_LINK_ATTR, '');
-      anchor.textContent = match[0];
-      parts.appendChild(anchor);
-      last = index + match[0].length;
-    }
-    if (last < text.length) parts.appendChild(doc.createTextNode(text.slice(last)));
-    node.replaceWith(parts);
+  const used = new Map<string, number>();
+  for (const heading of Array.from(root.querySelectorAll('h1, h2, h3, h4, h5, h6'))) {
+    const base = headingSlug(heading.textContent ?? '');
+    const count = (used.get(base) ?? 0) + 1;
+    used.set(base, count);
+    const id = count === 1 ? base : `${base}-${count}`;
+    heading.id = id;
+    const anchor = doc.createElement('a');
+    anchor.className = 'tk-anchor';
+    anchor.href = `#${id}`;
+    anchor.setAttribute('aria-hidden', 'true');
+    anchor.tabIndex = -1;
+    anchor.title = 'Copy link to this section';
+    heading.appendChild(anchor);
   }
 }
 
-function hasSkippedAncestor(node: Node): boolean {
-  for (let parent = node.parentNode; parent; parent = parent.parentNode) {
-    if (SKIP_AUTOLINK.has(parent.nodeName)) return true;
-    if (parent instanceof Element && parent.classList.contains('tk-mention')) return true;
+function renderCallouts(root: DocumentFragment): void {
+  const doc = root.ownerDocument;
+  for (const quote of Array.from(root.querySelectorAll('blockquote'))) {
+    const first = quote.firstElementChild;
+    const text = first?.tagName === 'P' ? first.firstChild : null;
+    if (!text || text.nodeType !== 3) continue;
+    const match = CALLOUT_MARKER.exec(text.nodeValue ?? '');
+    if (!match) continue;
+    const kind = match[1].toLowerCase() as CalloutKind;
+    text.nodeValue = (text.nodeValue ?? '').slice(match[0].length);
+    if (!text.nodeValue) {
+      const next = text.nextSibling;
+      text.remove();
+      if (next?.nodeName === 'BR') next.remove();
+      else if (next?.nodeType === 3) next.nodeValue = (next.nodeValue ?? '').replace(/^\n/, '');
+    }
+    if (!first!.hasChildNodes()) first!.remove();
+
+    const callout = doc.createElement('div');
+    callout.className = `tk-md-callout tk-md-callout-${kind}`;
+    callout.setAttribute('role', 'note');
+    const title = doc.createElement('p');
+    title.className = 'tk-md-callout-title';
+    title.textContent = CALLOUT_TITLES[kind];
+    callout.appendChild(title);
+    while (quote.firstChild) callout.appendChild(quote.firstChild);
+    quote.replaceWith(callout);
   }
-  return false;
 }
 
 function decorateLinks(root: DocumentFragment): void {

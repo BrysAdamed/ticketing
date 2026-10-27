@@ -66,7 +66,7 @@ Controls:
   - The template author and version come with the prompt (`template.updatedBy`).
   - Claude shows the prefilled prompt before Enter.
 - **The outsider warning interrupts the reflex.** When text the agent will read was written by a non-member (see T3), Shift+D or the click opens a dialog. The launch waits for a separate "Open anyway" click.
-- **Destructive MCP tools ask every time.** `delete_ticket`, `delete_comment`, `unlink_tickets`, `cancel_regression_session` and `archive_board` carry `requiresUserInteraction`, so Claude asks on every call in every permission mode (D-102).
+- **Destructive MCP tools ask every time.** `delete_ticket`, `delete_comment`, `unlink_tickets`, `cancel_regression_session`, `archive_board`, `delete_doc` and `delete_doc_comment` carry `requiresUserInteraction`, so Claude asks on every call in every permission mode (D-102).
 - **The guardrails tell the agent to ask** before anything risky, destructive or outside the ticket, and to stop on a folder mismatch (T6).
 
 Tests:

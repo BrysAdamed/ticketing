@@ -1,13 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { TICKET_STATUS_LABELS, TicketStatus } from '@shared/domain/enums';
-
-const PIES: Partial<Record<TicketStatus, string>> = {
-  InProgress: 'M7 7 7 3.5A3.5 3.5 0 0 1 10.5 7Z',
-  Review: 'M7 7 7 3.5A3.5 3.5 0 0 1 7 10.5Z',
-  ReadyForTesting: 'M7 7 7 3.5A3.5 3.5 0 1 1 4.525 9.475Z',
-  Testing: 'M7 7 7 3.5A3.5 3.5 0 1 1 3.5 7Z',
-  ReadyForDeploy: 'M7 7 7 3.5A3.5 3.5 0 1 1 4.525 4.525Z',
-};
+import { STATUS_PIES } from '@shared/domain/status-glyph';
 
 /// Status progress ring (design-system §8): the filled fraction shows pipeline progress.
 @Component({
@@ -65,6 +58,6 @@ export class StatusIconComponent {
   readonly size = input(14);
 
   protected readonly label = computed(() => TICKET_STATUS_LABELS[this.status()]);
-  protected readonly pie = computed(() => PIES[this.status()] ?? null);
+  protected readonly pie = computed(() => STATUS_PIES[this.status()] ?? null);
   protected readonly color = computed(() => `var(--tk-status-${this.status().toLowerCase()})`);
 }

@@ -13,9 +13,9 @@ using Ticketing.Infrastructure;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services
+    .AddHostedService<DatabaseStartup>()
     .AddApplication()
     .AddInfrastructure(builder.Configuration)
-    .AddHostedService<DatabaseStartup>()
     .AddDemoData(builder.Configuration)
     .AddTicketingForwardedHeaders(builder.Configuration)
     .AddTicketingAuth(builder.Configuration)

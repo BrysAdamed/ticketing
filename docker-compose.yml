@@ -26,7 +26,7 @@ services:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
       ForwardedHeaders__KnownNetworks: ${TICKETING_TRUSTED_PROXIES:-172.16.0.0/12,192.168.0.0/16}
       ForwardedHeaders__ForwardLimit: ${TICKETING_FORWARD_LIMIT:-1}
-      ConnectionStrings__Db: Host=db;Port=5432;Database=ticketing;Username=ticketing;Password=${DB_PASSWORD:?set DB_PASSWORD in .env}
+      ConnectionStrings__Db: Host=db;Port=5432;Database=ticketing;Username=ticketing;Password=${DB_PASSWORD:?set DB_PASSWORD in .env};GSS Encryption Mode=Disable
       Database__MigrateOnStartup: "true"
       Auth__CookieSecurePolicy: ${COOKIE_SECURE_POLICY:-SameAsRequest}
       TICKETING_SEED_DEMO: ${TICKETING_SEED_DEMO:-false}

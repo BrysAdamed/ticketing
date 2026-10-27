@@ -201,6 +201,9 @@ export const DOC_ROOT = 'root';
 /// Most characters a page may hold (spec 12.2).
 export const PAGE_CONTENT_MAX_LENGTH = 100_000;
 
+/// Most characters a Mermaid diagram's source may hold (spec 12.2).
+export const MERMAID_SOURCE_MAX_LENGTH = 20_000;
+
 /// The caller's private, unpublished edit of a page or diagram (`GET|PUT /docs/{key}/draft`).
 /// `title` may be empty while it is being typed.
 export interface DocDraft {

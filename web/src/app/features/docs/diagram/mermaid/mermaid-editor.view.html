@@ -1,0 +1,138 @@
+@let status = session.status();
+<div class="ebar">
+  <tk-doc-edit-status [editors]="presence()" />
+  <div class="r">
+    <button mat-button type="button" data-testid="doc-editor-discard" (click)="discard()">
+      Discard
+    </button>
+    <button mat-stroked-button type="button" data-testid="doc-editor-close" (click)="close()">
+      Close <tk-kbd>Esc</tk-kbd>
+    </button>
+    <button
+      mat-flat-button
+      type="button"
+      data-testid="doc-editor-publish"
+      [disabled]="status === 'publishing' || !!session.conflict()"
+      (click)="publish(false)"
+    >
+      Publish
+      @for (key of shortcutKeys('mod+s'); track $index) {
+        <tk-kbd tone="on-solid">{{ key }}</tk-kbd>
+      }
+    </button>
+  </div>
+</div>
+<div class="etool" role="toolbar" aria-label="Diagram">
+  <button
+    mat-button
+    type="button"
+    class="tool"
+    data-testid="mermaid-template-menu"
+    [matMenuTriggerFor]="templateMenu"
+  >
+    <tk-icon name="tablerTemplate" [size]="16" />Template<tk-icon
+      name="tablerChevronDown"
+      [size]="14"
+    />
+  </button>
+  <mat-menu #templateMenu="matMenu">
+    @for (template of templates; track template.id) {
+      <button
+        mat-menu-item
+        type="button"
+        [attr.data-testid]="'mermaid-template-' + template.id"
+        (click)="useTemplate(template)"
+      >
+        {{ template.label }}
+      </button>
+    }
+  </mat-menu>
+  <a
+    mat-button
+    class="tool"
+    target="_blank"
+    rel="noopener noreferrer"
+    data-testid="mermaid-syntax-help"
+    [href]="syntaxUrl"
+  >
+    <tk-icon name="tablerBook2" [size]="16" />Syntax
+  </a>
+  @if (typeLabel(); as type) {
+    <span class="hint" data-testid="mermaid-type">Mermaid · {{ type }}</span>
+  }
+  <div class="right">
+    @if (tooLong()) {
+      <span class="bad tnum" data-testid="doc-editor-too-long"
+        >{{ session.content().length.toLocaleString() }} / {{ maxLength.toLocaleString() }}</span
+      >
+    }
+    <input
+      class="note"
+      type="text"
+      maxlength="200"
+      placeholder="Change note (optional)"
+      aria-label="Change note"
+      data-testid="doc-editor-change-note"
+      [value]="changeNote()"
+      (input)="changeNote.set($any($event.target).value)"
+    />
+  </div>
+</div>
+<div class="body">
+  <div class="title-row">
+    <input
+      class="title"
+      type="text"
+      maxlength="200"
+      placeholder="Untitled"
+      aria-label="Title"
+      data-testid="doc-editor-title"
+      [value]="session.title()"
+      (input)="onTitle($any($event.target).value)"
+      (blur)="session.flush()"
+    />
+  </div>
+  <div class="split">
+    <div class="src" #source></div>
+    <div class="pv" aria-label="Preview" data-testid="mermaid-preview">
+      <div class="pvlabel"><tk-icon name="tablerEye" [size]="12" />Preview</div>
+      <div class="stage">
+        @if (preview(); as content) {
+          <tk-diagram-viewport [content]="content" [fill]="true" [stale]="!!error()" />
+        } @else if (empty()) {
+          <div class="start" data-testid="mermaid-start">
+            <p>Start from a template</p>
+            <div class="chips">
+              @for (template of templates; track template.id) {
+                <button
+                  type="button"
+                  class="chip"
+                  [attr.data-testid]="'mermaid-start-' + template.id"
+                  (click)="useTemplate(template)"
+                >
+                  {{ template.label }}
+                </button>
+              }
+            </div>
+          </div>
+        }
+      </div>
+      @if (error(); as message) {
+        <div class="err" role="alert" data-testid="mermaid-error">
+          <p class="err-title">Mermaid syntax error</p>
+          <pre>{{ message }}</pre>
+        </div>
+      }
+    </div>
+  </div>
+  @if (session.conflict(); as conflict) {
+    <tk-doc-conflict
+      data-testid="doc-conflict"
+      [conflict]="conflict"
+      [busy]="status === 'publishing'"
+      (keep)="keepEditingOnLatest()"
+      (overwrite)="overwriteWithMine()"
+      (discard)="discardMine()"
+    />
+  }
+</div>

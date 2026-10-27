@@ -20,53 +20,8 @@
   contain: strict;
 }
 
-.l {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  overflow: hidden;
-  color: var(--tk-text-muted);
-  font-size: var(--tk-text-sm);
-  white-space: nowrap;
-}
-
-.st {
-  flex: none;
-  color: var(--tk-text-subtle);
-
-  &.ok {
-    color: var(--tk-success-fg);
-  }
-}
-
 .bad {
   color: var(--tk-danger-fg);
-}
-
-.sep {
-  color: var(--tk-text-disabled);
-}
-
-.newer {
-  color: var(--tk-warning-fg);
-}
-
-.presence {
-  margin-left: 6px;
-}
-
-.link {
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--tk-accent-fg);
-  font: inherit;
-  cursor: pointer;
-
-  &:hover {
-    text-decoration: underline;
-  }
 }
 
 .seg {

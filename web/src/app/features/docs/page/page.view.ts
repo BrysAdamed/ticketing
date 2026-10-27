@@ -15,16 +15,12 @@ import {
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { ActivatedRoute, Router } from '@angular/router';
-import { firstValueFrom, map } from 'rxjs';
+import { map } from 'rxjs';
 import { Doc } from '@core/docs/doc.models';
-import { DocsApi } from '@core/docs/docs.api';
-import { ConfirmService } from '@core/notify/confirm.service';
-import { ToastService } from '@core/notify/toast.service';
 import { ViewRegistry } from '@core/views/view-registry';
 import { AbsoluteTimePipe, RelativeTimePipe } from '@shared/pipes/relative-time.pipe';
-import { IconComponent } from '@shared/ui/icon/icon.component';
 import { KbdComponent } from '@shared/ui/kbd/kbd.component';
-import { DocStore } from '../doc/doc.store';
+import { DocDraftBannerComponent } from '../doc/doc-draft-banner.component';
 import { DOCS_PAGE_EDIT_VIEW } from '../docs.views';
 import { DocMarkdownComponent } from './doc-markdown.component';
 import { DocPageSectionsComponent } from './doc-page-sections.component';
@@ -39,10 +35,10 @@ import { activeHeading, extractOutline, OutlineEntry } from './page-outline';
   imports: [
     NgComponentOutlet,
     MatButtonModule,
-    IconComponent,
     KbdComponent,
     RelativeTimePipe,
     AbsoluteTimePipe,
+    DocDraftBannerComponent,
     DocMarkdownComponent,
     DocPageSectionsComponent,
     DocPresenceComponent,
@@ -53,13 +49,9 @@ import { activeHeading, extractOutline, OutlineEntry } from './page-outline';
   styleUrl: './page.view.scss',
 })
 export class PageView {
-  private readonly store = inject(DocStore);
-  private readonly api = inject(DocsApi);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly registry = inject(ViewRegistry);
-  private readonly confirm = inject(ConfirmService);
-  private readonly toast = inject(ToastService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
 
   readonly doc = input.required<Doc>();
@@ -141,37 +133,6 @@ export class PageView {
       queryParams: { mode: 'edit' },
       queryParamsHandling: 'merge',
     });
-  }
-
-  protected async discardDraft(): Promise<void> {
-    const doc = this.doc();
-    const ok = await this.confirm.confirm({
-      title: 'Discard your unpublished changes?',
-      message: `Your draft of ${doc.title} is deleted. The published page stays as it is.`,
-      confirmLabel: 'Discard',
-      danger: true,
-    });
-    if (!ok) return;
-    try {
-      await firstValueFrom(this.api.discardDraft(doc.key));
-      this.store.set({ ...doc, myDraft: null });
-      this.toast.success('Draft discarded');
-    } catch (error) {
-      this.toast.error(error);
-    }
-  }
-
-  protected draftTime(updatedAt: string): string {
-    const date = new Date(updatedAt);
-    const sameDay = date.toDateString() === new Date().toDateString();
-    return sameDay
-      ? date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
-      : date.toLocaleString(undefined, {
-          month: 'short',
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-        });
   }
 
   private spy(): void {

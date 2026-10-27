@@ -125,7 +125,7 @@ export class DocEditSession {
   async publish(changeNote?: string | null): Promise<Doc | null> {
     const title = this.title().trim();
     if (!title) {
-      this.toast.warning('Give the page a title before publishing.');
+      this.toast.warning('Give it a title before publishing.');
       return null;
     }
     this.clearTimer();

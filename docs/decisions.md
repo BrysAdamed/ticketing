@@ -647,7 +647,17 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
   - **Embeds** are placeholders (`figure.tk-doc-embed[data-doc-key][data-diagram-format][data-version] > .tk-doc-embed-body`, min-height 160 px) that the diagram stories fill through a markdown enhancer reading `DocMarkdownContext.embeds`.
   - **Seams added**: `provideDocEditorPlugin` accepts a factory (to `inject()` clients); `markdownCompletions` is a CodeMirror facet for plugin completion sources (the editor's `override` keeps language-data sources out); a page section hides itself with the host class `tk-section-empty`.
 - Rationale: one index written where versions are written cannot drift from the content, and resolving it inside the doc GET keeps rendering to zero extra requests (the AC) while the readability filter sits in one query per list. Absent-rather-than-masked references are the only shape that cannot leak a title, a status or even existence.
-### D-109 Mermaid: lazy blocks with remembered heights, one diagram view with renderer and editor registries (TKT-17)
+
+### D-109 Docs tree panel collapses with `Ctrl \`; `Ctrl .` / `Ctrl Shift .` copy the doc key and link; shifted symbol shortcuts match the physical key (TKT-39)
+
+- Question: the refinement (1.1, 1.16) collapses the tree with `[` and copies the key / link with `⌘.` / `⌘⇧.`. `[` already toggles the app sidebar, `]` toggles the page's right rail (screens.md 3), and screens.md uses `Ctrl Shift .` for a heading link instead. Also, `Ctrl Shift .` never fired anywhere: browsers report the shifted character (`>`), and `ShortcutService` drops `Shift` for symbols, so the ticket view's "Copy link" was dead.
+- Decision:
+  - `Ctrl \` (`⌘\`) shows and hides the tree panel, as in Notion; buttons in the tree header and in the 40 px strip that replaces the collapsed panel do the same. The state is remembered per browser (`tk-docs-tree-collapsed`, like the width). A collapsed tree is removed, so its single-key shortcuts (`N`, `J`/`K`, `Del`…) are off; `Ctrl Shift E` opens it and focuses it.
+  - `Ctrl .` copies the open doc's key and `Ctrl Shift .` its link, the same keys as on a ticket (refinement wins over screens.md; copying a heading link stays with the hover anchor).
+  - `ShortcutService` first tries the physical-key form of a shifted symbol (`mod+shift+.` from `event.code` `Period`), then the reported character (`?`), so both notations work on any layout that has the key.
+- Rationale: the bracket keys are taken by the two other panels, and a modifier keeps the tree toggle from firing while reading. Matching shifted symbols by physical key fixes the ticket shortcut as well without per-layout tables.
+
+### D-110 Mermaid: lazy blocks with remembered heights, one diagram view with renderer and editor registries (TKT-17)
 
 - Context: TKT-17 renders Mermaid in every markdown surface and as diagram docs with an editor, under two constraints from the epic: Mermaid stays out of the initial bundle and a page with ten diagrams must not shift while they render. TKT-18 (Canvas) shares the diagram view right after, and the PDF bundle (TKT-20) reuses the renderer.
 - Decision:

@@ -127,6 +127,53 @@ test.describe('docs tree', () => {
         await expect.poll(() => docs.outline()).toEqual(['Ops', '  Runbook', 'runbook']);
     });
 
+    test('the tree panel collapses and stays collapsed; Ctrl . and Ctrl Shift . copy the key and the link', async ({
+        page,
+        api,
+        context,
+    }) => {
+        // Arrange
+        await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+        const projectKey = (await api.createProject()).key;
+        const doc = await createDoc(api, projectKey, { kind: 'Page', title: 'Glossary' });
+        const docs = new DocsPage(page);
+        await page.goto(`/docs/${doc.key}`);
+        await expect(page.getByTestId('doc-title')).toHaveText('Glossary');
+        const clipboard = () => page.evaluate(() => navigator.clipboard.readText());
+
+        // Act: copy key, then link
+        await page.locator('body').press('Control+.');
+        await expect.poll(clipboard).toBe(doc.key);
+        await page.locator('body').press('Control+Shift+.');
+
+        // Assert
+        await expect
+            .poll(clipboard)
+            .toMatch(
+                new RegExp(`^https?://[^/]+/projects/${projectKey}/docs/${doc.key}/glossary$`),
+            );
+
+        // Act: collapse with the button, reload
+        await page.getByTestId('doc-tree-collapse').click();
+        await expect(page.getByTestId('doc-tree')).toBeHidden();
+        await page.reload();
+
+        // Assert: still collapsed
+        await expect(page.getByTestId('doc-title')).toHaveText('Glossary');
+        await expect(page.getByTestId('doc-tree-expand')).toBeVisible();
+        await expect(page.getByTestId('doc-tree')).toBeHidden();
+
+        // Act: Ctrl Shift E shows the tree and focuses it, Ctrl \ hides it again
+        await page.locator('body').press('Control+Shift+E');
+        await expect(docs.tree).toBeFocused();
+        await page.locator('body').press('Control+\\');
+
+        // Assert
+        await expect(page.getByTestId('doc-tree')).toBeHidden();
+        await page.getByTestId('doc-tree-expand').click();
+        await expect(docs.row(doc.key)).toHaveClass(/active/);
+    });
+
     test('owners see the trash and restore from it', async ({ page, api }) => {
         // Arrange
         const projectKey = (await api.createProject()).key;

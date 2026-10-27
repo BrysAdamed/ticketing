@@ -12,6 +12,16 @@
       <tk-icon name="tablerPlus" [size]="16" />
     </button>
   }
+  <button
+    type="button"
+    class="tk-icon-btn"
+    aria-label="Hide the tree"
+    data-testid="doc-tree-collapse"
+    [title]="collapseTitle()"
+    (click)="collapse.emit()"
+  >
+    <tk-icon name="tablerLayoutSidebarLeftCollapse" [size]="16" />
+  </button>
 </div>
 
 <div class="tree-f">

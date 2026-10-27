@@ -138,7 +138,7 @@ const PRESENCE_REFRESH_MS = 30_000;
             <button
               type="button"
               class="tk-icon-btn"
-              title="Copy link"
+              [title]="copyLinkTitle"
               aria-label="Copy link"
               data-testid="doc-copy-link"
               (click)="copyLink(doc)"
@@ -232,6 +232,7 @@ export class DocView {
   protected readonly url = docUrl;
   protected readonly homeUrl = computed(() => docsHomeUrl(this.projectKey().toUpperCase()));
   protected readonly content = signal<Type<unknown> | null>(null);
+  protected readonly copyLinkTitle = `Copy link (${this.shortcuts.format('mod+shift+.').join(' ')})`;
 
   /// The loaded doc with the tree's title, so a rename in the tree shows at once.
   protected readonly viewDoc = computed<Doc | null>(() => {
@@ -291,6 +292,24 @@ export class DocView {
         handler: () => {
           if (this.historyOpen()) this.closeHistory();
           else if (!this.editing()) this.openHistory();
+        },
+      },
+      {
+        keys: 'mod+.',
+        description: 'Copy the doc key',
+        section: 'Docs',
+        handler: () => {
+          const doc = this.viewDoc();
+          if (doc) this.copyKey(doc);
+        },
+      },
+      {
+        keys: 'mod+shift+.',
+        description: 'Copy the doc link',
+        section: 'Docs',
+        handler: () => {
+          const doc = this.viewDoc();
+          if (doc) this.copyLink(doc);
         },
       },
     ]);
@@ -407,6 +426,13 @@ export class DocView {
 
   protected markdownUrl(doc: Doc): string {
     return this.api.markdownExportUrl(doc.key);
+  }
+
+  private copyKey(doc: Doc): void {
+    void navigator.clipboard
+      .writeText(doc.key)
+      .then(() => this.toast.success(`${doc.key} copied`))
+      .catch(() => this.toast.error("Couldn't copy the key"));
   }
 
   protected copyLink(doc: Doc): void {

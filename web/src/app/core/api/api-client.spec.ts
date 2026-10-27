@@ -11,7 +11,11 @@ describe('ApiClient GET dedupe', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [provideZonelessChangeDetection(), provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideZonelessChangeDetection(),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+      ],
     });
     api = TestBed.inject(ApiClient);
     http = TestBed.inject(HttpTestingController);

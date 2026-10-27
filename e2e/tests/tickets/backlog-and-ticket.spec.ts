@@ -145,7 +145,7 @@ test.describe('backlog and ticket view', () => {
         await expect(page.getByText(`${ticket.key} was deleted by`)).toBeVisible();
     });
 
-    test('s and i open pickers for the focused row; the assignee picker offers any active user', async ({
+    test('s and a open pickers for the focused row; the assignee picker offers any active user', async ({
         page,
         api,
     }) => {
@@ -165,8 +165,8 @@ test.describe('backlog and ticket view', () => {
             .getByRole('option', { name: /^Review/ })
             .click();
 
-        // Act: assignee through i, searching a user who is not a project member
-        await page.keyboard.press('i');
+        // Act: assignee through a, searching a user who is not a project member
+        await page.keyboard.press('a');
         const search = page.getByTestId('search-picker');
         await search.getByTestId('search-picker-input').fill(outsider.displayName);
         await search.getByRole('option', { name: outsider.displayName }).click();

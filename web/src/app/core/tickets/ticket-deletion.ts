@@ -49,10 +49,13 @@ export class TicketDeletion {
       this.cache.put(result.value);
       this.events.emit({ kind: 'restored', ticket: result.value });
     });
-    const failed = results.find((r) => r.status === 'rejected') as PromiseRejectedResult | undefined;
+    const failed = results.find((r) => r.status === 'rejected') as
+      PromiseRejectedResult | undefined;
     if (failed) this.toast.error(`Couldn't restore: ${toApiError(failed.reason).title}`);
     else
-      this.toast.success(keys.length === 1 ? `${keys[0]} restored` : `${keys.length} tickets restored`);
+      this.toast.success(
+        keys.length === 1 ? `${keys[0]} restored` : `${keys.length} tickets restored`,
+      );
   }
 
   private async bringBack(keys: readonly string[]): Promise<void> {

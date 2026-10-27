@@ -46,6 +46,10 @@ internal static class ProjectMembership
         return active.ToHashSet();
     }
 
+    /// <summary>The member's e-mail for audit entries, so the audit log can name them.</summary>
+    public static Task<string?> EmailOfAsync(ITicketingDbContext db, Guid userId, CancellationToken cancellationToken) =>
+        db.Users.AsNoTracking().Where(u => u.Id == userId).Select(u => (string?)u.Email).SingleOrDefaultAsync(cancellationToken);
+
     public static void EnsureIsMember(Project project, Guid userId)
     {
         if (!project.IsMember(userId))

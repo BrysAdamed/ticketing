@@ -53,7 +53,7 @@ ESLint enforces the boundaries: `core` and `shared` may not import `@features/*`
 | `/set-password?token=` | `auth` | `auth.set-password` |
 | `/my-work` | `my-work` | `my-work.list` |
 | `/projects` | `projects` (list implemented) | `projects.list` |
-| `/projects/:projectKey` → `dashboard` | `projects` (layout with tabs) + `dashboard` | `project.layout`, `project.dashboard` |
+| `/projects/:projectKey` → `dashboard` | `projects` (frame: archived banner, not-found state; sections are sidebar sub-items, D-83) + `dashboard` | `project.layout`, `project.dashboard` |
 | `/projects/:projectKey/backlog` | `backlog` | `backlog.list` |
 | `/projects/:projectKey/test-cases`, `…/test-cases/:testCaseKey`, `…/test-cases/new?forTicket=KEY` (filters `?status=&q=&ticket=&archived=`) | `test-cases` | `testcases.list`, `testcases.editor` (side pane) |
 | `/projects/:projectKey/regressions[/:sessionKey]` (`?status=`; session `?item=KEY&show=mine`, `waiting` or `failed`) | `regressions` | `regressions.list`, `regressions.session` |
@@ -102,11 +102,12 @@ Each routed page is a **store** (state + API calls, `@Injectable()` provided by 
    ```
 
 4. Route it in your own `features/backlog/backlog.routes.ts`: `export default [viewRoute(BACKLOG_VIEW, { path: '' })]`. `viewRoute` sets `loadComponent` to resolve through `ViewRegistry`. It picks the variant whose name equals the flag's evaluated value (`on`/`off` in v1) and falls back to `default` when that variant is missing or fails to load. The router caches the choice for the session. Never put `component`/`loadComponent` on a page route directly.
-5. Only touch shared files for a new top-level area (one entry in `app.routes.ts`) or a new project tab (one entry in `features/projects/projects.routes.ts` plus the tab list in `projects/layout/project-layout.view.ts`).
+5. Only touch shared files for a new top-level area (one entry in `app.routes.ts`) or a new project section (one entry in `features/projects/projects.routes.ts`, with `title` and `breadcrumb`, plus `PROJECT_NAV` in `core/layout/sidebar/sidebar.component.ts`).
+6. Give every route a `title` (a string or a resolver; the page part only). `PageTitleStrategy` (`core/layout/page-title.ts`) composes `<page> · <project> · Ticketing`. For a title that follows app state use `data: { pageTitle: (route) => … }` (runs in an injection context, may read signals); a page with a dynamic subject calls `PageTitleStrategy.setSubject('PAY-12 Fix the login')`.
 
 Exposure analytics: `provideViewExposure((e) => …)` in `app.config.ts` receives `{ viewId, variant, flag }` every time a view is shown (route activation or peek).
 
-Inside project tabs, `inject(ProjectContext)` gives the current project (`project()`, `name()`, `isOwner()`, `rowVersion`), loaded once by the project layout. `ProjectDirectory.reload()` refreshes the sidebar and palette after you create or archive a project.
+Inside project sections, `inject(ProjectContext)` gives the current project (`project()`, `name()`, `isOwner()`, `rowVersion`), loaded once per key by the project layout (cached, never retried on its own after a 4xx; `reload()` retries). `ProjectDirectory.reload()` refreshes the sidebar and palette after you create or archive a project.
 
 ## Core services
 
@@ -120,7 +121,8 @@ Inside project tabs, `inject(ProjectContext)` gives the current project (`projec
 | Toasts | `ToastService.show / success / warning / error(err)` with an optional `{ action: { label: 'Undo', run } }`. |
 | Confirm | `await ConfirmService.confirm({ title, message, confirmLabel, danger, requireText })`. |
 | Palette | `CommandRegistry.registerCommands([...], destroyRef)` or `provideCommands(() => [...])` in route providers. Use `registerSearchProvider({ id, remote: true, minQueryLength, search(q, signal) })` for API-backed results (debounced 120 ms, aborted when the query changes). Registering the command id `ticket.create` shows the top-bar "New ticket" button and turns on the global `C`. |
-| Shortcuts | `ShortcutService.registerScoped([{ keys, description, section, handler, allowInInputs }])` for the component's lifetime. The latest registration of the same keys wins (a page can take over `/`). Notation: `mod+k` (Ctrl or ⌘), `shift+enter`, `g b` (sequence), `escape`, `?`. Single keys are ignored while typing in a field unless `allowInInputs` is set. Everything registered appears in the `?` sheet. |
+| Shortcuts | `ShortcutService.registerScoped([{ keys, description, section, handler, allowInInputs }])` for the component's lifetime. The latest registration of the same keys wins (a page can take over `/`). Notation: `mod+k` (Ctrl or ⌘), `shift+enter`, `g b` (sequence), `escape`, `?`. Single keys are ignored while typing in a field unless `allowInInputs` is set, and every shortcut is ignored while an overlay with a backdrop (dialog, menu, picker) is open. Everything registered appears in the `?` sheet. `isRegistered(keys)` tells pickers whether to show their key hint (`PICKER_SHORTCUT_AVAILABLE`). |
+| Cached reads | `SwrCache.load(key, fetch, tags)` returns `{ cached, fresh }`: render `cached` at once, then `fresh` (D-84). While cached data is shown the refetch drives the shell's 2px top line. Tag entries (`project:KEY`, `ticketsTag(KEY)`, `MY_WORK_TAG`); `TicketEvents.emit` drops the ticket-list tags. `ApiClient.get` already shares identical in-flight GETs. |
 | Breadcrumbs | `data: { breadcrumb: 'Backlog' }` or `(route) => ({ label, projectKey })` on routes. Pages can call `Breadcrumbs.setTail([...])` for dynamic crumbs. |
 | Theme | `ThemeService.setPreference('light' \| 'dark' \| 'system')`, `toggle()`, `setDensity('compact')`. Stored in localStorage (`tk-theme`, `tk-density`) and applied as `data-theme` / `data-density` on `<html>` before Angular boots. |
 
@@ -134,7 +136,9 @@ The tickets slice (`features/tickets`, `features/backlog`) keeps everything othe
 | --- | --- |
 | Ticket REST calls | `TicketsApi` (`get`, `create`, `update(key, patch, rowVersion?)`, `backlog`, `move`, `find`, `hints`, comments, links, history). Wire types are in `ticket.models.ts`. |
 | Instant ticket views | `TicketCache.peek/fetch/prefetch(key)`. Lists call `prefetch` after a 150 ms hover, so the peek opens with data already loaded. |
-| Keep lists in sync | `TicketEvents.events` emits `created`, `updated` (with the full ticket) and `deleted`. Emit them after your own ticket writes, and subscribe in list stores (backlog, boards) to patch rows without a refetch. |
+| Keep lists in sync | `TicketEvents.events` emits `created`, `updated` (with the full ticket), `deleted` and `restored`. Emit them after your own ticket writes, and subscribe in list stores (backlog, boards) to patch rows without a refetch. |
+| Delete a ticket | `TicketDeletion.delete(keys)`: no confirm dialog; emits `deleted` at once, runs the DELETEs, and shows a toast whose Undo calls `POST /tickets/{key}/restore` (10 minutes, D-82) and emits `restored`. |
+| Move tickets | `MoveTargets.options(projectKey, currentLocation)` lists the backlog and the active boards linking the project as picker options; move with `TicketsApi.move`. |
 | Open a ticket | `PeekService.open(key)` for the side panel, or route to `/tickets/:key`. |
 | Create a ticket | `TicketCreator.open(prefill)` opens the create dialog with any `NewTicket` fields pre-filled, plus `heading` and an optional `submit(projectKey, ticket)` that replaces the default `POST /projects/{key}/tickets`. The regressions slice uses it for "Create bug" with its own endpoint. It resolves with the created `TicketSummary`, or `null`. The global `C` and the top bar button run the `ticket.create` command registered by `provideTicketCreation` in `app.config.ts`. In the backlog, `C` opens the inline quick-create row instead. |
 | Assignee / label / version pickers | `ProjectPeople.picker(() => projectKey)` for a type-ahead `tkSearchPicker` over `GET /users?projectKey=` (any active user on public projects, Admins and Owner/Member members on private ones; never a members-only list), `FieldHints.get(projectKey, 'labels' \| 'version', prefix)`. |
@@ -171,7 +175,7 @@ Live catalogue: `/dev/ui-kit`. Import components one by one (all standalone, `tk
 | `tk-segmented [options] [(value)]` | Radio-group segmented control. |
 | `[tkSearchPicker]="searchFn" (picked)` | Like the inline picker, but options come from an async, debounced search (tickets by key or title). |
 | `[tkLabelsPicker]="labels" [labelSuggestions]="fn" (labelToggled)` | Multi-select labels popover with suggestions and "create new". Stays open while toggling. |
-| `[tkInlinePicker]="options" [pickerValue] (picked)` | CDK overlay listbox with a filter input, ↑/↓/Home/End/Enter/Esc and digits 1–9. Optional `[pickerOptionTemplate]`. Ready-made options are in `shared/domain/picker-options.ts`. |
+| `[tkInlinePicker]="options" [pickerValue] (picked)` | CDK overlay listbox with a filter input, ↑/↓/Home/End/Enter/Esc and digits 1–9. Options may carry an `icon` (status, type, priority, severity glyph or a Tabler icon). `[pickerLoad]` loads options on open; `open(origin, options)` opens under another element. Optional `[pickerOptionTemplate]`. Ready-made options are in `shared/domain/picker-options.ts`. |
 | `tk-markdown [source]` | `renderMarkdown()`: marked (GFM) → raw HTML escaped → DOMPurify, ticket keys linked to `/tickets/KEY` (router navigation), external links open in a new tab. |
 | `tk-markdown-editor [(value)] (submitted) (cancelled)` | Write / Preview tabs. Ctrl/⌘+Enter submits and Esc cancels. Projected content goes in the footer. |
 | `tk-route-tabs [tabs]` | Material tab nav bar over child routes. Project the `<router-outlet />`. |

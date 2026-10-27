@@ -29,18 +29,18 @@ test.describe('projects', () => {
 
         // Assert: it opens and is in the sidebar
         await expect(page).toHaveURL(new RegExp(`/projects/${key}/`));
-        await expect(project.headerName).toHaveText(`Customer Portal ${key}`);
-        await expect(project.headerVisibility).toContainText('Public');
+        await expect(project.breadcrumbProject).toHaveText(`Customer Portal ${key}`);
+        await expect(page).toHaveTitle(`Dashboard · Customer Portal ${key} · Ticketing`);
         await expect(shell.navLink(`nav-project-${key}`)).toBeVisible();
 
         // Act: edit settings
-        await project.tab('settings').click();
+        await project.section('settings').click();
         await project.nameInput.fill(`Portal ${key}`);
         await project.descriptionEditor.fill('Self-service portal for **customers**.');
         await project.saveButton.click();
 
-        // Assert: header and sidebar follow
-        await expect(project.headerName).toHaveText(`Portal ${key}`);
+        // Assert: breadcrumb and sidebar follow
+        await expect(project.breadcrumbProject).toHaveText(`Portal ${key}`);
         await expect(shell.navLink(`nav-project-${key}`)).toContainText(`Portal ${key}`);
         await expect(project.saveButton).toBeDisabled();
 
@@ -50,10 +50,13 @@ test.describe('projects', () => {
         // Assert: read-only everywhere
         await expect(project.archivedBanner).toBeVisible();
         await expect(project.nameInput).toBeDisabled();
-        await expect(shell.navLink(`nav-project-${key}`)).toHaveCount(0);
-        await project.tab('backlog').click();
+        await expect(shell.navLink(`nav-project-${key}`)).toBeVisible();
+        await project.section('backlog').click();
         await expect(project.archivedBanner).toBeVisible();
         await expect(project.archivedBanner).toContainText('unlinked from every board');
+        await page.goto('/my-work');
+        await expect(shell.navLink(`nav-project-${key}`)).toHaveCount(0);
+        await page.goto(`/projects/${key}/backlog`);
 
         // Act: unarchive from the banner
         await project.unarchiveButton.click();

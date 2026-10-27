@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  untracked,
+} from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { Router, RouterLink } from '@angular/router';
 import { PeekService } from '@core/layout/peek/peek';
@@ -11,6 +18,8 @@ import { IconComponent } from '@shared/ui/icon/icon.component';
 import { SkeletonRowsComponent } from '@shared/ui/skeleton/skeleton-rows.component';
 import { TicketRowComponent } from '@shared/ui/ticket-row/ticket-row.component';
 import { MyWorkStore, REGRESSIONS_GROUP } from './my-work.store';
+
+const PEEK_FOLLOW_MS = 120;
 
 /// My work (spec 6.8, I-08): open tickets assigned to me across projects, grouped by project and
 /// ordered by priority, then my waiting regression items. `J`/`K` move, `Enter` opens.
@@ -191,6 +200,19 @@ export class MyWorkView {
 
   constructor() {
     void this.store.load();
+
+    let followTimer: ReturnType<typeof setTimeout> | null = null;
+    effect(() => {
+      const entry = this.store.focused();
+      const open = this.peek.isOpen();
+      if (followTimer) clearTimeout(followTimer);
+      followTimer = null;
+      const key = entry?.kind === 'ticket' ? entry.ticket.key : null;
+      if (!open || !key || untracked(() => this.peek.ticketKey()) === key) return;
+      this.cache.prefetch(key);
+      followTimer = setTimeout(() => this.peek.open(key), PEEK_FOLLOW_MS);
+    });
+
     inject(ShortcutService).registerScoped([
       {
         keys: 'j',

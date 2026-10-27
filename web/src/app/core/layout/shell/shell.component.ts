@@ -39,11 +39,7 @@ const PROGRESS_DELAY_MS = 150;
       <tk-topbar />
       <div class="progress">
         @if (busy()) {
-          <mat-progress-bar
-            mode="indeterminate"
-            aria-label="Loading"
-            data-testid="top-progress"
-          />
+          <mat-progress-bar mode="indeterminate" aria-label="Loading" data-testid="top-progress" />
         }
       </div>
       <div class="body">

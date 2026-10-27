@@ -52,6 +52,13 @@ const ADMIN_NAV: readonly NavLink[] = [
 
 const MAX_PROJECTS = 8;
 
+interface NavProject {
+  id: string;
+  key: string;
+  name: string;
+  archived?: boolean;
+}
+
 @Component({
   selector: 'tk-sidebar',
   imports: [RouterLink, RouterLinkActive, IconComponent, ProjectTileComponent, MatTooltip],
@@ -74,7 +81,11 @@ export class SidebarComponent {
 
   protected readonly currentProjectKey = this.context.projectKey;
   protected readonly projects = computed(() => {
-    const all = this.directory.activeProjects();
+    const archived = this.context.archivedProject();
+    const all: readonly NavProject[] =
+      archived && archived.key === this.currentProjectKey()
+        ? [...this.directory.activeProjects(), { id: archived.key, ...archived, archived: true }]
+        : this.directory.activeProjects();
     const current = this.currentProjectKey();
     const shown = all.slice(0, MAX_PROJECTS);
     const active = all.find((p) => p.key === current);

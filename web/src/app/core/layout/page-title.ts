@@ -29,9 +29,7 @@ export class PageTitleStrategy extends TitleStrategy {
   private readonly injector = inject(Injector);
   private readonly directory = inject(ProjectDirectory);
   private readonly page = signal<string | null>(null);
-  private readonly pageFn = signal<{ fn: PageTitleFn; route: ActivatedRouteSnapshot } | null>(
-    null,
-  );
+  private readonly pageFn = signal<{ fn: PageTitleFn; route: ActivatedRouteSnapshot } | null>(null);
   private readonly projectKey = signal<string | null>(null);
   private readonly subject = signal<string | null>(null);
 

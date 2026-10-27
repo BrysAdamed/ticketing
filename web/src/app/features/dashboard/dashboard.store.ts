@@ -3,7 +3,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ApiClient } from '@core/api/api-client';
 import { ApiError, toApiError } from '@core/api/api-error';
 import { FieldHints } from '@core/tickets/field-hints';
-import { TicketEvents } from '@core/tickets/ticket-events';
+import { SwrCache } from '@core/api/swr-cache';
+import { TicketEvents, ticketsTag } from '@core/tickets/ticket-events';
 import { debounceTime, firstValueFrom } from 'rxjs';
 import { DashboardLinks } from './dashboard-links';
 import { ProjectDashboard } from './dashboard.model';
@@ -21,6 +22,7 @@ export type DashboardPhase = 'blank' | 'skeleton' | 'ready' | 'error';
 export class DashboardStore {
   private readonly api = inject(ApiClient);
   private readonly hints = inject(FieldHints);
+  private readonly cache = inject(SwrCache);
 
   readonly projectKey = signal('');
   readonly version = signal<string | null>(null);
@@ -59,7 +61,8 @@ export class DashboardStore {
     this.projectKey.set(key);
     this.version.set(version);
     if (projectChanged) {
-      this.data.set(null);
+      this.data.set(this.cache.get<ProjectDashboard>(this.cacheKey()) ?? null);
+      if (this.data()) this.phase.set('ready');
       void this.loadVersions(key);
     }
     void this.fetch();
@@ -85,11 +88,14 @@ export class DashboardStore {
     this.error.set(null);
 
     try {
-      const data = await firstValueFrom(
+      const cacheKey = this.cacheKey();
+      const call = firstValueFrom(
         this.api.get<ProjectDashboard>(`/projects/${this.projectKey()}/dashboard`, {
           version: this.version(),
         }),
       );
+      const data = await (firstLoad ? call : this.cache.track(call));
+      this.cache.set(cacheKey, data, [ticketsTag(this.projectKey())]);
       clearTimeout(timer);
       if (skeletonShownAt !== null) {
         const shownFor = performance.now() - skeletonShownAt;
@@ -106,6 +112,10 @@ export class DashboardStore {
     } finally {
       if (request === this.request) this.refreshing.set(false);
     }
+  }
+
+  private cacheKey(): string {
+    return `dashboard:${this.projectKey()}:${this.version() ?? ''}`;
   }
 
   private async loadVersions(projectKey: string): Promise<void> {

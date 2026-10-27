@@ -159,6 +159,9 @@ const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(naviga
       padding: 6px 8px 6px 14px;
       border-top: 1px solid var(--tk-border-subtle);
     }
+    .footer:not(:has(.hint)):has(.actions:empty) {
+      display: none;
+    }
     .hint {
       color: var(--tk-text-subtle);
       font-size: var(--tk-text-sm);

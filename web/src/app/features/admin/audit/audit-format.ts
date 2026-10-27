@@ -37,7 +37,16 @@ const FIELD_LABELS: Record<string, string> = {
   targetRoles: 'target roles',
 };
 
+const MEMBER_VERBS: Record<string, string> = {
+  'project.member.added': 'added member',
+  'project.member.removed': 'removed member',
+  'project.member.roleChanged': 'changed the role of',
+  'project.member.ownerRestored': 'made owner again',
+};
+
 export function describeAuditEntry(entry: AuditEntry): AuditDescription {
+  const memberVerb = MEMBER_VERBS[entry.action];
+  if (memberVerb) return describeMember(entry, memberVerb);
   const self = entry.actor?.id === entry.entityId && entry.action.startsWith('user.password.');
   const target = self
     ? ''
@@ -66,6 +75,24 @@ export function formatValue(field: string | null, value: unknown): string {
   }
   if (typeof value === 'object') return JSON.stringify(value);
   return String(value);
+}
+
+/// "added member ann@x.com · Payments, as Member". Older entries carry no e-mail: "a member".
+function describeMember(entry: AuditEntry, verb: string): AuditDescription {
+  const now = asRecord(entry.newValue);
+  const before = asRecord(entry.oldValue);
+  const email = now?.['email'] ?? before?.['email'];
+  const target = typeof email === 'string' && email ? email : 'a member';
+  const project = entry.entityLabel ?? 'a removed project';
+  const role = (value: Record<string, unknown> | null) => String(value?.['role'] ?? '—');
+  switch (entry.action) {
+    case 'project.member.roleChanged':
+      return { verb, target, detail: `${project}: ${role(before)} → ${role(now)}` };
+    case 'project.member.removed':
+      return { verb, target, detail: `${project}, was ${role(now)}` };
+    default:
+      return { verb, target, detail: `${project}, as ${role(now)}` };
+  }
 }
 
 function detailOf(entry: AuditEntry): string | null {

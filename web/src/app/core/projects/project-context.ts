@@ -1,4 +1,5 @@
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { computed, DestroyRef, effect, inject, Injectable, signal } from '@angular/core';
+import { NavigationContext } from '../layout/navigation-context';
 import { firstValueFrom } from 'rxjs';
 import { ApiClient } from '../api/api-client';
 import { ApiError, toApiError } from '../api/api-error';
@@ -69,6 +70,17 @@ export class ProjectContext {
   readonly notFound = computed(() => this.error()?.isNotFound ?? false);
 
   private token = 0;
+
+  constructor() {
+    const navigation = inject(NavigationContext);
+    effect(() => {
+      const project = this.project();
+      navigation.archivedProject.set(
+        project?.archivedAt ? { key: project.key, name: project.name } : null,
+      );
+    });
+    inject(DestroyRef).onDestroy(() => navigation.archivedProject.set(null));
+  }
 
   /// Shows the cached project at once (stale-while-revalidate) and fetches it once per key: calling
   /// it again for the same key while loading, loaded or failed does nothing; `reload()` retries.

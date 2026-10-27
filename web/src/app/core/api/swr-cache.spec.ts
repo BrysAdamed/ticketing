@@ -6,7 +6,9 @@ describe('SwrCache', () => {
     const cache = new SwrCache();
 
     // Act
-    const { cached, fresh } = cache.load('project:PAY', () => Promise.resolve({ name: 'Payments' }));
+    const { cached, fresh } = cache.load('project:PAY', () =>
+      Promise.resolve({ name: 'Payments' }),
+    );
 
     // Assert
     expect(cached).toBeUndefined();

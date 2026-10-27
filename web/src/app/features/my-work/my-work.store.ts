@@ -2,7 +2,9 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { ApiClient } from '@core/api/api-client';
 import { ApiError, toApiError } from '@core/api/api-error';
+import { SwrCache } from '@core/api/swr-cache';
 import { LoadStatus } from '@core/projects/project-directory';
+import { MY_WORK_TAG } from '@core/tickets/ticket-events';
 import { TicketSummary } from '@core/tickets/ticket.models';
 import { ExecutionMode } from '@shared/domain/enums';
 
@@ -41,6 +43,7 @@ export type WorkEntry =
 @Injectable()
 export class MyWorkStore {
   private readonly api = inject(ApiClient);
+  private readonly cache = inject(SwrCache);
 
   readonly work = signal<MyWork | null>(null);
   readonly status = signal<LoadStatus>('idle');
@@ -62,15 +65,22 @@ export class MyWorkStore {
   ]);
   readonly focused = computed(() => this.entries()[this.focusIndex()] ?? null);
 
+  /// Shows the last My work at once (stale-while-revalidate), then the fresh one.
   async load(): Promise<void> {
-    this.status.set('loading');
+    const { cached, fresh } = this.cache.load(
+      MY_WORK_TAG,
+      () => firstValueFrom(this.api.get<MyWork>('/me/work')),
+      [MY_WORK_TAG],
+    );
+    if (cached) this.work.set(cached);
+    this.status.set(this.work() ? 'loaded' : 'loading');
     try {
-      this.work.set(await firstValueFrom(this.api.get<MyWork>('/me/work')));
+      this.work.set(await fresh);
       this.error.set(null);
       this.status.set('loaded');
     } catch (error) {
       this.error.set(toApiError(error));
-      this.status.set('error');
+      if (!this.work()) this.status.set('error');
     }
   }
 

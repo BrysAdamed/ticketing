@@ -418,9 +418,35 @@ Format: question, options considered, decision, rationale. "PO" marks decisions 
 
 ### D-78 Field pickers from the keyboard
 
+Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
+
 - Question: the shortcut sheet in layout-and-screens.md used `A` for the assignee popover and `I` for "assign to me", while spec §10 and the backlog already used `a` for "assign to me" and the ticket view used `i`.
 - Decision: `s`, `p` and `i` open the status, priority and assignee picker in the backlog, on the board and in the ticket view; they apply to the selection when there is one, otherwise to the focused ticket. `a` is "assign to me" everywhere (spec §10). On the board, the picker opens under the focused card; status changes there are column moves (bottom of the column, `POST /tickets/move`). Assignee pickers search `GET /users?projectKey=` as you type (any active user on public projects), never a members-only list.
 - Rationale: one meaning per key across views, matching the spec; `i` reads as "assign…" and is free in all three views.
+
+### D-81 Jira keys for assigning, plus type, labels, move and delete
+
+- Question: D-78 made `a` "assign to me" and `i` the assignee picker. Our users come from Jira, where `a` opens the assignee field and `i` assigns to me (UX-07). Several keys were also missing (UX-08).
+- Decision: replaces D-78's key meanings. In the backlog, on the board and in the ticket view, `a` opens the assignee picker and `i` assigns the selection (or the focused ticket) to the signed-in user and shows a toast with Undo, which puts back each ticket's previous assignee. Backlog and ticket view also get `t` (type picker), `l` (labels picker), `m` (backlog: move to a board; ticket view: move to the backlog or a board, through `POST /tickets/move`) and `Delete` / `⌘⌫` (D-82). The backlog bulk bar gains Type and Move to board. A picker shows its key hint only when that key is registered in the current scope (`ShortcutService.isRegistered`), and every shortcut is ignored while a dialog, menu or picker (any overlay with a backdrop) is open.
+- Rationale: muscle memory beats internal consistency arguments; one meaning per key still holds across views.
+
+### D-82 Ticket delete is immediate, with Undo that restores on the server
+
+- Question: the UI asked "Delete?" in a dialog while the design asks for an immediate delete with an Undo toast (UX-36). Spec 6.2 removes links and test case references on delete and lists restore as LATER, so Undo needs a server-side restore that does not lose them.
+- Decision: delete happens at once (lists drop the row, an open peek closes) and a toast offers Undo for its 8 seconds. Undo calls `POST /api/v1/tickets/{key}/restore`, Owner only like delete, allowed for 10 minutes after the deletion (`ticket.restore.expired`, `ticket.notDeleted` otherwise). The `ticket.deleted` activity entry now records what the delete removed: board, rank, links (other ticket, type, direction, original author and time) and the unlinked test case ids; the ticket history shows only key and board, so linked private tickets are not exposed. Restore brings back the parent if it is alive and still allowed, the links whose other ticket is alive, the test cases not linked elsewhere meanwhile, and the placement: the original board if it is active and still links the project (else the backlog), at the original rank when that slot is free (else the default position: board bottom, backlog top). It writes `ticket.restored`. REST only; no MCP tool.
+- Rationale: an undo that only re-flags the row would silently drop links and test case coverage, which is worse than the confirm dialog; recording the removed relations in the delete entry keeps the schema unchanged and the undo complete. Ten minutes covers any Undo click with margin and keeps spec 6.2's "deleted is gone" semantics for everything older.
+
+### D-83 Project sections live in the sidebar only
+
+- Question: project pages had both sidebar sub-items and header tabs (UX-42); the mockups (backlog.html) show only the sidebar sub-items, a breadcrumb and the page's own header.
+- Decision: the project frame drops the header row and tabs and keeps only the archived banner; Dashboard, Backlog, Test cases, Regressions and Settings are sidebar sub-items of the current project (also shown in the collapsed rail, with tooltips). The breadcrumb names the project, and the document title reads `<page> · <project> · Ticketing` (one `TitleStrategy` for every route). An archived project, which the readable-projects list leaves out, stays in the sidebar while the user is in it. An unknown or inaccessible key renders one project-level not-found state instead of a frame with a failing section.
+- Rationale: one navigation path, as designed; the page header already says where you are, so the project header was a second title.
+
+### D-84 Stale-while-revalidate for read models, and one request per GET
+
+- Question: revisited pages rendered empty for 100–400 ms and the same GET often ran two or three times (UX-15, UX-16).
+- Decision: `ApiClient` shares identical GETs that are in flight at the same time; any write starts a new generation, so a GET issued after a write never joins an older one. `SwrCache` (core) keeps the last value of a read model by key with tags: the project (`project:KEY`), the backlog per filter set, My work and the dashboard. A view renders the cached value at once and replaces it when the refetch answers; while such a background refetch runs, the shell shows its 2px top line. Ticket events drop the cached lists of the affected project and My work, a list stores its edited state when it is left, and signing in or out clears the cache. The ticket view keeps using `TicketCache` (prefetched on hover).
+- Rationale: the spec's "cached data under 50 ms" with a small, explicit cache instead of a state library; tags keep invalidation coarse and safe.
 
 ### D-90 The test case editor autosaves
 

@@ -46,6 +46,7 @@
             class="nav"
             [routerLink]="['/projects', project.key]"
             [class.current]="project.key === currentProjectKey()"
+            [class.subtle]="project.archived"
             [attr.data-testid]="'nav-project-' + project.key"
             [matTooltip]="project.name"
             matTooltipPosition="right"
@@ -68,9 +69,7 @@
           </button>
         </div>
         @if (
-          layout.sidebarCollapsed()
-            ? project.key === currentProjectKey()
-            : isExpanded(project.key)
+          layout.sidebarCollapsed() ? project.key === currentProjectKey() : isExpanded(project.key)
         ) {
           @for (item of projectNav; track item.path) {
             <a

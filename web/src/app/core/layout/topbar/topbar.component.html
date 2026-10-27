@@ -7,9 +7,18 @@
       <tk-project-tile [projectKey]="crumb.projectKey" />
     }
     @if (last || !crumb.url) {
-      <span class="cur" [attr.aria-current]="last ? 'page' : null">{{ crumb.label }}</span>
+      <span
+        class="cur"
+        [attr.aria-current]="last ? 'page' : null"
+        [attr.data-testid]="crumb.projectKey ? 'breadcrumb-project' : null"
+        >{{ crumb.label }}</span
+      >
     } @else {
-      <a [routerLink]="crumb.url">{{ crumb.label }}</a>
+      <a
+        [routerLink]="crumb.url"
+        [attr.data-testid]="crumb.projectKey ? 'breadcrumb-project' : null"
+        >{{ crumb.label }}</a
+      >
     }
   }
 </nav>

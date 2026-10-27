@@ -100,7 +100,7 @@ Version: a `mat-autocomplete` that lists this project's previously used versions
   - **Child tickets**: section header "Sub-tickets 2/4" with a mini progress bar and `+ Add`. Children appear as compact 32px rows (status, key, title, assignee) and can be reordered by drag. `Add` offers create-new inline or link-existing (search popover).
   - **Test cases**: header "Test cases 3" with a `+ Add` button. Each row shows the status badge (New/Manual/Automatic), title, step count and a last-run result dot. Expanding a row reveals its numbered steps inline (editable list; Enter adds a step, drag reorders, `⌫` on an empty step removes it).
   - **Activity**: tabs `Comments · History · All`. Comments are cards with a 24px avatar, name, relative time (absolute on hover) and markdown body. Your own comments get `Edit`/`Delete` on hover. History entries are single muted lines with a 14px icon, such as "Anna moved from Review to Ready for Testing · 2h". The composer sits at the bottom of the main column (a sticky-on-focus textarea) with `⌘↵ Comment`.
-- **Field column** (280px, `--tk-bg-subtle` panel, label/value rows of 32px, labels 96px `sm` muted): Status (button styled with status icon + name; also `S`), Priority (`P`), Severity, Type, Assignee (`I`, plus "Assign to me" `A`), Reporter, Story points, Version, Labels (`L`), Parent (`⇧P`), Board / Backlog location, Created, Updated. Values are ghost buttons that become the hover background, with no visible input chrome until edited.
+- **Field column** (280px, `--tk-bg-subtle` panel, label/value rows of 32px, labels 96px `sm` muted): Status (button styled with status icon + name; also `S`), Priority (`P`), Severity, Type, Assignee (`A`, plus "Assign to me" `I`), Reporter, Story points, Version, Labels (`L`), Parent (`⇧P`), Board / Backlog location, Created, Updated. Values are ghost buttons that become the hover background, with no visible input chrome until edited.
 - Concurrency: if the ticket changes on the server while open, a subtle bar "Updated by Anna · Reload" appears. Edits to untouched fields merge silently.
 
 ### 3.4 Board [`board.kanban`] (mockup: `board.html`)
@@ -187,15 +187,17 @@ Single-key shortcuts are inactive while focus is in an input, textarea or conten
 | | `H` / `L` or `←` / `→` | Board: previous / next column |
 | | `Enter` / `Shift+Enter` | Open peek / open full page |
 | | `X`, `Shift+↓/↑`, `⌘A` | Select, extend selection, select all |
-| | `S` `P` `I` | Status, priority, assignee picker (applies to the selection, or to the focused item; D-78) |
-| | `A` | Assign to me |
+| | `S` `P` `T` `A` `L` | Status, priority, type, assignee, labels picker (applies to the selection, or to the focused item; D-81) |
+| | `I` | Assign to me (with undo toast) |
+| | `M` | Backlog: move to a board (picker) |
 | | `1`…`8` inside the status popover | Pick status by order |
 | | `Shift+H` / `Shift+L` | Board: move card to previous / next status |
-| | `⌘⌫` | Delete (with undo toast) |
-| Ticket | `S` `P` `I` / `A` | Status, priority, assignee picker / assign to me |
+| | `Del` / `⌘⌫` | Delete, Owners only (with undo toast, D-82) |
+| Ticket | `S` `P` `T` `A` `L` / `I` | Status, priority, type, assignee, labels picker / assign to me |
+| | `M` | Move to the backlog or a board |
+| | `Del` / `⌘⌫` | Delete, Owners only (with undo toast) |
 | | `E` | Edit title |
-| | `D` | Edit description |
-| | `M` | Focus comment composer, `⌘↵` sends |
+| | `Shift+E` | Edit description |
 | | `⌘.` / `⌘⇧.` | Copy key / copy link |
 | | `⇧P` | Set parent |
 | Regression session | `P` / `F` / `B` / `S` | Pass / Fail / Blocked / Skip the focused item |

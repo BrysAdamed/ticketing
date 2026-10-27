@@ -48,10 +48,8 @@ export class MoveTargets {
     const key = projectKey.toUpperCase();
     const cached = this.boards.get(key);
     if (cached && Date.now() - cached.at < FRESH_MS) return cached.request;
-    const request = firstValueFrom(
-      this.api.list({ projectKey: key }, { limit: BOARD_LIMIT }),
-    ).then((page) =>
-      page.items.filter((b) => !b.archivedAt).map((b) => ({ id: b.id, name: b.name })),
+    const request = firstValueFrom(this.api.list({ projectKey: key }, { limit: BOARD_LIMIT })).then(
+      (page) => page.items.filter((b) => !b.archivedAt).map((b) => ({ id: b.id, name: b.name })),
     );
     request.catch(() => this.boards.delete(key));
     this.boards.set(key, { at: Date.now(), request });

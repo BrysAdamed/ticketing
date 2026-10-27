@@ -181,14 +181,13 @@ export class BacklogView {
   protected readonly listHeight = signal(480);
   /// The list fills the window below the toolbar, minus the "on boards" footer and, while tickets
   /// are selected, the floating bulk bar, so the last rows can scroll above it.
-  protected readonly viewportHeight = computed(
-    () =>
-      Math.max(
-        160,
-        this.listHeight() -
-          (this.store.onBoardsCount() > 0 ? ON_BOARDS_FOOTER_PX : 0) -
-          (this.selectionCount() > 0 ? BULK_BAR_CLEARANCE_PX : 0),
-      ),
+  protected readonly viewportHeight = computed(() =>
+    Math.max(
+      160,
+      this.listHeight() -
+        (this.store.onBoardsCount() > 0 ? ON_BOARDS_FOOTER_PX : 0) -
+        (this.selectionCount() > 0 ? BULK_BAR_CLEARANCE_PX : 0),
+    ),
   );
   private readonly scrollTop = signal(0);
   protected readonly scrollbarWidth = signal(0);
@@ -254,7 +253,8 @@ export class BacklogView {
     effect(() => {
       this.viewportHeight();
       const viewport = this.viewport();
-      if (viewport) afterNextRender(() => viewport.checkViewportSize(), { injector: this.injector });
+      if (viewport)
+        afterNextRender(() => viewport.checkViewportSize(), { injector: this.injector });
     });
 
     inject(ShortcutService).registerScoped([

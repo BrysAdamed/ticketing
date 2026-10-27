@@ -31,7 +31,10 @@ public static class UnarchiveProject
 
                 activity.Record(ActivityEntityType.Project, project.Id, project.Id, "project.unarchived");
                 if (newOwner is not null)
-                    activity.Record(ActivityEntityType.Project, project.Id, project.Id, "project.member.ownerRestored", new { userId = newOwner.UserId, role = newOwner.Role });
+                {
+                    var email = await ProjectMembership.EmailOfAsync(db, newOwner.UserId, ct);
+                    activity.Record(ActivityEntityType.Project, project.Id, project.Id, "project.member.ownerRestored", new { userId = newOwner.UserId, email, role = newOwner.Role });
+                }
                 await db.SaveChangesAsync(ct);
                 return await GetProject.Handler.LoadAsync(db, grant with { IsArchived = false }, ct);
             }, cancellationToken);

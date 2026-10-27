@@ -7,7 +7,11 @@ import { BOARD_VIEW, BOARDS_LIST_VIEW } from './boards.views';
 
 const boardTitle = (route: ActivatedRouteSnapshot) => {
   const id = route.paramMap.get('boardId');
-  return inject(BoardDirectory).boards().find((b) => b.id === id)?.name ?? 'Board';
+  return (
+    inject(BoardDirectory)
+      .boards()
+      .find((b) => b.id === id)?.name ?? 'Board'
+  );
 };
 
 export default [

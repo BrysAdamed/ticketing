@@ -38,6 +38,7 @@ Items triaged as LATER in [product/02-improvements-triage.md](product/02-improve
 | I-35 | Sprints with dates, goal, velocity and burndown | Scrum metrics. Board archive covers the flow until then. | L |
 | I-53 | Releases with release notes | Turns the free-text version into a managed release. | M |
 | I-75 | Stale ticket housekeeping | Bulk close or flag long-untouched tickets. | S |
+| – | Readable board URLs | `/boards/{guid}` is hard to read and share by voice; a short board key or slug (`/boards/web-sprint-42`) with the id as fallback (UX review UX-38). Needs a unique, renamable slug and redirects from old slugs. | S |
 
 ## Tickets and search
 
@@ -52,7 +53,7 @@ Items triaged as LATER in [product/02-improvements-triage.md](product/02-improve
 | I-42 | Clone ticket | Convenience for repeated work. | S |
 | I-43 | Description templates per ticket type | Better bug reports. | S |
 | I-46 | Due dates | Some teams track deadlines. | S |
-| I-56 | Restore deleted tickets from the UI | Undo for Owner mistakes. | S |
+| I-56 | Restore deleted tickets from the UI | Undo for Owner mistakes. The 10-minute Undo exists (D-82); this is a "recently deleted" list for older deletions. | S |
 | I-40 | Bulk field edit in the UI | Change many tickets at once without MCP. | M |
 | I-41 | Move ticket to another project | New key plus redirect from the old one. | M |
 | I-64 | Project key rename with redirects | Rare, risky, but asked for eventually. | M |

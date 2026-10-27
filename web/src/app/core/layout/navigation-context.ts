@@ -1,4 +1,4 @@
-import { computed, inject, Injectable } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router } from '@angular/router';
 import { filter, map } from 'rxjs';
@@ -31,6 +31,10 @@ export class NavigationContext {
     }
     return null;
   });
+
+  /// The open project when it is archived, so the sidebar can keep it (and its sections) while the
+  /// user is in it; the readable-projects list leaves archived projects out.
+  readonly archivedProject = signal<{ key: string; name: string } | null>(null);
 
   projectUrl(view?: string): string | null {
     const key = this.projectKey();

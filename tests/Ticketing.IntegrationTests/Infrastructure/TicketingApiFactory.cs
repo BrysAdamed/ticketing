@@ -2,6 +2,7 @@ using System.Net;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Logging;
 using Npgsql;
 using Respawn;
 using Ticketing.Application.Abstractions;
@@ -27,6 +28,9 @@ public sealed class TicketingApiFactory : WebApplicationFactory<Program>, IAsync
 
     public string ConnectionString { get; private set; } = string.Empty;
 
+    /// <summary>What the host logged at Information and above (the production default level) since the current test started.</summary>
+    public CapturedLogs Logs { get; } = new();
+
     public async ValueTask InitializeAsync()
     {
         ConnectionString = await PostgresServer.CreateDatabaseAsync(TestContext.Current.CancellationToken);
@@ -48,6 +52,7 @@ public sealed class TicketingApiFactory : WebApplicationFactory<Program>, IAsync
         await connection.OpenAsync();
         await _respawner.ResetAsync(connection);
         Services.GetRequiredService<IFeatureFlagStore>().Invalidate();
+        Logs.Clear();
     }
 
     public ValueTask OnTestFinishedAsync(IXunitTest test) => ValueTask.CompletedTask;
@@ -64,6 +69,10 @@ public sealed class TicketingApiFactory : WebApplicationFactory<Program>, IAsync
         builder.UseSetting("Logging:Console:FormatterName", "simple");
         builder.UseSetting("Logging:LogLevel:Default", "Warning");
         builder.UseSetting("Logging:LogLevel:Microsoft.AspNetCore", "Error");
+        builder.ConfigureLogging(logging => logging
+            .AddProvider(Logs)
+            .AddFilter<CapturedLogs>(null, LogLevel.Information)
+            .AddFilter<CapturedLogs>("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Warning));
         builder.ConfigureServices(services => services.AddSingleton<IStartupFilter, RemoteAddressStartupFilter>());
     }
 

@@ -150,8 +150,12 @@ public sealed class PromptTemplate
         }
     }
 
+    private const int EchoedNameMaxLength = 40;
+
     private static string UnknownMessage(string name) =>
-        name.Length == 0 ? "A placeholder needs a name, for example {{ticket.key}}." : $"Unknown placeholder '{name}'.";
+        name.Length == 0
+            ? "A placeholder needs a name, for example {{ticket.key}}."
+            : $"Unknown placeholder '{(name.Length > EchoedNameMaxLength ? name[..EchoedNameMaxLength] + "…" : name)}'.";
 
     private static (int Line, int Column) Position(string body, int index)
     {

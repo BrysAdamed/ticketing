@@ -47,3 +47,7 @@ docs/                        glossary, ADRs, workflows, decisions, ideas, design
 * `src/app/shared` — reusable presentational components (badges, avatars, markdown, chips).
 * `src/app/features/<feature>` — lazily loaded route trees; each feature owns its `*.routes.ts`.
 * Each routed page is split into a **store** (signal-based state + API calls) and a **view** (presentational). See ADR on A/B-ready views.
+
+## Security notes
+
+* [agent-delegation-threats.md](agent-delegation-threats.md) — threat model for Delegate to agent (deep links, prompt injection, templates, PATs, local folders), with the control and test for each threat.

@@ -106,8 +106,8 @@ public sealed record AgentPromptOutsiderContentDto(AgentPromptContentSource Sour
 
 /// <summary>
 /// The prompt for a ticket after resolution (spec 13.5), with the template and guardrails versions it was built from.
-/// <see cref="OutsiderContent"/> is set on public projects when the latest description write or comment came from a
-/// non-member, so clients can warn before launching.
+/// <see cref="OutsiderContent"/> is set on public projects when any title or description write, comment or attachment came
+/// from a non-member (the newest one), so clients can warn before launching.
 /// </summary>
 public sealed record ResolvedAgentPromptDto(
     string Prompt, string TicketKey, TicketType TicketType, AgentPromptTemplateRefDto Template, int GuardrailsVersion, AgentPromptOutsiderContentDto? OutsiderContent);

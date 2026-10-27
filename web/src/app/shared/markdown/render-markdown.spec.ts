@@ -172,6 +172,103 @@ describe('renderMarkdown', () => {
     });
   });
 
+  describe('app-launching links (agent delegation threat model)', () => {
+    const LAUNCH_SCHEME = /^(?:claude-cli|claude|vscode|ticketing-agent):/i;
+    // eslint-disable-next-line no-control-regex
+    const BROWSER_IGNORED = /[\u0000-\u0020]/g;
+    const launching = (dom: HTMLElement) =>
+      [...dom.querySelectorAll('*')].flatMap((element) =>
+        [...element.attributes]
+          .map((attribute) => attribute.value.replace(BROWSER_IGNORED, ''))
+          .filter((value) => LAUNCH_SCHEME.test(value)),
+      );
+
+    const urls = [
+      'claude-cli://open?q=rm%20-rf',
+      'claude://code/new?q=x',
+      'vscode://file/C:/x',
+      'ticketing-agent://run?ticket=TKT-1',
+      'CLAUDE-CLI://open?q=x',
+      'Claude://code/new?q=x',
+      'VsCode://file/x',
+      'Ticketing-Agent://run',
+    ];
+    const syntaxes: [string, (url: string) => string][] = [
+      ['inline link', (url) => `[open](${url})`],
+      ['inline link with title', (url) => `[open](${url} "Open")`],
+      ['angle-bracket destination', (url) => `[open](<${url}>)`],
+      ['autolink', (url) => `<${url}>`],
+      ['reference-style link', (url) => `[open][1]\n\n[1]: ${url}`],
+      ['collapsed reference', (url) => `[open][]\n\n[open]: ${url}`],
+      ['image', (url) => `![shot](${url})`],
+      ['reference-style image', (url) => `![shot][i]\n\n[i]: ${url}`],
+      ['linked image', (url) => `[![shot](/a.png)](${url})`],
+      ['raw HTML anchor', (url) => `<a href="${url}">open</a>`],
+      ['raw HTML image', (url) => `<img src="${url}">`],
+      ['link inside a list and a table', (url) => `- [a](${url})\n\n| x |\n|---|\n| [b](${url}) |`],
+    ];
+
+    it.each(
+      syntaxes.flatMap(([name, build]) => urls.map((url) => [name, url, build(url)] as const)),
+    )('strips %s to %s', (_name, _url, source) => {
+      // Act
+      const dom = parse(renderMarkdown(source));
+
+      // Assert
+      expect(launching(dom)).toEqual([]);
+    });
+
+    it.each([
+      ['entity-encoded hyphen', '[open](claude&#45;cli://open?q=x)'],
+      ['entity-encoded first letter', '[open](&#99;laude-cli://open?q=x)'],
+      ['hex entity colon', '[open](claude-cli&#x3A;//open?q=x)'],
+      ['named entity colon', '[open](claude-cli&colon;//open?q=x)'],
+      ['entity-encoded reference', '[open][r]\n\n[r]: &#118;scode://file/x'],
+      ['tab inside the scheme', '[open](<claude\t-cli://open>)'],
+      ['leading space in an angle destination', '[open](< claude-cli://open>)'],
+      ['newline inside a raw anchor', '<a href="claude-\ncli://x">open</a>'],
+      ['NUL before the scheme', '[open](\u0000claude-cli://open)'],
+      ['entity-encoded raw anchor', '<a href="&#99;laude://code/new">open</a>'],
+    ])('strips an obfuscated scheme: %s', (_name, source) => {
+      // Act
+      const dom = parse(renderMarkdown(source));
+
+      // Assert
+      expect(launching(dom)).toEqual([]);
+    });
+
+    it('keeps http(s), mailto, relative and ticket links working next to a stripped one', () => {
+      // Act
+      const dom = parse(
+        renderMarkdown(
+          '[a](https://example.com) [b](mailto:x@example.com) [c](/tickets/TKT-1) [d](#top) [e](claude-cli://open) TKT-2',
+        ),
+      );
+
+      // Assert
+      expect([...dom.querySelectorAll('a[href]')].map((a) => a.getAttribute('href'))).toEqual([
+        'https://example.com',
+        'mailto:x@example.com',
+        '/tickets/TKT-1',
+        '#top',
+        '/tickets/TKT-2',
+      ]);
+      expect(dom.textContent).toContain('e');
+    });
+
+    it('drops other non-web schemes too (allowlist, not blocklist)', () => {
+      // Act
+      const dom = parse(
+        renderMarkdown(
+          '[a](tel:123) [b](sms:1) [c](file:///C:/x) [d](ms-word:ofe|u|x) [e](data:text/html,x)',
+        ),
+      );
+
+      // Assert
+      expect(dom.querySelectorAll('a[href]').length).toBe(0);
+    });
+  });
+
   it('returns an empty string for empty input', () => {
     expect(renderMarkdown(null)).toBe('');
     expect(renderMarkdown('')).toBe('');

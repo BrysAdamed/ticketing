@@ -106,6 +106,9 @@ This file is the pool of unscheduled ideas. Once an idea is scheduled it becomes
 | - | Evaluate the default agent prompts | The built-ins (D-102) are hypotheses. The prompt designer's evaluation plan (04-delegate-to-agent-prompts.md §6: a sandbox stack, 2–3 historical tickets per type, injection probes, a rubric with safety as a gate, and field data from the `Delegated run` marker) would show which wording works before the next release. | M |
 | - | Deny rules for delegated runs | The prompt designer wanted `--disallowedTools` for tracker writes a delegated run never needs and for force-pushes (§2.2). A deep link cannot pass flags, so v1 relies on the guardrails and on `requiresUserInteraction` for destructive tools (D-102); our own helper (I-124) or a shipped `.claude/settings.json` snippet could add them. | S |
 | - | Editable merge-policy sentences | The two `{{finish}}` sentences ship fixed with the built-ins (D-98); an Admin may want to word them for the company's forge and review flow. | S |
+| - | Record the prompt versions a delegation actually launched (TKT-42) | The delegation record resolves at POST time, so a template changed after the page loaded is recorded instead of the one that ran (TKT-33 review). | S |
+| - | Outsider warning for linked tickets, test cases and once-public content (TKT-43) | The agent also reads related items, and a project turned private stops warning about text outsiders wrote while it was public (TKT-33, D-104). | S |
+| - | Project-scoped personal access tokens | A token limited to one project would cap what a hijacked agent or a stolen PAT can change (research §4.4, agent delegation threat model T5). | M |
 
 ## Experiments and UI
 

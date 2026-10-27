@@ -76,44 +76,49 @@ public static class ResolveAgentPrompt
         }
 
         /// <summary>
-        /// On a public project, the latest of the current description's last write and the latest comment whose author is
-        /// neither a member of the project nor an Admin (D-100); null on private projects or when both came from insiders.
+        /// On a public project, the newest text the agent reads over MCP that someone who is neither a member of the project
+        /// nor an Admin wrote (D-100, D-104): any title or description write (creation included), any non-deleted comment
+        /// (at its last edit) and any attachment. Later writes by insiders never clear it, because the outsider's text may
+        /// still be there. Null on private projects or when every such write came from insiders.
         /// </summary>
         private async Task<OutsiderContent?> OutsiderContentAsync(TicketTarget ticket, CancellationToken cancellationToken)
         {
             if (ticket.Grant.Visibility != ProjectVisibility.Public)
                 return null;
 
-            var description = await db.ActivityEntries
+            var insiders = db.Users.Where(u => u.GlobalRole == GlobalRole.Admin).Select(u => u.Id)
+                .Concat(db.ProjectMembers.Where(m => m.ProjectId == ticket.ProjectId).Select(m => m.UserId));
+
+            var text = await db.ActivityEntries
                 .AsNoTracking()
                 .Where(a => a.EntityType == ActivityEntityType.Ticket && a.EntityId == ticket.Id
-                    && (a.Action == CreateTicket.Action || (a.Action == UpdateTicket.FieldChanged && a.Field == "description")))
+                    && (a.Action == CreateTicket.Action || (a.Action == UpdateTicket.FieldChanged && (a.Field == "title" || a.Field == "description")))
+                    && a.ActorId != null && !insiders.Contains(a.ActorId.Value))
                 .OrderByDescending(a => a.OccurredAt)
-                .Select(a => new { a.ActorId, a.OccurredAt })
+                .Select(a => new { AuthorId = a.ActorId!.Value, a.Field, a.OccurredAt })
                 .FirstOrDefaultAsync(cancellationToken);
             var comment = await db.Comments
                 .AsNoTracking()
-                .Where(c => c.TicketId == ticket.Id && c.DeletedAt == null)
-                .OrderByDescending(c => c.CreatedAt)
-                .Select(c => new { c.AuthorId, c.CreatedAt })
+                .Where(c => c.TicketId == ticket.Id && c.DeletedAt == null && !insiders.Contains(c.AuthorId))
+                .Select(c => new { c.AuthorId, At = c.EditedAt ?? c.CreatedAt })
+                .OrderByDescending(c => c.At)
+                .FirstOrDefaultAsync(cancellationToken);
+            var attachment = await db.Attachments
+                .AsNoTracking()
+                .Where(a => a.TicketId == ticket.Id && !insiders.Contains(a.UploadedById))
+                .OrderByDescending(a => a.UploadedAt)
+                .Select(a => new { a.UploadedById, a.UploadedAt })
                 .FirstOrDefaultAsync(cancellationToken);
 
-            var candidates = new List<OutsiderContent>(2);
-            if (description?.ActorId is { } describer)
-                candidates.Add(new OutsiderContent(AgentPromptContentSource.Description, describer, description.OccurredAt));
+            var candidates = new List<OutsiderContent>(3);
+            if (text is not null)
+                candidates.Add(new OutsiderContent(
+                    text.Field == "title" ? AgentPromptContentSource.Title : AgentPromptContentSource.Description, text.AuthorId, text.OccurredAt));
             if (comment is not null)
-                candidates.Add(new OutsiderContent(AgentPromptContentSource.Comment, comment.AuthorId, comment.CreatedAt));
-            if (candidates.Count == 0)
-                return null;
-
-            var authors = candidates.Select(c => c.AuthorId).Distinct().ToList();
-            var insiders = await db.Users
-                .AsNoTracking()
-                .Where(u => authors.Contains(u.Id)
-                    && (u.GlobalRole == GlobalRole.Admin || db.ProjectMembers.Any(m => m.ProjectId == ticket.ProjectId && m.UserId == u.Id)))
-                .Select(u => u.Id)
-                .ToListAsync(cancellationToken);
-            return candidates.Where(c => !insiders.Contains(c.AuthorId)).OrderByDescending(c => c.At).FirstOrDefault();
+                candidates.Add(new OutsiderContent(AgentPromptContentSource.Comment, comment.AuthorId, comment.At));
+            if (attachment is not null)
+                candidates.Add(new OutsiderContent(AgentPromptContentSource.Attachment, attachment.UploadedById, attachment.UploadedAt));
+            return candidates.OrderByDescending(c => c.At).FirstOrDefault();
         }
 
         private sealed record OutsiderContent(AgentPromptContentSource Source, Guid AuthorId, DateTimeOffset At);

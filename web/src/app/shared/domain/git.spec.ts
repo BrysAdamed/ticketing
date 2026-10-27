@@ -22,6 +22,11 @@ describe('normalizeGitRemote', () => {
     'https://git.example.com/team/../repo',
     'https://user:secret@git.example.com/team/repo',
     'C:\\repos\\ticketing',
+    'https://ghp_0123456789abcdefghijABCDEFGHIJ012345@github.com/o/r.git',
+    'https://GLPAT-abcdefghij0123456789@gitlab.com/o/r.git',
+    'https://tkt_abcdefghij0123456789@git.example.com/o/r.git',
+    'https://abcdefghijabcdefghijabcdefghijabcdefghijabcdefghijab@dev.azure.com/o/p/_git/r',
+    'ssh://-oProxyCommand@git.example.com/team/repo',
   ])('rejects %s', (value) => {
     // Act
     const normalized = normalizeGitRemote(value);
@@ -37,11 +42,25 @@ describe('isValidGitBranch', () => {
     expect(isValidGitBranch(name)).toBe(true);
   });
 
-  it.each(['', 'a b', '-x', 'x/', 'x.', 'a..b', 'a//b', 'x@{1}', '@', '.hidden', 'x.lock', 'a~1'])(
-    'rejects %s',
-    (name) => {
-      // Act & Assert
-      expect(isValidGitBranch(name)).toBe(false);
-    },
-  );
+  it.each([
+    '',
+    'a b',
+    '-x',
+    'x/',
+    'x.',
+    'a..b',
+    'a//b',
+    'x@{1}',
+    '@',
+    '.hidden',
+    'x.lock',
+    'a~1',
+    'a;b',
+    'a$b',
+    'a|b',
+    '</x>',
+  ])('rejects %s', (name) => {
+    // Act & Assert
+    expect(isValidGitBranch(name)).toBe(false);
+  });
 });

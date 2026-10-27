@@ -65,6 +65,37 @@ public sealed class AgentPromptLeakTests(TicketingApiFactory api)
         Assert.Equal(absent.GetProperty("type").GetString(), hidden.GetProperty("type").GetString());
     }
 
+    public static TheoryData<string, string> WritePaths => new()
+    {
+        { "PUT", "/Bug" },
+        { "POST", "/Bug/reset" },
+        { "POST", "/Bug/versions/1/restore" },
+    };
+
+    [Theory]
+    [MemberData(nameof(WritePaths))]
+    public async Task Writes_to_a_private_projects_prompts_are_the_same_404_for_outsiders_as_for_a_missing_project(string method, string path)
+    {
+        // Arrange
+        var owner = await api.CreateUserAsync();
+        var outsider = await api.CreateUserAsync();
+        await api.ProjectAsync(owner, "PRIV");
+        await api.EnableAgentFlagAsync(owner, outsider);
+        await (await (await api.LoginAsync(owner)).PutPromptAsync("PRIV", "Bug", new { mode = "Off", baseVersion = 0 })).ShouldHaveStatusAsync(HttpStatusCode.OK);
+        var client = await api.LoginAsync(outsider);
+        var body = new { mode = "Inherit", baseVersion = 1 };
+
+        // Act
+        var hidden = await SendAsync(client, method, "PRIV", path, body);
+        var missing = await SendAsync(client, method, "NOPE", path, body);
+
+        // Assert
+        var hiddenProblem = await hidden.ShouldBeProblemAsync(HttpStatusCode.NotFound, ProjectErrors.NotFound);
+        var missingProblem = await missing.ShouldBeProblemAsync(HttpStatusCode.NotFound, ProjectErrors.NotFound);
+        Assert.Equal(missingProblem.GetProperty("type").GetString(), hiddenProblem.GetProperty("type").GetString());
+        Assert.Equal(1, await api.PromptActivityCountAsync());
+    }
+
     [Fact]
     public async Task Resolving_a_prompt_hides_private_tickets_from_outsiders()
     {
@@ -87,10 +118,15 @@ public sealed class AgentPromptLeakTests(TicketingApiFactory api)
         Assert.Equal(privateTicket, asAdmin.TicketKey);
     }
 
-    private async Task<HttpResponseMessage> SendAsync(HttpClient client, string method, string projectKey, string path)
+    private async Task<HttpResponseMessage> SendAsync(HttpClient client, string method, string projectKey, string path, object? body = null)
     {
         var uri = $"/api/v1/projects/{projectKey}/agent/prompts{path}";
-        return method == "GET" ? await client.GetAsync(uri, _ct) : await client.PostAsJsonAsync(uri, new { }, _ct);
+        return method switch
+        {
+            "GET" => await client.GetAsync(uri, _ct),
+            "PUT" => await client.PutAsJsonAsync(uri, body ?? new { }, _ct),
+            _ => await client.PostAsJsonAsync(uri, body ?? new { }, _ct),
+        };
     }
 
     private Task<ResolvedAgentPromptDto> ResolveAsync(TestUser user, string ticketKey) =>

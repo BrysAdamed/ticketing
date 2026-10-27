@@ -120,6 +120,12 @@ public sealed class TicketEndpoints : IEndpointModule
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict);
 
+        ticket.MapGet("/children/graph", async (string keyOrId, GetChildrenGraph.Handler handler, CancellationToken ct) =>
+            TypedResults.Ok(await handler.HandleAsync(new GetChildrenGraph.Query(keyOrId), ct)))
+            .WithSummary("The children of a ticket as a graph: nodes (children, plus readable linked tickets outside the parent as external nodes, "
+                + "with a blocked flag) and edges (links between them; Blocks goes from the blocking ticket).")
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
         ticket.MapGet("/history", async (string keyOrId, int? limit, string? cursor, GetTicketHistory.Handler handler, CancellationToken ct) =>
             TypedResults.Ok(await handler.HandleAsync(new GetTicketHistory.Query(keyOrId, new PageRequest(limit, cursor)), ct)))
             .WithSummary("Activity entries of the ticket, newest first.");

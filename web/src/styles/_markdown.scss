@@ -132,4 +132,46 @@
     font-weight: var(--tk-weight-medium);
     font-variant-numeric: tabular-nums;
   }
+
+  .tk-mention {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 20px;
+    max-width: 100%;
+    padding: 0 6px 0 2px;
+    border-radius: var(--tk-radius-full);
+    background: var(--tk-accent-subtle);
+    color: var(--tk-accent-fg);
+    font-size: var(--tk-text-base);
+    font-weight: var(--tk-weight-medium);
+    line-height: 20px;
+    vertical-align: bottom;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .tk-mention-avatar {
+    flex: none;
+    width: 16px;
+    height: 16px;
+    display: inline-grid;
+    place-items: center;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--tk-mention-avatar-bg) var(--tk-tint-avatar), transparent);
+    color: var(--tk-mention-avatar-fg);
+    font-size: 8px;
+    font-weight: var(--tk-weight-semibold);
+    line-height: 1;
+    letter-spacing: 0.01em;
+    user-select: none;
+  }
+
+  @for $i from 0 through 7 {
+    .tk-mention-avatar.tk-palette-#{$i} {
+      --tk-mention-avatar-bg: var(--tk-palette-#{$i});
+      --tk-mention-avatar-fg: var(--tk-palette-#{$i}-fg);
+    }
+  }
 }

@@ -223,7 +223,7 @@ public sealed class TokenTests(TicketingApiFactory api)
             result = await scope.ServiceProvider.GetRequiredService<DataRetention>().PurgeAsync(_ct);
 
         // Assert
-        Assert.Equal(new RetentionResult(2, 1, 0, 0), result);
+        Assert.Equal(new RetentionResult(2, 1, 0, 0, 0), result);
         var remaining = await api.WithDbAsync(db => db.PersonalAccessTokens.Select(t => t.Name).OrderBy(n => n).ToListAsync(_ct));
         Assert.Equal(["active", "expired-recently", "revoked-recently"], remaining);
         Assert.Equal(["fresh-key"], await api.WithDbAsync(db => db.IdempotencyRecords.Select(r => r.Key).ToListAsync(_ct)));

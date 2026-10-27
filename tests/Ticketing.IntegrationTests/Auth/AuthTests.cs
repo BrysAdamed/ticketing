@@ -192,7 +192,7 @@ public sealed class AuthTests(TicketingApiFactory api)
             result = await scope.ServiceProvider.GetRequiredService<DataRetention>().PurgeAsync(_ct);
 
         // Assert
-        Assert.Equal(new RetentionResult(0, 0, 1, 1), result);
+        Assert.Equal(new RetentionResult(0, 0, 1, 1, 0), result);
         Assert.Equal(["203.0.113.2"], await api.WithDbAsync(db => db.LoginThrottles.Select(t => t.ClientAddress).ToListAsync(_ct)));
     }
 

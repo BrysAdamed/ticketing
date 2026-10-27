@@ -17,6 +17,7 @@ Every write described below runs inside one application handler, in one database
 9. [MCP request flow](#9-mcp-request-flow)
 10. [Attachment upload](#10-attachment-upload)
 11. [Watching tickets](#11-watching-tickets)
+12. [Notifications](#12-notifications)
 
 ## 1. Ticket lifecycle and status side effects
 
@@ -650,4 +651,41 @@ stateDiagram-v2
 ```
 
 - Watch and unwatch need read access only and a write-scoped token; both are idempotent and record no history.
-- A hidden watcher keeps the row but is left out of the watcher list, the `watching=true` search, My work and (later) notifications, because every reader re-checks access.
+- A hidden watcher keeps the row but is left out of the watcher list, the `watching=true` search, My work and notifications (section 12), because every reader re-checks access.
+
+## 12. Notifications
+
+Spec [§6.16](../product/01-refined-spec.md#616-in-app-notifications-i-30-d-94), D-94. Notifications are derived in the same save as watchers (section 11): after `WatchingRules`, `NotificationRules` turns the events into candidates (recipient, kind), the projector drops the actor and anyone who cannot read the project, renders the summary and merges each candidate into an open notification or adds a new one. Every query is batched per save.
+
+```mermaid
+sequenceDiagram
+    participant H as Handler (any write)
+    participant P as CollaborationProjector
+    participant DB as PostgreSQL
+    H->>P: activity entries of this save (SaveChangesAsync)
+    P->>P: WatchingRules, then NotificationRules
+    Note over P: assignee of a new or reassigned ticket: Assigned<br/>assignee of a regression item: RegressionItemAssigned<br/>watchers on comment, status, priority raised to High/Highest,<br/>move (incl. board archive/delete), delete
+    P->>DB: watchers of the tickets (stored + added in this save)
+    P->>DB: who of the recipients can read the project (active; Admin, public or member)
+    P->>DB: board and session names for summaries
+    P->>DB: unread notifications of these recipients and subjects created in the last 5 minutes
+    P->>P: skip the actor; merge into an open notification (same recipient, actor, ticket or session) or add a new one
+    P->>H: notifications join the same transaction as the change
+```
+
+```mermaid
+stateDiagram-v2
+    [*] --> Unread: first event (eventCount 1)
+    Unread --> Unread: same actor and ticket, within 5 min of the first event (eventCount + 1, higher-ranked headline wins)
+    Unread --> Read: mark read (ids or all)
+    Read --> [*]: purged after 90 days
+    Unread --> [*]: purged after 90 days
+    Unread --> Hidden: recipient loses read access
+    Read --> Hidden: recipient loses read access
+    Hidden --> Unread: access returns (if unread)
+    Hidden --> Read: access returns (if read)
+```
+
+- A change after the 5-minute window, by another actor, or after the notification was read starts a new notification.
+- The summary is rendered on the server without user-written text; ticket key and title come from the ticket when listing, and a deleted ticket is flagged.
+- Hidden notifications keep their row: the list and the unread count join the projects the reader can read now.

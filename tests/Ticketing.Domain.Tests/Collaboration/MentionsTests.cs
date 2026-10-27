@@ -92,10 +92,21 @@ public sealed class MentionsTests
     [InlineData("```\ncode\n```\n{0}")]
     [InlineData("```\n``` not a close\n```\n{0}")]
     [InlineData("`a` {0} `b`")]
+    [InlineData("{0} `b`")]
     public void Mentions_outside_code_count(string template)
     {
         // Act
         var ids = Mentions.UserIds(string.Format(System.Globalization.CultureInfo.InvariantCulture, template, M(Maya)));
+
+        // Assert
+        Assert.Equal([Maya], ids);
+    }
+
+    [Fact]
+    public void Only_the_start_of_a_token_decides_whether_it_is_in_code()
+    {
+        // Act
+        var ids = Mentions.UserIds($"@[a`b](user:{Maya}) `x`");
 
         // Assert
         Assert.Equal([Maya], ids);

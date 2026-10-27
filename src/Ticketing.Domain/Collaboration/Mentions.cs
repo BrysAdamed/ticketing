@@ -10,8 +10,8 @@ public readonly record struct EmailMention(string Email, int Start, int Length);
 
 /// <summary>
 /// The mention syntax of ticket descriptions and comments (D-95). The id is authoritative and the name only a fallback, so a
-/// stored mention survives renames. Mentions inside inline code spans and fenced code blocks are not mentions; the web client
-/// applies the same rules.
+/// stored mention survives renames. A mention whose <c>@</c> lies inside an inline code span or a fenced code block is not a
+/// mention (indented code blocks are not treated as code); the web client applies the same rules.
 /// </summary>
 public static partial class Mentions
 {
@@ -24,7 +24,7 @@ public static partial class Mentions
 
         var code = CodeRanges(markdown);
         return [.. TokenPattern().Matches(markdown)
-            .Where(m => !Overlaps(code, m.Index, m.Length))
+            .Where(m => !Overlaps(code, m.Index, 1))
             .Select(m => new MentionToken(Guid.Parse(m.Groups[2].Value), m.Groups[1].Value, m.Index, m.Length))];
     }
 

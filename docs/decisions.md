@@ -591,6 +591,16 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
   - Quick jump stays one request: the existing `/quick-jump` also answers doc keys and appends up to 5 docs with snippets after the tickets (`QuickJumpKind.Doc`, new optional fields). The palette's "Recent docs" (empty query) are the docs the user viewed last, kept per user in `localStorage` like recent boards, so they need no endpoint.
   - The endpoint lives in `SearchEndpoints` and the tool in `SearchTools`, next to ticket search, and reuses its query-string parameter reader.
 - Rationale: one ranked query keeps search and quick jump consistent and fast (p95 under 150 ms with 20 000 docs and 200 000 tickets, `DocSearchPerformanceTests`). Control-character marks cannot be confused with markup in the content, and returning ranges instead of `<mark>` HTML keeps the API safe for every client, including LLMs.
+
+### D-104 Palette scope prefixes `p:` and `t:` are registered scopes, answered by one scoped quick-jump request (TKT-40)
+
+- Question: how the command palette narrows to docs (`p:`) or tickets (`t:`) as the docs design (screens §9) shows, without the core palette knowing about docs or tickets.
+- Decision:
+  - The core palette knows only `PaletteScope { id, prefix, hint }`, registered through `CommandRegistry.registerScope`. `parsePaletteQuery` strips a leading prefix (any case, leading spaces ignored). While a scope is active, commands are hidden, only search providers whose `scopes` list its id run, with the text after the prefix and the scope id, and a group shows up to 20 rows instead of 8. The footer lists `↑ ↓ navigate` and every registered scope's hint, the active one emphasised.
+  - The search feature registers `p:` (docs only) and `t:` (tickets only). `/quick-jump` takes an optional `scope` (`Docs`, `Tickets`): a scoped request drops the other kinds, exact keys included (`t:` does not jump to test cases or sessions), and returns up to 20 items instead of 10 tickets / 5 docs. The key jump and the "Search … for" rows follow the same scope; `p:` with no text shows the recent docs.
+  - The hint reads "docs only" rather than the mockup's "pages only", because the Docs group also holds diagrams and folders.
+- Rationale: keeping the prefixes as data in a registry keeps `core/` free of feature knowledge and lets another feature add a prefix without touching the palette; one scoped request keeps the server the single place that ranks and authorizes results.
+
 ## Product owner answers (v1 review, 2026-10-27)
 
 These were open questions (Q-01..Q-05); the product owner resolved them as follows.

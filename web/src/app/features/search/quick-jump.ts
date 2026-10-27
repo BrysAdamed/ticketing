@@ -2,7 +2,7 @@ import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { firstValueFrom, fromEvent, takeUntil } from 'rxjs';
 import { ApiClient } from '@core/api/api-client';
-import { PaletteItem, SearchProvider } from '@core/commands/command';
+import { PaletteItem, PaletteScope, SearchProvider } from '@core/commands/command';
 import { docKindIcon, DocSnippet } from '@core/docs/doc-search.api';
 import { DiagramFormat, DocKind } from '@core/docs/doc.models';
 import { RecentDoc, RecentDocs } from '@core/docs/recent-docs';
@@ -31,6 +31,12 @@ export interface QuickJumpItem {
   snippet?: DocSnippet | null;
 }
 
+/// Palette prefixes (spec 12.7): `p:` keeps only docs, `t:` only tickets.
+export const DOCS_SCOPE: PaletteScope = { id: 'docs', prefix: 'p:', hint: 'docs only' };
+export const TICKETS_SCOPE: PaletteScope = { id: 'tickets', prefix: 't:', hint: 'tickets only' };
+export const QUICK_JUMP_SCOPES: readonly PaletteScope[] = [DOCS_SCOPE, TICKETS_SCOPE];
+const API_SCOPES: Record<string, string> = { docs: 'Docs', tickets: 'Tickets' };
+
 const DOCS_GROUP = 'Docs';
 const GROUPS: Record<QuickJumpItem['kind'], string> = {
   Ticket: 'Tickets',
@@ -53,8 +59,13 @@ const TYPE_ICONS: Record<TicketType, string> = {
 };
 
 /// The `Go to KEY` item shown instantly (before the debounced lookup) when the query is a key, so
-/// typing a key and pressing Enter jumps without waiting for the server.
-export function keyJumpItem(query: string, navigate: (url: string) => void): PaletteItem | null {
+/// typing a key and pressing Enter jumps without waiting for the server. A scope keeps only its own
+/// kind of key (`p:` doc keys, `t:` ticket keys).
+export function keyJumpItem(
+  query: string,
+  navigate: (url: string) => void,
+  scope: string | null = null,
+): PaletteItem | null {
   const key = query.trim().toUpperCase();
   const project = key.slice(0, key.indexOf('-'));
   let url: string | null = null;
@@ -64,6 +75,8 @@ export function keyJumpItem(query: string, navigate: (url: string) => void): Pal
     url = `/projects/${project}/regressions/${key}`;
   else if (DOC_KEY_PATTERN.test(key)) url = `/docs/${key}`;
   if (!url) return null;
+  if (scope === DOCS_SCOPE.id && !DOC_KEY_PATTERN.test(key)) return null;
+  if (scope === TICKETS_SCOPE.id && !TICKET_KEY_PATTERN.test(key)) return null;
   const target = url;
   return {
     id: `jump:${key}`,
@@ -123,9 +136,36 @@ export function docLocation(projectKey: string, folderPath: string): string {
   return `${projectKey} · ${readable}`;
 }
 
+/// The "Search tickets/docs for …" rows that open the search page; a scope keeps only its own.
+export function searchPageItems(
+  text: string,
+  scope: string | null,
+  open: (queryParams: Record<string, string>) => void,
+): PaletteItem[] {
+  const items: PaletteItem[] = [];
+  if (scope !== DOCS_SCOPE.id)
+    items.push({
+      id: 'search:open',
+      label: `Search tickets for “${text}”`,
+      group: 'Search',
+      icon: 'tablerSearch',
+      run: () => open({ q: text }),
+    });
+  if (scope !== TICKETS_SCOPE.id)
+    items.push({
+      id: 'search:docs',
+      label: `Search docs for “${text}”`,
+      group: 'Search',
+      icon: 'tablerSearch',
+      run: () => open({ scope: 'docs', q: text }),
+    });
+  return items;
+}
+
 /// Command palette providers (I-04, spec 12.7): an instant key jump, recent docs for an empty
 /// query, the server lookup (exact keys first, then the top 10 ticket titles and the top 5 docs
-/// across readable projects), and "Search … for" items that open the search page.
+/// across readable projects), and "Search … for" items that open the search page. Under the
+/// `p:` / `t:` scopes the lookup keeps only docs or only tickets (up to 20).
 export function quickJumpProviders(): SearchProvider[] {
   const api = inject(ApiClient);
   const router = inject(Router);
@@ -136,13 +176,15 @@ export function quickJumpProviders(): SearchProvider[] {
     {
       id: 'search.key-jump',
       minQueryLength: 4,
-      search: (query) => {
-        const item = keyJumpItem(query, navigate);
+      scopes: [DOCS_SCOPE.id, TICKETS_SCOPE.id],
+      search: (query, _signal, scope) => {
+        const item = keyJumpItem(query, navigate, scope);
         return item ? [item] : [];
       },
     },
     {
       id: 'search.recent-docs',
+      scopes: [DOCS_SCOPE.id],
       search: (query) =>
         query.trim() ? [] : recentDocs.items().map((doc) => recentDocItem(doc, navigate)),
     },
@@ -150,30 +192,21 @@ export function quickJumpProviders(): SearchProvider[] {
       id: 'search.quick-jump',
       remote: true,
       minQueryLength: 1,
-      search: async (query, signal) => {
+      scopes: [DOCS_SCOPE.id, TICKETS_SCOPE.id],
+      search: async (query, signal, scope) => {
         const text = query.trim();
-        const searchItems: PaletteItem[] = [
-          {
-            id: 'search:open',
-            label: `Search tickets for “${text}”`,
-            group: 'Search',
-            icon: 'tablerSearch',
-            run: () => void router.navigate(['/search'], { queryParams: { q: text } }),
-          },
-          {
-            id: 'search:docs',
-            label: `Search docs for “${text}”`,
-            group: 'Search',
-            icon: 'tablerSearch',
-            run: () =>
-              void router.navigate(['/search'], { queryParams: { scope: 'docs', q: text } }),
-          },
-        ];
+        const searchItems = searchPageItems(
+          text,
+          scope,
+          (queryParams) => void router.navigate(['/search'], { queryParams }),
+        );
+        const params: Record<string, string> = { q: text };
+        if (scope && API_SCOPES[scope]) params['scope'] = API_SCOPES[scope];
         let items: QuickJumpItem[];
         try {
           items = await firstValueFrom(
             api
-              .get<QuickJumpItem[]>('/quick-jump', { q: text })
+              .get<QuickJumpItem[]>('/quick-jump', params)
               .pipe(takeUntil(fromEvent(signal, 'abort'))),
             {
               defaultValue: [] as QuickJumpItem[],
@@ -182,7 +215,7 @@ export function quickJumpProviders(): SearchProvider[] {
         } catch {
           items = [];
         }
-        const jumped = keyJumpItem(text, navigate) ? text.toUpperCase() : null;
+        const jumped = keyJumpItem(text, navigate, scope) ? text.toUpperCase() : null;
         return [
           ...items.filter((i) => i.key !== jumped).map((i) => toPaletteItem(i, navigate, text)),
           ...searchItems,

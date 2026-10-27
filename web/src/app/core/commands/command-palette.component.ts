@@ -18,11 +18,12 @@ import { HighlightedTextComponent } from '@shared/ui/highlighted-text/highlighte
 import { IconComponent } from '@shared/ui/icon/icon.component';
 import { KbdComponent } from '@shared/ui/kbd/kbd.component';
 import { ShortcutService } from '../shortcuts/shortcut.service';
-import { matchScore, PaletteItem } from './command';
+import { matchScore, PaletteItem, parsePaletteQuery } from './command';
 import { CommandRegistry } from './command-registry';
 
 const DEBOUNCE_MS = 120;
 const MAX_PER_GROUP = 8;
+const MAX_PER_GROUP_SCOPED = 20;
 const COMMANDS_GROUP = 'Commands';
 
 interface Group {
@@ -116,6 +117,18 @@ interface Group {
         </div>
       } @empty {
         <div class="empty">{{ loading() ? 'Searching…' : 'No results' }}</div>
+      }
+    </div>
+    <div class="footer" data-testid="command-palette-footer">
+      <span><tk-kbd>↑</tk-kbd> <tk-kbd>↓</tk-kbd> navigate</span>
+      @for (scope of registry.scopes(); track scope.id) {
+        <span
+          class="scope"
+          [class.active]="scope.id === parsed().scope?.id"
+          [attr.data-testid]="'palette-scope-' + scope.id"
+        >
+          <tk-kbd>{{ scope.prefix }}</tk-kbd> {{ scope.hint }}
+        </span>
       }
     </div>
   `,
@@ -243,10 +256,29 @@ interface Group {
       text-align: center;
       color: var(--tk-text-muted);
     }
+    .footer {
+      flex: none;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px 16px;
+      padding: 8px 16px;
+      border-top: 1px solid var(--tk-border-subtle);
+      font-size: var(--tk-text-xs);
+      color: var(--tk-text-subtle);
+    }
+    .footer span {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .scope.active {
+      color: var(--tk-accent-fg);
+      font-weight: var(--tk-weight-medium);
+    }
   `,
 })
 export class CommandPaletteComponent {
-  private readonly registry = inject(CommandRegistry);
+  protected readonly registry = inject(CommandRegistry);
   protected readonly shortcuts = inject(ShortcutService);
 
   readonly closed = output<void>();
@@ -256,11 +288,15 @@ export class CommandPaletteComponent {
   private readonly asyncResults = signal<ReadonlyMap<string, readonly PaletteItem[]>>(new Map());
   private readonly pending = signal(0);
   protected readonly loading = computed(() => this.pending() > 0);
+  protected readonly parsed = computed(() =>
+    parsePaletteQuery(this.query(), this.registry.scopes()),
+  );
 
   private readonly input = viewChild.required<ElementRef<HTMLInputElement>>('input');
 
   private readonly commandItems = computed<PaletteItem[]>(() => {
-    const query = this.query();
+    const { text: query, scope } = this.parsed();
+    if (scope) return [];
     return this.registry
       .commands()
       .filter((c) => c.available?.() ?? true)
@@ -291,10 +327,11 @@ export class CommandPaletteComponent {
       ...this.collect(this.asyncResults()),
       ...this.commandItems(),
     ];
+    const max = this.parsed().scope ? MAX_PER_GROUP_SCOPED : MAX_PER_GROUP;
     const byGroup = new Map<string, PaletteItem[]>();
     for (const item of all) {
       const list = byGroup.get(item.group) ?? [];
-      if (list.length < MAX_PER_GROUP && !list.some((i) => i.id === item.id)) list.push(item);
+      if (list.length < max && !list.some((i) => i.id === item.id)) list.push(item);
       byGroup.set(item.group, list);
     }
     let index = 0;
@@ -320,9 +357,11 @@ export class CommandPaletteComponent {
     });
 
     effect(() => {
-      const query = this.query();
+      const { text: query, scope } = this.parsed();
+      const scopeId = scope?.id ?? null;
       const providers = this.registry
         .providers()
+        .filter((p) => scopeId === null || (p.scopes ?? []).includes(scopeId))
         .filter((p) => query.trim().length >= (p.minQueryLength ?? 0));
       untracked(() => {
         controller?.abort();
@@ -334,7 +373,7 @@ export class CommandPaletteComponent {
         this.asyncResults.set(new Map());
 
         const run = (provider: (typeof providers)[number]) => {
-          const result = provider.search(query, current.signal);
+          const result = provider.search(query, current.signal, scopeId);
           if (!(result instanceof Promise)) {
             this.syncResults.update((map) => new Map(map).set(provider.id, result));
             return;

@@ -15,7 +15,7 @@ The research found that **PrimeNG 22 is no longer open source**: `primeng@22.x` 
   - Standalone components only, **zoneless** change detection, **signals** for all state, `OnPush` semantics, the new control flow.
   - Feature folders under `src/app/features/<feature>` with lazy route trees; `core` and `shared` as in the [architecture overview](../architecture/overview.md). Pages follow [ADR 0008](0008-ab-ready-views.md).
 - **UI components: Angular Material 22 + CDK 22** (MIT, released in lockstep with Angular).
-  - Themed through the M3 system tokens (`mat.theme`, `mat.theme-overrides`, `--mat-sys-*`) mapped from our own design tokens in [docs/design/tokens.scss](../design/tokens.scss), not per-component CSS overrides. Light by default, dark through the same tokens.
+  - Themed through the M3 system tokens (`mat.theme`, `mat.theme-overrides`, `--mat-sys-*`) mapped from our own design tokens in [web/src/styles/_tokens.scss](../../web/src/styles/_tokens.scss), not per-component CSS overrides. Light by default, dark through the same tokens.
   - CDK drag-drop for the backlog and the board; CDK virtual scroll for long lists; `mat-table` for tables; `mat-autocomplete` + chips for labels and version hints.
   - Dates through `@angular/material-date-fns-adapter` + `date-fns`.
 - **Icons: Tabler via `@ng-icons/core` + `@ng-icons/tabler-icons`** (MIT). SVG, tree-shaken per icon. `mat-icon` and Material Symbols (a large icon font) are not used.

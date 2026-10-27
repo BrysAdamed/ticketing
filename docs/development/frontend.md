@@ -21,7 +21,7 @@ Docker: `docker build -t ticketing-web web` builds the app with Node, then serve
 
 ```
 web/src/
-  styles/               tokens (_tokens.scss = copy of docs/design/tokens.scss), Material theme + overrides, base, markdown
+  styles/               tokens (_tokens.scss, the single source of truth for design tokens), Material theme + overrides, base, markdown
   app/
     app.routes.ts       top-level routes only (login, set-password, shell + one lazy entry per feature)
     app.config.ts       providers: router, HTTP (XSRF, error interceptor), app initializer, icons, peek view, Material defaults
@@ -182,7 +182,7 @@ Global CSS helpers (`styles/`): `.tk-page`, `.tk-page-header` (+ `.tk-page-count
 
 ## Theming
 
-`styles/_tokens.scss` is a verbatim copy of `docs/design/tokens.scss`; when the design tokens change, copy the file again. `_material-theme.scss` maps every M3 system token to a `--tk-*` variable (`mat.theme` + `mat.theme-overrides`, verified against the installed Material 22.2). `_material-overrides.scss` pins component sizes: 32 px controls, 28 px icon buttons, 32 px table rows, no ripples. Wrap toolbars in `.tk-dense` for 28 px controls. Components use semantic tokens only (`--tk-bg`, `--tk-text-muted`, `--tk-status-*`), never primitives, so dark mode works without extra code. Buttons: `mat-flat-button` is primary (at most one per view), `mat-stroked-button` secondary, `mat-button` ghost.
+`styles/_tokens.scss` is the single source of truth for design tokens; the design docs link to it and there is no copy to keep in sync. The HTML mockups embed an older snapshot and are visual reference only. `_material-theme.scss` maps every M3 system token to a `--tk-*` variable (`mat.theme` + `mat.theme-overrides`, verified against the installed Material 22.2). `_material-overrides.scss` pins component sizes: 32 px controls, 28 px icon buttons, 32 px table rows, no ripples. Wrap toolbars in `.tk-dense` for 28 px controls. Components use semantic tokens only (`--tk-bg`, `--tk-text-muted`, `--tk-status-*`), never primitives, so dark mode works without extra code. Buttons: `mat-flat-button` is primary (at most one per view), `mat-stroked-button` secondary, `mat-button` ghost.
 
 ## Testing
 

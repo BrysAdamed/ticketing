@@ -2,7 +2,7 @@
 
 Visual language for Ticketing. Target feel: Linear / Height / GitHub Projects. Dense but calm, keyboard-first, crisp type, hairline borders, light and dark themes of equal quality.
 
-Token source of truth: [`tokens.scss`](./tokens.scss). Angular Material + CDK mapping: [`material-theming.md`](./material-theming.md). Screens: [`layout-and-screens.md`](./layout-and-screens.md). Visual reference: [`mockups/`](./mockups/). The mockups are static HTML: they embed `tokens.scss` as CSS, follow `prefers-color-scheme`, and have a Theme button in the sidebar footer. Only the mockups load Inter from Google Fonts, and they fall back to the system stack when offline.
+Token source of truth: [`web/src/styles/_tokens.scss`](../../web/src/styles/_tokens.scss), the app's own stylesheet; there is no second copy. Angular Material + CDK mapping: [`material-theming.md`](./material-theming.md). Screens: [`layout-and-screens.md`](./layout-and-screens.md). Visual reference: [`mockups/`](./mockups/). The mockups are static HTML: they embed a snapshot of the tokens as CSS, follow `prefers-color-scheme`, and have a Theme button in the sidebar footer. Only the mockups load Inter from Google Fonts, and they fall back to the system stack when offline.
 
 ## 1. Principles
 

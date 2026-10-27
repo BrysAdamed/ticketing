@@ -1,16 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { paletteIndex } from '@shared/util/hash';
+import { initialsOf } from '@shared/util/initials';
 import { IconComponent } from '../icon/icon.component';
 
 export type AvatarSize = 20 | 24 | 32;
-
-export function initialsOf(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return '?';
-  const first = parts[0][0] ?? '';
-  const last = parts.length > 1 ? (parts[parts.length - 1][0] ?? '') : '';
-  return (first + last).toUpperCase();
-}
 
 /// User avatar: initials on a stable palette tint (hash of user id). No user = "Unassigned".
 @Component({

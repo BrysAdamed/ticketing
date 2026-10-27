@@ -1,7 +1,7 @@
 import DOMPurify from 'dompurify';
 import { Marked, Tokens, TokenizerAndRendererExtension } from 'marked';
 import { TICKET_KEY_IN_TEXT } from '@shared/domain/keys';
-import { initialsOf } from '@shared/ui/domain/avatar.component';
+import { initialsOf } from '@shared/util/initials';
 import { paletteIndex } from '@shared/util/hash';
 import { MENTION_AT_START, MentionUser } from './mentions';
 

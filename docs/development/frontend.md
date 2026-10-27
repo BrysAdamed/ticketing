@@ -58,7 +58,7 @@ ESLint enforces the boundaries: `core` and `shared` may not import `@features/*`
 | `/projects/:projectKey/backlog` | `backlog` | `backlog.list` |
 | `/projects/:projectKey/test-cases`, `…/test-cases/:testCaseKey`, `…/test-cases/new?forTicket=KEY` (filters `?status=&q=&ticket=&archived=`) | `test-cases` | `testcases.list`, `testcases.editor` (side pane) |
 | `/projects/:projectKey/regressions[/:sessionKey]` (`?status=`; session `?item=KEY&show=mine`, `waiting` or `failed`) | `regressions` | `regressions.list`, `regressions.session` |
-| `/projects/:projectKey/docs`, `…/docs/trash`, `…/docs/:docKey[/:slug]` (`/docs/:docKey` and `/p/:projectKey/docs/…` redirect; D-99) | `docs` | `docs.layout`, `docs.home`, `docs.trash`, `docs.doc` (frame) with content views `docs.page`, `docs.diagram`, `docs.folder` |
+| `/projects/:projectKey/docs`, `…/docs/trash`, `…/docs/:docKey[/:slug]` (`/docs/:docKey` and `/p/:projectKey/docs/…` redirect; D-102) | `docs` | `docs.layout`, `docs.home`, `docs.trash`, `docs.doc` (frame) with content views `docs.page`, `docs.diagram`, `docs.folder` |
 | `/projects/:projectKey/settings` | `project-settings` | `project.settings` |
 | `/tickets/:ticketKey` | `tickets` | `ticket.detail` (presentation `page`) |
 | `?peek=KEY` on any shell URL | `tickets` | `ticket.detail` (presentation `peek`) |
@@ -195,6 +195,21 @@ Live catalogue: `/dev/ui-kit`. Import components one by one (all standalone, `tk
 | `tk-route-tabs [tabs]` | Material tab nav bar over child routes. Project the `<router-outlet />`. |
 | `tk-kbd`, `relativeTime` / `absoluteTime` pipes | Keyboard hints; "3h ago" / "Oct 22". |
 | `shared/domain/enums.ts` | Every spec §3 enum as a const array, a union type and a `*_LABELS` map, plus `statusCategory()`. `keys.ts` holds the key regexes. |
+
+### Diagrams (`shared/diagrams`, ADR 0013)
+
+Mermaid, Excalidraw and React are lazy chunks. Never import `mermaid`, `@excalidraw/excalidraw`, `react` or `react-dom` statically from app code; go through these entry points:
+
+| API | Notes |
+| --- | --- |
+| `renderMermaid(source, theme)` → `{ svg }` or `{ error }` | Loads Mermaid on first use with `mermaidConfig(theme)`: strict security, SVG labels, dagre, token palette. The SVG is DOMPurify-sanitised; the error is the parser message. Renders are serialised. |
+| `renderMermaidBlocks(root, theme)` | Replaces every `pre > code.language-mermaid` under `root` (as `renderMarkdown` emits them) with `figure.tk-mermaid`. A block that fails to parse stays as code, followed by `.tk-mermaid-error`. Run it after the HTML is in the DOM, and again when the theme changes. The PDF print bundle calls the same function with `'light'`. |
+| `MERMAID_SECURITY_SAMPLES`, `unsafeSvgFindings(svg)` | Hostile sources and the checker for unit tests. `mermaid-renderer.spec.ts` shows how to render in jsdom (stub `getBBox` and `getComputedTextLength`). |
+| `tk-canvas-editor [source] [theme] [readOnly] (changed) (loadFailed)` | Excalidraw island. `source` is the stored JSON; a new value reloads the editor, so never bind the editor's own output back into it. `ready()` turns true once mounted; then `serialize()` returns the JSON to store and `exportSvg()` the light snapshot. Give the host a height. |
+| `parseCanvasSource`, `emptyCanvasSource`, `exportCanvasSourceSvg(source)` | Stored-format helpers; the last one exports a snapshot without mounting an editor (it still loads Excalidraw). |
+| `loadExcalidraw()` | React, react-dom and Excalidraw, with `EXCALIDRAW_ASSET_PATH` pointing at `/excalidraw/` (fonts and CSS copied by `angular.json`). |
+
+Embed a Canvas in a page through its stored snapshot in an `<img>`, not through a read-only editor. In dark mode add `filter: invert(93%) hue-rotate(180deg)`. Excalidraw logs about 230 CSP reports for its `esm.sh` font fallback when it mounts. They are expected; no request is sent.
 
 Global CSS helpers (`styles/`): `.tk-page`, `.tk-page-header` (+ `.tk-page-count`, `.tk-page-actions`), `.tk-toolbar`, `.tk-page-body`, `.tk-icon-btn`, `.tk-field-label` (labels sit above fields, no floating labels), `.tk-callout[-danger|-warning]`, `.tk-popover`, `.tnum`, `.tk-muted`, `.tk-subtle`.
 

@@ -68,6 +68,31 @@ public sealed class BoardMcpTests(TicketingApiFactory api)
     }
 
     [Fact]
+    public async Task Move_ticket_with_include_children_and_get_move_children_match_rest()
+    {
+        // Arrange
+        var (mcp, _, browser) = await SetUpAsync();
+        await using var session = mcp;
+        var board = await browser.CreateBoardAsync("Sprint", "WEB");
+        await browser.CreateTicketAsync("WEB", "Epic", "Epic");
+        await browser.CreateTicketAsync("WEB", "Story", extra: new { parentKey = "WEB-1" });
+        await browser.CreateTicketAsync("WEB", "Task", "Technical", new { parentKey = "WEB-2" });
+        await browser.CreateTicketAsync("WEB", "Finished", "Technical", new { parentKey = "WEB-2", status = "Done" });
+        var rest = await browser.PreviewAsync(["WEB-1"]);
+
+        // Act
+        var preview = await CallAsync(mcp, "get_move_children", new() { ["keys"] = new[] { "WEB-1" } });
+        var moved = await CallAsync(mcp, "move_ticket", new() { ["keys"] = new[] { "WEB-1" }, ["target"] = board.Id.ToString(), ["includeChildren"] = true });
+
+        // Assert
+        Assert.Equal((rest.Count, rest.Done), (preview.GetProperty("count").GetInt32(), preview.GetProperty("done").GetInt32()));
+        var children = Assert.Single(preview.GetProperty("parents").EnumerateArray()).GetProperty("children").EnumerateArray();
+        Assert.Equal(rest.Parents[0].Children.Select(c => c.Key), children.Select(c => c.GetProperty("key").GetString()));
+        Assert.Equal(["WEB-1", "WEB-2", "WEB-3"], moved.EnumerateArray().Select(t => t.GetProperty("key").GetString()));
+        Assert.Equal(["ToDo: WEB-1, WEB-2, WEB-3"], (await browser.GetBoardAsync(board.Id)).Layout());
+    }
+
+    [Fact]
     public async Task Archive_board_reports_where_tickets_went_and_read_only_tokens_cannot_see_write_tools()
     {
         // Arrange

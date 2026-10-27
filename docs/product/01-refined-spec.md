@@ -454,7 +454,7 @@ A PAT acts as its user, with the user's current permissions, intersected with it
 - Maximum depth is 3 levels (for example Epic > UserStory > Technical). Setting a parent that would create a 4th level fails with `ticket.parent.depth`.
 - Cycles are rejected with `ticket.parent.cycle` (the depth rule already prevents most, the server checks explicitly).
 - Changing a ticket's type to `Epic` fails if it has a parent. Changing it from `Epic` is allowed if the depth rule still holds for its subtree.
-- Children are independent of the parent's status, board and backlog placement. No automatic status roll-up.
+- Children are independent of the parent's status, board and backlog placement. No automatic status roll-up. A move may bring the sub-tickets that are still in the place the parent is leaving and not Done along, on request (D-107).
 - The ticket view lists direct children with status and a progress bar by status category.
 
 ### 6.4 Backlog and boards
@@ -706,7 +706,8 @@ Tickets
 | `create_ticket` | `projectKey`, `title`, `type`, optional `description`, `status`, `priority`, `severity`, `storyPoints`, `version`, `labels`, `parentKey`, `assignee`, `boardId`, `idempotencyKey` | Created ticket (summary + rowVersion). |
 | `create_tickets` | `projectKey`, `tickets` (1..50 objects with the `create_ticket` fields except `projectKey`; `parentKey` may also reference an earlier item in the batch as `#index`) | Created ticket summaries in input order. All-or-nothing (I-26). |
 | `update_ticket` | `key`, any of `title`, `description`, `type`, `status`, `resolution`, `priority`, `severity`, `storyPoints`, `version`, `labels` (replace), `addLabels`, `removeLabels`, `parentKey` (null to clear), `assignee` (null to clear), `reporter`, optional `expectedVersion` | Updated ticket. Null clears an optional field; omitted leaves it. |
-| `move_ticket` | `keys` (1..100), `target` (`backlog` or a board id), optional `status` (target column), optional `beforeKey`, `afterKey` or `position` (`Top`/`Bottom`) | Moved ticket summaries. |
+| `move_ticket` | `keys` (1..100), `target` (`backlog` or a board id), optional `status` (target column), optional `beforeKey`, `afterKey` or `position` (`Top`/`Bottom`), optional `includeChildren` (D-107) | Moved ticket summaries, sub-tickets included. |
+| `get_move_children` | `keys` (1..100) | Per ticket, the sub-tickets that `includeChildren` would move and the counts that stay (`onOtherBoard`, `inBacklog`, `done`; D-107). |
 | `delete_ticket` | `key` | Confirmation. Owner only. |
 | `get_children_graph` | `key` | `{ key, nodes, edges }`: the children plus readable linked tickets outside the parent (`external`), each with `blocked`; edges `{ linkId, type, from, to }`. Unreadable and deleted tickets are left out (D-95). |
 | `get_ticket_history` | `key`, `limit`, `cursor` | Activity entries: when, actor, channel, action, field, old, new. |

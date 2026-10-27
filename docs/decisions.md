@@ -652,6 +652,18 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
   - Cost: four queries (text, comments, attachments, test cases), each with the related set as a subquery on existing indexes (`activity_entries (entity_type, entity_id, occurred_at)`, `comments (ticket_id, created_at)`, `attachments (ticket_id)`, `tickets (parent_id)`, `ticket_links` both ways, `test_cases (ticket_id)`), plus one key lookup when the newest hit is on a related ticket. The number of queries does not grow with the number of related tickets.
 - Rationale: the warning is the only in-app signal that untrusted text steers the agent, so it should match what the prompts tell the agent to read. One hop is what the built-in prompts read; going further would make an epic's warning fire for almost anything and train people to click through it.
 
+### D-107 A move can bring the sub-tickets along, on request (TKT-71)
+
+- Question: spec 6.3 keeps children independent of the parent's placement, so moving an epic or story to a board leaves its work behind, and people have to find and move each child. Should children follow, and which ones?
+- Decision:
+  - The data model stays independent (a child may sit somewhere other than its parent, nothing syncs later). A move gains an explicit option, `includeChildren` (default `false`) on `POST /tickets/move` and MCP `move_ticket`.
+  - Which children come along: non-deleted descendants (up to 3 levels) that are **in the place the parent is leaving** and **not Done**. Children on another board (or, for a parent on a board, in the backlog) and Done children stay. Each descendant belongs to its nearest sent ancestor, so a parent sent together with its own child moves that child once, and the child's own sub-tickets follow it.
+  - Placement: each parent is followed by its children in their current rank order; the block keeps the sent order and anchor rules. A target `status` applies to the sent tickets only; children keep theirs. Every moved child writes its own `ticket.moved` entry, so watchers are notified as for any move.
+  - Expansion runs server-side inside the move's transaction and board locks. The 100-ticket limit applies to the expanded set (`ticket.move.tooMany`, nothing moves), and write access is checked for every expanded ticket.
+  - A read-only preview, `GET /tickets/move/children?keys=…&from=…` and MCP `get_move_children`, returns the children per parent and the counts skipped (`onOtherBoard`, `inBacklog`, `done`), so the prompt shows real numbers.
+  - The web app asks every time a move (backlog to board, board to board, board to backlog) involves a ticket with qualifying children: **Move with sub-tickets** (default), **Only the selected tickets**, Cancel. One dialog sums all selected parents. It checks `childCount` first and calls the preview only when that is above 0. No "don't ask again" yet.
+- Rationale: an opt-in expansion keeps existing callers and the spec 6.3 independence intact while fixing the common case. Leaving Done children and children placed elsewhere avoids undoing someone else's planning. The same rule for every source keeps the behaviour symmetric at little cost.
+
 ## Product owner answers (v1 review, 2026-10-27)
 
 These were open questions (Q-01..Q-05); the product owner resolved them as follows.

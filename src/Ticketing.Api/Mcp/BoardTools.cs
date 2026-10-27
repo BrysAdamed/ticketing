@@ -99,7 +99,10 @@ public sealed class BoardTools
     [Description("Moves 1..100 tickets as one block, in the order given: to 'backlog' (each to its own project backlog, top by default) or to a board id "
         + "(bottom of the status column by default). Optional status sets the column (" + Statuses + "), with the usual status rules (entering Done "
         + "sets resolution Done). beforeKey, afterKey or position (Top or Bottom) places the block in the target; use it with target 'backlog' to "
-        + "reorder a backlog. Returns the moved ticket summaries.")]
+        + "reorder a backlog. includeChildren also moves each ticket's sub-tickets (descendants up to 3 levels) that are still in the place "
+        + "it is leaving and not Done, right after their parent in their current order; sub-tickets on another board or Done stay, and status "
+        + "applies to the given tickets only. At most 100 tickets including sub-tickets (ticket.move.tooMany). get_move_children previews it. "
+        + "Returns the moved ticket summaries, sub-tickets included.")]
     public static Task<IReadOnlyList<TicketSummaryDto>> MoveTicket(
         MoveTickets.Handler handler,
         [Description("Ticket keys (for example [\"WEB-42\"]) or ids, 1..100.")] string[] keys,
@@ -108,6 +111,17 @@ public sealed class BoardTools
         [Description("Place the tickets right before this ticket.")] string? beforeKey = null,
         [Description("Place the tickets right after this ticket.")] string? afterKey = null,
         [Description("Top or Bottom of the target, instead of beforeKey/afterKey.")] RankPosition? position = null,
+        [Description("Also move the sub-tickets still in the place each ticket is leaving and not Done. Default false.")] bool includeChildren = false,
         CancellationToken cancellationToken = default) =>
-        handler.HandleAsync(new MoveTickets.Command(keys, target, status, beforeKey, afterKey, position), cancellationToken);
+        handler.HandleAsync(new MoveTickets.Command(keys, target, status, beforeKey, afterKey, position, IncludeChildren: includeChildren), cancellationToken);
+
+    [McpServerTool(Name = "get_move_children", ReadOnly = true, Idempotent = true, Title = "Preview sub-tickets of a move")]
+    [Description("Previews move_ticket with includeChildren: per ticket, the sub-tickets that would come along (descendants still in the place "
+        + "it is leaving and not Done, in the order they would be placed) and how many stay behind: onOtherBoard, inBacklog, done. "
+        + "Returns { parents: [{ key, children, onOtherBoard, inBacklog, done }], count, onOtherBoard, inBacklog, done }.")]
+    public static Task<MoveChildrenPreviewDto> GetMoveChildren(
+        GetMoveChildren.Handler handler,
+        [Description("Ticket keys (for example [\"WEB-42\"]) or ids, 1..100.")] string[] keys,
+        CancellationToken cancellationToken = default) =>
+        handler.HandleAsync(new GetMoveChildren.Query(keys), cancellationToken);
 }

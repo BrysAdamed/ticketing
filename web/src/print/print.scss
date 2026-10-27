@@ -113,10 +113,7 @@ nav.toc {
 }
 
 .cover {
-  box-sizing: border-box;
-  height: 296mm;
-  padding: 0 24mm;
-  overflow: hidden;
+  height: 230mm;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -217,10 +214,10 @@ nav.toc {
 
   svg,
   img {
-    max-width: 100%;
+    width: 100%;
     max-height: 215mm;
-    width: auto;
     height: auto;
+    object-fit: contain;
   }
 }
 

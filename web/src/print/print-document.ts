@@ -137,7 +137,7 @@ function cover(doc: Document, data: PrintData): HTMLElement {
   el.append(
     element(doc, 'p', 'cover-project', `${data.projectName} (${data.projectKey})`),
     element(doc, 'h1', 'cover-title', folder.title),
-    element(doc, 'p', 'cover-path', folder.path),
+    element(doc, 'p', 'cover-path', folder.path === folder.title ? '' : folder.path),
     element(
       doc,
       'p',

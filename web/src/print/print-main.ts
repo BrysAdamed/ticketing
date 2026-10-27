@@ -13,11 +13,7 @@ declare global {
 async function main(): Promise<void> {
   const data = JSON.parse(document.getElementById(PRINT_DATA_ID)!.textContent!) as PrintData;
   document.body.classList.add(`mode-${data.mode}`);
-  if (data.mode === 'folder') {
-    const style = document.createElement('style');
-    style.textContent = '@page :first { margin: 0; }';
-    document.head.append(style);
-  }
+
   const root = document.querySelector('main')!;
   root.append(...buildPrint(document, data));
   await drawDiagrams(root, data);

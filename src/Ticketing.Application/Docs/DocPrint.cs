@@ -62,7 +62,7 @@ public static partial class DocPrint
             var entries = await builder.FolderEntriesAsync(subtree, folders, cancellationToken);
             var path = DisplayPath(folders, self.ParentId, self.Title);
             var data = builder.Data("folder", projectName, new PrintFolder(target.Key, self.Title, path, documents), entries);
-            return builder.Job(data, self.Title, $"{target.Grant.ProjectKey} · {self.Title}", path,
+            return builder.Job(data, self.Title, $"{target.Grant.ProjectKey} · {self.Title}", DisplayPath(folders, self.ParentId, null),
                 string.Create(CultureInfo.InvariantCulture, $"{target.Key} · {documents} {(documents == 1 ? "document" : "documents")}"),
                 target.Grant.Visibility, documents);
         }
@@ -306,11 +306,12 @@ public static partial class DocPrint
 
         private static string Band(string content) => $$"""
             <!doctype html><html><head><meta charset="utf-8"><style>
-            html, body { margin: 0; }
-            body { font-family: 'DejaVu Sans', sans-serif; font-size: 8px; color: #62656e; width: 100%; padding: 0 18mm;
-              box-sizing: border-box; display: flex; justify-content: space-between; gap: 16px; -webkit-print-color-adjust: exact; }
-            span { white-space: nowrap; }
-            </style></head><body>{{content}}</body></html>
+            .band { box-sizing: border-box; width: 100%; padding: 0 18mm; display: flex; gap: 16px;
+              font-family: 'DejaVu Sans', sans-serif; font-size: 8px; color: #62656e; -webkit-print-color-adjust: exact; }
+            .band > span { flex: 1 1 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .band > span:last-child { text-align: right; }
+            .band > span:nth-child(2):not(:last-child) { text-align: center; }
+            </style></head><body><div class="band">{{content}}</div></body></html>
             """;
     }
 

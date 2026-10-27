@@ -1,6 +1,6 @@
 import { provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { normalizeKeys, ShortcutService } from './shortcut.service';
+import { normalizeKeys, OWN_KEYS_ATTR, ShortcutService } from './shortcut.service';
 
 const press = (key: string, init: KeyboardEventInit = {}, target: EventTarget = document.body) =>
   target.dispatchEvent(
@@ -76,6 +76,35 @@ describe('ShortcutService', () => {
     expect(plain).toBe(0);
     expect(allowed).toBe(1);
     input.remove();
+  });
+
+  it('leaves the keys inside an element that owns its keyboard to it, like an input', () => {
+    // Arrange
+    const owner = document.createElement('div');
+    owner.setAttribute(OWN_KEYS_ATTR, '');
+    const canvas = document.createElement('div');
+    canvas.tabIndex = 0;
+    owner.appendChild(canvas);
+    document.body.appendChild(owner);
+    let history = 0;
+    let publish = 0;
+    service.register({ keys: 'h', description: 'history', handler: () => history++ });
+    service.register({
+      keys: 'mod+s',
+      description: 'publish',
+      handler: () => publish++,
+      allowInInputs: true,
+    });
+
+    // Act
+    press('h', {}, canvas);
+    press('s', { ctrlKey: true, metaKey: true }, canvas);
+    press('h');
+
+    // Assert
+    expect(history).toBe(1);
+    expect(publish).toBe(1);
+    owner.remove();
   });
 
   it('lets the latest registration override and restores the previous one on removal', () => {

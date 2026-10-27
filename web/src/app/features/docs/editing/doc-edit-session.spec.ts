@@ -327,6 +327,44 @@ describe('DocEditSession', () => {
     expect(session.conflict()).toBeNull();
   });
 
+  it('without a text merge, shows the conflict at once and overwrites with mine plus its picture', async () => {
+    // Arrange
+    const attach = vi.fn((content: string) =>
+      Promise.resolve({ snapshot: `<svg>${content}</svg>` }),
+    );
+    session.configure({ textMerge: false, attach });
+    await session.open(doc());
+    session.edit({ content: 'one\n\nmine\n\nfour' });
+    api.update.mockReturnValueOnce(throwError(conflict));
+    api.get.mockReturnValue(
+      of(doc({ content: 'zero\n\ntwo\n\nthree', version: 4, updatedBy: jane })),
+    );
+
+    // Act
+    const first = await session.publish();
+
+    // Assert
+    expect(first).toBeNull();
+    expect(api.version).not.toHaveBeenCalled();
+    expect(session.status()).toBe('conflict');
+    expect(session.conflict()?.theirs.version).toBe(4);
+    expect(session.conflict()?.regions).toEqual([]);
+
+    // Act: overwrite with mine
+    const published = await session.overwriteWithMine();
+
+    // Assert
+    expect(api.update).toHaveBeenLastCalledWith('WEB-D-1', {
+      snapshot: '<svg>one\n\nmine\n\nfour</svg>',
+      title: undefined,
+      content: 'one\n\nmine\n\nfour',
+      baseVersion: 4,
+      changeNote: null,
+    });
+    expect(published).not.toBeNull();
+    expect(attach).toHaveBeenCalledTimes(2);
+  });
+
   it('discards my draft and clears the marker on the doc', async () => {
     // Arrange
     store.doc.set(doc({ myDraft: { baseVersion: 3, updatedAt: '2026-10-27T10:05:00Z' } }));

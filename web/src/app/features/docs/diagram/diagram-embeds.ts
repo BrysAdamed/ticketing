@@ -3,18 +3,23 @@ import { rememberedHeight, rememberHeight } from '@shared/diagrams/diagram-heigh
 import { DiagramTheme } from '@shared/diagrams/diagram-theme';
 import { mermaidErrorBox } from '@shared/diagrams/mermaid/mermaid-blocks';
 import { whenVisible } from '@shared/diagrams/when-visible';
+import { INTERNAL_LINK_ATTR } from '@shared/markdown/render-markdown';
 import { DIAGRAM_RENDERERS } from './diagram-renderers';
 
 /// What an embedded diagram needs to render, from the doc's `embeds` (the readable diagrams the
 /// server resolved for this reader).
-export type EmbeddedDiagram = Pick<DocEmbed, 'key' | 'diagramFormat' | 'version' | 'content'>;
+export type EmbeddedDiagram = Pick<
+  DocEmbed,
+  'key' | 'title' | 'diagramFormat' | 'version' | 'content' | 'url' | 'snapshotUrl'
+>;
 
 export const EMBED_SELECTOR = 'figure.tk-doc-embed[data-doc-key]';
 
 /// Draws the diagrams embedded in a page (`![caption](KEY)`, rendered by `renderMarkdown` as
 /// `figure.tk-doc-embed` with an empty `.tk-doc-embed-body`) with the renderer of their format,
 /// each when it comes near the viewport; the body keeps the diagram's remembered height until
-/// then. Embeds the viewer can't read are not in `embeds` and keep their placeholder.
+/// then. Pictures (Canvas) fit the width and open the diagram on click. Embeds the viewer can't
+/// read are not in `embeds` and keep their placeholder.
 export async function renderDiagramEmbeds(
   root: ParentNode,
   embeds: readonly EmbeddedDiagram[],
@@ -29,7 +34,7 @@ export async function renderDiagramEmbeds(
       const body = figure.querySelector<HTMLElement>('.tk-doc-embed-body');
       const embed = byKey.get(figure.dataset['docKey'] ?? '');
       const renderer = embed?.diagramFormat ? DIAGRAM_RENDERERS[embed.diagramFormat] : undefined;
-      if (!body || !embed || !renderer || !embed.content?.trim()) return;
+      if (!body || !embed || !renderer) return;
       const heightId = `doc:${embed.key}:${embed.version}`;
       const reserved = rememberedHeight(heightId);
       if (reserved) {
@@ -45,7 +50,11 @@ export async function renderDiagramEmbeds(
       body.style.removeProperty('min-height');
       body.style.removeProperty('box-sizing');
       if ('error' in rendered) {
-        body.replaceChildren(mermaidErrorBox(body.ownerDocument, rendered.error));
+        body.replaceChildren(
+          rendered.notice
+            ? noticeOf(body.ownerDocument, rendered.error)
+            : mermaidErrorBox(body.ownerDocument, rendered.error),
+        );
         return;
       }
       const { element, width, height } = rendered;
@@ -55,9 +64,32 @@ export async function renderDiagramEmbeds(
       }
       element.setAttribute('width', String(width));
       element.setAttribute('height', String(height));
-      body.replaceChildren(element);
+      body.replaceChildren(
+        element instanceof HTMLImageElement
+          ? openLink(body.ownerDocument, embed, element)
+          : element,
+      );
       const measured = body.isConnected ? body.getBoundingClientRect().height : 0;
       if (measured > 0) rememberHeight(heightId, measured);
     }),
   );
+}
+
+function openLink(doc: Document, embed: EmbeddedDiagram, picture: HTMLImageElement): HTMLElement {
+  const link = doc.createElement('a');
+  link.className = 'tk-doc-embed-open';
+  link.href = embed.url;
+  link.title = `Open ${embed.title}`;
+  link.setAttribute(INTERNAL_LINK_ATTR, '');
+  picture.alt = embed.title;
+  link.appendChild(picture);
+  return link;
+}
+
+function noticeOf(doc: Document, text: string): HTMLElement {
+  const notice = doc.createElement('p');
+  notice.className = 'tk-doc-embed-notice';
+  notice.setAttribute('data-testid', 'doc-embed-notice');
+  notice.textContent = text;
+  return notice;
 }

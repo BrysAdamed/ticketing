@@ -225,8 +225,10 @@ export class DocTreeComponent {
       return;
     }
     const doc = await this.store.submitCreate(this.createTitle());
-    if (doc && doc.kind !== 'Folder') void this.router.navigateByUrl(docUrl(doc.key, doc.title));
-    else this.focusTree();
+    if (doc && doc.kind !== 'Folder') {
+      const startDrawing = doc.diagramFormat === 'Canvas' ? '?mode=edit' : '';
+      void this.router.navigateByUrl(`${docUrl(doc.key, doc.title)}${startDrawing}`);
+    } else this.focusTree();
   }
 
   protected onCreateKeydown(event: KeyboardEvent): void {

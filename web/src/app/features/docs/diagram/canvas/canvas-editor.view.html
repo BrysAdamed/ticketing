@@ -1,0 +1,97 @@
+@let status = session.status();
+<div class="ebar">
+  <tk-doc-edit-status [editors]="presence()" />
+  <div class="r">
+    <button mat-button type="button" data-testid="doc-editor-discard" (click)="discard()">
+      Discard
+    </button>
+    <button mat-stroked-button type="button" data-testid="doc-editor-close" (click)="close()">
+      Close <tk-kbd>Esc</tk-kbd>
+    </button>
+    <button
+      mat-flat-button
+      type="button"
+      data-testid="doc-editor-publish"
+      [disabled]="status === 'publishing' || !!session.conflict()"
+      (click)="publish(false)"
+    >
+      Publish
+      @for (key of shortcutKeys('mod+s'); track $index) {
+        <tk-kbd tone="on-solid">{{ key }}</tk-kbd>
+      }
+    </button>
+  </div>
+</div>
+<div class="etool">
+  <input
+    class="title"
+    type="text"
+    maxlength="200"
+    placeholder="Untitled"
+    aria-label="Title"
+    data-testid="doc-editor-title"
+    [value]="session.title()"
+    (input)="onTitle($any($event.target).value)"
+    (blur)="session.flush()"
+  />
+  <span class="hint">Images go in pages</span>
+  <input
+    class="note"
+    type="text"
+    maxlength="200"
+    placeholder="Change note (optional)"
+    aria-label="Change note"
+    data-testid="doc-editor-change-note"
+    [value]="changeNote()"
+    (input)="changeNote.set($any($event.target).value)"
+  />
+</div>
+<div class="body">
+  @if (loadFailed()) {
+    <div class="failed" role="alert" data-testid="canvas-load-failed">
+      <p>The drawing editor couldn't be loaded.</p>
+      <button mat-stroked-button type="button" (click)="loadFailed.set(false)">Try again</button>
+    </div>
+  } @else if (session.ready()) {
+    <tk-canvas-editor
+      class="canvas"
+      [source]="scene()"
+      [theme]="theme()"
+      (changed)="onChanged()"
+      (imageRefused)="onImageRefused()"
+      (loadFailed)="loadFailed.set(true)"
+    />
+  }
+  @if (!session.ready() || !canvasReady()) {
+    <div
+      class="sk"
+      role="status"
+      aria-label="Loading the drawing editor"
+      data-testid="doc-editor-loading"
+    >
+      <div class="sk-rail"></div>
+      <div class="sk-tools"></div>
+    </div>
+  }
+  @if (session.conflict(); as conflict) {
+    <tk-doc-conflict
+      data-testid="doc-conflict"
+      [conflict]="conflict"
+      [textual]="false"
+      [busy]="status === 'publishing'"
+      (overwrite)="overwriteWithMine()"
+      (discard)="discardMine()"
+    >
+      <div theirs class="pic">
+        @if (pictures().theirs; as theirs) {
+          <tk-diagram-viewport [content]="theirs" [fill]="true" />
+        }
+      </div>
+      <div mine class="pic">
+        @if (pictures().mine; as mine) {
+          <tk-diagram-viewport [content]="mine" [fill]="true" />
+        }
+      </div>
+    </tk-doc-conflict>
+  }
+</div>

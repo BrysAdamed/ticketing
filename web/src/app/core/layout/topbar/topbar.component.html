@@ -37,6 +37,9 @@
       <tk-kbd tone="on-solid">C</tk-kbd>
     </button>
   }
+  @if (auth.isAuthenticated()) {
+    <tk-notification-bell />
+  }
   <button
     type="button"
     class="tk-icon-btn"

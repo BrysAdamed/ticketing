@@ -79,7 +79,7 @@
   </div>
 
   <div class="bscroll" cdkScrollable>
-    <div class="bgrid" cdkDropListGroup [style.grid-template-columns]="gridColumns()" [class.dragging]="dragging().size > 0">
+    <div class="bgrid" cdkDropListGroup [class.single]="store.swimlanes() === 'none'" [style.grid-template-columns]="gridColumns()" [class.dragging]="dragging().size > 0">
       @for (status of statuses; track status) {
         @let collapsed = store.collapsed().has(status);
         <div

@@ -192,15 +192,17 @@ export class BoardStore {
     }
   }
 
-  async addFromBacklog(keys: readonly string[]): Promise<void> {
+  async addFromBacklog(keys: readonly string[]): Promise<boolean> {
     const board = this.board();
-    if (!board || keys.length === 0) return;
+    if (!board || keys.length === 0) return false;
     try {
       await firstValueFrom(this.api.move({ keys: [...keys], target: board.id }));
       this.toast.success(keys.length === 1 ? `${keys[0]} added to the board` : `${keys.length} tickets added to the board`);
       await this.reload(true);
+      return true;
     } catch (error) {
       this.toast.error(error);
+      return false;
     }
   }
 

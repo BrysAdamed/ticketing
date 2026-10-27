@@ -16,13 +16,15 @@ import { IconComponent } from '@shared/ui/icon/icon.component';
 export interface AddTicketsDialogData {
   boardName: string;
   projects: BoardProject[];
+  /// Moves the picked tickets onto the board; the dialog closes when it resolves true.
+  add: (keys: string[]) => Promise<boolean>;
 }
 
 const SEARCH_DEBOUNCE_MS = 200;
 const MAX_SHOWN = 200;
 
 /// "Add tickets from backlog": search a linked project's backlog, pick several tickets (also across
-/// projects) and close with their keys in backlog order; the board then moves them in one call.
+/// projects) and move them onto the board in one call, in backlog order.
 @Component({
   selector: 'tk-add-tickets-dialog',
   imports: [MatButtonModule, MatDialogModule, AvatarComponent, PriorityIconComponent, ProjectTileComponent, StatusIconComponent, TypeIconComponent, IconComponent],
@@ -103,7 +105,7 @@ const MAX_SHOWN = 200;
     <mat-dialog-actions>
       <span class="count tnum">{{ selected().size }} selected</span>
       <button mat-button type="button" mat-dialog-close>Cancel</button>
-      <button mat-flat-button type="button" data-testid="add-tickets-submit" [disabled]="selected().size === 0" (click)="submit()">
+      <button mat-flat-button type="button" data-testid="add-tickets-submit" [disabled]="selected().size === 0 || busy()" (click)="submit()">
         Add {{ selected().size || '' }} {{ selected().size === 1 ? 'ticket' : 'tickets' }}
       </button>
     </mat-dialog-actions>
@@ -243,6 +245,7 @@ export class AddTicketsDialog {
   protected readonly status = signal<'loading' | 'loaded' | 'error'>('loading');
   protected readonly error = signal<string | null>(null);
   protected readonly selected = signal<ReadonlySet<string>>(new Set());
+  protected readonly busy = signal(false);
   protected readonly shown = computed(() => this.items().slice(0, MAX_SHOWN));
 
   private readonly order = new Map<string, number>();
@@ -274,9 +277,12 @@ export class AddTicketsDialog {
     });
   }
 
-  protected submit(): void {
+  protected async submit(): Promise<void> {
     const keys = [...this.selected()].sort((a, b) => (this.order.get(a) ?? 0) - (this.order.get(b) ?? 0));
-    this.ref.close(keys);
+    this.busy.set(true);
+    const added = await this.data.add(keys);
+    this.busy.set(false);
+    if (added) this.ref.close(keys);
   }
 
   private async load(projectKey: string, text: string): Promise<void> {

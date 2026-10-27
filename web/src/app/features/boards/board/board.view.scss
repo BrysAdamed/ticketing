@@ -104,6 +104,11 @@
   padding: 12px 24px 32px;
   width: max-content;
   min-width: 100%;
+  min-height: 100%;
+
+  &.single {
+    grid-template-rows: auto 1fr;
+  }
   align-content: start;
 }
 

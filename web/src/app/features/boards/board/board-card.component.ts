@@ -9,8 +9,8 @@ import { PriorityIconComponent } from '@shared/ui/domain/priority-icon.component
 import { TypeIconComponent } from '@shared/ui/domain/type-icon.component';
 import { IconComponent } from '@shared/ui/icon/icon.component';
 
-/// A compact board card (board.html): type, key and avatar; a two-line title; priority, severity
-/// (Blocker, Critical, Major), up to two labels, the parent and points.
+/// A compact board card (board.html): type, key, parent and avatar; a two-line title; priority, severity
+/// (Blocker, Critical, Major), up to two labels and points.
 @Component({
   selector: 'tk-board-card',
   imports: [MatTooltip, AvatarComponent, SeverityBadgeComponent, LabelChipComponent, PriorityIconComponent, TypeIconComponent, IconComponent],
@@ -31,6 +31,12 @@ import { IconComponent } from '@shared/ui/icon/icon.component';
     <div class="c1">
       <tk-type-icon [type]="card().type" [size]="14" />
       <span class="key tnum">{{ card().key }}</span>
+      @if (parent(); as p) {
+        <span class="parent" [matTooltip]="p.key + ' ' + p.title">
+          <tk-type-icon [type]="p.type" [size]="12" />
+          <span class="ptitle">{{ p.title }}</span>
+        </span>
+      }
       <span class="av">
         @if (assignee(); as user) {
           <tk-avatar [userId]="user.id" [name]="user.displayName" />
@@ -45,19 +51,15 @@ import { IconComponent } from '@shared/ui/icon/icon.component';
       @if (card().severity === 'Blocker' || card().severity === 'Critical' || card().severity === 'Major') {
         <tk-severity-badge [severity]="card().severity!" />
       }
-      @for (label of card().labels.slice(0, 2); track label) {
-        <tk-label-chip [label]="label" />
-      }
-      @if (card().labels.length > 2) {
-        <span class="more">+{{ card().labels.length - 2 }}</span>
-      }
-      <span class="end">
-        @if (parent(); as p) {
-          <span class="parent" [matTooltip]="p.key + ' ' + p.title">
-            <tk-type-icon [type]="p.type" [size]="12" />
-            <span class="ptitle">{{ p.title }}</span>
-          </span>
+      <span class="labels">
+        @for (label of card().labels.slice(0, 2); track label) {
+          <tk-label-chip [label]="label" />
         }
+        @if (card().labels.length > 2) {
+          <span class="more">+{{ card().labels.length - 2 }}</span>
+        }
+      </span>
+      <span class="end">
         @if (card().storyPoints !== null) {
           <span class="pts tnum" [attr.aria-label]="card().storyPoints + ' story points'">{{ card().storyPoints }}</span>
         }
@@ -109,12 +111,14 @@ import { IconComponent } from '@shared/ui/icon/icon.component';
       min-width: 0;
     }
     .key {
+      flex: none;
       color: var(--tk-text-muted);
       font-size: var(--tk-text-sm);
     }
     .av {
       margin-left: auto;
       display: flex;
+      flex: none;
     }
     .none {
       width: 20px;
@@ -143,14 +147,21 @@ import { IconComponent } from '@shared/ui/icon/icon.component';
       display: flex;
       align-items: center;
       gap: 8px;
+      flex: none;
+    }
+    .labels {
+      display: flex;
+      align-items: center;
+      gap: 4px;
       min-width: 0;
+      overflow: hidden;
     }
     .parent {
+      flex: 1;
       display: inline-flex;
       align-items: center;
       gap: 3px;
       min-width: 0;
-      max-width: 96px;
       color: var(--tk-text-subtle);
       font-size: var(--tk-text-xs);
     }

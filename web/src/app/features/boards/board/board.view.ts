@@ -6,7 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltip } from '@angular/material/tooltip';
-import { ActivatedRoute, Params, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, NavigationEnd, Params, Router, RouterLink } from '@angular/router';
 import { provideIcons } from '@ng-icons/core';
 import { BoardCard } from '@core/boards/board.models';
 import { Breadcrumbs } from '@core/layout/breadcrumbs';
@@ -23,7 +23,7 @@ import { StatusIconComponent } from '@shared/ui/domain/status-icon.component';
 import { TypeIconComponent } from '@shared/ui/domain/type-icon.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { IconComponent } from '@shared/ui/icon/icon.component';
-import { firstValueFrom } from 'rxjs';
+import { filter, firstValueFrom } from 'rxjs';
 import { BOARD_ICONS } from '../board-icons';
 import { AddTicketsDialog, AddTicketsDialogData } from './add-tickets.dialog';
 import { BoardCardComponent } from './board-card.component';
@@ -108,6 +108,7 @@ export class BoardView {
   protected readonly collapsedLanes = signal<ReadonlySet<string>>(new Set());
 
   private readonly queryParams = toSignal(this.route.queryParams, { initialValue: {} as Params });
+  private readonly navigated = toSignal(this.router.events.pipe(filter((e) => e instanceof NavigationEnd)));
   private readonly enterPredicates = new Map<string, (drag: CdkDrag<BoardCard>) => boolean>();
   private prefetchTimer: ReturnType<typeof setTimeout> | null = null;
   private lastDropAt = 0;
@@ -122,6 +123,7 @@ export class BoardView {
     });
 
     effect(() => {
+      this.navigated();
       const name = this.store.board()?.name;
       if (name) untracked(() => this.breadcrumbs.setTail([{ label: name, url: null }]));
     });
@@ -221,15 +223,12 @@ export class BoardView {
   protected openAddTickets(): void {
     const board = this.store.board();
     if (!board) return;
-    const data: AddTicketsDialogData = { boardName: board.name, projects: board.projects.filter((p) => p.canWrite && !p.isArchived) };
-    const ref = this.dialog.open<AddTicketsDialog, AddTicketsDialogData, string[]>(AddTicketsDialog, {
-      data,
-      width: '640px',
-      autoFocus: 'first-tabbable',
-    });
-    ref.afterClosed().subscribe((keys) => {
-      if (keys?.length) void this.store.addFromBacklog(keys);
-    });
+    const data: AddTicketsDialogData = {
+      boardName: board.name,
+      projects: board.projects.filter((p) => p.canWrite && !p.isArchived),
+      add: (keys) => this.store.addFromBacklog(keys),
+    };
+    this.dialog.open<AddTicketsDialog, AddTicketsDialogData, string[]>(AddTicketsDialog, { data, width: '640px', autoFocus: 'first-tabbable' });
   }
 
   protected openSettings(): void {

@@ -14,6 +14,7 @@ public static class DependencyInjection
         services.AddScoped<IProjectAccess, ProjectAccess>();
         services.AddScoped<IFeatureFlags, FeatureFlagEvaluator>();
         services.AddScoped<IActivityObserver, CollaborationProjector>();
+        services.AddScoped<MentionNormalizer>();
         services.AddHandlers(typeof(DependencyInjection).Assembly);
         return services;
     }

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Ticketing.Application.Abstractions;
 using Ticketing.Application.Access;
 using Ticketing.Application.Boards;
+using Ticketing.Application.Collaboration;
 using Ticketing.Application.Common;
 using Ticketing.Domain.Activity;
 using Ticketing.Domain.Common;
@@ -84,7 +85,8 @@ public static class UpdateTicket
         ICurrentUser currentUser,
         IClock clock,
         IActivityLog activity,
-        ITicketRanker ranker) : IHandler<Command, TicketDto>
+        ITicketRanker ranker,
+        MentionNormalizer mentions) : IHandler<Command, TicketDto>
     {
         public async Task<TicketDto> HandleAsync(Command command, CancellationToken cancellationToken)
         {
@@ -104,7 +106,10 @@ public static class UpdateTicket
             if (command.Title.HasValue)
                 changes.Track("title", ticket.Title, () => ticket.Rename(command.Title.Value), () => ticket.Title);
             if (command.Description.HasValue)
-                changes.Track("description", ticket.Description, () => ticket.ChangeDescription(command.Description.Value), () => ticket.Description);
+            {
+                var description = await mentions.NormalizeAsync(target.Grant, ticket.Description, command.Description.Value, "description", cancellationToken);
+                changes.Track("description", ticket.Description, () => ticket.ChangeDescription(description), () => ticket.Description);
+            }
             if (command.Priority.HasValue)
                 changes.Track("priority", ticket.Priority, () => ticket.ChangePriority(command.Priority.Value), () => ticket.Priority);
             if (command.Severity.HasValue)

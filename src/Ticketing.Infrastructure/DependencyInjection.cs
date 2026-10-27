@@ -45,7 +45,10 @@ public static class DependencyInjection
         services.AddScoped<IIdempotency, IdempotencyService>();
         services.AddSingleton<IFeatureFlagStore, FeatureFlagStore>();
 
-        services.AddOptions<AgentOptions>().Configure(o => o.PublicUrl = configuration[AgentOptions.PublicUrlVariable]);
+        services.AddOptions<AgentOptions>()
+            .Configure(o => o.PublicUrl = configuration[AgentOptions.PublicUrlVariable])
+            .Validate(o => o.IsValid, $"{AgentOptions.PublicUrlVariable} must be an absolute http or https URL without query, for example https://tickets.example.com.")
+            .ValidateOnStart();
         services.AddOptions<MaintenanceOptions>().Bind(configuration.GetSection(MaintenanceOptions.Section));
         services.AddScoped<DataRetention>();
         services.AddHostedService<DataRetentionService>();

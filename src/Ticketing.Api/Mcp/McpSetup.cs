@@ -22,17 +22,20 @@ internal static class McpSetup
             .WithHttpTransport(o => o.Stateless = true)
             .AddAuthorizationFilters()
             .WithToolsFromAssembly(typeof(McpSetup).Assembly, Json)
-            .WithRequestFilters(filters => filters.AddCallToolFilter(next => async (context, cancellationToken) =>
-            {
-                try
+            .WithRequestFilters(filters => filters
+                .AddListToolsFilter(next => async (context, cancellationToken) =>
+                    await FeatureGatedTools.FilterAsync(await next(context, cancellationToken), context.Services!, cancellationToken))
+                .AddCallToolFilter(next => async (context, cancellationToken) =>
                 {
-                    return await next(context, cancellationToken);
-                }
-                catch (Exception ex) when (Problems.ToAppException(ex) is { } error)
-                {
-                    return McpErrors.ToResult(error);
-                }
-            }));
+                    try
+                    {
+                        return await next(context, cancellationToken);
+                    }
+                    catch (Exception ex) when (Problems.ToAppException(ex) is { } error)
+                    {
+                        return McpErrors.ToResult(error);
+                    }
+                }));
         return services;
     }
 

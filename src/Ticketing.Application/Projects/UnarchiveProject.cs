@@ -1,5 +1,6 @@
 using Ticketing.Application.Abstractions;
 using Ticketing.Application.Access;
+using Ticketing.Application.Agents;
 using Ticketing.Domain.Activity;
 
 namespace Ticketing.Application.Projects;
@@ -17,7 +18,8 @@ public static class UnarchiveProject
         IProjectAccess access,
         ICurrentUser currentUser,
         IClock clock,
-        IActivityLog activity) : IHandler<Command, ProjectDto>
+        IActivityLog activity,
+        AgentGate agents) : IHandler<Command, ProjectDto>
     {
         public async Task<ProjectDto> HandleAsync(Command command, CancellationToken cancellationToken)
         {
@@ -36,7 +38,7 @@ public static class UnarchiveProject
                     activity.Record(ActivityEntityType.Project, project.Id, project.Id, "project.member.ownerRestored", new { userId = newOwner.UserId, email, role = newOwner.Role });
                 }
                 await db.SaveChangesAsync(ct);
-                return await GetProject.Handler.LoadAsync(db, grant with { IsArchived = false }, ct);
+                return await GetProject.Handler.LoadAsync(db, agents, grant with { IsArchived = false }, ct);
             }, cancellationToken);
         }
     }

@@ -13,4 +13,6 @@ public static class ProjectErrors
     public const string NotMember = "project.member.notFound";
     public const string LastOwner = "project.lastOwner";
     public const string DeleteNotConfirmed = "project.delete.notConfirmed";
+    public const string RepositoryUrlInvalid = "project.repositoryUrl.invalid";
+    public const string DefaultBranchInvalid = "project.defaultBranch.invalid";
 }

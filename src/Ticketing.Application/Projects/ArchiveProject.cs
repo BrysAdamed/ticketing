@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Ticketing.Application.Abstractions;
 using Ticketing.Application.Access;
+using Ticketing.Application.Agents;
 using Ticketing.Application.Boards;
 using Ticketing.Domain.Activity;
 using Ticketing.Domain.Projects;
@@ -22,7 +23,8 @@ public static class ArchiveProject
         ICurrentUser currentUser,
         IClock clock,
         ITicketRanker ranker,
-        IActivityLog activity) : IHandler<Command, ProjectDto>
+        IActivityLog activity,
+        AgentGate agents) : IHandler<Command, ProjectDto>
     {
         public async Task<ProjectDto> HandleAsync(Command command, CancellationToken cancellationToken)
         {
@@ -39,7 +41,7 @@ public static class ArchiveProject
                 activity.Record(ActivityEntityType.Project, project.Id, project.Id, "project.archived",
                     new { ticketsReturnedToBacklog = returned, boardsUnlinked = unlinkedBoards });
                 await db.SaveChangesAsync(ct);
-                return await GetProject.Handler.LoadAsync(db, grant with { IsArchived = true }, ct);
+                return await GetProject.Handler.LoadAsync(db, agents, grant with { IsArchived = true }, ct);
             }, cancellationToken);
         }
 

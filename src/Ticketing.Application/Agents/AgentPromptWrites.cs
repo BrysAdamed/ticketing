@@ -14,7 +14,7 @@ internal static class AgentPromptWrites
         await db.Projects
             .AsNoTracking()
             .Where(p => p.Id == projectId)
-            .Select(p => new AgentPromptProject(p.Key, p.RepositoryUrl, p.AgentMergePolicy))
+            .Select(p => new AgentPromptProject(p.Key, p.RepositoryUrl, p.DefaultBranch, p.AgentMergePolicy))
             .SingleAsync(cancellationToken);
 
     /// <summary>

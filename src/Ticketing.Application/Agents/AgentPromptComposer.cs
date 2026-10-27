@@ -6,7 +6,7 @@ using Ticketing.Domain.Tickets;
 namespace Ticketing.Application.Agents;
 
 /// <summary>The project facts a prompt is rendered with.</summary>
-public sealed record AgentPromptProject(string Key, string? RepositoryUrl, AgentMergePolicy MergePolicy);
+public sealed record AgentPromptProject(string Key, string? RepositoryUrl, string DefaultBranch, AgentMergePolicy MergePolicy);
 
 /// <summary>A rendered prompt, or the template and length errors that prevented it.</summary>
 public sealed record AgentPromptRendering(string? Prompt, IReadOnlyList<AgentPromptIssueDto> Errors)
@@ -24,7 +24,7 @@ public sealed class AgentPromptComposer(IBuiltInAgentPrompts builtIns, IOptions<
     public const int SampleTicketNumber = 1234;
 
     /// <summary>Project facts for instance-default previews and checks: a typical key and repository URL.</summary>
-    public static readonly AgentPromptProject SampleProject = new("PROJECT", "https://git.example.com/team/project.git", AgentMergePolicy.Review);
+    public static readonly AgentPromptProject SampleProject = new("PROJECT", "https://git.example.com/team/project.git", GitBranchName.Default, AgentMergePolicy.Review);
 
     public AgentPromptContext Context(AgentPromptProject project, int ticketNumber, TicketType type, int templateVersion, AgentPromptSource source) =>
         Context(project, ticketNumber, type, AgentPromptContext.TemplateIdFor(type, templateVersion, source));
@@ -40,6 +40,7 @@ public sealed class AgentPromptComposer(IBuiltInAgentPrompts builtIns, IOptions<
             instanceUrl is null ? null : $"{instanceUrl}/tickets/{key}",
             project.Key,
             project.RepositoryUrl,
+            project.DefaultBranch,
             instanceUrl,
             builtIns.FinishSentence(project.MergePolicy),
             templateId);

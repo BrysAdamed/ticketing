@@ -1,3 +1,4 @@
+using Ticketing.Application.Agents;
 using Ticketing.Domain.Projects;
 using Ticketing.Domain.Users;
 
@@ -26,6 +27,7 @@ public sealed record TicketCategoryCountsDto(int ToDo, int InProgress, int Done)
 /// <summary>The longest-standing active Owner member.</summary>
 public sealed record ProjectLeadDto(Guid UserId, string DisplayName);
 
+/// <param name="Agent">The agent setup (spec 13.3); null while agent delegation is not available to the caller.</param>
 public sealed record ProjectDto(
     Guid Id,
     string Key,
@@ -37,6 +39,7 @@ public sealed record ProjectDto(
     DateTimeOffset CreatedAt,
     IReadOnlyList<ProjectMemberDto> Members,
     IReadOnlyList<LinkedBoardDto> Boards,
+    ProjectAgentSettingsDto? Agent,
     uint RowVersion);
 
 /// <param name="Role">The stored membership role.</param>

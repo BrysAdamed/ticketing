@@ -8,6 +8,8 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Agent delegation**: Handing a ticket to a coding agent (Claude Code): Ticketing renders the prompt for the ticket's type and the browser opens Claude's deep link with it. Behind the `agent.delegate` flag; projects opt in. [§13](product/01-refined-spec.md#13-agent-delegation)
 
+**Agent setup**: A project's agent delegation settings, changed by Owners in the web app: enabled, repository URL, default branch, merge policy, and what delegating does to the ticket (assign to the delegating user if unassigned; move `ToDo` to `InProgress`). [§13.3](product/01-refined-spec.md#133-domain-model)
+
 **Agent prompt template**: The text a delegated agent starts from, per ticket type: an instance default edited by Admins, optionally overridden per project (`Inherit`, `Custom` or `Off`). Every change is an immutable version. Only trusted placeholders are allowed, never the ticket title, description or comments. [§13.3](product/01-refined-spec.md#133-domain-model), [§13.4](product/01-refined-spec.md#134-template-language)
 
 **Archive (board)**: Makes a board read-only. The owner chooses where non-Done tickets go (their backlogs or another board); Done tickets stay as a record. Unarchive is allowed. [§6.4](product/01-refined-spec.md#64-backlog-and-boards)
@@ -98,6 +100,8 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Mention**: A reference to a user in a ticket description or comment, written with the `@` people picker or as `@email`, stored as `@[Name](user:<id>)` so it survives renames. Only active users who can read the project can be newly mentioned; a new mention notifies them once and makes them a watcher, and readers see it as a chip with the current name (others see plain text) (D-96). [§6.9](product/01-refined-spec.md#69-comments)
 
+**Normalized repository URL**: The form two git remotes of one repository share: host and path in lower case without scheme, user, port or `.git` (`git.example.com/team/repo` for both `https://git.example.com/team/repo.git` and `git@git.example.com:team/repo`). Agents compare their clone's remote with it. [§13.3](product/01-refined-spec.md#133-domain-model), [D-99](decisions.md)
+
 **Notification**: An in-app message to one user about a change someone else made: assigned to them (ticket or regression item), mentioned, or a comment, status change, priority raised to High/Highest, move or deletion on a ticket they watch. Created in the same transaction as the change, shown under the bell, listed only while the user can read the project, purged after 90 days (D-94). See Collapsing. [§6.16](product/01-refined-spec.md#616-in-app-notifications-i-30-d-94)
 
 **Open**: A ticket whose status category is not `Done`. Used in dashboards and filters. [§3](product/01-refined-spec.md#3-enumerations)
@@ -120,6 +124,8 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Public project**: A project every signed-in user can read and write with Member access (D-02). Settings, membership and destructive actions stay with Owners. [§5.1](product/01-refined-spec.md#51-effective-project-access)
 
+**Public URL**: `TICKETING_PUBLIC_URL`, the instance's origin as users reach it. Agent prompts build ticket links from it; while it is unset agent delegation is off for everyone. [§13.2](product/01-refined-spec.md#132-feature-flag)
+
 **Quick jump**: `Ctrl+K` or `/`: type a ticket, test case or regression session key to open it, or text to list the 10 best ticket title matches across readable projects. [§6.8](product/01-refined-spec.md#68-search-lists-and-export)
 
 **Rank**: Hidden fractional-index string that orders tickets within their container; compared byte-wise (`COLLATE "C"`). [§6.6](product/01-refined-spec.md#66-ranking), [ADR 0010](adr/0010-fractional-index-ranking.md)
@@ -139,6 +145,8 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 **Reporter**: The user who reported a ticket; defaults to its creator and can be changed. [§4.5](product/01-refined-spec.md#45-ticket)
 
 **Resolution**: Why a ticket is done: `Done`, `WontDo`, `Duplicate`, `CannotReproduce`. Set if and only if the status is `Done`. [§3](product/01-refined-spec.md#3-enumerations), [§6.2](product/01-refined-spec.md#62-ticket-lifecycle)
+
+**Resolved prompt**: The prompt for one ticket after resolution: the project's template for its type (or the instance default), rendered, followed by the guardrails. Read with `GET /tickets/{key}/agent-prompt` or MCP `get_agent_prompt`. [§13.5](product/01-refined-spec.md#135-resolving-the-prompt-for-a-ticket)
 
 **Row version**: PostgreSQL `xmin` exposed as `rowVersion`, used for optimistic concurrency on every mutable aggregate. [§2](product/01-refined-spec.md#2-cross-cutting-conventions), [ADR 0005](adr/0005-postgresql-and-ef-core.md)
 

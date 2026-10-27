@@ -30,6 +30,9 @@ public sealed class ProjectAgentPromptTests(TicketingApiFactory api)
         { "POST", $"{Prompts}/Bug/versions/1/restore" },
         { "POST", $"{Prompts}/Bug/preview" },
         { "GET", "/api/v1/agent/prompt-placeholders" },
+        { "GET", "/api/v1/projects/TKT/agent" },
+        { "PATCH", "/api/v1/projects/TKT/agent" },
+        { "GET", "/api/v1/tickets/TKT-1/agent-prompt" },
     };
 
     [Theory]

@@ -18,6 +18,7 @@ public static class AgentPromptPlaceholders
     public const string TicketUrl = "ticket.url";
     public const string ProjectKey = "project.key";
     public const string RepositoryUrl = "project.repositoryUrl";
+    public const string DefaultBranch = "project.defaultBranch";
     public const string InstanceUrl = "instance.url";
     public const string Finish = "finish";
     public const string TemplateId = "template.id";
@@ -29,6 +30,7 @@ public static class AgentPromptPlaceholders
         new(TicketUrl, "The ticket's absolute URL on this instance."),
         new(ProjectKey, "The project key, for example TKT."),
         new(RepositoryUrl, "The project's repository URL; empty when not set."),
+        new(DefaultBranch, "The project's default branch, for example main."),
         new(InstanceUrl, "This instance's public URL."),
         new(Finish, "The finish step for the project's merge policy: stop at Review, or merge to main once verified."),
         new(TemplateId, "Which prompt ran, for example 'Bug v3 / C' (D = instance default, C = project custom)."),
@@ -44,6 +46,7 @@ public sealed record AgentPromptContext(
     string? TicketUrl,
     string ProjectKey,
     string? RepositoryUrl,
+    string DefaultBranch,
     string? InstanceUrl,
     string Finish,
     string TemplateId)
@@ -55,6 +58,7 @@ public sealed record AgentPromptContext(
         [AgentPromptPlaceholders.TicketUrl] = TicketUrl,
         [AgentPromptPlaceholders.ProjectKey] = ProjectKey,
         [AgentPromptPlaceholders.RepositoryUrl] = RepositoryUrl,
+        [AgentPromptPlaceholders.DefaultBranch] = DefaultBranch,
         [AgentPromptPlaceholders.InstanceUrl] = InstanceUrl,
         [AgentPromptPlaceholders.Finish] = Finish,
         [AgentPromptPlaceholders.TemplateId] = TemplateId,

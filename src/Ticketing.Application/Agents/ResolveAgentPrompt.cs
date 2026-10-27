@@ -33,7 +33,7 @@ public static class ResolveAgentPrompt
             var project = await db.Projects
                 .AsNoTracking()
                 .Where(p => p.Id == ticket.ProjectId)
-                .Select(p => new { Facts = new AgentPromptProject(p.Key, p.RepositoryUrl, p.AgentMergePolicy), p.AgentDelegationEnabled })
+                .Select(p => new { Facts = new AgentPromptProject(p.Key, p.RepositoryUrl, p.DefaultBranch, p.AgentMergePolicy), p.AgentDelegationEnabled })
                 .SingleAsync(cancellationToken);
             if (!project.AgentDelegationEnabled)
                 throw AppException.Conflict(

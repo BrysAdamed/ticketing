@@ -10,7 +10,7 @@ using Ticketing.IntegrationTests.Infrastructure;
 
 namespace Ticketing.IntegrationTests.Agents;
 
-/// <summary>Prompt resolution (spec 13.5), step by step. The REST and MCP entry points arrive with TKT-28, so this runs the handler directly.</summary>
+/// <summary>Prompt resolution (spec 13.5), step by step, through the handler; <see cref="GetAgentPromptTests"/> covers its REST and MCP entry points.</summary>
 [Collection(nameof(AgentsCollection))]
 public sealed class ResolveAgentPromptTests(TicketingApiFactory api)
 {

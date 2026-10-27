@@ -689,9 +689,9 @@ Projects
 | Tool | Inputs | Output |
 | --- | --- | --- |
 | `list_projects` | optional `query`, `includeArchived` (default false) | Readable projects: key, name, visibility, my effective role, open ticket count. |
-| `get_project` | `projectKey` | Project fields, members with roles, linked boards. |
+| `get_project` | `projectKey` | Project fields, members with roles, linked boards; `agent` (the agent setup, 13.3) or null while agent delegation is not available to the caller. |
 | `create_project` | `key`, `name`, optional `description`, `visibility` | Created project. |
-| `update_project` | `projectKey`, any of `name`, `description`, `visibility` | Updated project. Owner only. |
+| `update_project` | `projectKey`, any of `name`, `description`, `visibility` | Updated project. Owner only. The agent setup is not an input: it changes only in the web app (13.6). |
 | `get_field_hints` | `projectKey`, `field` (`labels` or `version`), optional `prefix` | Up to 20 values, most recent first. |
 | `get_project_stats` | `projectKey`, optional `version` | All dashboard widgets from section 7 as JSON. |
 
@@ -780,7 +780,7 @@ Out of MCP in v1: user administration, PAT management, feature flags, project de
 
 ## 13. Agent delegation
 
-A developer hands a ticket to Claude Code: Ticketing renders a short prompt for the ticket's type and the developer's browser opens Claude's own deep link with it. The design and its history are in [04-delegate-to-agent-refinement.md](04-delegate-to-agent-refinement.md) (its section 6 overrides section 4); this section is the normative summary and grows with each part of epic TKT-25. Decisions: D-98.
+A developer hands a ticket to Claude Code: Ticketing renders a short prompt for the ticket's type and the developer's browser opens Claude's own deep link with it. The design and its history are in [04-delegate-to-agent-refinement.md](04-delegate-to-agent-refinement.md) (its section 6 overrides section 4); this section is the normative summary and grows with each part of epic TKT-25. Decisions: D-98, D-99.
 
 ### 13.1 Parts
 
@@ -796,6 +796,10 @@ A developer hands a ticket to Claude Code: Ticketing renders a short prompt for 
 
 `agent.delegate` is an ordinary string-variant flag (6.13): `on` or `off`, targeted at users, roles (Admins first) or a percentage. While it is off for the caller, every agent endpoint returns 404 `agent.disabled` and nothing about agents is shown. Stored templates stay untouched. The server checks it on every request (`AgentGate`).
 
+The instance also needs `TICKETING_PUBLIC_URL`, its public origin (for example `https://tickets.example.com`): prompts link to tickets with it, never with request headers. While it is unset the feature is off for everyone, exactly as if the flag were off (404 `agent.disabled`, whose message then names the variable for callers the flag is on for). A value that is not an absolute http(s) URL stops the API at startup.
+
+The web app tells whether agent delegation is available from the project: `agent` in the project DTO is null while it is not.
+
 ### 13.3 Domain model
 
 | Enum | Values | Notes |
@@ -805,7 +809,18 @@ A developer hands a ticket to Claude Code: Ticketing renders a short prompt for 
 | `AgentPromptSource` | `Default`, `Custom` | Where a resolved prompt's type template came from. |
 | `AgentMergePolicy` | `Review`, `MergeWhenVerified` | Picks the sentence `{{finish}}` renders. |
 
-**Project** gains `AgentDelegationEnabled` (bool, default false; enabling needs a repository URL, `agent.project.repositoryRequired`), `RepositoryUrl` (text(500)?) and `AgentMergePolicy` (default `Review`). TKT-28 adds the endpoint that sets them, URL validation and the remaining setup fields.
+**Project** gains the agent setup, changed together through `PATCH /projects/{pk}/agent` (13.7) and validated as a whole:
+
+| Field | Type | Constraints |
+| --- | --- | --- |
+| AgentDelegationEnabled | bool | Default false. Enabling needs a repository URL (`agent.project.repositoryRequired`); so does clearing the URL of an enabled project. |
+| RepositoryUrl | text(500)? | `https://[user@]host[:port]/path`, `ssh://[user@]host[:port]/path` or scp-style `user@host:path`, each optionally ending in `.git`. Printable ASCII; no password, query or fragment; no empty, `.` or `..` path segment. Stored as typed (trimmed); otherwise `project.repositoryUrl.invalid`. |
+| DefaultBranch | text(100) | Default `main`. A name `git check-ref-format --branch` accepts, in printable ASCII (`project.defaultBranch.invalid`). |
+| AgentMergePolicy | AgentMergePolicy | Default `Review`. |
+| AgentAssignOnDelegate | bool | Default true. Delegating assigns the ticket to the delegating user if it is unassigned. |
+| AgentStartProgressOnDelegate | bool | Default true. Delegating moves a `ToDo` ticket to `InProgress`; other statuses stay. |
+
+The **normalized repository URL** is what clones are compared by: host and path in lower case, without scheme, user, port, `.git` or slashes at either end, so `https://git.example.com/Team/Repo.git` and `git@git.example.com:team/repo` both give `git.example.com/team/repo`. The API returns it next to the URL (`normalizedRepositoryUrl`). The two on-delegate toggles are applied by the delegation history entry (TKT-29), not by reading the prompt.
 
 **AgentPromptTemplate** (`agent_prompt_templates`), one row per slot:
 
@@ -845,7 +860,7 @@ Placeholders, deliberately only trusted values (D-98): there is **no** title, de
 | --- | --- |
 | `ticket.key`, `ticket.type` | `TKT-42`, `Bug` |
 | `ticket.url` | `{TICKETING_PUBLIC_URL}/tickets/{KEY}`; empty while the variable is unset |
-| `project.key`, `project.repositoryUrl` | |
+| `project.key`, `project.repositoryUrl`, `project.defaultBranch` | The URL as typed; the branch defaults to `main` |
 | `instance.url` | `TICKETING_PUBLIC_URL` without a trailing slash |
 | `finish` | The finish sentence for the project's merge policy |
 | `template.id` | `<TicketType> v<n> / <D\|C>` (D = instance default, C = project custom) |
@@ -854,7 +869,7 @@ Placeholders, deliberately only trusted values (D-98): there is **no** title, de
 
 `ResolveAgentPrompt`, in order:
 
-1. Flag off for the caller: 404 `agent.disabled`.
+1. Flag off for the caller, or `TICKETING_PUBLIC_URL` unset: 404 `agent.disabled`.
 2. Ticket not readable: 404 `ticket.notFound`; deleted ticket: `ticket.deleted` (as every ticket read). Archived project: 409 `agent.unavailable`.
 3. Project `AgentDelegationEnabled = false`: 409 `agent.project.disabled`.
 4. The project row for the ticket's type: `Off` gives 409 `agent.type.off`; `Custom` uses its body; `Inherit` or no row uses the instance default.
@@ -867,10 +882,12 @@ The result carries the prompt, the ticket key and type, the template's source, v
 | Action | Owner/Admin | Member | Viewer | No access |
 | --- | --- | --- | --- | --- |
 | Read a project's templates, versions; preview | Yes | Yes | Yes | 404 |
+| Read a project's agent setup; resolve a ticket's prompt (REST, `get_agent_prompt`) | Yes | Yes | Yes | 404 |
 | Change a project's templates (save, restore, reset to default) | Yes | No (403) | No (403) | 404 |
+| Change a project's agent setup | Yes | No (403) | No (403) | 404 |
 | Instance defaults and guardrails (read, change, preview) | Admin only | 403 | 403 | 403 |
 
-All of it requires the flag. Template writes and previews accept the **cookie session only**: a PAT of any scope gets 403 `auth.cookieSessionRequired` (a read-only PAT may already be stopped by `pat.readOnlyScope`), so an agent session cannot rewrite the prompts its teammates' sessions will run. Project reads accept a PAT. On an archived project everything is read-only (`project.archived`).
+All of it requires the flag. Template writes, previews and agent setup changes accept the **cookie session only**: a PAT of any scope gets 403 `auth.cookieSessionRequired` (a read-only PAT may already be stopped by `pat.readOnlyScope`), so an agent session cannot rewrite the prompts its teammates' sessions will run or widen its own project's merge policy. Project reads and prompt resolution accept a PAT, read-only ones included. On an archived project everything is read-only (`project.archived`).
 
 ### 13.7 REST
 
@@ -890,6 +907,26 @@ Instance templates, Admins only, under `/api/v1/admin/agent/prompts` (`{slot}` i
 
 `GET /api/v1/agent/prompt-placeholders` lists the placeholders for the editor.
 
+Project agent setup and resolved prompts:
+
+| Method and path | Purpose |
+| --- | --- |
+| `GET /api/v1/projects/{pk}/agent` | `{ enabled, repositoryUrl, normalizedRepositoryUrl, defaultBranch, mergePolicy, assignOnDelegate, startProgressOnDelegate, rowVersion }` with an `ETag`. Readers, PATs included. |
+| `PATCH /api/v1/projects/{pk}/agent` | Any of `enabled`, `repositoryUrl` (null or blank clears), `defaultBranch`, `mergePolicy`, `assignOnDelegate`, `startProgressOnDelegate`; omitted fields stay. Optional `If-Match` with the project's `rowVersion` (409 `concurrency.conflict`). Owners and Admins, web session only. Returns the setup. |
+| `GET /api/v1/tickets/{key}/agent-prompt` | The resolved prompt (13.5): `{ prompt, ticketKey, ticketType, template: { source, version, updatedAt, updatedBy }, guardrailsVersion }`. No side effects. |
+
+The project DTO (`GET /projects/{pk}`, `get_project`) carries the same setup as `agent`, null while agent delegation is not available to the caller.
+
 ### 13.8 Activity and audit
 
 Every template change writes `agent.prompt.updated` with EntityType `AgentPrompt`, `ProjectId` set for project rows, `Field` the type name or `Guardrails`, and old and new values `{ version, mode }`. The body is never in activity; bodies live in the versions. The Admin audit trail (I-13) lists `AgentPrompt` entries, labelled `Bug` or `TKT Bug`.
+
+Each changed setup field writes `project.field.changed` (EntityType `Project`) with `Field` one of `agentDelegationEnabled`, `repositoryUrl`, `defaultBranch`, `agentMergePolicy`, `agentAssignOnDelegate`, `agentStartProgressOnDelegate`. Resolving a prompt writes nothing.
+
+### 13.9 MCP
+
+| Tool | Inputs | Output |
+| --- | --- | --- |
+| `get_agent_prompt` | `key` | The same object as `GET /tickets/{key}/agent-prompt`. Read-only; a `ReadOnly` token may call it. |
+
+`tools/list` contains `get_agent_prompt` only while the agent gate (13.2) is open for the token's user; a direct call otherwise fails with `agent.disabled`. A tool joins this rule by carrying `[FeatureGate(typeof(SomeGate))]`. `get_project` returns `agent`; `update_project` does not accept the setup (13.6). There are no MCP tools for template edits.

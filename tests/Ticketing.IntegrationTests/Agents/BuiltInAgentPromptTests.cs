@@ -34,7 +34,7 @@ public sealed class BuiltInAgentPromptTests
     {
         // Arrange
         var composer = new AgentPromptComposer(BuiltIns, Options.Create(new AgentOptions { PublicUrl = "https://ticketing.internal.example.com:8443/" }));
-        var project = new AgentPromptProject("ABCDEFGHIJ", "https://gitlab.internal.example.com/" + new string('g', 200) + ".git", policy);
+        var project = new AgentPromptProject("ABCDEFGHIJ", "https://gitlab.internal.example.com/" + new string('g', 200) + ".git", new string('b', GitBranchName.MaxLength), policy);
         var guardrails = BuiltIns.For(AgentPromptSlot.Guardrails).Body;
 
         // Act

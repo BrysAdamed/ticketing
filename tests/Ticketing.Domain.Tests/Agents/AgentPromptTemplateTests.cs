@@ -233,8 +233,9 @@ public sealed class AgentPromptTemplateTests
         var project = Project.Create("TKT", "Ticketing", null, ProjectVisibility.Public, Admin, Now);
 
         // Act
-        var error = Assert.Throws<DomainException>(() => project.ConfigureAgentDelegation(true, " ", AgentMergePolicy.Review));
-        project.ConfigureAgentDelegation(true, "https://git.example.com/team/ticketing.git", AgentMergePolicy.MergeWhenVerified);
+        var error = Assert.Throws<DomainException>(() => project.ConfigureAgentDelegation(AgentDelegationSettings.Default with { Enabled = true, RepositoryUrl = " " }));
+        project.ConfigureAgentDelegation(
+            AgentDelegationSettings.Default with { Enabled = true, RepositoryUrl = "https://git.example.com/team/ticketing.git", MergePolicy = AgentMergePolicy.MergeWhenVerified });
 
         // Assert
         Assert.Equal(AgentErrors.RepositoryRequired, error.Code);

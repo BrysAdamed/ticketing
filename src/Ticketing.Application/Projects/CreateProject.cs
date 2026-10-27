@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Ticketing.Application.Abstractions;
 using Ticketing.Application.Access;
+using Ticketing.Application.Agents;
 using Ticketing.Application.Common;
 using Ticketing.Domain.Activity;
 using Ticketing.Domain.Projects;
@@ -34,7 +35,8 @@ public static partial class CreateProject
         ICurrentUser currentUser,
         IClock clock,
         IActivityLog activity,
-        IIdempotency idempotency) : IHandler<Command, ProjectDto>
+        IIdempotency idempotency,
+        AgentGate agents) : IHandler<Command, ProjectDto>
     {
         public Task<ProjectDto> HandleAsync(Command command, CancellationToken cancellationToken)
         {
@@ -56,7 +58,7 @@ public static partial class CreateProject
             await ProjectUniqueness.SaveAsync(db, project, cancellationToken);
 
             var grant = new ProjectAccessGrant(project.Id, project.Key, ProjectRole.Owner, project.Visibility, IsArchived: false);
-            return await GetProject.Handler.LoadAsync(db, grant, cancellationToken);
+            return await GetProject.Handler.LoadAsync(db, agents, grant, cancellationToken);
         }
     }
 

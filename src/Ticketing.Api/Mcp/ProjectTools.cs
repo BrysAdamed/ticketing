@@ -32,7 +32,8 @@ public sealed class ProjectTools
 
     [McpServerTool(Name = "get_project", ReadOnly = true, Idempotent = true, Title = "Get project")]
     [Description("Gets a project by key (for example WEB) or id: fields, your role, archivedAt, members (role and effectiveRole: Owner, Member, Viewer; "
-        + "a Viewer on a Public project acts as Member), linked boards and the current rowVersion.")]
+        + "a Viewer on a Public project acts as Member), linked boards, the current rowVersion and, where agent delegation is available to you, "
+        + "agent { enabled, repositoryUrl, normalizedRepositoryUrl, defaultBranch, mergePolicy (Review or MergeWhenVerified), assignOnDelegate, startProgressOnDelegate }.")]
     public static Task<ProjectDto> GetProject(
         GetProject.Handler handler,
         [Description("Project key (for example WEB) or project id.")] string projectKey,
@@ -55,7 +56,7 @@ public sealed class ProjectTools
     [Authorize(Policy = AuthPolicies.CanWrite)]
     [McpServerTool(Name = "update_project", Destructive = false, Idempotent = true, Title = "Update project")]
     [Description("Updates a project's name, description or visibility (Private or Public; Public means every signed-in user can edit). Owner only; "
-        + "archived projects are read-only. Omitted fields stay unchanged.")]
+        + "archived projects are read-only. Omitted fields stay unchanged. The agent setup cannot be changed over MCP; Owners change it in the web app.")]
     public static Task<ProjectDto> UpdateProject(
         UpdateProject.Handler handler,
         [Description("Project key (for example WEB) or project id.")] string projectKey,

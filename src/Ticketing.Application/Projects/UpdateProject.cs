@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using Ticketing.Application.Abstractions;
 using Ticketing.Application.Access;
+using Ticketing.Application.Agents;
 using Ticketing.Application.Common;
 using Ticketing.Domain.Activity;
 using Ticketing.Domain.Projects;
@@ -41,7 +42,8 @@ public static class UpdateProject
     public sealed class Handler(
         ITicketingDbContext db,
         IProjectAccess access,
-        IActivityLog activity) : IHandler<Command, ProjectDto>
+        IActivityLog activity,
+        AgentGate agents) : IHandler<Command, ProjectDto>
     {
         public async Task<ProjectDto> HandleAsync(Command command, CancellationToken cancellationToken)
         {
@@ -73,7 +75,7 @@ public static class UpdateProject
             }
 
             await ProjectUniqueness.SaveAsync(db, project, cancellationToken);
-            return await GetProject.Handler.LoadAsync(db, grant with { Visibility = project.Visibility }, cancellationToken);
+            return await GetProject.Handler.LoadAsync(db, agents, grant with { Visibility = project.Visibility }, cancellationToken);
         }
     }
 }

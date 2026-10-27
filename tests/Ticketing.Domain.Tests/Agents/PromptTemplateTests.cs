@@ -7,7 +7,7 @@ namespace Ticketing.Domain.Tests.Agents;
 public sealed class PromptTemplateTests
 {
     private static readonly AgentPromptContext Context = new(
-        "TKT-42", TicketType.Bug, "https://ticketing.test/tickets/TKT-42", "TKT", "https://git.example.com/team/ticketing.git",
+        "TKT-42", TicketType.Bug, "https://ticketing.test/tickets/TKT-42", "TKT", "https://git.example.com/team/ticketing.git", "develop",
         "https://ticketing.test", "Finish: push and set Review.", "Bug v3 / C");
 
     [Fact]
@@ -27,6 +27,7 @@ public sealed class PromptTemplateTests
             ticket.url=https://ticketing.test/tickets/TKT-42
             project.key=TKT
             project.repositoryUrl=https://git.example.com/team/ticketing.git
+            project.defaultBranch=develop
             instance.url=https://ticketing.test
             finish=Finish: push and set Review.
             template.id=Bug v3 / C

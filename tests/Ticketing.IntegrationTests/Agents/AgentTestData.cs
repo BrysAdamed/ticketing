@@ -47,7 +47,7 @@ internal static class AgentTestData
             var project = Project.Create(key, $"{key} project", null, visibility, owner.Id, now);
             foreach (var (user, role) in members)
                 project.AddMember(user.Id, role, owner.Id, now);
-            project.ConfigureAgentDelegation(delegation, RepositoryUrl, mergePolicy);
+            project.ConfigureAgentDelegation(AgentDelegationSettings.Default with { Enabled = delegation, RepositoryUrl = RepositoryUrl, MergePolicy = mergePolicy });
             db.Projects.Add(project);
             await db.SaveChangesAsync();
             return project.Id;

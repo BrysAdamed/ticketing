@@ -29,6 +29,14 @@ public sealed class AgentPromptAccess(AgentGate gate, IProjectAccess access, ICu
         return grant;
     }
 
+    /// <summary>Changing a project's agent setup: the flag, the web session, then Owner or Admin on a writable project.</summary>
+    public async Task<ProjectAccessGrant> ConfigureProjectAsync(string projectKeyOrId, CancellationToken cancellationToken)
+    {
+        await gate.EnsureEnabledAsync(cancellationToken);
+        currentUser.EnsureCookieSession();
+        return await access.EnsureOwnerAsync(projectKeyOrId, cancellationToken);
+    }
+
     public async Task EnsureAdminAsync(CancellationToken cancellationToken)
     {
         await gate.EnsureEnabledAsync(cancellationToken);

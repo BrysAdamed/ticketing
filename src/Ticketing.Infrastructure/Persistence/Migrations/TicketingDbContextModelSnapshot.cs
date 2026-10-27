@@ -665,6 +665,10 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<bool>("AgentAssignOnDelegate")
+                        .HasColumnType("boolean")
+                        .HasColumnName("agent_assign_on_delegate");
+
                     b.Property<bool>("AgentDelegationEnabled")
                         .HasColumnType("boolean")
                         .HasColumnName("agent_delegation_enabled");
@@ -674,6 +678,10 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                         .HasColumnType("integer")
                         .HasDefaultValue(1)
                         .HasColumnName("agent_merge_policy");
+
+                    b.Property<bool>("AgentStartProgressOnDelegate")
+                        .HasColumnType("boolean")
+                        .HasColumnName("agent_start_progress_on_delegate");
 
                     b.Property<DateTimeOffset?>("ArchivedAt")
                         .HasColumnType("timestamp with time zone")
@@ -690,6 +698,12 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("CreatedById")
                         .HasColumnType("uuid")
                         .HasColumnName("created_by_id");
+
+                    b.Property<string>("DefaultBranch")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("default_branch");
 
                     b.Property<DateTimeOffset?>("DeletedAt")
                         .HasColumnType("timestamp with time zone")

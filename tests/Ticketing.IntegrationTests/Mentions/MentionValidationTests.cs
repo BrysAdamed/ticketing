@@ -12,6 +12,8 @@ namespace Ticketing.IntegrationTests.Mentions;
 [Collection(nameof(MentionsCollection))]
 public sealed class MentionValidationTests(TicketingApiFactory api)
 {
+    private readonly CancellationToken _ct = TestContext.Current.CancellationToken;
+
     [Fact]
     public async Task Mentioning_someone_who_cannot_read_a_private_project_is_rejected()
     {
@@ -23,7 +25,7 @@ public sealed class MentionValidationTests(TicketingApiFactory api)
         // Act
         var comment = await world.OwnerClient.PostCommentAsync("WEB-1", $"Hey {outsider.Mention()}");
         var byEmail = await world.OwnerClient.PostCommentAsync("WEB-1", $"Hey @{outsider.Email}");
-        var description = await world.OwnerClient.PatchAsJsonAsync("/api/v1/tickets/WEB-1", new { description = outsider.Mention() }, HttpAssertions.Json);
+        var description = await world.OwnerClient.PatchAsJsonAsync("/api/v1/tickets/WEB-1", new { description = outsider.Mention() }, HttpAssertions.Json, _ct);
 
         // Assert
         var problem = await comment.ShouldBeProblemAsync(HttpStatusCode.BadRequest, CollaborationErrors.MentionInvalid);
@@ -48,7 +50,7 @@ public sealed class MentionValidationTests(TicketingApiFactory api)
         var inactive = await world.OwnerClient.PostCommentAsync("WEB-1", world.Member.Mention());
         var unknown = await world.OwnerClient.PostCommentAsync("WEB-1", Domain.Collaboration.Mentions.Format(Guid.CreateVersion7(), "Ghost"));
         var create = await world.OwnerClient.PostAsJsonAsync(
-            "/api/v1/projects/WEB/tickets", new { title = "New", type = "Bug", description = world.Member.Mention() }, HttpAssertions.Json);
+            "/api/v1/projects/WEB/tickets", new { title = "New", type = "Bug", description = world.Member.Mention() }, HttpAssertions.Json, _ct);
 
         // Assert
         await inactive.ShouldBeProblemAsync(HttpStatusCode.BadRequest, CollaborationErrors.MentionInvalid);
@@ -78,7 +80,7 @@ public sealed class MentionValidationTests(TicketingApiFactory api)
         var world = await api.SeedWorldAsync();
         await world.OwnerClient.CreateTicketAsync("WEB", "Lost access", extra: new { description = $"Ask {world.Member.Mention()}" });
         var comment = await world.OwnerClient.AddCommentAsync("WEB-1", $"Ping {world.Member.Mention()}");
-        (await world.OwnerClient.DeleteAsync($"/api/v1/projects/WEB/members/{world.Member.Id}")).EnsureSuccessStatusCode();
+        (await world.OwnerClient.DeleteAsync($"/api/v1/projects/WEB/members/{world.Member.Id}", _ct)).EnsureSuccessStatusCode();
 
         // Act
         var edited = await world.OwnerClient.EditCommentAsync(comment.Id, $"Ping {world.Member.Mention()} (left the team)");

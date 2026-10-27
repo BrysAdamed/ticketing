@@ -147,6 +147,7 @@ export class ProjectContext {
   }
 }
 
-function projectCacheKey(key: string): string {
+/// SwrCache key (and tag) of `GET /projects/{key}`, shared by every reader of the project detail.
+export function projectCacheKey(key: string): string {
   return `project:${key}`;
 }

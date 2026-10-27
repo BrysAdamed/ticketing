@@ -1,0 +1,105 @@
+@if (visible()) {
+  <span
+    class="split"
+    role="group"
+    aria-label="Delegate to agent"
+    [class.icon-only]="presentation() === 'peek'"
+    [attr.data-state]="state().kind"
+  >
+    <span class="tip" [matTooltip]="tooltip()">
+      <button
+        type="button"
+        class="main"
+        data-testid="delegate-button"
+        [attr.aria-label]="presentation() === 'peek' ? 'Delegate to agent' : null"
+        [disabled]="!ready()"
+        (click)="delegate()"
+      >
+        <tk-icon name="tablerRobot" [size]="14" />
+        @if (presentation() === 'page') {
+          <span>Delegate to agent</span>
+        }
+      </button>
+    </span>
+    @if (state().kind !== 'setup') {
+      <button
+        type="button"
+        class="chevron"
+        aria-label="Delegate options"
+        matTooltip="Delegate options"
+        data-testid="delegate-menu"
+        [matMenuTriggerFor]="menu"
+      >
+        <tk-icon name="tablerChevronDown" [size]="12" />
+      </button>
+    }
+  </span>
+
+  @if (overLength(); as text) {
+    <span class="over tnum" data-testid="delegate-length">{{ text }}</span>
+  }
+  @if (state().kind === 'setup') {
+    <a class="setup" data-testid="delegate-setup" [routerLink]="settingsLink()">Set up</a>
+  }
+
+  <mat-menu #menu="matMenu" xPosition="before" class="tk-delegate-menu">
+    <button
+      mat-menu-item
+      type="button"
+      data-testid="delegate-copy"
+      [disabled]="!prompt()"
+      (click)="copyPrompt()"
+    >
+      <tk-icon name="tablerCopy" [size]="14" />Copy prompt
+    </button>
+    <button
+      mat-menu-item
+      type="button"
+      data-testid="delegate-preview"
+      [disabled]="!prompt()"
+      (click)="previewPrompt()"
+    >
+      <tk-icon name="tablerFileText" [size]="14" />Preview prompt
+    </button>
+    <mat-divider />
+    <div class="menu-label" aria-hidden="true">Open in</div>
+    @for (option of apps; track option) {
+      <button
+        mat-menu-item
+        type="button"
+        role="menuitemradio"
+        [attr.aria-checked]="app() === option"
+        [attr.data-testid]="'delegate-app-' + option"
+        (click)="chooseApp(option)"
+      >
+        <tk-icon
+          [name]="option === 'ClaudeDesktop' ? 'tablerDeviceDesktop' : 'tablerKeyboard'"
+          [size]="14"
+        />{{ appLabels[option] }}
+        @if (app() === option) {
+          <tk-icon class="check" name="tablerCheck" [size]="14" />
+        }
+      </button>
+    }
+    <mat-divider />
+    <button
+      mat-menu-item
+      type="button"
+      data-testid="delegate-change-folder"
+      [attr.title]="folder()"
+      (click)="changeFolder()"
+    >
+      <tk-icon name="tablerFolders" [size]="14" />{{
+        folder() ? 'Change local folder…' : 'Set local folder…'
+      }}
+    </button>
+    <button mat-menu-item type="button" data-testid="delegate-help" (click)="openHelp()">
+      <tk-icon name="tablerHelp" [size]="14" />Didn't open? Help
+    </button>
+    @if (isOwner()) {
+      <a mat-menu-item data-testid="delegate-settings" [routerLink]="settingsLink()">
+        <tk-icon name="tablerSettings" [size]="14" />Agent settings
+      </a>
+    }
+  </mat-menu>
+}

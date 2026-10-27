@@ -26,6 +26,7 @@ import { ToastService } from '@core/notify/toast.service';
 import { Shortcut, ShortcutService } from '@core/shortcuts/shortcut.service';
 import { ProjectPeople } from '@core/tickets/project-people';
 import { TicketAttachments } from '@core/tickets/ticket-attachments';
+import { TicketHeaderHost } from '@core/tickets/ticket-header-actions';
 import { TICKET_DETAIL_SECTIONS } from '@core/tickets/ticket-sections';
 import { TicketLink, TicketRef } from '@core/tickets/ticket.models';
 import { TICKET_TYPE_LABELS } from '@shared/domain/enums';
@@ -40,6 +41,7 @@ import { ActivityTab, TicketActivityComponent } from './ticket-activity.componen
 import { NewChild, TicketChildrenComponent } from './ticket-children.component';
 import { FieldEdit, TicketFieldsComponent } from './ticket-fields.component';
 import { NewLink, TicketLinksComponent } from './ticket-links.component';
+import { TicketHeaderActionsHostComponent } from './ticket-header-actions-host.component';
 import { TicketSectionsHostComponent } from './ticket-sections-host.component';
 import { TicketDetailStore } from './ticket-detail.store';
 import { TicketDescriptionComponent, TicketTitleComponent } from './ticket-text.component';
@@ -65,13 +67,14 @@ export type TicketPresentation = 'page' | 'peek';
     TicketActivityComponent,
     TicketChildrenComponent,
     TicketFieldsComponent,
+    TicketHeaderActionsHostComponent,
     TicketLinksComponent,
     TicketSectionsHostComponent,
     TicketTitleComponent,
     TicketDescriptionComponent,
     TicketWatchComponent,
   ],
-  providers: [TicketDetailStore],
+  providers: [TicketDetailStore, TicketHeaderHost],
   viewProviders: [provideIcons(TICKET_ICONS)],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
@@ -85,6 +88,7 @@ export type TicketPresentation = 'page' | 'peek';
 })
 export class TicketDetailView {
   protected readonly store = inject(TicketDetailStore);
+  protected readonly headerHost = inject(TicketHeaderHost);
   private readonly confirm = inject(ConfirmService);
   private readonly toast = inject(ToastService);
   private readonly clipboard = inject(Clipboard);
@@ -248,9 +252,16 @@ export class TicketDetailView {
         handler: () => this.copyLink(),
       },
     ];
+    this.headerHost.refreshRequests
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => void this.store.reload());
+    effect(() =>
+      this.headerHost.shortcutsActive.set(!(this.presentation() === 'page' && this.peek.isOpen())),
+    );
+
     const shortcutService = inject(ShortcutService);
     effect((onCleanup) => {
-      if (this.presentation() === 'page' && this.peek.isOpen()) return;
+      if (!this.headerHost.shortcutsActive()) return;
       const removers = untracked(() => shortcuts.map((s) => shortcutService.register(s)));
       onCleanup(() => removers.forEach((remove) => remove()));
     });

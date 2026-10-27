@@ -875,7 +875,7 @@ Placeholders, deliberately only trusted values (D-98): there is **no** title, de
 4. The project row for the ticket's type: `Off` gives 409 `agent.type.off`; `Custom` uses its body; `Inherit` or no row uses the instance default.
 5. Render it with the trusted values, append the guardrails when non-empty, and enforce the limit (409 `agent.prompt.tooLong`).
 
-The result carries the prompt, the ticket key and type, the template's source, version and last editor, and the guardrails version. Anyone who can read the project may resolve, including Viewers and read-only tokens; nothing is written.
+The result carries the prompt, the ticket key and type, the template's source, version and last editor, the guardrails version and `outsiderContent`: on public projects, `{ source: Description | Comment, author, at }` when the current description's last write or the latest comment came from someone who is neither a project member nor an Admin, otherwise null (D-100). Anyone who can read the project may resolve, including Viewers and read-only tokens; nothing is written.
 
 ### 13.6 Permissions
 
@@ -885,9 +885,10 @@ The result carries the prompt, the ticket key and type, the template's source, v
 | Read a project's agent setup; resolve a ticket's prompt (REST, `get_agent_prompt`) | Yes | Yes | Yes | 404 |
 | Change a project's templates (save, restore, reset to default) | Yes | No (403) | No (403) | 404 |
 | Change a project's agent setup | Yes | No (403) | No (403) | 404 |
+| Record a delegation (`POST /tickets/{key}/agent-delegations`) | Yes | Yes | No (403) | 404 |
 | Instance defaults and guardrails (read, change, preview) | Admin only | 403 | 403 | 403 |
 
-All of it requires the flag. Template writes, previews and agent setup changes accept the **cookie session only**: a PAT of any scope gets 403 `auth.cookieSessionRequired` (a read-only PAT may already be stopped by `pat.readOnlyScope`), so an agent session cannot rewrite the prompts its teammates' sessions will run or widen its own project's merge policy. Project reads and prompt resolution accept a PAT, read-only ones included. On an archived project everything is read-only (`project.archived`).
+All of it requires the flag. Template writes, previews, agent setup changes and delegation records accept the **cookie session only**: a PAT of any scope gets 403 `auth.cookieSessionRequired` (a read-only PAT may already be stopped by `pat.readOnlyScope`), so an agent session cannot rewrite the prompts its teammates' sessions will run or widen its own project's merge policy. Project reads and prompt resolution accept a PAT, read-only ones included. On an archived project everything is read-only (`project.archived`).
 
 ### 13.7 REST
 
@@ -913,7 +914,8 @@ Project agent setup and resolved prompts:
 | --- | --- |
 | `GET /api/v1/projects/{pk}/agent` | `{ enabled, repositoryUrl, normalizedRepositoryUrl, defaultBranch, mergePolicy, assignOnDelegate, startProgressOnDelegate, rowVersion }` with an `ETag`. Readers, PATs included. |
 | `PATCH /api/v1/projects/{pk}/agent` | Any of `enabled`, `repositoryUrl` (null or blank clears), `defaultBranch`, `mergePolicy`, `assignOnDelegate`, `startProgressOnDelegate`; omitted fields stay. Optional `If-Match` with the project's `rowVersion` (409 `concurrency.conflict`). Owners and Admins, web session only. Returns the setup. |
-| `GET /api/v1/tickets/{key}/agent-prompt` | The resolved prompt (13.5): `{ prompt, ticketKey, ticketType, template: { source, version, updatedAt, updatedBy }, guardrailsVersion }`. No side effects. |
+| `GET /api/v1/tickets/{key}/agent-prompt` | The resolved prompt (13.5): `{ prompt, ticketKey, ticketType, template: { source, version, updatedAt, updatedBy }, guardrailsVersion, outsiderContent }`. No side effects. |
+| `POST /api/v1/tickets/{key}/agent-delegations` | `{ app?: ClaudeCode \| ClaudeDesktop }` (default ClaudeCode). The web app calls it when Delegate opens Claude. Writers, web session only; after the 13.5 checks a Done ticket is 409 `agent.ticket.done`. In one transaction: `ticket.agent.delegated`, then the caller as assignee if `assignOnDelegate` and unassigned, and To Do → In Progress if `startProgressOnDelegate`. Returns the ticket (D-100). |
 
 The project DTO (`GET /projects/{pk}`, `get_project`) carries the same setup as `agent`, null while agent delegation is not available to the caller.
 
@@ -922,6 +924,8 @@ The project DTO (`GET /projects/{pk}`, `get_project`) carries the same setup as 
 Every template change writes `agent.prompt.updated` with EntityType `AgentPrompt`, `ProjectId` set for project rows, `Field` the type name or `Guardrails`, and old and new values `{ version, mode }`. The body is never in activity; bodies live in the versions. The Admin audit trail (I-13) lists `AgentPrompt` entries, labelled `Bug` or `TKT Bug`.
 
 Each changed setup field writes `project.field.changed` (EntityType `Project`) with `Field` one of `agentDelegationEnabled`, `repositoryUrl`, `defaultBranch`, `agentMergePolicy`, `agentAssignOnDelegate`, `agentStartProgressOnDelegate`. Resolving a prompt writes nothing.
+
+A delegation writes `ticket.agent.delegated` (EntityType `Ticket`) with the new value `{ templateSource, templateVersion, guardrailsVersion, app }`, and the on-delegate changes as ordinary `ticket.field.changed` entries (`assignee`, `status`) with the same timestamp. Neither the prompt nor the local folder is ever stored. History shows it as "Anna delegated to agent · prompt v3 (custom) · Claude Code".
 
 ### 13.9 MCP
 

@@ -4,10 +4,15 @@ import { IconComponent } from '@shared/ui/icon/icon.component';
 
 export type ToastIntent = 'info' | 'success' | 'warning' | 'danger';
 
+export interface ToastAction {
+  label: string;
+  run: () => void;
+}
+
 export interface ToastData {
   message: string;
   intent: ToastIntent;
-  action?: { label: string; run: () => void };
+  actions: readonly ToastAction[];
 }
 
 const ICONS: Record<ToastIntent, string> = {
@@ -25,7 +30,7 @@ const ICONS: Record<ToastIntent, string> = {
   template: `
     <tk-icon class="icon" [name]="icon" [size]="16" />
     <span class="message">{{ data.message }}</span>
-    @if (data.action; as action) {
+    @for (action of data.actions; track action.label) {
       <button type="button" class="action" (click)="run(action.run)">{{ action.label }}</button>
     }
     <button

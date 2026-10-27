@@ -228,6 +228,7 @@ public sealed class ProjectAgentPromptTests(TicketingApiFactory api)
         Assert.StartsWith($"Fix {ticket} (Bug v1 / C) in {AgentTestData.RepositoryUrl}.\n\n<delegation_rules>", custom.Prompt, StringComparison.Ordinal);
         Assert.Contains($"{TicketingApiFactory.PublicUrl}/tickets/{ticket}", custom.Prompt, StringComparison.Ordinal);
         Assert.Equal((custom.Prompt!.Length, AgentPrompt.LengthLimit, ticket), (custom.Length, custom.LengthLimit, custom.TicketKey));
+        Assert.StartsWith("<delegation_rules>", custom.Prompt[custom.GuardrailsStart!.Value..], StringComparison.Ordinal);
         Assert.Empty(custom.Errors);
         Assert.Equal("TKT-1234", sample.TicketKey);
         Assert.StartsWith("Fix the bug TKT-1234.", sample.Prompt, StringComparison.Ordinal);

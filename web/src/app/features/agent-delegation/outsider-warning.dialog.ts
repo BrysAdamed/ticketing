@@ -6,14 +6,13 @@ import { RelativeTimePipe } from '@shared/pipes/relative-time.pipe';
 
 export interface OutsiderWarningDialogData {
   ticketKey: string;
-  projectKey: string;
   content: NonNullable<ResolvedAgentPrompt['outsiderContent']>;
   /// Called synchronously from the button's click handler, so the launch keeps the user gesture.
   proceed: () => void;
 }
 
-/// Shown before a launch when a title, description, comment or attachment of a public project's
-/// ticket came from a non-member (refinement §6 hardening, D-100, D-104): the agent reads it over MCP.
+/// Shown before a launch when text the agent reads over MCP (the ticket, its related tickets and
+/// test cases) came from outside the team (refinement §6 hardening, D-100, D-104, D-106).
 @Component({
   selector: 'tk-outsider-warning-dialog',
   imports: [MatButtonModule, MatDialogModule, RelativeTimePipe],
@@ -23,13 +22,20 @@ export interface OutsiderWarningDialogData {
     <h2 mat-dialog-title>Check {{ data.ticketKey }} before the agent reads it</h2>
     <mat-dialog-content>
       <div class="tk-callout tk-callout-warning">
-        <strong>{{ data.content.author?.displayName ?? 'Someone' }}</strong>
-        {{ action }} {{ data.content.at | relativeTime }} and isn't a member of
-        {{ data.projectKey }}.
+        <span>
+          <strong>{{ data.content.author?.displayName ?? 'Someone' }}</strong>
+          {{ action }}
+          @if (data.content.itemKey; as itemKey) {
+            <strong data-testid="agent-outsider-item">{{ itemKey }}</strong>
+          }
+          {{ data.content.at | relativeTime }} and isn't an Owner or Member of
+          {{ data.content.projectKey }}.
+        </span>
       </div>
       <p class="text">
-        The agent reads the ticket over MCP, so text from outside the team can steer it. Read the
-        ticket first, and review the prompt in Claude before you press Enter.
+        The agent reads the ticket and its related tickets and test cases over MCP, so text from
+        outside the team can steer it. Read them first, and review the prompt in Claude before you
+        press Enter.
       </p>
     </mat-dialog-content>
     <mat-dialog-actions align="end">

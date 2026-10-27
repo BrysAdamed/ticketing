@@ -12,13 +12,17 @@ export interface AgentPromptUser {
   isActive: boolean;
 }
 
-export type OutsiderContentSource = 'Title' | 'Description' | 'Comment' | 'Attachment';
+export type OutsiderContentSource =
+  'Title' | 'Description' | 'Comment' | 'Attachment' | 'RelatedTicket' | 'TestCase';
 
+/// What the outsider did, followed by `itemKey` when there is one (D-106).
 export const OUTSIDER_CONTENT_LABELS: Record<OutsiderContentSource, string> = {
   Title: 'changed the title',
   Description: 'wrote the description',
   Comment: 'wrote a comment',
   Attachment: 'attached a file',
+  RelatedTicket: 'wrote on the related ticket',
+  TestCase: 'wrote the test case',
 };
 
 /// `GET /tickets/{key}/agent-prompt` (TKT-28, D-100).
@@ -33,12 +37,15 @@ export interface ResolvedAgentPrompt {
     updatedBy: AgentPromptUser | null;
   };
   guardrailsVersion: number;
-  /// Set on public projects when any title or description write, comment or attachment came from a
-  /// non-member: the newest one (D-104).
+  /// The newest text the agent reads (the ticket, its parent, children, linked tickets and test
+  /// cases) written by someone who is not an Owner or Member of `projectKey` (D-104, D-106).
+  /// `itemKey` names the related ticket or test case, null for the ticket itself.
   outsiderContent: {
     source: OutsiderContentSource;
     author: AgentPromptUser | null;
     at: string;
+    projectKey: string;
+    itemKey: string | null;
   } | null;
 }
 

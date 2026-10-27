@@ -3,11 +3,8 @@ using Ticketing.Application.Abstractions;
 using Ticketing.Application.Access;
 using Ticketing.Application.Common;
 using Ticketing.Application.Tickets;
-using Ticketing.Domain.Activity;
 using Ticketing.Domain.Agents;
-using Ticketing.Domain.Projects;
 using Ticketing.Domain.Tickets;
-using Ticketing.Domain.Users;
 
 namespace Ticketing.Application.Agents;
 
@@ -17,8 +14,8 @@ namespace Ticketing.Application.Agents;
 /// delegation enabled (<c>agent.project.disabled</c>); the project's row for the ticket type is not Off
 /// (<c>agent.type.off</c>), Custom uses its own body and Inherit or no row the instance default; both it and the guardrails
 /// must still parse (<c>agent.template.invalid</c>); then the guardrails are appended when non-empty, and the result must
-/// stay below the deep-link limit (<c>agent.prompt.tooLong</c>).
-/// Readers (Viewers and read-only tokens included) may resolve; nothing is written.
+/// stay below the deep-link limit (<c>agent.prompt.tooLong</c>). The result names the newest outsider text the agent will
+/// read (<see cref="AgentOutsiderContent"/>). Readers (Viewers and read-only tokens included) may resolve; nothing is written.
 /// </summary>
 public static class ResolveAgentPrompt
 {
@@ -50,7 +47,8 @@ public static class ResolveAgentPrompt
                 throw AppException.Conflict(
                     AgentErrors.ProjectDisabled, $"Agent delegation is off for project {ticket.Grant.ProjectKey}.", "A project Owner can turn it on in the project's Agent settings.");
 
-            var type = await db.Tickets.Where(t => t.Id == ticket.Id).Select(t => t.Type).SingleAsync(cancellationToken);
+            var facts = await db.Tickets.Where(t => t.Id == ticket.Id).Select(t => new { t.Type, t.ParentId }).SingleAsync(cancellationToken);
+            var type = facts.Type;
             await defaults.EnsureAsync(cancellationToken);
             var instance = await AgentPromptQueries.InstanceAsync(db, cancellationToken);
             var row = await db.AgentPromptTemplates
@@ -67,7 +65,7 @@ public static class ResolveAgentPrompt
             if (!AgentPrompt.FitsLimit(prompt))
                 throw AppException.Conflict(AgentErrors.PromptTooLong, AgentPrompt.TooLongMessage(prompt.Length), "Ask a project Owner or an Admin to shorten the template or the guardrails.");
 
-            var outsider = await OutsiderContentAsync(ticket, cancellationToken);
+            var outsider = await AgentOutsiderContent.FindAsync(db, access, ticket, facts.ParentId, cancellationToken);
             var users = await AgentPromptQueries.UsersAsync(db, [template.UpdatedById, outsider?.AuthorId], cancellationToken);
             return new ResolvedAgentPromptDto(
                 prompt,
@@ -75,7 +73,9 @@ public static class ResolveAgentPrompt
                 type,
                 new AgentPromptTemplateRefDto(source, template.CurrentVersion, template.UpdatedAt, AgentPromptQueries.User(users, template.UpdatedById)),
                 guardrails.CurrentVersion,
-                outsider is null ? null : new AgentPromptOutsiderContentDto(outsider.Source, AgentPromptQueries.User(users, outsider.AuthorId), outsider.At));
+                outsider is null
+                    ? null
+                    : new AgentPromptOutsiderContentDto(outsider.Source, AgentPromptQueries.User(users, outsider.AuthorId), outsider.At, outsider.ProjectKey, outsider.ItemKey));
         }
 
         /// <summary>
@@ -97,53 +97,5 @@ public static class ResolveAgentPrompt
         private static AppException InvalidTemplate(string what, PromptTemplateError error, string hint) =>
             AppException.Conflict(
                 AgentErrors.TemplateInvalid, $"{what} no longer parses (line {error.Line}, column {error.Column}: {error.Code}).", hint);
-
-        /// <summary>
-        /// On a public project, the newest text the agent reads over MCP that someone who is neither a member of the project
-        /// nor an Admin wrote (D-100, D-104): any title or description write (creation included), any non-deleted comment
-        /// (at its last edit) and any attachment. Later writes by insiders never clear it, because the outsider's text may
-        /// still be there. Null on private projects or when every such write came from insiders.
-        /// </summary>
-        private async Task<OutsiderContent?> OutsiderContentAsync(TicketTarget ticket, CancellationToken cancellationToken)
-        {
-            if (ticket.Grant.Visibility != ProjectVisibility.Public)
-                return null;
-
-            var insiders = db.Users.Where(u => u.GlobalRole == GlobalRole.Admin).Select(u => u.Id)
-                .Concat(db.ProjectMembers.Where(m => m.ProjectId == ticket.ProjectId).Select(m => m.UserId));
-
-            var text = await db.ActivityEntries
-                .AsNoTracking()
-                .Where(a => a.EntityType == ActivityEntityType.Ticket && a.EntityId == ticket.Id
-                    && (a.Action == CreateTicket.Action || (a.Action == UpdateTicket.FieldChanged && (a.Field == "title" || a.Field == "description")))
-                    && a.ActorId != null && !insiders.Contains(a.ActorId.Value))
-                .OrderByDescending(a => a.OccurredAt)
-                .Select(a => new { AuthorId = a.ActorId!.Value, a.Field, a.OccurredAt })
-                .FirstOrDefaultAsync(cancellationToken);
-            var comment = await db.Comments
-                .AsNoTracking()
-                .Where(c => c.TicketId == ticket.Id && c.DeletedAt == null && !insiders.Contains(c.AuthorId))
-                .Select(c => new { c.AuthorId, At = c.EditedAt ?? c.CreatedAt })
-                .OrderByDescending(c => c.At)
-                .FirstOrDefaultAsync(cancellationToken);
-            var attachment = await db.Attachments
-                .AsNoTracking()
-                .Where(a => a.TicketId == ticket.Id && !insiders.Contains(a.UploadedById))
-                .OrderByDescending(a => a.UploadedAt)
-                .Select(a => new { a.UploadedById, a.UploadedAt })
-                .FirstOrDefaultAsync(cancellationToken);
-
-            var candidates = new List<OutsiderContent>(3);
-            if (text is not null)
-                candidates.Add(new OutsiderContent(
-                    text.Field == "title" ? AgentPromptContentSource.Title : AgentPromptContentSource.Description, text.AuthorId, text.OccurredAt));
-            if (comment is not null)
-                candidates.Add(new OutsiderContent(AgentPromptContentSource.Comment, comment.AuthorId, comment.At));
-            if (attachment is not null)
-                candidates.Add(new OutsiderContent(AgentPromptContentSource.Attachment, attachment.UploadedById, attachment.UploadedAt));
-            return candidates.OrderByDescending(c => c.At).FirstOrDefault();
-        }
-
-        private sealed record OutsiderContent(AgentPromptContentSource Source, Guid AuthorId, DateTimeOffset At);
     }
 }

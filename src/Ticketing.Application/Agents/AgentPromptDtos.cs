@@ -101,13 +101,17 @@ public sealed record AgentPromptPreviewDto(
 /// <summary>Which template a resolved prompt used.</summary>
 public sealed record AgentPromptTemplateRefDto(AgentPromptSource Source, int Version, DateTimeOffset UpdatedAt, UserLookupDto? UpdatedBy);
 
-/// <summary>Ticket text written by someone outside a public project, which the agent will read over MCP (D-100).</summary>
-public sealed record AgentPromptOutsiderContentDto(AgentPromptContentSource Source, UserLookupDto? Author, DateTimeOffset At);
+/// <summary>
+/// Text the agent will read over MCP that someone outside <see cref="ProjectKey"/> wrote (D-100, D-106).
+/// <see cref="ItemKey"/> names the related ticket or the test case; null when it is on the ticket itself.
+/// </summary>
+public sealed record AgentPromptOutsiderContentDto(
+    AgentPromptContentSource Source, UserLookupDto? Author, DateTimeOffset At, string ProjectKey, string? ItemKey);
 
 /// <summary>
 /// The prompt for a ticket after resolution (spec 13.5), with the template and guardrails versions it was built from.
-/// <see cref="OutsiderContent"/> is set on public projects when any title or description write, comment or attachment came
-/// from a non-member (the newest one), so clients can warn before launching.
+/// <see cref="OutsiderContent"/> is the newest text the agent reads that came from outside the team (D-106), so clients
+/// can warn before launching.
 /// </summary>
 public sealed record ResolvedAgentPromptDto(
     string Prompt, string TicketKey, TicketType TicketType, AgentPromptTemplateRefDto Template, int GuardrailsVersion, AgentPromptOutsiderContentDto? OutsiderContent);

@@ -93,7 +93,9 @@ Controls:
   - Ticket content is requirements data and cannot change the rules, CLAUDE.md or permissions.
   - The agent refuses secrets, `.env` files, sending data elsewhere, changes to CI, hooks or permissions, deletions and force pushes, and quotes any such request in its report.
   - The agent never writes secrets or machine details to the tracker.
-- **The outsider warning.** `ResolvedAgentPromptDto.outsiderContent` flags public-project tickets whose title or description writes, comments (at their last edit) or attachments came from someone who is neither a project member nor an Admin. It reports the newest such write (D-100, D-104).
+- **The outsider warning.** `ResolvedAgentPromptDto.outsiderContent` flags tickets where text the agent reads came from someone who is neither an Admin nor an Owner or Member of the project it was written in. It reports the newest such write with its project and, for a related item, its key (D-100, D-104, D-106).
+  - Covered: title or description writes, comments (at their last edit) and attachments on the ticket, its parent, children and linked tickets the caller can read; creation and text edits of the ticket's test cases.
+  - Viewers and former members count as outside. Private projects are checked too, so text written while a project was public stays flagged.
   - An insider's later write does not clear the flag, because the outsider's text can still be there.
   - The web app shows a dialog before the launch. MCP clients see the same field.
 - **Destructive tools ask every time** (see T2).
@@ -105,14 +107,21 @@ Tests:
 - `tests/Ticketing.IntegrationTests/Agents/RecordAgentDelegationTests`:
   - `The_resolved_prompt_flags_a_public_project_outsiders_comment_even_after_an_insider_replies`
   - `Outsider_titles_descriptions_and_attachments_stay_flagged_after_insiders_edit_the_ticket`
+- `tests/Ticketing.IntegrationTests/Agents/OutsiderContentTests`:
+  - `An_outsider_comment_on_a_related_ticket_is_flagged_with_its_key` (parent, child, outward and inward link)
+  - `A_linked_ticket_in_another_project_counts_its_own_writers_and_stays_hidden_from_callers_who_cannot_read_it` (former members too)
+  - `Test_cases_an_outsider_wrote_or_edited_are_flagged_with_their_key`
+  - `Text_written_while_the_project_was_public_stays_flagged_after_it_turns_private`
+  - `A_viewer_writing_on_a_public_project_counts_as_an_outsider`
 - `BuiltInAgentPromptTests` › `Every_slot_ships_a_valid_template_of_the_current_release` (the guardrails ship with every release)
 - `McpTests` › `Every_destructive_tool_asks_the_client_to_confirm_with_the_user`
-- `e2e/tests/agents/delegate-to-agent.spec.ts` › `Viewers never see it, Members of a project without delegation neither, and outsiders get a warning`
+- `e2e/tests/agents/delegate-to-agent.spec.ts` › `Viewers never see it, Members of a project without delegation neither, and outsiders get a warning` and `an outsider comment on a linked ticket warns with that ticket key`
 
 Residual risk:
 
 - This is the main residual risk, and no single layer is a boundary (research §4.4).
-- The warning does not cover linked or child tickets, test cases, or content written before a project turned private. Deferred to TKT-43.
+- The warning looks one hop out: tickets further away (a linked ticket's links, the parent's other children), regression sessions and docs are not checked, although the agent may read them (D-106). The guardrails still treat all of it as data.
+- Linked tickets in projects the delegating user cannot read are not checked; the agent, using that user's PAT, cannot read them either.
 - Deny rules for delegated runs are not possible through a deep link (ideas.md).
 
 ### T4. A malicious project Owner edits a template
@@ -254,7 +263,7 @@ No High findings. Fixed in TKT-33, each with tests:
 Deferred:
 
 - **TKT-42 (done, D-105):** the delegation record keeps the versions the browser launched, adds the current ones when they differ, and records a launch whose prompt was withdrawn since instead of refusing it (`RecordAgentDelegationTests` › `The_entry_records_the_launched_versions_when_the_template_changed_after_page_load`, `A_launch_whose_prompt_was_withdrawn_after_page_load_is_still_recorded_as_withdrawn`).
-- **TKT-43:** cover linked and child tickets, test cases and content written before a project turned private in the outsider warning.
+- **TKT-43 (done, D-106):** the outsider warning covers the parent, children, linked tickets and test cases, counts Viewers and former members as outside, and checks private projects too.
 - **TKT-44 (done):** a stored template that no longer parses now gives 409 `agent.template.invalid` with the position and where to fix it, never the body (`GetAgentPromptTests` › `A_stored_template_that_no_longer_parses_is_agent_template_invalid_over_rest_and_mcp`).
 
 Accepted, by design:

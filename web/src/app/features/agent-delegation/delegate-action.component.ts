@@ -230,7 +230,6 @@ export class DelegateActionComponent {
     this.dialog.open<OutsiderWarningDialog, OutsiderWarningDialogData>(OutsiderWarningDialog, {
       data: {
         ticketKey: prompt.ticketKey,
-        projectKey: this.ticket().projectKey,
         content,
         proceed: () => this.launch(prompt, folder),
       },

@@ -20,6 +20,8 @@ import {
   effect,
   ElementRef,
   inject,
+  input,
+  output,
   signal,
   untracked,
   viewChild,
@@ -28,6 +30,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
 import { Router, RouterLink } from '@angular/router';
 import { provideIcons } from '@ng-icons/core';
+import { tablerLayoutSidebarLeftCollapse } from '@ng-icons/tabler-icons';
 import { docsHomeUrl, docUrl } from '@core/docs/doc-links';
 import { DiagramFormat, DOC_ROOT, DocKind, DocTreeItem } from '@core/docs/doc.models';
 import { ToastService } from '@core/notify/toast.service';
@@ -69,7 +72,7 @@ const SKELETON = [0, 1, 1, 1, 0, 1, 2, 2, 0, 0].map((depth, i) => ({
     InlinePickerDirective,
     AutofocusSelectDirective,
   ],
-  viewProviders: [provideIcons(DOCS_ICONS)],
+  viewProviders: [provideIcons({ ...DOCS_ICONS, tablerLayoutSidebarLeftCollapse })],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { 'data-testid': 'doc-tree' },
   templateUrl: './doc-tree.component.html',
@@ -79,6 +82,9 @@ export class DocTreeComponent {
   protected readonly store = inject(DocTreeStore);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
+
+  readonly collapseTitle = input('Hide the tree');
+  readonly collapse = output<void>();
 
   protected readonly rowHeight = TREE_ROW_HEIGHT;
   protected readonly docIcon = docIcon;

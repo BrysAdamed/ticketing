@@ -125,7 +125,10 @@ export class ShortcutService {
       }
     }
 
-    const match = candidates.find((s) => s.keys === combo && (!editable || s.allowInInputs));
+    const combos = [physicalComboOf(event, this.isMac), combo].filter((c) => c !== null);
+    const match = combos
+      .map((c) => candidates.find((s) => s.keys === c && (!editable || s.allowInInputs)))
+      .find((s) => s !== undefined);
     if (match) {
       event.preventDefault();
       match.handler(event);
@@ -161,6 +164,32 @@ export function comboOf(event: KeyboardEvent, isMac: boolean): string | null {
   const isSymbol = key.length === 1 && !/[a-z0-9]/.test(key);
   if (event.shiftKey && !isSymbol) parts.push('shift');
   parts.push(key);
+  return parts.join('+');
+}
+
+const PHYSICAL_SYMBOLS: Readonly<Record<string, string>> = {
+  Backquote: '`',
+  Minus: '-',
+  Equal: '=',
+  BracketLeft: '[',
+  BracketRight: ']',
+  Backslash: '\\',
+  Semicolon: ';',
+  Quote: "'",
+  Comma: ',',
+  Period: '.',
+  Slash: '/',
+};
+
+/// `Shift` with a symbol key, named by the symbol on the physical key: `Ctrl Shift .` is
+/// `mod+shift+.` although the browser reports `>`. It is tried before `comboOf`.
+export function physicalComboOf(event: KeyboardEvent, isMac: boolean): string | null {
+  const symbol = event.shiftKey ? PHYSICAL_SYMBOLS[event.code] : undefined;
+  if (!symbol) return null;
+  const parts: string[] = [];
+  if (isMac ? event.metaKey : event.ctrlKey) parts.push('mod');
+  if (event.altKey) parts.push('alt');
+  parts.push('shift', symbol);
   return parts.join('+');
 }
 

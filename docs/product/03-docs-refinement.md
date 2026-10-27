@@ -15,7 +15,7 @@ Proposed numbering: spec §12 "Docs", decisions D-93 onwards, ideas I-82 onwards
 ### 1.1 Scope and placement
 - Docs becomes a new project section: a sidebar sub-item **Docs** under each project. D-83 says project sections live in the sidebar, so it is not a header tab, even though the owner said "tab". View ids are `docs.home`, `docs.page`, `docs.diagram`, `docs.history` and `docs.trash`.
 - Layout is two panes:
-  - Left: a tree panel, 280 px, resizable 200–480 px, collapsible with `[`. It is per project and its state is persisted.
+  - Left: a tree panel, 280 px, resizable 200–480 px, collapsible with `Ctrl \` (D-109; `[` is the app sidebar). It is per project and its state is persisted.
   - Right: the content. A page body is at most 760 px wide. At ≥1440 px a 220 px "On this page" rail sits on the right.
 - One project owns three kinds of documents:
   - **Folders.**

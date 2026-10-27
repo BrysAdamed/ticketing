@@ -159,6 +159,13 @@ test.describe('test cases and regressions', () => {
         await expect(page.getByTestId('summary-waiting')).toHaveText('0');
         await expect(page.getByTestId('summary-pass-rate')).toHaveText('100%');
         await expect(page.getByTestId('session-items').getByRole('button')).toHaveCount(2);
+        await expect
+            .poll(async () =>
+                (await api.get<Session>(`/regression-sessions/${project.key}-R-1`)).items.map(
+                    (i) => i.status,
+                ),
+            )
+            .toEqual(['Passed', 'Skipped']);
         const testCases = new TestCasesPage(page);
         await testCases.goto(project.key);
         await testCases.row(`${project.key}-TC-1`).click();

@@ -45,6 +45,15 @@ export class Api {
         );
     }
 
+    async put<T>(path: string, body?: unknown): Promise<T> {
+        return this.json<T>(
+            await this.context.put(url(path), {
+                data: body,
+                headers: await this.unsafeHeaders(),
+            }),
+        );
+    }
+
     async patch<T>(path: string, body: unknown, rowVersion?: number): Promise<T> {
         const headers: Record<string, string> =
             rowVersion === undefined ? {} : { 'If-Match': `"${rowVersion}"` };

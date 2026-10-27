@@ -44,8 +44,12 @@ export const routes: Routes = [
         redirectTo: ({ params }) =>
           `/projects/${projectKeyOfDoc(params['docKey'])}/docs/${params['docKey'].toUpperCase()}`,
       },
-      { path: 'p/:projectKey/docs', redirectTo: '/projects/:projectKey/docs' },
-      { path: 'p/:projectKey/docs/:docKey', redirectTo: '/projects/:projectKey/docs/:docKey' },
+      { path: 'p/:projectKey/docs', pathMatch: 'full', redirectTo: '/projects/:projectKey/docs' },
+      {
+        path: 'p/:projectKey/docs/:docKey',
+        pathMatch: 'full',
+        redirectTo: '/projects/:projectKey/docs/:docKey',
+      },
       {
         path: 'p/:projectKey/docs/:docKey/:slug',
         redirectTo: '/projects/:projectKey/docs/:docKey/:slug',

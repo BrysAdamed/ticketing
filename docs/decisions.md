@@ -581,6 +581,26 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
   - `Shift+D` drafts a Mermaid diagram; the inline row has a Mermaid | Canvas toggle. Single-key tree shortcuts (`N`, `Shift+N`, `Shift+D`, `F2`, `M`, `Del`, `J`/`K`, `Alt+↑/↓`) act on the tree cursor, which follows the open doc; arrow keys and `Enter` act only while the tree has focus, so they never take scrolling away from a page.
 - Rationale: one URL shape for every project section keeps the sidebar, breadcrumbs and `G` shortcuts working unchanged, and the redirects keep the server's links valid. Resolving the content view by kind inside one frame gives every kind its own A/B seam without routing on data the URL does not carry. A 5 000-node tree is small enough to hold in memory, which makes the drop feedback (an invalid drop shows red) and the rollback exact without extra requests.
 
+### D-103 Docs search: one ranked query, plain-text snippets from ts_headline, docs inside quick jump
+
+- Question: how docs search (TKT-19, refinement 1.10) ranks, builds snippets that are "plain text plus highlight ranges, never HTML", and reaches the command palette.
+- Decision:
+  - One query over `doc_nodes` (the published copy; drafts live in `doc_drafts` and are never read) composed with `ReadableProjects()`. Text matches the generated `search_vector` (`websearch_to_tsquery('english')`), a title substring from 3 characters (trigram index) or a doc key. Relevance orders by `10 × exact key + 1 × title contains the text + ts_rank`, then `updatedAt`, `id`; at most 100, no cursor. Without text the only sort is `updated` with a keyset cursor (`updatedAt`, `id`).
+  - Snippets come from `ts_headline` over the content (Canvas: the outline) with the control characters U+0002/U+0003 as start and stop marks, `MaxWords=30, MinWords=12, ShortWord=0`, run only for the returned page. `DocSnippets` turns that into text plus UTF-16 ranges, collapses whitespace, drops markdown emphasis and heading marks and cuts at 240 characters. HTML in content stays literal text; the SPA renders snippets with text bindings only.
+  - `folder` resolves to the folder's whole subtree in memory from the project's folder rows (at most 5 000), so no recursive SQL. Unreadable or unknown projects, folders and tickets match nothing (no 404, no leak); a readable non-folder in `folder` is 400 `validation`.
+  - Quick jump stays one request: the existing `/quick-jump` also answers doc keys and appends up to 5 docs with snippets after the tickets (`QuickJumpKind.Doc`, new optional fields). The palette's "Recent docs" (empty query) are the docs the user viewed last, kept per user in `localStorage` like recent boards, so they need no endpoint.
+  - The endpoint lives in `SearchEndpoints` and the tool in `SearchTools`, next to ticket search, and reuses its query-string parameter reader.
+- Rationale: one ranked query keeps search and quick jump consistent and fast (p95 under 150 ms with 20 000 docs and 200 000 tickets, `DocSearchPerformanceTests`). Control-character marks cannot be confused with markup in the content, and returning ranges instead of `<mark>` HTML keeps the API safe for every client, including LLMs.
+
+### D-104 Palette scope prefixes `p:` and `t:` are registered scopes, answered by one scoped quick-jump request (TKT-40)
+
+- Question: how the command palette narrows to docs (`p:`) or tickets (`t:`) as the docs design (screens §9) shows, without the core palette knowing about docs or tickets.
+- Decision:
+  - The core palette knows only `PaletteScope { id, prefix, hint }`, registered through `CommandRegistry.registerScope`. `parsePaletteQuery` strips a leading prefix (any case, leading spaces ignored). While a scope is active, commands are hidden, only search providers whose `scopes` list its id run, with the text after the prefix and the scope id, and a group shows up to 20 rows instead of 8. The footer lists `↑ ↓ navigate` and every registered scope's hint, the active one emphasised.
+  - The search feature registers `p:` (docs only) and `t:` (tickets only). `/quick-jump` takes an optional `scope` (`Docs`, `Tickets`): a scoped request drops the other kinds, exact keys included (`t:` does not jump to test cases or sessions), and returns up to 20 items instead of 10 tickets / 5 docs. The key jump and the "Search … for" rows follow the same scope; `p:` with no text shows the recent docs.
+  - The hint reads "docs only" rather than the mockup's "pages only", because the Docs group also holds diagrams and folders.
+- Rationale: keeping the prefixes as data in a registry keeps `core/` free of feature knowledge and lets another feature add a prefix without touching the palette; one scoped request keeps the server the single place that ranks and authorizes results.
+
 ## Product owner answers (v1 review, 2026-10-27)
 
 These were open questions (Q-01..Q-05); the product owner resolved them as follows.

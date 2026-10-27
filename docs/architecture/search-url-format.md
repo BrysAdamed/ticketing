@@ -64,7 +64,23 @@ Ties are broken by ticket id in the same direction, so paging is stable. `key` o
 
 ## UI-only parameters (search page)
 
-Not sent to the API: `peek=<ticket key>` (open peek panel, layout-and-screens §peek panel).
+Not sent to the API: `peek=<ticket key>` (open peek panel, layout-and-screens §peek panel) and `scope=docs` (the `Tickets | Docs` switch; absent means tickets).
+
+## Docs search
+
+The search page with `scope=docs` and `GET /api/v1/docs/search?<filters>&limit=&cursor=` share one format (spec §12.7). The encoding rules above apply.
+
+| Parameter | Values | Meaning |
+| --- | --- | --- |
+| `project` | project keys, list | Docs in any of these projects; unreadable or unknown keys match nothing. |
+| `q` | text | Full text over title (weight A) and the latest published content or Canvas labels (weight B), `websearch_to_tsquery('english')` syntax, OR a case-insensitive substring of the title (3+ characters), OR a doc key (`WEB-D-12`). Drafts are never searched. |
+| `kind` | `Folder`, `Page`, `Diagram`, list | |
+| `folder` | folder key or id | Docs anywhere below that folder. A doc that is not a folder is `400 validation`; an unreadable one matches nothing. |
+| `mentions` | ticket key or id | Docs whose latest content mentions the ticket. |
+| `updatedFrom`, `updatedTo` | date or timestamp | Updated in range. |
+| `sort` | `relevance`, `updated` | `relevance` (default with `q`): best match first, at most 100, no cursor. `updated` (default and only sort without `q`): newest first, keyset cursor. |
+
+The response is `{ items, nextCursor, total, totalCapped, sort }` with `sort` the one applied; each item has a plain-text `snippet` with highlight ranges. Examples: `/search?scope=docs&q=idempotency`, `/search?scope=docs&project=WEB&folder=WEB-D-3&kind=Page`, `/search?scope=docs&mentions=WEB-42`.
 
 ## Examples
 
@@ -82,5 +98,7 @@ Not sent to the API: `peek=<ticket key>` (open peek panel, layout-and-screens §
 | Open tickets I watch | `/search?watching=true&category=ToDo,InProgress` |
 
 ## MCP mapping
+
+`search_docs` takes `text` ← `q`, `projectKeys` ← `project`, `kinds` ← `kind`, `folder`, `mentions`, `updatedFrom`/`updatedTo`, `sort`, `limit`, `cursor`.
 
 `search_tickets` (spec §9.3) takes the same filters as JSON with these names: `projectKeys` ← `project`, `text` ← `q`, `types`, `statuses`, `statusCategory` (list) ← `category`, `priorities`, `severities`, `assignee` (list), `assigneeNot` (list), `reporter` (list), `labels`, `version`, `parentKey`, `location`, `createdFrom`/`createdTo`, `updatedFrom`/`updatedTo`, `resolvedFrom`/`resolvedTo`, `fromRegression`, `watching`, `sort`, `order`, `limit`, `cursor`.

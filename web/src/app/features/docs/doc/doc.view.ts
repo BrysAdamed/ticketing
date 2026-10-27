@@ -20,6 +20,7 @@ import { filter, map } from 'rxjs';
 import { docsHomeUrl, docSlug, docUrl } from '@core/docs/doc-links';
 import { Doc, DocKind } from '@core/docs/doc.models';
 import { DocsApi } from '@core/docs/docs.api';
+import { RecentDocs } from '@core/docs/recent-docs';
 import { ShortcutService } from '@core/shortcuts/shortcut.service';
 import { KbdComponent } from '@shared/ui/kbd/kbd.component';
 import { Breadcrumbs } from '@core/layout/breadcrumbs';
@@ -191,6 +192,7 @@ export class DocView {
   private readonly route = inject(ActivatedRoute);
   private readonly api = inject(DocsApi);
   private readonly shortcuts = inject(ShortcutService);
+  private readonly recentDocs = inject(RecentDocs);
 
   readonly projectKey = input.required<string>();
   readonly docKey = input.required<string>();
@@ -293,6 +295,7 @@ export class DocView {
       if (!doc) return;
       untracked(() => {
         this.pageTitle.setSubject(doc.title);
+        this.recentDocs.visited(doc);
         this.breadcrumbs.setTail([
           ...doc.breadcrumb.map((c) => ({ label: c.title, url: docUrl(c.key, c.title) })),
           { label: doc.title, url: null },

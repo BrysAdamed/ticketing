@@ -33,28 +33,17 @@ import { StatusIconComponent } from '@shared/ui/domain/status-icon.component';
 import { TypeIconComponent } from '@shared/ui/domain/type-icon.component';
 import { IconComponent } from '@shared/ui/icon/icon.component';
 import {
+  DATE_PRESETS,
+  DatePreset,
   EMPTY_SEARCH,
   hasFilters,
   ListField,
+  rangeLabel,
   SearchFilters,
   TextField,
   toggleValue,
   utcDate,
 } from './search-query';
-
-interface DatePreset {
-  label: string;
-  from?: number;
-  to?: number;
-}
-
-const DATE_PRESETS: readonly DatePreset[] = [
-  { label: 'Today', from: 0 },
-  { label: 'Last 7 days', from: 7 },
-  { label: 'Last 30 days', from: 30 },
-  { label: 'Last 90 days', from: 90 },
-  { label: 'Older than 30 days', to: 31 },
-];
 
 interface ExtraChip {
   id: string;
@@ -79,6 +68,15 @@ interface ExtraChip {
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { role: 'toolbar', 'aria-label': 'Filters' },
+  styleUrl: './filter-chips.scss',
+  styles: `
+    :host {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+    }
+  `,
   template: `
     <button
       type="button"
@@ -473,128 +471,6 @@ interface ExtraChip {
       </button>
     }
   `,
-  styles: `
-    :host {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 6px;
-    }
-    .fchip {
-      height: 24px;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 0 8px;
-      border: 1px dashed var(--tk-border-strong);
-      border-radius: var(--tk-radius-md);
-      background: none;
-      color: var(--tk-text-muted);
-      font: inherit;
-      font-size: var(--tk-text-sm);
-      font-weight: var(--tk-weight-medium);
-      cursor: pointer;
-      white-space: nowrap;
-    }
-    .fchip:hover {
-      background: var(--tk-bg-hover);
-      color: var(--tk-text);
-    }
-    .fchip.on {
-      border-style: solid;
-      border-color: var(--tk-accent-border);
-      background: var(--tk-accent-subtle);
-      color: var(--tk-accent-fg);
-    }
-    .fchip b {
-      font-weight: var(--tk-weight-semibold);
-      max-width: 180px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .fixed {
-      cursor: default;
-      padding-right: 2px;
-    }
-    .x {
-      width: 18px;
-      height: 18px;
-      display: grid;
-      place-items: center;
-      border: 0;
-      border-radius: var(--tk-radius-sm);
-      background: none;
-      color: inherit;
-      cursor: pointer;
-    }
-    .x:hover {
-      background: var(--tk-bg-active);
-    }
-    .clear {
-      height: 24px;
-      padding: 0 8px;
-      border: 0;
-      border-radius: var(--tk-radius-md);
-      background: none;
-      color: var(--tk-text-muted);
-      font: inherit;
-      font-size: var(--tk-text-sm);
-      cursor: pointer;
-    }
-    .clear:hover {
-      background: var(--tk-bg-hover);
-      color: var(--tk-text);
-    }
-    .opt {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .box {
-      width: 14px;
-      height: 14px;
-      border: 1px solid var(--tk-border-input-hover);
-      border-radius: var(--tk-radius-xs);
-      flex: none;
-    }
-    .box.on {
-      background: var(--tk-accent);
-      border-color: var(--tk-accent);
-      box-shadow: inset 0 0 0 2px var(--tk-surface-raised);
-    }
-    .empty,
-    .mnote {
-      padding: 8px 12px;
-      color: var(--tk-text-subtle);
-      font-size: var(--tk-text-sm);
-    }
-    .mhead {
-      padding: 8px 12px 2px;
-      font-size: var(--tk-text-xs);
-      font-weight: var(--tk-weight-medium);
-      letter-spacing: var(--tk-tracking-caps);
-      text-transform: uppercase;
-      color: var(--tk-text-subtle);
-    }
-    .minput {
-      padding: 6px 8px;
-    }
-    .minput input {
-      width: 100%;
-      height: 28px;
-      padding: 0 8px;
-      border: 1px solid var(--tk-border);
-      border-radius: var(--tk-radius-md);
-      background: var(--tk-surface);
-      color: var(--tk-text);
-      font: inherit;
-      font-size: var(--tk-text-sm);
-      outline: 0;
-    }
-    .minput input:focus {
-      border-color: var(--tk-accent);
-    }
-  `,
 })
 export class SearchFilterBarComponent {
   private readonly directory = inject(ProjectDirectory);
@@ -756,9 +632,7 @@ export class SearchFilterBarComponent {
   }
 
   protected rangeLabel(from: string, to: string): string {
-    if (from && to) return from === to ? from : `${from} – ${to}`;
-    if (from) return `since ${from}`;
-    return `until ${to}`;
+    return rangeLabel(from, to);
   }
 
   protected focusInput(input: HTMLInputElement): void {

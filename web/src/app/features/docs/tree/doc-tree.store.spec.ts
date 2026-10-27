@@ -52,6 +52,9 @@ function doc(key: string, overrides: Partial<Doc> = {}): Doc {
     url: `/p/WEB/docs/${key}/x`,
     rowVersion: 1,
     commentCount: 0,
+    references: { tickets: [], docs: [] },
+    embeds: [],
+    backlinks: { total: 0, items: [] },
     ...overrides,
   };
 }

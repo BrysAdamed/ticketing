@@ -69,6 +69,8 @@
           data-testid="doc-content"
           [source]="page.content"
           [docKey]="page.key"
+          [references]="page.references"
+          [embeds]="page.embeds"
           (rendered)="onRendered($event)"
         />
       } @else {

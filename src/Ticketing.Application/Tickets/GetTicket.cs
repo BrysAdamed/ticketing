@@ -3,6 +3,7 @@ using Ticketing.Application.Abstractions;
 using Ticketing.Application.Access;
 using Ticketing.Application.Collaboration;
 using Ticketing.Application.Comments;
+using Ticketing.Application.Docs;
 using Ticketing.Application.Watchers;
 using Ticketing.Domain.Common;
 using Ticketing.Domain.Tickets;
@@ -19,7 +20,9 @@ public enum TicketIncludes
     Links = 4,
     TestCases = 8,
     Watchers = 16,
+    Docs = 32,
     All = Comments | Children | Links | TestCases | Watchers,
+    Everything = All | Docs,
 }
 
 /// <summary>A ticket with its fields and, on request, its children (with progress), links, latest comments and test cases.</summary>
@@ -37,12 +40,15 @@ public static class GetTicket
             return await LoadAsync(db, access, currentUser, target, request.Include, cancellationToken);
         }
 
-        /// <summary>Parses <c>comments,children,links,testCases,watchers</c> (case-insensitive); null or empty means all. Unknown names are ignored.</summary>
-        public static TicketIncludes ParseIncludes(IEnumerable<string>? names)
+        /// <summary>
+        /// Parses <c>comments,children,links,testCases,watchers,docs</c> (case-insensitive); null or empty means
+        /// <paramref name="fallback"/> (<see cref="TicketIncludes.All"/>, which leaves out the opt-in docs). Unknown names are ignored.
+        /// </summary>
+        public static TicketIncludes ParseIncludes(IEnumerable<string>? names, TicketIncludes fallback = TicketIncludes.All)
         {
             var list = names?.SelectMany(n => n.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)).ToList();
             if (list is null || list.Count == 0)
-                return TicketIncludes.All;
+                return fallback;
             var result = TicketIncludes.None;
             foreach (var name in list)
             {
@@ -120,6 +126,7 @@ public static class GetTicket
 
             var testCases = include.HasFlag(TicketIncludes.TestCases) ? await TestCasesAsync(db, projectKey, id, cancellationToken) : null;
             var watchers = include.HasFlag(TicketIncludes.Watchers) ? await WatcherQueries.LoadAsync(db, currentUser, target, cancellationToken) : null;
+            var docs = include.HasFlag(TicketIncludes.Docs) ? await GetTicketDocs.Handler.LoadAsync(db, access, id, GetTicketDocs.DefaultLimit, cancellationToken) : null;
 
             var mentioned = await MentionedUsers.LoadAsync(db, ticket.ProjectId, [ticket.Description], cancellationToken);
             var canWrite = target.Grant.CanWrite && !target.Grant.IsArchived && currentUser.PatScope != PatScope.ReadOnly;
@@ -131,7 +138,7 @@ public static class GetTicket
                 TicketQueries.Location(ticket.BoardId, row.BoardName),
                 TicketQueries.User(row.AssigneeId, row.AssigneeEmail, row.AssigneeName, row.AssigneeActive), row.Reporter, row.CreatedBy,
                 ticket.CreatedAt, ticket.UpdatedAt, ticket.StatusChangedAt, ticket.ResolvedAt, target.Grant.Role, permissions, TicketQueries.Url(key), ticket.RowVersion,
-                children, progress, links, comments, commentCount, testCases, watchers, MentionedUsers.In(ticket.Description, mentioned));
+                children, progress, links, comments, commentCount, testCases, watchers, MentionedUsers.In(ticket.Description, mentioned), docs);
         }
 
         private static async Task<IReadOnlyList<TicketRefDto>> ChildrenAsync(ITicketingDbContext db, string projectKey, Guid id, CancellationToken cancellationToken)

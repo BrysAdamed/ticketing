@@ -31,7 +31,7 @@ public static class DocSearchTestData
             return await db.SaveChangesAsync();
         });
 
-    /// <summary>Records that a doc mentions a ticket, as the links story's publisher will.</summary>
+    /// <summary>Writes a mention into the reference index directly, without the ticket key in the content (publishing one does the same).</summary>
     public static Task MentionAsync(this TicketingApiFactory api, Guid docId, Guid ticketId) =>
         api.WithDbAsync(async db =>
         {

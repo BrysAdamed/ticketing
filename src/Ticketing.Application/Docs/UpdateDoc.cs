@@ -52,7 +52,7 @@ public static class UpdateDoc
             command.EnsureValid();
             var target = await DocLookup.WriteAsync(db, access, command.KeyOrId, cancellationToken);
             await db.InTransactionAsync(ct => ApplyAsync(command, target, ct), cancellationToken);
-            return await DocQueries.LoadAsync(db, currentUser, clock, target, cancellationToken);
+            return await DocQueries.LoadAsync(db, access, currentUser, clock, target, cancellationToken);
         }
 
         private async Task<bool> ApplyAsync(Command command, DocTarget target, CancellationToken cancellationToken)

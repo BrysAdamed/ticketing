@@ -4,7 +4,7 @@ import {
   makeEnvironmentProviders,
   Type,
 } from '@angular/core';
-import { Doc, DocKind } from './doc.models';
+import { Doc, DocEmbed, DocKind } from './doc.models';
 
 /// Where a page section is rendered: below the page content (`footer`, full width of the body)
 /// or in the right rail under "On this page" (`rail`, hidden below 1200 px).
@@ -12,7 +12,8 @@ export type DocPageSectionPlacement = 'footer' | 'rail';
 
 /// A section other stories add to the page reader (attachments, backlinks, comments, …). The
 /// component receives the input `doc` (`input.required<Doc>()`, the latest published page) and is
-/// re-created when the doc key changes. Sections render in ascending `order`.
+/// re-created when the doc key changes. Sections render in ascending `order`. A section with nothing
+/// to show adds the class `tk-section-empty` to its host and takes no space.
 export interface DocPageSection {
   /// Stable id, also used as `data-testid="doc-section-<id>"`.
   readonly id: string;
@@ -40,6 +41,10 @@ export interface DocMarkdownContext {
   readonly theme: 'light' | 'dark';
   /// The doc being shown, when there is one.
   readonly docKey: string | null;
+  /// The diagrams the reader may see that the content embeds; each `figure.tk-doc-embed` (with
+  /// `data-doc-key`, `data-diagram-format`, `data-version`) has an empty `.tk-doc-embed-body` for
+  /// the diagram renderer to fill.
+  readonly embeds: readonly DocEmbed[];
   /// Aborted when the HTML is replaced (new source, theme change) or the view is destroyed.
   readonly signal: AbortSignal;
 }
@@ -105,8 +110,16 @@ export const DOC_EDITOR_PLUGINS = new InjectionToken<readonly DocEditorPlugin[]>
   { factory: () => [] },
 );
 
-export function provideDocEditorPlugin(plugin: DocEditorPlugin): EnvironmentProviders {
-  return makeEnvironmentProviders([{ provide: DOC_EDITOR_PLUGINS, useValue: plugin, multi: true }]);
+/// Registers an editor plugin; pass a factory to `inject()` services (it runs in an injection
+/// context when the editor first asks for its plugins).
+export function provideDocEditorPlugin(
+  plugin: DocEditorPlugin | (() => DocEditorPlugin),
+): EnvironmentProviders {
+  return makeEnvironmentProviders([
+    typeof plugin === 'function'
+      ? { provide: DOC_EDITOR_PLUGINS, useFactory: plugin, multi: true }
+      : { provide: DOC_EDITOR_PLUGINS, useValue: plugin, multi: true },
+  ]);
 }
 
 /// Inputs a page section component may declare.

@@ -153,6 +153,112 @@ $icon-octagon: tabler-icon(
     font-variant-numeric: tabular-nums;
   }
 
+  a.tk-tref {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 20px;
+    max-width: 100%;
+    padding: 0 6px 0 4px;
+    border: 1px solid var(--tk-border);
+    border-radius: var(--tk-radius-sm);
+    background: var(--tk-surface);
+    color: var(--tk-text);
+    font-size: var(--tk-text-sm);
+    font-weight: var(--tk-weight-medium);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    vertical-align: -3px;
+    white-space: nowrap;
+
+    &:hover {
+      border-color: var(--tk-border-strong);
+      background: var(--tk-bg-subtle);
+      text-decoration: none;
+    }
+
+    svg {
+      flex: none;
+    }
+  }
+
+  @each $status in todo, inprogress, onhold, review, readyfortesting, testing, readyfordeploy, done
+  {
+    a.tk-tref-#{$status} svg {
+      color: var(--tk-status-#{$status});
+    }
+  }
+
+  a.tk-docref {
+    font-weight: var(--tk-weight-medium);
+  }
+
+  .tk-docref-deleted {
+    color: var(--tk-text-subtle);
+
+    s {
+      text-decoration-color: currentColor;
+    }
+  }
+
+  .tk-doc-embed {
+    margin: 4px 0 16px;
+    border: 1px solid var(--tk-border);
+    border-radius: var(--tk-radius-lg);
+    background: var(--tk-surface);
+    overflow: hidden;
+
+    > figcaption {
+      padding: 6px 12px 8px;
+      border-top: 1px solid var(--tk-border-subtle);
+      color: var(--tk-text-subtle);
+      font-size: var(--tk-text-sm);
+      text-align: center;
+    }
+  }
+
+  .tk-doc-embed-h {
+    height: 36px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 12px;
+    border-bottom: 1px solid var(--tk-border-subtle);
+    font-size: var(--tk-text-sm);
+  }
+
+  a.tk-doc-embed-title {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--tk-text);
+  }
+
+  .tk-doc-embed-format {
+    margin-left: auto;
+    flex: none;
+    color: var(--tk-text-subtle);
+    font-size: var(--tk-text-xs);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .tk-doc-embed-body {
+    min-height: 160px;
+    padding: 16px 12px;
+    display: grid;
+    place-items: center;
+  }
+
+  .tk-doc-embed-missing {
+    padding: 14px 16px;
+    border-style: dashed;
+    background: var(--tk-bg-subtle);
+    color: var(--tk-text-subtle);
+    font-size: var(--tk-text-sm);
+    text-align: center;
+  }
+
   .tk-mention {
     display: inline-flex;
     align-items: center;

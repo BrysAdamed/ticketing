@@ -145,7 +145,7 @@
     <div class="section" data-testid="nav-admin">
       <button type="button" class="section-label" (click)="toggleSection('admin')">Admin</button>
       @if (!isSectionCollapsed('admin')) {
-        @for (item of adminNav; track item.path) {
+        @for (item of adminNav(); track item.path) {
           <a
             class="nav"
             [routerLink]="item.path"

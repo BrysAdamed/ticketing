@@ -13,7 +13,8 @@ namespace Ticketing.Application.Agents;
 /// <summary>
 /// Renders a template as the editor shows it, storing nothing. <c>body</c> is the text being edited; null previews what is
 /// stored (for a project type: the instance default, which is what "Use default" produces). A type slot renders with the
-/// current guardrails; the guardrails slot renders after the default of the sample ticket's type. <c>ticketKey</c> picks a
+/// current guardrails; the guardrails slot renders after the default of the sample ticket's type, and an empty body there
+/// previews the prompt without guardrails, as saving it would. <c>ticketKey</c> picks a
 /// real ticket (in the project, for a project slot); otherwise a synthetic one is used. Template and length problems come
 /// back in <c>errors</c> with their line and column instead of failing the request.
 /// </summary>
@@ -43,7 +44,7 @@ public static class PreviewAgentPrompt
             var instance = await AgentPromptQueries.InstanceAsync(db, cancellationToken);
             var (project, number, ticketType) = await SubjectAsync(command, target, cancellationToken);
 
-            var body = string.IsNullOrWhiteSpace(command.Body) ? null : command.Body;
+            var body = command.Body is not null && (target.Slot.IsGuardrails || !string.IsNullOrWhiteSpace(command.Body)) ? command.Body : null;
             if (body is not null && body.Length > AgentPromptTemplate.BodyMaxLength)
                 return Failed(project, number, new AgentPromptIssueDto(
                     AgentErrors.TemplateTooLong,

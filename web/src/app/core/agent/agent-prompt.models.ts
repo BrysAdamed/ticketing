@@ -70,6 +70,25 @@ export interface InstanceAgentPrompt extends InstanceAgentPromptSummary {
   builtInBody: string;
 }
 
+/// Item of `GET /admin/agent/prompts/{type}/overrides`: a project that does not use the default.
+export interface AgentPromptOverride {
+  projectKey: string;
+  projectName: string;
+  isArchived: boolean;
+  mode: Exclude<AgentPromptMode, 'Inherit'>;
+  version: number;
+  defaultChanged: boolean;
+  updatedBy: UserRef | null;
+  updatedAt: string;
+}
+
+/// `GET /admin/agent/status` (Admins; answers with the flag on even while the public URL is unset).
+export interface AgentInstanceStatus {
+  publicUrlVariable: string;
+  publicUrl: string | null;
+  delegationAvailable: boolean;
+}
+
 export interface AgentPromptVersionSummary {
   number: number;
   mode: AgentPromptMode;

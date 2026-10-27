@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltip } from '@angular/material/tooltip';
+import { AGENT_FLAG } from '@core/agent/agent-prompt.models';
+import { FeatureFlagService } from '@core/flags/feature-flag.service';
 import {
   ACTIVITY_ENTITY_TYPE_LABELS,
   WRITE_CHANNEL_LABELS,
@@ -38,6 +40,7 @@ const ENTITY_ICONS: Record<string, string> = {
   PersonalAccessToken: 'tablerKey',
   FeatureFlag: 'tablerFlag',
   Project: 'tablerFolders',
+  AgentPrompt: 'tablerRobot',
 };
 
 const timeFormat = new Intl.DateTimeFormat('en', { hour: '2-digit', minute: '2-digit' });
@@ -78,6 +81,9 @@ export class AuditLogView {
     { value: 'PersonalAccessToken', label: 'Tokens' },
     { value: 'FeatureFlag', label: 'Flags' },
     { value: 'Project', label: 'Projects' },
+    ...(inject(FeatureFlagService).isOn(AGENT_FLAG)
+      ? [{ value: 'AgentPrompt' as const, label: 'Agent prompts' }]
+      : []),
   ];
 
   protected readonly days = computed<AuditDay[]>(() => {

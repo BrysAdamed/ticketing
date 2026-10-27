@@ -780,7 +780,7 @@ Out of MCP in v1: user administration, PAT management, feature flags, project de
 
 ## 13. Agent delegation
 
-A developer hands a ticket to Claude Code: Ticketing renders a short prompt for the ticket's type and the developer's browser opens Claude's own deep link with it. The design and its history are in [04-delegate-to-agent-refinement.md](04-delegate-to-agent-refinement.md) (its section 6 overrides section 4); this section is the normative summary and grows with each part of epic TKT-25. Decisions: D-98, D-99, D-100, D-102.
+A developer hands a ticket to Claude Code: Ticketing renders a short prompt for the ticket's type and the developer's browser opens Claude's own deep link with it. The design and its history are in [04-delegate-to-agent-refinement.md](04-delegate-to-agent-refinement.md) (its section 6 overrides section 4); this section is the normative summary and grows with each part of epic TKT-25. Decisions: D-98, D-99, D-100, D-101, D-102, D-103.
 
 ### 13.1 Parts
 
@@ -796,7 +796,7 @@ A developer hands a ticket to Claude Code: Ticketing renders a short prompt for 
 
 `agent.delegate` is an ordinary string-variant flag (6.13): `on` or `off`, targeted at users, roles (Admins first) or a percentage. While it is off for the caller, every agent endpoint returns 404 `agent.disabled` and nothing about agents is shown. Stored templates stay untouched. The server checks it on every request (`AgentGate`).
 
-The instance also needs `TICKETING_PUBLIC_URL`, its public origin (for example `https://tickets.example.com`): prompts link to tickets with it, never with request headers. While it is unset the feature is off for everyone, exactly as if the flag were off (404 `agent.disabled`, whose message then names the variable for callers the flag is on for). A value that is not an absolute http(s) URL stops the API at startup.
+The instance also needs `TICKETING_PUBLIC_URL`, its public origin (for example `https://tickets.example.com`): prompts link to tickets with it, never with request headers. While it is unset the feature is off for everyone, exactly as if the flag were off (404 `agent.disabled`, whose message then names the variable for callers the flag is on for). A value that is not an absolute http(s) URL stops the API at startup. The one exception is the Admin status (`GET /api/v1/admin/agent/status`), which needs only the flag so the Admin page can say the variable is missing (D-103).
 
 The web app tells whether agent delegation is available from the project: `agent` in the project DTO is null while it is not.
 
@@ -904,7 +904,9 @@ Project templates, under `/api/v1/projects/{projectKeyOrId}/agent/prompts` (`{ty
 | `POST /{type}/versions/{n}/restore` | `{ baseVersion, changeNote? }`: version n becomes current as a new version |
 | `POST /{type}/preview` | `{ body?, ticketKey? }` returns `{ prompt, length, lengthLimit, ticketKey, errors[] }`; stores nothing. A null body previews the instance default; the ticket must be in the project. |
 
-Instance templates, Admins only, under `/api/v1/admin/agent/prompts` (`{slot}` is a ticket type or `guardrails`): `GET`, `GET /{slot}`, `PUT /{slot}` (`{ body, changeNote?, baseVersion }`; an empty guardrails body removes them), `POST /{slot}/reset-built-in`, the same `versions`, `restore` and `preview` routes. Instance responses add `builtInVersion`, `followsBuiltIn`, `latestBuiltInVersion`, `newerBuiltInAvailable`, `builtInBody` and `overridingProjects` (live projects with `Custom` or `Off` for the type).
+Instance templates, Admins only, under `/api/v1/admin/agent/prompts` (`{slot}` is a ticket type or `guardrails`): `GET`, `GET /{slot}`, `PUT /{slot}` (`{ body, changeNote?, baseVersion }`; an empty guardrails body removes them), `POST /{slot}/reset-built-in`, the same `versions`, `restore` and `preview` routes. Instance responses add `builtInVersion`, `followsBuiltIn`, `latestBuiltInVersion`, `newerBuiltInAvailable`, `builtInBody` and `overridingProjects` (live projects with `Custom` or `Off` for the type). `GET /{type}/overrides` lists those projects by key: `{ projectKey, projectName, isArchived, mode, version, defaultChanged, updatedBy, updatedAt }` (guardrails: `agent.prompt.notFound`).
+
+`GET /api/v1/admin/agent/status` returns `{ publicUrlVariable, publicUrl, delegationAvailable }` for Admins in the web app. It requires the flag but not the public URL, so it answers while every other agent route is `agent.disabled` (D-103).
 
 `GET /api/v1/agent/prompt-placeholders` lists the placeholders for the editor.
 
@@ -921,7 +923,11 @@ The project DTO (`GET /projects/{pk}`, `get_project`) carries the same setup as 
 
 ### 13.8 Activity and audit
 
-Every template change writes `agent.prompt.updated` with EntityType `AgentPrompt`, `ProjectId` set for project rows, `Field` the type name or `Guardrails`, and old and new values `{ version, mode }`. The body is never in activity; bodies live in the versions. The Admin audit trail (I-13) lists `AgentPrompt` entries, labelled `Bug` or `TKT Bug`.
+Every template change writes `agent.prompt.updated` with EntityType `AgentPrompt`, `ProjectId` set for project rows, `Field` the type name or `Guardrails`, and old and new values `{ version, mode }`. The body is never in activity; bodies live in the versions. The Admin audit trail (I-13) lists `AgentPrompt` entries, labelled `Bug` or `TKT Bug`, as "changed agent prompt · v2 → v3" (plus the mode change when there is one).
+
+### 13.8a Admin → Agent prompts
+
+A tab next to Feature flags, shown and routed only while the flag is on for the Admin (`/admin/agent-prompts`, `/admin/agent-prompts/{bug|user-story|technical|spike|epic|guardrails}`). It shows the `TICKETING_PUBLIC_URL` status line ("not set — delegation is disabled" with no prompt lists while it is unset), the five defaults and the guardrails with their version and built-in state, a "Newer built-in" badge, and per type the number of overriding projects, which opens their list with links to each project's prompt editor. The editor is the project one without the modes: preview (the guardrails render after a sample type prompt), compare with the built-in, history and restore, **Reset to built-in**, and the banner "A newer built-in prompt is available" with **Compare** and **Adopt** (both take the shipped text as a new version, D-103).
 
 Each changed setup field writes `project.field.changed` (EntityType `Project`) with `Field` one of `agentDelegationEnabled`, `repositoryUrl`, `defaultBranch`, `agentMergePolicy`, `agentAssignOnDelegate`, `agentStartProgressOnDelegate`. Resolving a prompt writes nothing.
 

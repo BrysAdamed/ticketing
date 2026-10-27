@@ -3,8 +3,10 @@ import { MatTooltip } from '@angular/material/tooltip';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { IconComponent } from '@shared/ui/icon/icon.component';
 import { ProjectTileComponent } from '@shared/ui/domain/project-tile.component';
+import { AGENT_FLAG } from '../../agent/agent-prompt.models';
 import { AuthService } from '../../auth/auth.service';
 import { BoardDirectory } from '../../boards/board-directory';
+import { FeatureFlagService } from '../../flags/feature-flag.service';
 import { OpenProjectState } from '../../projects/open-project';
 import { ProjectDirectory } from '../../projects/project-directory';
 import { LayoutState } from '../layout-state';
@@ -15,6 +17,8 @@ interface NavLink {
   path: string;
   icon: string;
   testId: string;
+  /// Shown only while this feature flag is on for the user.
+  flag?: string;
 }
 
 export const PROJECT_NAV: readonly NavLink[] = [
@@ -48,6 +52,13 @@ export const PROJECT_NAV: readonly NavLink[] = [
 const ADMIN_NAV: readonly NavLink[] = [
   { label: 'Users', path: '/admin/users', icon: 'tablerUsers', testId: 'nav-admin-users' },
   { label: 'Feature flags', path: '/admin/flags', icon: 'tablerFlag', testId: 'nav-admin-flags' },
+  {
+    label: 'Agent prompts',
+    path: '/admin/agent-prompts',
+    icon: 'tablerRobot',
+    testId: 'nav-admin-agent-prompts',
+    flag: AGENT_FLAG,
+  },
   { label: 'Audit log', path: '/admin/audit', icon: 'tablerReport', testId: 'nav-admin-audit' },
 ];
 
@@ -77,7 +88,10 @@ export class SidebarComponent {
   private readonly openProject = inject(OpenProjectState);
 
   protected readonly projectNav = PROJECT_NAV;
-  protected readonly adminNav = ADMIN_NAV;
+  private readonly flags = inject(FeatureFlagService);
+  protected readonly adminNav = computed(() =>
+    ADMIN_NAV.filter((item) => !item.flag || this.flags.isOn(item.flag)),
+  );
   protected readonly collapsedSections = signal<ReadonlySet<string>>(new Set());
   private readonly toggledProjects = signal<ReadonlySet<string>>(new Set());
 

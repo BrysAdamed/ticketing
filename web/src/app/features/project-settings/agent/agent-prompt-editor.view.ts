@@ -19,6 +19,7 @@ import {
   AgentPromptMode,
   AgentPromptVersion,
 } from '@core/agent/agent-prompt.models';
+import { promptTypeFromSlug } from '@core/agent/prompt-slugs';
 import { LeaveGuarded } from '@core/layout/unsaved-changes.guard';
 import { ConfirmService } from '@core/notify/confirm.service';
 import { ToastService } from '@core/notify/toast.service';
@@ -45,7 +46,6 @@ import {
   SegmentOption,
 } from '@shared/ui/segmented/segmented-control.component';
 import { SkeletonRowsComponent } from '@shared/ui/skeleton/skeleton-rows.component';
-import { promptTypeFromSlug } from './prompt-slugs';
 
 type Panel = 'preview' | 'compare' | 'history';
 
@@ -98,7 +98,7 @@ const SAMPLE_TICKET = '';
   providers: [AgentPromptEditorStore],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './agent-prompt-editor.view.html',
-  styleUrl: './agent-prompt-editor.view.scss',
+  styleUrl: '../../../shared/agent-prompts/prompt-editor-page.scss',
   host: {
     'data-testid': 'view-project.settings.agent-prompt',
     '(window:beforeunload)': 'onBeforeUnload($event)',

@@ -44,9 +44,18 @@ const MEMBER_VERBS: Record<string, string> = {
   'project.member.ownerRestored': 'made owner again',
 };
 
+const AGENT_PROMPT_UPDATED = 'agent.prompt.updated';
+
+const AGENT_PROMPT_MODES: Record<string, string> = {
+  Inherit: 'Use default',
+  Custom: 'Custom',
+  Off: 'Off',
+};
+
 export function describeAuditEntry(entry: AuditEntry): AuditDescription {
   const memberVerb = MEMBER_VERBS[entry.action];
   if (memberVerb) return describeMember(entry, memberVerb);
+  if (entry.action === AGENT_PROMPT_UPDATED) return describeAgentPrompt(entry);
   const self = entry.actor?.id === entry.entityId && entry.action.startsWith('user.password.');
   const target = self
     ? ''
@@ -93,6 +102,21 @@ function describeMember(entry: AuditEntry, verb: string): AuditDescription {
     default:
       return { verb, target, detail: `${project}, as ${role(now)}` };
   }
+}
+
+/// "changed agent prompt Guardrails · v1 → v2", or "TKT Bug · v2 → v3, Custom → Use default".
+/// The values hold only the version and mode, never the text.
+function describeAgentPrompt(entry: AuditEntry): AuditDescription {
+  const before = asRecord(entry.oldValue);
+  const now = asRecord(entry.newValue);
+  const target = entry.entityLabel ?? entry.field ?? 'a removed prompt';
+  const version = (value: Record<string, unknown> | null) =>
+    typeof value?.['version'] === 'number' && value['version'] > 0 ? `v${value['version']}` : '—';
+  const mode = (value: Record<string, unknown> | null) =>
+    AGENT_PROMPT_MODES[String(value?.['mode'])] ?? String(value?.['mode'] ?? '—');
+  const versions = `${version(before)} → ${version(now)}`;
+  const modes = mode(before) === mode(now) ? '' : `, ${mode(before)} → ${mode(now)}`;
+  return { verb: 'changed agent prompt', target, detail: versions + modes };
 }
 
 function detailOf(entry: AuditEntry): string | null {

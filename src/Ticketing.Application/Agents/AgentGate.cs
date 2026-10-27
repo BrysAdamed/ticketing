@@ -42,9 +42,18 @@ public sealed class AgentGate(IFeatureFlags flags, IOptions<AgentOptions> option
 
     public async Task EnsureEnabledAsync(CancellationToken cancellationToken)
     {
-        if (!await flags.IsOnAsync(AgentFeature.FlagKey, cancellationToken))
-            throw AppException.NotFound(AgentErrors.Disabled, "Agent delegation is not available.");
+        await EnsureFlagOnAsync(cancellationToken);
         if (!IsConfigured)
             throw AppException.NotFound(AgentErrors.Disabled, $"Agent delegation is not available: this instance has no {AgentOptions.PublicUrlVariable}.");
+    }
+
+    /// <summary>
+    /// The flag alone, without the public URL: only for the Admin status, which must explain why delegation is off while the
+    /// URL is missing (D-103). Everything else uses <see cref="EnsureEnabledAsync"/>.
+    /// </summary>
+    public async Task EnsureFlagOnAsync(CancellationToken cancellationToken)
+    {
+        if (!await flags.IsOnAsync(AgentFeature.FlagKey, cancellationToken))
+            throw AppException.NotFound(AgentErrors.Disabled, "Agent delegation is not available.");
     }
 }

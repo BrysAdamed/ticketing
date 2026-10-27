@@ -37,6 +37,16 @@ public sealed class AgentPromptAccess(AgentGate gate, IProjectAccess access, ICu
         return await access.EnsureOwnerAsync(projectKeyOrId, cancellationToken);
     }
 
+    /// <summary>
+    /// The Admin status of the instance: the flag only, not the public URL, so an Admin learns why delegation is off while
+    /// <see cref="AgentOptions.PublicUrlVariable"/> is unset (D-103); then an Admin in the web app.
+    /// </summary>
+    public async Task EnsureAdminStatusAsync(CancellationToken cancellationToken)
+    {
+        await gate.EnsureFlagOnAsync(cancellationToken);
+        currentUser.EnsureAdminWebSession();
+    }
+
     public async Task EnsureAdminAsync(CancellationToken cancellationToken)
     {
         await gate.EnsureEnabledAsync(cancellationToken);

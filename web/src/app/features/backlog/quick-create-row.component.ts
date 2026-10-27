@@ -3,7 +3,8 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
-  input,
+  inject,
+  Injector,
   output,
   signal,
   viewChild,
@@ -51,7 +52,6 @@ const LAST_TYPE_KEY = 'tk-quick-create-type';
       aria-label="New ticket title"
       maxlength="255"
       data-testid="quick-create-input"
-      [disabled]="busy()"
       [value]="title()"
       (input)="title.set(input.value)"
       (keydown)="onKeydown($event)"
@@ -118,7 +118,6 @@ const LAST_TYPE_KEY = 'tk-quick-create-type';
   `,
 })
 export class QuickCreateRowComponent {
-  readonly busy = input(false);
   readonly submitted = output<QuickCreate>();
   readonly closed = output<void>();
 
@@ -127,6 +126,7 @@ export class QuickCreateRowComponent {
   protected readonly title = signal('');
   protected readonly type = signal<TicketType>(readLastType());
   private readonly input = viewChild.required<ElementRef<HTMLInputElement>>('input');
+  private readonly injector = inject(Injector);
 
   constructor() {
     afterNextRender(() => this.focus());
@@ -136,21 +136,18 @@ export class QuickCreateRowComponent {
     this.input().nativeElement.focus();
   }
 
-  reset(): void {
-    this.title.set('');
-    queueMicrotask(() => this.focus());
-  }
-
   protected setType(type: TicketType): void {
     this.type.set(type);
     try {
       localStorage.setItem(LAST_TYPE_KEY, type);
     } catch {
-      return;
+      // Storage can be unavailable (private mode); the type is then remembered for this row only.
     }
-    queueMicrotask(() => this.focus());
+    afterNextRender(() => this.focus(), { injector: this.injector });
   }
 
+  /// Enter hands the title over and clears the input at once, so the next title can be typed
+  /// while the ticket is still being created.
   protected onKeydown(event: KeyboardEvent): void {
     if (event.key === 'Escape') {
       event.preventDefault();
@@ -158,13 +155,17 @@ export class QuickCreateRowComponent {
       this.closed.emit();
     } else if (event.key === 'Enter') {
       event.preventDefault();
+      if (event.repeat) return;
       const title = this.title().trim();
-      if (title) this.submitted.emit({ title, type: this.type(), open: event.shiftKey });
+      if (!title) return;
+      this.title.set('');
+      this.input().nativeElement.value = '';
+      this.submitted.emit({ title, type: this.type(), open: event.shiftKey });
     }
   }
 
   protected onBlur(): void {
-    if (!this.title().trim() && !this.busy())
+    if (!this.title().trim())
       setTimeout(() => {
         if (
           !this.title().trim() &&

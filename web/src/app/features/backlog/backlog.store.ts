@@ -7,7 +7,9 @@ import { ToastService } from '@core/notify/toast.service';
 import { LoadStatus } from '@core/projects/project-directory';
 import { FieldHints } from '@core/tickets/field-hints';
 import { TicketCache } from '@core/tickets/ticket-cache';
-import { TicketEvents } from '@core/tickets/ticket-events';
+import { SwrCache } from '@core/api/swr-cache';
+import { TicketDeletion } from '@core/tickets/ticket-deletion';
+import { TicketEvents, ticketsTag } from '@core/tickets/ticket-events';
 import {
   Backlog,
   BacklogItem,
@@ -62,6 +64,8 @@ export class BacklogStore {
   private readonly cache = inject(TicketCache);
   private readonly hints = inject(FieldHints);
   private readonly events = inject(TicketEvents);
+  private readonly deletion = inject(TicketDeletion);
+  private readonly swr = inject(SwrCache);
 
   readonly projectKey = signal('');
   readonly status = signal<LoadStatus>('idle');
@@ -81,6 +85,8 @@ export class BacklogStore {
   /// Group id (or 'all') where the quick-create row is open, null when closed.
   readonly creatingIn = signal<string | null>(null);
   readonly lastCreatedId = signal<string | null>(null);
+  /// Tickets matching the filters that sit on a board, so they are not in this list.
+  readonly onBoardsCount = signal(0);
 
   readonly hasData = computed(() => this.status() === 'loaded' || this.items().length > 0);
   readonly meId = computed(() => this.auth.currentUser()?.id ?? null);
@@ -125,16 +131,26 @@ export class BacklogStore {
   readonly canDrag = computed(() => this.canWrite() && this.sortBy() === 'rank');
 
   private loadToken = 0;
+  private shown: Backlog | null = null;
+  private shownKey: string | null = null;
+  /// Quick-created tickets are sent one after another, so their order on the server matches the list.
+  private createQueue: Promise<unknown> = Promise.resolve();
 
   constructor() {
-    this.events.events.pipe(takeUntilDestroyed(inject(DestroyRef))).subscribe((event) => {
+    const destroyRef = inject(DestroyRef);
+    this.events.events.pipe(takeUntilDestroyed(destroyRef)).subscribe((event) => {
       if (event.kind === 'updated') this.applyServerTicket(event.ticket);
       else if (event.kind === 'deleted') this.removeLocal([event.key]);
       else if (event.kind === 'created' && event.ticket.projectKey === this.projectKey())
         this.addCreated(event.ticket, null);
+      else if (event.kind === 'restored' && event.ticket.projectKey === this.projectKey())
+        void this.reload();
     });
+    destroyRef.onDestroy(() => this.remember());
   }
 
+  /// Renders the cached backlog of this project and filters at once (stale-while-revalidate), then
+  /// the fresh one.
   async load(projectKey: string): Promise<void> {
     const key = projectKey.toUpperCase();
     if (key !== this.projectKey()) {
@@ -145,23 +161,31 @@ export class BacklogStore {
     }
     this.projectKey.set(key);
     const token = ++this.loadToken;
+    const filters = this.filters();
+    const cacheKey = backlogCacheKey(key, filters);
+    const { cached, fresh } = this.swr.load(
+      cacheKey,
+      () =>
+        firstValueFrom(
+          this.api.backlog(key, {
+            showDone: filters.showDone,
+            type: filters.types,
+            status: filters.statuses,
+            priority: filters.priorities,
+            assignee: filters.assignee,
+            label: filters.labels,
+            version: filters.version,
+            text: filters.text.trim() || null,
+          }),
+        ),
+      [ticketsTag(key)],
+    );
+    if (cached && cacheKey !== this.shownKey) this.apply(cached, cacheKey);
     this.status.set(this.items().length ? 'loaded' : 'loading');
     try {
-      const filters = this.filters();
-      const backlog = await firstValueFrom(
-        this.api.backlog(key, {
-          showDone: filters.showDone,
-          type: filters.types,
-          status: filters.statuses,
-          priority: filters.priorities,
-          assignee: filters.assignee,
-          label: filters.labels,
-          version: filters.version,
-          text: filters.text.trim() || null,
-        }),
-      );
+      const backlog = await fresh;
       if (token !== this.loadToken) return;
-      this.apply(backlog);
+      this.apply(backlog, cacheKey);
       this.error.set(null);
       this.status.set('loaded');
     } catch (error) {
@@ -220,7 +244,7 @@ export class BacklogStore {
 
   /// The tickets a keyboard or bulk action applies to: the selection when the focused row is in it.
   targets(focusId = this.focusId()): string[] {
-    return targets(this.selection(), this.order(), focusId);
+    return targets(this.selection(), this.order(), focusId).filter((id) => !isPending(id));
   }
 
   item(id: string): BacklogItem | undefined {
@@ -290,15 +314,46 @@ export class BacklogStore {
     }));
   }
 
-  assignToMe(ids: readonly string[]): Promise<void> {
+  /// `i`: assigns the tickets to the signed-in user, with an Undo toast that puts back each
+  /// ticket's previous assignee (D-81).
+  async assignToMe(ids: readonly string[]): Promise<void> {
     const me = this.auth.currentUser();
-    if (!me) return Promise.resolve();
-    return this.setAssignee(ids, {
+    if (!me) return;
+    const changing = ids
+      .map((id) => this.item(id))
+      .filter((i): i is BacklogItem => !!i && i.assigneeId !== me.id);
+    if (changing.length === 0) return;
+    const previous = new Map(changing.map((i) => [i.id, i.assigneeId]));
+    await this.setAssignee([...previous.keys()], {
       id: me.id,
       email: me.email,
       displayName: me.displayName,
       isActive: true,
     });
+    const assigned = [...previous.keys()].filter((id) => this.item(id)?.assigneeId === me.id);
+    if (assigned.length === 0) return;
+    this.toast.success(
+      assigned.length === 1
+        ? `${this.item(assigned[0])?.key} assigned to you`
+        : `${assigned.length} tickets assigned to you`,
+      { action: { label: 'Undo', run: () => void this.restoreAssignees(assigned, previous) } },
+    );
+  }
+
+  private async restoreAssignees(
+    ids: readonly string[],
+    previous: ReadonlyMap<string, string | null>,
+  ): Promise<void> {
+    const byAssignee = new Map<string | null, string[]>();
+    for (const id of ids) {
+      const assignee = previous.get(id) ?? null;
+      byAssignee.set(assignee, [...(byAssignee.get(assignee) ?? []), id]);
+    }
+    await Promise.all(
+      [...byAssignee].map(([assignee, group]) =>
+        this.update(group, { assignee }, () => ({ assigneeId: assignee })),
+      ),
+    );
   }
 
   toggleLabel(ids: readonly string[], label: string, add: boolean): Promise<void> {
@@ -310,32 +365,26 @@ export class BacklogStore {
     }));
   }
 
+  /// Deletes at once with an Undo toast (D-82); keyboard focus moves to the next remaining row.
   async remove(ids: readonly string[]): Promise<void> {
-    const removed = ids.map((id) => this.item(id)).filter((i): i is BacklogItem => !!i);
-    const snapshot = this.items();
-    this.items.update((items) => items.filter((i) => !ids.includes(i.id)));
+    const keys = ids.map((id) => this.item(id)?.key).filter((k): k is string => !!k);
+    if (keys.length === 0) return;
+    const order = this.order();
+    const removing = new Set(ids);
+    const focus = this.focusId();
+    if (focus && removing.has(focus)) {
+      const index = order.indexOf(focus);
+      const next =
+        order.slice(index + 1).find((id) => !removing.has(id)) ??
+        order
+          .slice(0, index)
+          .reverse()
+          .find((id) => !removing.has(id)) ??
+        null;
+      this.focusId.set(next);
+    }
     this.clearSelection();
-    const results = await Promise.allSettled(
-      removed.map((item) => firstValueFrom(this.api.delete(item.key))),
-    );
-    const failed = removed.filter((_, i) => results[i].status === 'rejected');
-    for (const item of removed.filter((i) => !failed.includes(i))) {
-      this.cache.evict(item.key);
-      this.events.emit({ kind: 'deleted', key: item.key });
-    }
-    if (failed.length) {
-      const keep = new Set(failed.map((i) => i.id));
-      const present = new Set(this.items().map((i) => i.id));
-      this.items.set(snapshot.filter((i) => keep.has(i.id) || present.has(i.id)));
-      const reason = (results.find((r) => r.status === 'rejected') as PromiseRejectedResult).reason;
-      this.toast.error(
-        `${failed.map((i) => i.key).join(', ')} not deleted: ${toApiError(reason).title}`,
-      );
-    } else {
-      this.toast.success(
-        removed.length === 1 ? `${removed[0].key} deleted` : `${removed.length} tickets deleted`,
-      );
-    }
+    await this.deletion.delete(keys);
   }
 
   // Ranking
@@ -387,6 +436,53 @@ export class BacklogStore {
     return this.rank(ids, { position }, { position });
   }
 
+  /// `M` / "Move to board": the tickets leave the backlog at once; Undo brings them back to the same
+  /// place (before the ticket that followed them).
+  async moveToBoard(ids: readonly string[], boardId: string, boardName: string): Promise<void> {
+    const order = this.order();
+    const moving = order.filter((id) => ids.includes(id) && !isPending(id));
+    const keys = moving.map((id) => this.item(id)!.key);
+    if (keys.length === 0) return;
+    const snapshot = this.items();
+    const last = order.indexOf(moving[moving.length - 1]);
+    const nextId = order.slice(last + 1).find((id) => !moving.includes(id) && !isPending(id));
+    const anchorKey = nextId ? this.item(nextId)?.key : undefined;
+    this.items.update((items) => items.filter((i) => !moving.includes(i.id)));
+    this.clearSelection();
+    try {
+      await firstValueFrom(this.api.move({ keys, target: boardId, from: 'backlog' }));
+      keys.forEach((key) => this.cache.evict(key));
+      this.onBoardsCount.update((n) => n + keys.length);
+      this.toast.success(
+        keys.length === 1
+          ? `${keys[0]} moved to ${boardName}`
+          : `${keys.length} tickets moved to ${boardName}`,
+        { action: { label: 'Undo', run: () => void this.moveBack(keys, boardId, anchorKey) } },
+      );
+    } catch (error) {
+      const present = new Set(this.items().map((i) => i.id));
+      this.items.set(snapshot.filter((i) => moving.includes(i.id) || present.has(i.id)));
+      this.toast.error(`Couldn't move: ${toApiError(error).title}`);
+    }
+  }
+
+  private async moveBack(keys: string[], boardId: string, beforeKey?: string): Promise<void> {
+    try {
+      await firstValueFrom(
+        this.api.move({
+          keys,
+          target: 'backlog',
+          from: boardId,
+          ...(beforeKey ? { beforeKey } : { position: 'Bottom' as const }),
+        }),
+      );
+    } catch (error) {
+      this.toast.error(`Couldn't move back: ${toApiError(error).title}`);
+    }
+    keys.forEach((key) => this.cache.evict(key));
+    await this.reload();
+  }
+
   // Quick create
 
   openCreate(groupId: string | null): void {
@@ -406,12 +502,10 @@ export class BacklogStore {
     this.creatingIn.set(null);
   }
 
-  /// Creates a ticket in the quick-create group and places it at the top of that group.
-  async quickCreate(
-    title: string,
-    type: TicketType,
-    row: CreateRow,
-  ): Promise<TicketSummary | null> {
+  /// Creates a ticket in the quick-create group, optimistically: a pending row appears at the top of
+  /// the group at once and is replaced by the real ticket when the server answers. Creations are
+  /// queued, so typing ahead never loses or merges titles and the server order matches the list.
+  quickCreate(title: string, type: TicketType, row: CreateRow): Promise<TicketSummary | null> {
     const body: NewTicket = { title: title.trim(), type };
     const groupBy = this.groupBy();
     if (row.value !== null) {
@@ -420,31 +514,113 @@ export class BacklogStore {
       if (groupBy === 'assignee') body.assignee = row.value;
       if (groupBy === 'epic') body.parentKey = row.value;
     }
+    const tempId = `${PENDING_PREFIX}${crypto.randomUUID()}`;
     const firstInGroup = this.rows().find(
       (r) => r.kind === 'ticket' && (row.groupId === 'all' || r.groupId === row.groupId),
     );
+    this.insertPending(tempId, body, firstInGroup?.kind === 'ticket' ? firstInGroup.id : null);
+    const idempotencyKey = crypto.randomUUID();
+    const result = this.createQueue.then(() =>
+      this.commitCreate(tempId, body, idempotencyKey, row),
+    );
+    this.createQueue = result;
+    return result;
+  }
+
+  private async commitCreate(
+    tempId: string,
+    body: NewTicket,
+    idempotencyKey: string,
+    row: CreateRow,
+  ): Promise<TicketSummary | null> {
     try {
       const created = await firstValueFrom(
-        this.api.create(this.projectKey(), body, crypto.randomUUID()),
+        this.api.create(this.projectKey(), body, idempotencyKey),
       );
-      this.addCreated(created, firstInGroup?.kind === 'ticket' ? firstInGroup.id : null);
+      this.replacePending(tempId, created);
       this.lastCreatedId.set(created.id);
       this.events.emit({ kind: 'created', ticket: created });
-      if (firstInGroup?.kind === 'ticket' && this.sortBy() === 'rank') {
-        void firstValueFrom(
+      const order = this.order();
+      const nextId = order
+        .slice(order.indexOf(created.id) + 1)
+        .find((id) => !isPending(id) && this.groupOf(id) === this.groupOf(created.id));
+      const next = nextId ? this.item(nextId) : undefined;
+      if (next && this.sortBy() === 'rank') {
+        await firstValueFrom(
           this.api.move({
             keys: [created.key],
             target: 'backlog',
             from: 'backlog',
-            beforeKey: firstInGroup.item.key,
+            beforeKey: next.key,
           }),
         ).catch(() => undefined);
       }
       return created;
     } catch (error) {
-      this.toast.error(`Couldn't create the ticket: ${toApiError(error).title}`);
+      this.items.update((items) => items.filter((i) => i.id !== tempId));
+      this.toast.error(`Couldn't create "${body.title}": ${toApiError(error).title}`, {
+        action: {
+          label: 'Retry',
+          run: () => void this.quickCreate(body.title, body.type, row),
+        },
+      });
       return null;
     }
+  }
+
+  private insertPending(tempId: string, body: NewTicket, beforeId: string | null): void {
+    const parent = body.parentKey
+      ? [...this.parents().values()].find((p) => p.key === body.parentKey)
+      : undefined;
+    const item: BacklogItem = {
+      id: tempId,
+      key: '',
+      title: body.title,
+      type: body.type,
+      status: body.status ?? 'ToDo',
+      priority: 'Medium',
+      severity: null,
+      storyPoints: null,
+      version: null,
+      labels: [],
+      assigneeId: body.assignee ?? null,
+      parentId: parent?.id ?? null,
+      updatedAt: new Date().toISOString(),
+      childCount: 0,
+      childDoneCount: 0,
+      commentCount: 0,
+      testCaseCount: 0,
+    };
+    this.items.update((items) =>
+      moveBlock([...items, item], [tempId], beforeId ? { beforeId } : { position: 'Bottom' }),
+    );
+  }
+
+  private replacePending(tempId: string, summary: TicketSummary): void {
+    if (summary.assignee)
+      this.users.update((map) => new Map(map).set(summary.assignee!.id, summary.assignee!));
+    this.items.update((items) =>
+      items.map((item) =>
+        item.id === tempId
+          ? {
+              ...item,
+              id: summary.id,
+              key: summary.key,
+              title: summary.title,
+              type: summary.type,
+              status: summary.status,
+              priority: summary.priority,
+              severity: summary.severity,
+              storyPoints: summary.storyPoints,
+              version: summary.version,
+              labels: summary.labels,
+              assigneeId: summary.assignee?.id ?? null,
+              updatedAt: summary.updatedAt,
+            }
+          : item,
+      ),
+    );
+    if (this.focusId() === tempId) this.focusId.set(summary.id);
   }
 
   private addCreated(summary: TicketSummary, beforeId: string | null): void {
@@ -484,6 +660,10 @@ export class BacklogStore {
     if (ticket.projectKey !== this.projectKey()) return;
     if (ticket.location.kind !== 'Backlog') {
       this.removeLocal([ticket.key]);
+      return;
+    }
+    if (!this.items().some((i) => i.id === ticket.id)) {
+      if (ticket.status !== 'Done' || this.filters().showDone) void this.reload();
       return;
     }
     if (ticket.assignee)
@@ -526,17 +706,36 @@ export class BacklogStore {
     this.items.update((items) => items.filter((i) => !keys.includes(i.key)));
   }
 
-  private apply(backlog: Backlog): void {
+  private apply(backlog: Backlog, cacheKey: string): void {
+    this.shown = backlog;
+    this.shownKey = cacheKey;
     this.canWrite.set(backlog.canWrite);
     this.truncated.set(backlog.truncated);
+    this.onBoardsCount.set(backlog.onBoardsCount ?? 0);
     this.users.set(new Map(backlog.users.map((u) => [u.id, u])));
     this.parents.set(new Map(backlog.parents.map((p) => [p.id, p])));
-    this.items.set(backlog.items);
+    const pending = this.items().filter((i) => isPending(i.id));
+    this.items.set([...pending, ...backlog.items]);
     this.selection.update((state) =>
       prune(
         state,
         backlog.items.map((i) => i.id),
       ),
+    );
+  }
+
+  /// Keeps what the list shows now (including local edits) for the next visit.
+  private remember(): void {
+    if (!this.shown || !this.shownKey) return;
+    this.swr.set(
+      this.shownKey,
+      {
+        ...this.shown,
+        items: this.items().filter((i) => !isPending(i.id)),
+        users: [...this.users().values()],
+        parents: [...this.parents().values()],
+      } satisfies Backlog,
+      [ticketsTag(this.projectKey())],
     );
   }
 
@@ -578,4 +777,15 @@ export class BacklogStore {
     const group = this.rows().find((r) => r.kind === 'group');
     return group?.id ?? (this.groupBy() === 'status' ? 'status:ToDo' : 'all');
   }
+}
+
+const PENDING_PREFIX = 'pending:';
+
+/// A quick-created ticket shown before the server confirmed it.
+export function isPending(id: string): boolean {
+  return id.startsWith(PENDING_PREFIX);
+}
+
+function backlogCacheKey(projectKey: string, filters: BacklogFilters): string {
+  return `backlog:${projectKey}:${JSON.stringify(filters)}`;
 }

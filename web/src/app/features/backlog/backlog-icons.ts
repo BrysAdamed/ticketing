@@ -1,6 +1,7 @@
 import {
   tablerArrowBarToDown,
   tablerArrowBarToUp,
+  tablerCategory,
   tablerChecklist,
   tablerFilter,
   tablerLayersSubtract,
@@ -15,6 +16,7 @@ import {
 export const BACKLOG_ICONS = {
   tablerArrowBarToDown,
   tablerArrowBarToUp,
+  tablerCategory,
   tablerChecklist,
   tablerFilter,
   tablerLayersSubtract,

@@ -229,6 +229,8 @@ export interface Backlog {
   users: UserRef[];
   parents: BacklogParent[];
   truncated: boolean;
+  /// Tickets matching the same filters that sit on a board instead ("N more on boards").
+  onBoardsCount: number;
 }
 
 export type RankPosition = 'Top' | 'Bottom';

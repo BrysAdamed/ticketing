@@ -3,6 +3,7 @@ import { firstValueFrom } from 'rxjs';
 import { ProjectRole, ProjectVisibility } from '@shared/domain/enums';
 import { ApiClient } from '../api/api-client';
 import { ApiError, toApiError } from '../api/api-error';
+import { Page } from '../api/page';
 
 /// Item of `GET /api/v1/projects`.
 export interface ProjectSummary {
@@ -26,7 +27,8 @@ export interface ProjectSummary {
 
 export type LoadStatus = 'idle' | 'loading' | 'loaded' | 'error';
 
-const SIDEBAR_LIMIT = 100;
+const PAGE_SIZE = 100;
+const MAX_PROJECTS = 1000;
 
 /// The readable projects of the signed-in user, shared by the sidebar, the command palette and
 /// any feature that needs a project list. Call `reload()` after creating or archiving a project.
@@ -48,10 +50,16 @@ export class ProjectDirectory {
   async reload(): Promise<void> {
     this.status.set('loading');
     try {
-      const page = await firstValueFrom(
-        this.api.list<ProjectSummary>('/projects', { limit: SIDEBAR_LIMIT }),
-      );
-      this.items.set(page.items);
+      const items: ProjectSummary[] = [];
+      let cursor: string | null = null;
+      do {
+        const page: Page<ProjectSummary> = await firstValueFrom(
+          this.api.list<ProjectSummary>('/projects', { limit: PAGE_SIZE, cursor }),
+        );
+        items.push(...page.items);
+        cursor = page.nextCursor;
+      } while (cursor && items.length < MAX_PROJECTS);
+      this.items.set(items);
       this.error.set(null);
       this.status.set('loaded');
     } catch (error) {

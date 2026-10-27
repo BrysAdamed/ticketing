@@ -63,8 +63,17 @@ const MAX_PROJECTS = 20;
       <span class="tk-field-label"
         >Projects <span class="muted tnum">{{ selected().size }} / {{ maxProjects }}</span></span
       >
+      <input
+        class="filter"
+        type="search"
+        placeholder="Filter projects"
+        aria-label="Filter projects"
+        data-testid="create-board-project-filter"
+        [value]="filter()"
+        (input)="filter.set($any($event.target).value)"
+      />
       <div class="projects" role="group" aria-label="Projects">
-        @for (project of projects(); track project.id) {
+        @for (project of visibleProjects(); track project.id) {
           <button
             type="button"
             class="project"
@@ -109,6 +118,17 @@ const MAX_PROJECTS = 20;
   styles: `
     mat-form-field {
       width: 100%;
+    }
+    .filter {
+      width: 100%;
+      height: 28px;
+      margin-bottom: 6px;
+      padding: 0 8px;
+      border: 1px solid var(--tk-border-input);
+      border-radius: var(--tk-radius-sm);
+      background: var(--tk-bg);
+      color: var(--tk-text);
+      font: inherit;
     }
     .projects {
       max-height: 240px;
@@ -184,9 +204,20 @@ export class CreateBoardDialog {
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
 
+  protected readonly filter = signal('');
   protected readonly projects = computed(() =>
     this.directory.activeProjects().filter((p) => p.myRole === 'Owner' || p.myRole === 'Member'),
   );
+  protected readonly visibleProjects = computed(() => {
+    const term = this.filter().trim().toLowerCase();
+    if (!term) return this.projects();
+    return this.projects().filter(
+      (p) =>
+        this.selected().has(p.key) ||
+        p.key.toLowerCase().includes(term) ||
+        p.name.toLowerCase().includes(term),
+    );
+  });
   protected readonly valid = computed(
     () => this.name().trim().length > 0 && this.selected().size > 0,
   );

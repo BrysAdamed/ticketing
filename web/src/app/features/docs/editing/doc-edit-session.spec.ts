@@ -79,6 +79,8 @@ class FakeApi {
       channel: 'Web',
       createdAt: '2026-10-27T10:00:00Z',
       restoredFrom: null,
+      references: { tickets: [], docs: [] },
+      embeds: [],
     } satisfies DocVersion),
   );
 }

@@ -189,4 +189,33 @@ test.describe('doc links', () => {
             null,
         ]);
     });
+
+    test('an older version renders its own ticket chips and embeds', async ({ page, api }) => {
+        // Arrange
+        const projectKey = (await api.createProject()).key;
+        const ticket = await createTicket(api, projectKey, 'First approach');
+        const diagram = await createDoc(api, projectKey, {
+            kind: 'Diagram',
+            diagramFormat: 'Mermaid',
+            title: 'Old flow',
+            content: 'flowchart LR\n  A --> B',
+        });
+        const doc = await createDoc(api, projectKey, {
+            kind: 'Page',
+            title: 'Design',
+            content: `Tracked in ${ticket.key}.\n\n![Old flow](${diagram.key})`,
+        });
+        await api.patch(`/docs/${doc.key}`, { content: 'Rewritten.', baseVersion: 1 });
+
+        // Act
+        await page.goto(`/projects/${projectKey}/docs/${doc.key}/design?v=1`);
+
+        // Assert
+        const content = page.getByTestId('doc-version-content');
+        await expect(content.getByTestId(`ticket-chip-${ticket.key}`)).toBeVisible();
+        await expect(
+            content.locator(`figure.tk-doc-embed[data-doc-key="${diagram.key}"]`),
+        ).toBeVisible();
+        await expect(content).not.toContainText('Diagram not available');
+    });
 });

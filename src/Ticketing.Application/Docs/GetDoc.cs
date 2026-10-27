@@ -7,8 +7,8 @@ namespace Ticketing.Application.Docs;
 
 /// <summary>
 /// A doc by key (or id), or by project and path: latest content, path and breadcrumb, who else is editing, the caller's
-/// own draft marker and permissions; folders also list their children. With <c>Version</c> the content is that version's
-/// and <see cref="DocDto.AtVersion"/> describes it.
+/// own draft marker and permissions; folders also list their children. With <c>Version</c> the content, references and embeds
+/// are that version's and <see cref="DocDto.AtVersion"/> describes it.
 /// </summary>
 public static class GetDoc
 {
@@ -33,9 +33,13 @@ public static class GetDoc
             if (request.Version is not { } number)
                 return doc;
             var version = await GetDocVersion.LoadAsync(db, target, number, cancellationToken);
+            var (references, embeds) = await DocReferenceQueries.ReferencesOfContentAsync(
+                db, access, target.Id, version.Content, doc.Kind, doc.DiagramFormat, cancellationToken);
             return doc with
             {
                 Content = version.Content,
+                References = references,
+                Embeds = embeds,
                 Outline = doc.Outline is null ? null : OutlineOf(version.Content),
                 SnapshotUrl = version.SnapshotUrl,
                 AtVersion = new DocVersionInfoDto(

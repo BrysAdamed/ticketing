@@ -52,7 +52,9 @@ describe('buildPrint', () => {
 
     // Assert
     expect(main.querySelector('.cover-title')?.textContent).toBe('Architecture');
-    expect(main.querySelector('.cover')?.textContent).toContain('Exported by Jane Doe on 2026-10-27 16:40');
+    expect(main.querySelector('.cover')?.textContent).toContain(
+      'Exported by Jane Doe on 2026-10-27 16:40',
+    );
     const links = Array.from(main.querySelectorAll<HTMLAnchorElement>('nav.toc a'));
     expect(links.map((a) => a.getAttribute('href'))).toEqual(['#PAY-D-1', '#PAY-D-4', '#PAY-D-5']);
     expect(main.querySelector('nav.toc .toc-d2')?.textContent).toContain('Use Postgres');
@@ -119,7 +121,9 @@ describe('buildPrint', () => {
 
     // Assert
     const article = main.querySelector('article#PAY-D-1')!;
-    const hrefs = Array.from(article.querySelectorAll('.tk-md a')).map((a) => a.getAttribute('href'));
+    const hrefs = Array.from(article.querySelectorAll('.tk-md a')).map((a) =>
+      a.getAttribute('href'),
+    );
     expect(hrefs).toEqual([
       '#PAY-D-2',
       'https://tickets.example.com/p/PAY/docs/PAY-D-3/refunds',
@@ -168,7 +172,10 @@ describe('buildPrint', () => {
   it('leaves an empty figure for diagram documents, drawn later', () => {
     // Act
     const main = render(
-      data([entry({ kind: 'Diagram', diagramFormat: 'Canvas', picture: 'canvas-1.svg' })], 'single'),
+      data(
+        [entry({ kind: 'Diagram', diagramFormat: 'Canvas', picture: 'canvas-1.svg' })],
+        'single',
+      ),
     );
 
     // Assert

@@ -43,7 +43,9 @@ export async function drawDiagrams(root: HTMLElement, data: PrintData): Promise<
   for (const body of Array.from(root.querySelectorAll<HTMLElement>('[data-print-diagram]'))) {
     const entry = data.entries.find((e) => e.key === body.dataset['printDiagram']);
     if (entry)
-      jobs.push(drawInto(body, entry.diagramFormat ?? '', entry.content, entry.picture, entry.title));
+      jobs.push(
+        drawInto(body, entry.diagramFormat ?? '', entry.content, entry.picture, entry.title),
+      );
   }
   await Promise.all(jobs);
   await highlightCodeBlocks(root);
@@ -170,7 +172,10 @@ function folderHead(doc: Document, entry: PrintEntry): HTMLElement {
   const el = doc.createElement('section');
   el.id = entry.key;
   el.className = 'folder-head';
-  el.append(element(doc, 'h1', 'folder-title', entry.title), element(doc, 'p', 'folder-path', entry.path));
+  el.append(
+    element(doc, 'h1', 'folder-title', entry.title),
+    element(doc, 'p', 'folder-path', entry.path),
+  );
   return el;
 }
 

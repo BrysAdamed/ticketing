@@ -106,6 +106,15 @@ export class DocsApi {
   markdownExportUrl(key: string): string {
     return this.api.url(`/docs/${encodeURIComponent(key)}/export.md`);
   }
+
+  /// The PDF of a page, diagram (`version` for an older one) or folder; dates in `timeZone`.
+  pdfExportUrl(key: string, version?: number | null, timeZone?: string | null): string {
+    const query = new URLSearchParams();
+    if (version) query.set('version', String(version));
+    if (timeZone) query.set('tz', timeZone);
+    const search = query.toString();
+    return this.api.url(`/docs/${encodeURIComponent(key)}/export.pdf${search ? `?${search}` : ''}`);
+  }
 }
 
 function xsrfToken(): string {

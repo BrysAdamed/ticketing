@@ -11,7 +11,6 @@ import { AbsoluteTimePipe, RelativeTimePipe } from '@shared/pipes/relative-time.
 import { BadgeComponent } from '@shared/ui/domain/badge.component';
 import { UserDisplayComponent } from '@shared/ui/domain/user-display.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
-import { IconComponent } from '@shared/ui/icon/icon.component';
 import { SkeletonRowsComponent } from '@shared/ui/skeleton/skeleton-rows.component';
 
 export interface PromptOverridesDialogData {
@@ -29,7 +28,6 @@ export interface PromptOverridesDialogData {
     BadgeComponent,
     UserDisplayComponent,
     EmptyStateComponent,
-    IconComponent,
     SkeletonRowsComponent,
     RelativeTimePipe,
     AbsoluteTimePipe,

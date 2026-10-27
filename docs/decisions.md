@@ -710,6 +710,12 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
   - Rows keep showing the last editor: the index does not record who added a mention (D-108).
 - Rationale: the top level is the only folder every project has; naming the page after the ticket makes it findable in the tree and in search without asking for a title first.
 
+### D-115 Drafts too large for a keepalive request are saved normally on unload, behind the browser's "Leave site?" prompt (TKT-72)
+
+- Question: editors save unsaved changes on `beforeunload` with `fetch(..., { keepalive: true })`, but browsers drop keepalive bodies over 64 KB, so the last second of a big Canvas drawing (up to 2 MB) was lost silently. Compressing does not bound the size, and synchronous requests are not allowed while a page is being dismissed.
+- Decision: `DocsApi.saveDraftOnUnload` sends only bodies of at most 60 000 UTF-8 bytes (`fitsKeepalive`) and reports whether it did. Otherwise `DocEditSession.saveOnUnload(event)` starts a normal draft save and cancels the `beforeunload` event, so the browser shows its own "Leave site?" prompt while the request runs; staying keeps editing, leaving after it finished loses nothing. Small drafts behave as before, without a prompt.
+- Rationale: the prompt appears only when there is something unsaved that could not be sent, which is the honest answer; it costs no server change.
+
 ## Product owner answers (v1 review, 2026-10-27)
 
 These were open questions (Q-01..Q-05); the product owner resolved them as follows.

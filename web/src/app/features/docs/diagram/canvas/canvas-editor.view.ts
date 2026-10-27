@@ -52,7 +52,7 @@ export const CANVAS_OPEN_MEASURE = 'tk-canvas-open';
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     'data-testid': 'view-docs.diagram.canvas.edit',
-    '(window:beforeunload)': 'onUnload()',
+    '(window:beforeunload)': 'onUnload($event)',
     '(document:visibilitychange)': 'onVisibilityChange()',
   },
   templateUrl: './canvas-editor.view.html',
@@ -214,9 +214,9 @@ export class CanvasEditorView {
     if (await this.session.discard()) await this.leave();
   }
 
-  protected onUnload(): void {
+  protected onUnload(event: BeforeUnloadEvent): void {
     this.sync();
-    this.session.saveOnUnload();
+    this.session.saveOnUnload(event);
   }
 
   protected onVisibilityChange(): void {

@@ -1,7 +1,7 @@
 import { DocCanvasPage } from '../../pages/doc-canvas.page';
 import { DocsPage } from '../../pages/docs.page';
 import { Api } from '../../support/api';
-import { chainScene } from '../../support/canvas';
+import { chainScene, largeScene } from '../../support/canvas';
 import { BASE_URL } from '../../support/env';
 import { expect, test } from '../../support/fixtures';
 
@@ -204,5 +204,41 @@ test.describe('Canvas diagrams', () => {
         await expect(
             page.getByTestId('view-docs.diagram.canvas.edit').getByText('Images go in pages'),
         ).toBeVisible();
+    });
+
+    test('closing the tab with unsaved changes to a drawing over 64 KB saves them and asks first', async ({
+        page,
+        api,
+    }) => {
+        // Arrange
+        const projectKey = (await api.createProject()).key;
+        const scene = largeScene(600);
+        expect(scene.length).toBeGreaterThan(64 * 1024);
+        const diagram = await createCanvas(api, projectKey, 'Big map', scene);
+        const canvas = new DocCanvasPage(page);
+        await canvas.goto(projectKey, diagram.key, true);
+        const draftContent = () =>
+            api
+                .get<{ content: string }>(`/docs/${diagram.key}/draft`)
+                .then((draft) => draft.content)
+                .catch(() => '');
+        const asked = new Promise<string>((resolve) =>
+            page.once('dialog', (dialog) => {
+                resolve(dialog.type());
+                void expect
+                    .poll(draftContent, { timeout: 15_000 })
+                    .toContain('Late')
+                    .finally(() => dialog.accept());
+            }),
+        );
+
+        // Act: draw, then close before the autosave runs
+        await canvas.box(420, 320, 160, 80, 'Late');
+        await page.close({ runBeforeUnload: true });
+
+        // Assert: the browser asked, and the draft was saved while it did
+        expect(await asked).toBe('beforeunload');
+        await expect.poll(draftContent, { timeout: 15_000 }).toContain('Late');
+        await expect.poll(() => page.isClosed()).toBe(true);
     });
 });

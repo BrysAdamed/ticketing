@@ -66,6 +66,7 @@ ESLint enforces the boundaries: `core` and `shared` may not import `@features/*`
 | `/search` | `search` | `search.results` |
 | `/profile`, `/profile/tokens` | `profile` | `profile.layout`, `profile.general`, `profile.tokens` |
 | `/admin/users \| flags \| audit` (Admins only; others get 404) | `admin` | `admin.layout`, `admin.users`, `admin.flags`, `admin.audit` |
+| `/admin/agent-prompts`, `…/agent-prompts/:slot` (`bug`, `user-story`, …, `guardrails`; Admins with flag `agent.delegate`) | `admin` | `admin.agent-prompts`, `admin.agent-prompt` |
 | `/dev/ui-kit` | `ui-kit` | `dev.ui-kit` (UI kit catalogue) |
 | anything else | `not-found` | `app.not-found` |
 
@@ -168,10 +169,11 @@ The project Agent tab and the Admin prompts page edit the same kind of thing, so
 
 | Need | Use |
 | --- | --- |
-| Wire types, clients | `core/agent/agent-prompt.models.ts`; `AgentPromptsClient` (`listProject`, `listInstance`, `getProject`, `getInstance`, `save(scope, slot, …)`, `resetProject`, `resetInstanceToBuiltIn`, `versions`, `version`, `restore`, `preview`, `placeholders`); `ProjectAgentSettingsClient` (`get`, `update(pk, patch, rowVersion)`). A scope is `{ kind: 'project', projectKey }` or `{ kind: 'instance' }`; a slot is a ticket type or `Guardrails`. |
+| Wire types, clients | `core/agent/agent-prompt.models.ts`; `AgentPromptsClient` (`listProject`, `listInstance`, `getProject`, `getInstance`, `save(scope, slot, …)`, `resetProject`, `resetInstanceToBuiltIn`, `versions`, `version`, `restore`, `preview`, `placeholders`, and for Admins `instanceStatus`, `overrides(slot)`); `ProjectAgentSettingsClient` (`get`, `update(pk, patch, rowVersion)`). A scope is `{ kind: 'project', projectKey }` or `{ kind: 'instance' }`; a slot is a ticket type or `Guardrails`. |
 | Editor state | `AgentPromptEditorStore` (`core/agent/`, provide it in the view): `open(scope, slot, sampleTicket?)`, `setEditable`, `setMode`, `edit(body)`, `setPreviewTicket`, `save`, `reset` (default or built-in), `markReviewed`, `restore(n)`, `loadVersions`, `version(n)`, `discard`, `reapplyLostEdit`. Signals: `document` (with `reference` = what "Compare" diffs against, `referenceChanged`, `raw` DTO), `mode`, `body`, `changeNote`, `dirty`, `canSave`, `preview`, `previewPending`, `issues`, `length`, `lengthEstimated`, `limit`, `lostEdit`, `versions`. |
 | UI | `shared/agent-prompts/`: `tk-template-editor [(value)] [placeholders] [issues] [readonly] testId` (`{{` completion, issues underlined and listed), `tk-prompt-preview [prompt] [splitAt] [muted]="'after' \| 'before'" [mutedLabel]`, `tk-prompt-diff [left] [right] [leftLabel] [rightLabel]`, `tk-prompt-history [versions] [currentVersion] [canRestore] (view) (compare) (restore)`, `tk-length-meter [length] [limit] [estimated]`. Pure helpers: `line-diff.ts`, `template-text.ts`. |
 | Leave guard | `unsavedChangesGuard` (`core/layout/`) on the route; the view implements `LeaveGuarded.confirmLeave()`. |
+| Slots in URLs, page layout | `core/agent/prompt-slugs.ts` (`promptTypeSlug`, `promptSlotSlug`, `promptSlotFromSlug`, labels); `shared/agent-prompts/prompt-editor-page.scss` for the editor page grid both views use (D-103). |
 
 ## UI kit (`shared/`)
 

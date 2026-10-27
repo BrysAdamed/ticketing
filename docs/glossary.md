@@ -86,6 +86,8 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **My work**: Page listing the current user's open tickets across projects, their waiting regression items and the open tickets they watch. [§6.8](product/01-refined-spec.md#68-search-lists-and-export)
 
+**Mention**: A reference to a user in a ticket description or comment, written with the `@` people picker or as `@email`, stored as `@[Name](user:<id>)` so it survives renames. Only active users who can read the project can be newly mentioned; a new mention notifies them once and makes them a watcher, and readers see it as a chip with the current name (others see plain text) (D-96). [§6.9](product/01-refined-spec.md#69-comments)
+
 **Notification**: An in-app message to one user about a change someone else made: assigned to them (ticket or regression item), mentioned, or a comment, status change, priority raised to High/Highest, move or deletion on a ticket they watch. Created in the same transaction as the change, shown under the bell, listed only while the user can read the project, purged after 90 days (D-94). See Collapsing. [§6.16](product/01-refined-spec.md#616-in-app-notifications-i-30-d-94)
 
 **Open**: A ticket whose status category is not `Done`. Used in dashboards and filters. [§3](product/01-refined-spec.md#3-enumerations)
@@ -182,6 +184,6 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Visibility**: `Private` (default) or `Public`; decides who can access a project without membership. [§3](product/01-refined-spec.md#3-enumerations)
 
-**Watcher**: A user who follows a ticket. Anyone who can read the ticket may watch it; the reporter, the assignee (on each assignment) and commenters start watching automatically. Only active watchers who can still read the project are shown or notified; the others stay stored but hidden (D-93). [§6.15](product/01-refined-spec.md#615-watchers-i-32-d-93)
+**Watcher**: A user who follows a ticket. Anyone who can read the ticket may watch it; the reporter, the assignee (on each assignment), commenters and newly mentioned users start watching automatically. Only active watchers who can still read the project are shown or notified; the others stay stored but hidden (D-93). [§6.15](product/01-refined-spec.md#615-watchers-i-32-d-93)
 
 **Write channel**: How a write arrived: `Web` (browser session), `Api` (PAT over REST) or `Mcp` (PAT over MCP). Recorded on every activity entry. [§2](product/01-refined-spec.md#2-cross-cutting-conventions)

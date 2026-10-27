@@ -16,6 +16,7 @@ import {
   MarkdownUploadHandler,
 } from '@shared/markdown/markdown-editor.component';
 import { MarkdownViewerComponent } from '@shared/markdown/markdown-viewer.component';
+import { MentionSearch } from '@shared/markdown/mentions';
 import { AbsoluteTimePipe, RelativeTimePipe } from '@shared/pipes/relative-time.pipe';
 import { AvatarComponent } from '@shared/ui/domain/avatar.component';
 import { IconComponent } from '@shared/ui/icon/icon.component';
@@ -120,6 +121,8 @@ type FeedItem =
                 submitHint="to save"
                 [maxLength]="20000"
                 [uploadHandler]="uploadHandler()"
+                [mentionSearch]="mentionSearch()"
+                [mentions]="c.mentions"
                 [(value)]="editDraft"
                 (submitted)="saveEdit(c)"
                 (cancelled)="editingId.set(null)"
@@ -135,7 +138,7 @@ type FeedItem =
                 </button>
               </tk-markdown-editor>
             } @else {
-              <tk-markdown class="cmt-b" [source]="c.body" />
+              <tk-markdown class="cmt-b" [source]="c.body" [mentions]="c.mentions" />
             }
           </article>
         } @else {
@@ -186,11 +189,12 @@ type FeedItem =
         class="composer"
         data-testid="comment-composer"
         ariaLabel="New comment"
-        placeholder="Leave a comment… Markdown supported, ticket keys link automatically"
+        placeholder="Leave a comment… Markdown supported, @ to mention, ticket keys link automatically"
         submitHint="to comment"
         [minRows]="2"
         [maxLength]="20000"
         [uploadHandler]="uploadHandler()"
+        [mentionSearch]="mentionSearch()"
         [(value)]="draft"
         (submitted)="submit()"
       >
@@ -220,6 +224,7 @@ export class TicketActivityComponent {
   readonly canComment = input(false);
   readonly add = input.required<(body: string) => Promise<boolean>>();
   readonly uploadHandler = input<MarkdownUploadHandler | null>(null);
+  readonly mentionSearch = input<MentionSearch | null>(null);
 
   readonly tabChange = output<ActivityTab>();
   readonly loadMoreHistory = output<void>();

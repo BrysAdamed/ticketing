@@ -64,9 +64,13 @@
       [minRows]="4"
       [maxRows]="400"
       [maxLength]="50000"
+      [mentionSearch]="projectKey() ? mentionSearch : null"
       [(value)]="description"
       (submitted)="create()"
     />
+    @if (fieldErrors()['description']; as message) {
+      <div class="field-error" data-testid="create-description-error">{{ message }}</div>
+    }
   </div>
 
   <div class="props">

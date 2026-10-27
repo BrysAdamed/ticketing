@@ -1,5 +1,6 @@
 import { inject, Injectable } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, fromEvent, takeUntil } from 'rxjs';
+import { MentionSearch } from '@shared/markdown/mentions';
 import { PickerOption } from '@shared/ui/inline-picker/picker-option';
 import { SearchFn } from '@shared/ui/search-picker/search-picker.directive';
 import { ApiClient } from '../api/api-client';
@@ -26,6 +27,22 @@ export class ProjectPeople {
         query: query.trim(),
       }),
     );
+  }
+
+  /// The `@` picker source of the markdown editor (D-96): active users who can read the project, viewers
+  /// included (`GET /users?projectKey=&query=&access=read`). Aborting resolves with no users.
+  mentionSearch(projectKey: () => string): MentionSearch {
+    return (query, signal) =>
+      firstValueFrom(
+        this.api
+          .get<UserRef[]>('/users', {
+            projectKey: projectKey().toUpperCase(),
+            query: query.trim(),
+            access: 'read',
+          })
+          .pipe(takeUntil(fromEvent(signal, 'abort'))),
+        { defaultValue: [] as UserRef[] },
+      );
   }
 
   /// A type-ahead `tkSearchPicker` source over `search`. With `unassigned`, "Unassigned" (value null)

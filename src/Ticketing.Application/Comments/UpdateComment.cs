@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using Ticketing.Application.Abstractions;
 using Ticketing.Application.Access;
+using Ticketing.Application.Collaboration;
 using Ticketing.Application.Common;
 using Ticketing.Application.Tickets;
 using Ticketing.Domain.Activity;
@@ -20,14 +21,17 @@ public static class UpdateComment
         public void Validate(Validator validator) => validator.Required("body", Body, Comment.BodyMaxLength);
     }
 
-    public sealed class Handler(ITicketingDbContext db, IProjectAccess access, ICurrentUser currentUser, IClock clock, IActivityLog activity)
+    public sealed class Handler(
+        ITicketingDbContext db, IProjectAccess access, ICurrentUser currentUser, IClock clock, IActivityLog activity, MentionNormalizer mentions)
         : IHandler<Command, CommentDto>
     {
         public async Task<CommentDto> HandleAsync(Command command, CancellationToken cancellationToken)
         {
             command.EnsureValid();
             var (comment, target) = await CommentLookup.WriteAsync(db, access, command.CommentId, cancellationToken);
-            var previous = comment.EditBy(currentUser.Id, command.Body, clock.Now);
+            comment.EnsureEditableBy(currentUser.Id);
+            var body = await mentions.NormalizeAsync(target.Grant, comment.Body, command.Body, "body", cancellationToken);
+            var previous = comment.EditBy(currentUser.Id, body!, clock.Now);
             activity.RecordChange(
                 ActivityEntityType.Ticket, target.Id, target.ProjectId, Action, Field,
                 new { commentId = comment.Id, body = previous }, new { commentId = comment.Id, body = comment.Body });

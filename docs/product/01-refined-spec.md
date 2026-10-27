@@ -151,7 +151,7 @@ The project creator becomes `Owner`. Only active users can be added. Removing a 
 | Number | int | Per-project sequence. Unique with ProjectId. Immutable. |
 | Key | derived | `{Project.Key}-{Number}`, for example `WEB-42`. Lookup is case-insensitive. |
 | Title | text(255) | Required, 1..255, single line (newlines rejected). |
-| Description | md(50000)? | |
+| Description | md(50000)? | May contain @mentions (6.9, D-96). |
 | Type | TicketType | Required. Changeable, subject to hierarchy rules (6.3). |
 | Status | TicketStatus | Default `ToDo`. |
 | Resolution | Resolution? | Non-null if and only if Status = `Done`. Defaults to `Done` when moving to Done without a value. Cleared when leaving Done. |
@@ -192,7 +192,7 @@ Invariants: unique on (Source, Target, Type). For `RelatesTo` the pair is unorde
 | Id | uuid | |
 | TicketId | uuid | |
 | AuthorId | uuid | |
-| Body | md(20000) | Required, 1..20000. |
+| Body | md(20000) | Required, 1..20000. May contain @mentions (6.9, D-96). |
 | CreatedAt | timestamptz | |
 | EditedAt | timestamptz? | Set on every edit. UI shows "edited". |
 | DeletedAt, DeletedById | timestamptz?, uuid? | On delete the body is cleared and the UI shows "Comment deleted". |
@@ -508,6 +508,7 @@ Rules in 5.4. Additionally:
 - The author can edit and delete their own comments at any time while they have write access. Edits set `EditedAt`; the previous body goes to ActivityEntry, so history keeps it.
 - Project Owners can delete any comment on the project.
 - Deleting clears the body and keeps a "Comment deleted" placeholder in order.
+- Mentions (I-33, D-96), in comments and ticket descriptions only: stored as `@[Display Name](user:<id>)`; clients may also write `@email`, which the server stores in that form when the address belongs to an active user who can read the project (an unknown address stays text). Mentions inside code spans and fenced code blocks do not count. A newly added mention (compared with the previous text) of a user who is inactive, unknown or cannot read the project fails with 400 `mention.invalid` (field `description` or `body`, with a hint); mentions already in the previous text are never re-checked. Each newly mentioned user other than the author starts watching (6.15) and is notified (6.16); edits that add no mention notify nobody. Tickets and comments return `mentions`: the mentioned users who are active and can read the project now; clients render other mentions as plain text. The web editors for descriptions and comments offer a people picker on `@` (`GET /users?projectKey=KEY&access=read`).
 
 ### 6.10 Test case lifecycle
 
@@ -609,7 +610,7 @@ Flag changes write ActivityEntries. Admin UI: list, create, edit, delete; shows 
 ### 6.15 Watchers (I-32, D-93)
 
 - Anyone who can read a ticket can watch or unwatch it: viewers too, and on archived projects too. Both are idempotent and need write-scoped credentials. The ticket view has a Watch/Unwatch toggle (shortcut `w`) with the watcher count and avatars.
-- Automatic watching, applied in the same transaction as the write that triggers it, whatever the channel: the reporter and the assignee of a new ticket, each new assignee, and anyone who comments (and, with I-33, anyone newly @mentioned). Users who cannot read the project or are deactivated are skipped. Unwatching holds until the next such trigger.
+- Automatic watching, applied in the same transaction as the write that triggers it, whatever the channel: the reporter and the assignee of a new ticket, each new assignee, anyone who comments, and anyone newly @mentioned (6.9, D-96). Users who cannot read the project or are deactivated are skipped. Unwatching holds until the next such trigger.
 - Watcher lists show only active users who can currently read the project, by display name. A watcher who loses access or is deactivated is hidden (and will get no notifications) but is shown again if access returns. Watcher data is never visible for an unreadable ticket (404).
 - REST: `GET /tickets/{key}/watchers`, `PUT /tickets/{key}/watchers/me`, `DELETE /tickets/{key}/watchers/me`, each returning `{ count, watching, users }`. The ticket (`GET /tickets/{key}`, `include=watchers`, part of the default) carries the same object as `watchers`.
 
@@ -618,7 +619,7 @@ Flag changes write ActivityEntries. Admin UI: list, create, edit, delete; shows 
 - Triggers, created in the same transaction as the change whatever the channel (REST, MCP, bulk create, moves, board archive or delete, regressions):
   - Assigned: a ticket created with you as assignee, or reassigned to you.
   - RegressionItemAssigned: a regression item assigned to you by someone else (taking an item or recording a result assigns it to yourself and notifies nobody).
-  - Mentioned: you are @mentioned (I-33, TKT-8).
+  - Mentioned: someone newly @mentions you in a ticket description or comment (6.9, D-96): "mentioned you in the description" / "mentioned you in a comment". On a ticket you watch, a new comment that mentions you notifies Mentioned instead of Commented.
   - On a ticket you watch (6.15): a new comment (Commented), a status change by PATCH or by moving to a board column (StatusChanged), a priority change to High or Highest from a lower priority (PriorityRaised; lowering or reaching Medium or below notifies nobody), a move between backlog and boards or between boards, including board archive carry-over and board deletion (Moved), and deletion (Deleted).
 - The actor is never notified about their own action. Recipients must be active and able to read the project (5.1) at the time of the change; others get nothing.
 - Collapsing: a change by the same actor on the same ticket (or regression session) within 5 minutes of the first change of an unread notification is merged into it: `eventCount` grows, `updatedAt` moves, and the headline (kind and summary) is replaced only by a higher-ranked kind (section 3). Several changes in one save collapse the same way. A read notification is never reopened; the next change starts a new one.
@@ -681,7 +682,7 @@ Context and users
 | Tool | Inputs | Output |
 | --- | --- | --- |
 | `whoami` | none | Current user (email, name, global role), token scope and expiry, server version. |
-| `find_users` | `query` (name or email prefix), optional `projectKey` to limit to users who can write there | Up to 20 users: email, name, active. |
+| `find_users` | `query` (name or email prefix), optional `projectKey` to limit to users who can write there, or with `access: Read` to users who can read it (who can be mentioned, viewers included) | Up to 20 users: id, email, name, active. |
 
 Projects
 
@@ -699,7 +700,7 @@ Tickets
 | Tool | Inputs | Output |
 | --- | --- | --- |
 | `search_tickets` | any filter from 6.8 (`projectKeys`, `text`, `types`, `statuses`, `statusCategory`, `priorities`, `severities`, `assignee` (email, `me` or `unassigned`), `reporter`, `labels`, `version`, `parentKey`, `location` (`backlog`, `board`, or a board id), date ranges, `watching`), `sort`, `limit`, `cursor` | Ticket summaries. |
-| `get_ticket` | `key`, optional `include` (any of `comments`, `children`, `links`, `testCases`, `attachments`, `watchers`; default all) | Full ticket incl. description, resolution, reporter, timestamps, rowVersion, and the included collections (latest 50 comments; watchers as `{ count, watching, users }`). |
+| `get_ticket` | `key`, optional `include` (any of `comments`, `children`, `links`, `testCases`, `attachments`, `watchers`; default all) | Full ticket incl. description, resolution, reporter, timestamps, rowVersion, and the included collections (latest 50 comments; watchers as `{ count, watching, users }`), and `mentions` (users mentioned in the description who are active and can read the project). |
 | `watch_ticket` | `key` | `{ count, watching, users }`. Read access is enough (6.15). |
 | `unwatch_ticket` | `key` | `{ count, watching, users }`. |
 | `create_ticket` | `projectKey`, `title`, `type`, optional `description`, `status`, `priority`, `severity`, `storyPoints`, `version`, `labels`, `parentKey`, `assignee`, `boardId`, `idempotencyKey` | Created ticket (summary + rowVersion). |
@@ -716,8 +717,8 @@ Comments
 
 | Tool | Inputs | Output |
 | --- | --- | --- |
-| `list_comments` | `key`, `limit`, `cursor` | Comments oldest first: id, author, body, createdAt, editedAt, deleted. |
-| `add_comment` | `key`, `body` | Created comment. |
+| `list_comments` | `key`, `limit`, `cursor` | Comments oldest first: id, author, body, createdAt, editedAt, deleted, mentions. |
+| `add_comment` | `key`, `body` (may mention users as `@[Name](user:<id>)` or `@email`, 6.9) | Created comment. |
 | `update_comment` | `commentId`, `body` | Updated comment. Own only. |
 | `delete_comment` | `commentId` | Confirmation. Own, or Owner. |
 

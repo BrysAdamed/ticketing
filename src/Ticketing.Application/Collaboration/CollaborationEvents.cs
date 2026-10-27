@@ -7,6 +7,7 @@ using Ticketing.Application.Comments;
 using Ticketing.Application.Regressions;
 using Ticketing.Application.Tickets;
 using Ticketing.Domain.Activity;
+using Ticketing.Domain.Comments;
 using Ticketing.Domain.Tickets;
 
 namespace Ticketing.Application.Collaboration;
@@ -32,7 +33,7 @@ public sealed record PriorityChanged(Guid TicketId, Guid ProjectId, Guid? ActorI
 public sealed record DescriptionChanged(Guid TicketId, Guid ProjectId, Guid? ActorId, DateTimeOffset OccurredAt, string? From, string? To)
     : TicketEvent(TicketId, ProjectId, ActorId, OccurredAt);
 
-public sealed record CommentAdded(Guid TicketId, Guid ProjectId, Guid? ActorId, DateTimeOffset OccurredAt, Guid CommentId)
+public sealed record CommentAdded(Guid TicketId, Guid ProjectId, Guid? ActorId, DateTimeOffset OccurredAt, Guid CommentId, string? Body)
     : TicketEvent(TicketId, ProjectId, ActorId, OccurredAt);
 
 public sealed record CommentEdited(Guid TicketId, Guid ProjectId, Guid? ActorId, DateTimeOffset OccurredAt, Guid CommentId, string? From, string? To)
@@ -49,7 +50,8 @@ public sealed record RegressionItemAssigned(Guid SessionId, Guid ProjectId, Guid
 
 /// <summary>
 /// Reads activity entries into <see cref="CollaborationEvent"/>s. Entries other rules do not care about are skipped. New
-/// tickets are read from the change tracker (or, when not tracked, in one query), so reading costs no query per entry.
+/// tickets and comments are read from the change tracker (or, when not tracked, in one query each), so reading costs no
+/// query per entry.
 /// </summary>
 public static class CollaborationEvents
 {
@@ -59,19 +61,21 @@ public static class CollaborationEvents
         ITicketingDbContext db, IReadOnlyList<ActivityEntry> entries, CancellationToken cancellationToken)
     {
         var created = await CreatedTicketsAsync(db, entries, cancellationToken);
+        var comments = await AddedCommentsAsync(db, entries, cancellationToken);
         var events = new List<CollaborationEvent>(entries.Count);
         foreach (var entry in entries)
         {
             if (entry.ProjectId is not { } projectId)
                 continue;
-            var e = Read(entry, projectId, created);
+            var e = Read(entry, projectId, created, comments);
             if (e is not null)
                 events.Add(e);
         }
         return events;
     }
 
-    private static CollaborationEvent? Read(ActivityEntry entry, Guid projectId, IReadOnlyDictionary<Guid, CreatedTicket> created)
+    private static CollaborationEvent? Read(
+        ActivityEntry entry, Guid projectId, IReadOnlyDictionary<Guid, CreatedTicket> created, IReadOnlyDictionary<Guid, string> comments)
     {
         var (id, actor, at) = (entry.EntityId, entry.ActorId, entry.OccurredAt);
         if (entry.EntityType == ActivityEntityType.RegressionSession)
@@ -96,7 +100,7 @@ public static class CollaborationEvents
             (UpdateTicket.FieldChanged, "description") =>
                 new DescriptionChanged(id, projectId, actor, at, Parse<string>(entry.OldValue), Parse<string>(entry.NewValue)),
             (AddComment.Action, _) when Parse<CommentBody>(entry.NewValue) is { } added =>
-                new CommentAdded(id, projectId, actor, at, added.CommentId),
+                new CommentAdded(id, projectId, actor, at, added.CommentId, comments.GetValueOrDefault(added.CommentId)),
             (UpdateComment.Action, _) when Parse<CommentBody>(entry.NewValue) is { } edited =>
                 new CommentEdited(id, projectId, actor, at, edited.CommentId, Parse<CommentBody>(entry.OldValue)?.Body, edited.Body),
             (BoardRelocation.MovedAction, BoardRelocation.MovedField) =>
@@ -128,6 +132,34 @@ public static class CollaborationEvents
                 .ToListAsync(cancellationToken);
             foreach (var row in rows)
                 result[row.Id] = new CreatedTicket(row.ReporterId, row.AssigneeId, row.Description);
+        }
+        return result;
+    }
+
+    /// <summary>Bodies of the comments added by <paramref name="entries"/>, from the change tracker or, when not tracked, one query.</summary>
+    private static async Task<IReadOnlyDictionary<Guid, string>> AddedCommentsAsync(
+        ITicketingDbContext db, IReadOnlyList<ActivityEntry> entries, CancellationToken cancellationToken)
+    {
+        var ids = entries
+            .Where(e => e.EntityType == ActivityEntityType.Ticket && e.Action == AddComment.Action)
+            .Select(e => Parse<CommentBody>(e.NewValue)?.CommentId)
+            .OfType<Guid>()
+            .ToHashSet();
+        if (ids.Count == 0)
+            return new Dictionary<Guid, string>();
+
+        var result = db.ChangeTracker.Entries<Comment>()
+            .Where(e => ids.Contains(e.Entity.Id))
+            .ToDictionary(e => e.Entity.Id, e => e.Entity.Body);
+        var missing = ids.Where(id => !result.ContainsKey(id)).ToList();
+        if (missing.Count > 0)
+        {
+            var rows = await db.Comments.AsNoTracking()
+                .Where(c => missing.Contains(c.Id))
+                .Select(c => new { c.Id, c.Body })
+                .ToListAsync(cancellationToken);
+            foreach (var row in rows)
+                result[row.Id] = row.Body;
         }
         return result;
     }

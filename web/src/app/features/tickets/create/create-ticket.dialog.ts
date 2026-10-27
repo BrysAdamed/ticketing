@@ -121,6 +121,7 @@ export class CreateTicketDialog {
   protected readonly fieldErrors = signal<Record<string, string>>({});
 
   protected readonly assigneeSearch = this.people.picker(() => this.projectKey());
+  protected readonly mentionSearch = this.people.mentionSearch(() => this.projectKey());
   protected readonly canSubmit = computed(
     () => !!this.projectKey() && !!this.title().trim() && !this.saving(),
   );

@@ -235,17 +235,20 @@ A `hint` (how to fix the problem) is included when the domain provides one. MCP 
 - Ticket full text uses a stored generated column, shadow property `TicketSearch.VectorProperty`, with `english` weights title A and description B. Use `EF.Property<NpgsqlTsVector>(t, TicketSearch.VectorProperty).Matches(EF.Functions.WebSearchToTsQuery(TicketSearch.Configuration, text))`. Partial words use the trigram index on `title` (`EF.Functions.ILike`).
 - Ranks are `COLLATE "C"`. Compare them in .NET with `string.CompareOrdinal`.
 
-### Migration policy (until v1 ships)
+### Migration policy (v1 released 2026-10-27, tag `v1.0.0`)
 
-There is a single `InitialCreate` migration covering the whole model. Until v1 is released it is **regenerated, not appended to**. Every model change replaces it:
+`InitialCreate` is **frozen**: real databases (the team's own Ticketing instance) have applied it. Every schema change is a new migration with a descriptive name, never an edit of a merged one (ADR 0006):
 
 ```bash
-rm -r src/Ticketing.Infrastructure/Persistence/Migrations
-dotnet ef migrations add InitialCreate --project src/Ticketing.Infrastructure --startup-project src/Ticketing.Infrastructure --output-dir Persistence/Migrations
-docker compose down -v   # existing dev databases must be recreated
+dotnet ef migrations add AddTicketWatchers --project src/Ticketing.Infrastructure --startup-project src/Ticketing.Infrastructure --output-dir Persistence/Migrations
 ```
 
-After v1, migrations are additive and never edited once merged. Feature branches that touch the model should regenerate the migration as the last commit before merging, so conflicts are resolved by regenerating rather than by hand. Migrations run automatically at API startup (EF Core takes a migration lock, so several instances are safe).
+- Keep migrations additive. Renames, drops and tighter constraints use expand and contract across two releases.
+- A migration that rewrites data gets an integration test against seeded data.
+- Two branches adding migrations conflict in `TicketingDbContextModelSnapshot.cs`. The second branch to merge deletes its own migration files, merges `main`, and re-adds its migration on top. Never hand-merge the snapshot.
+- Check for drift before pushing: `dotnet ef migrations has-pending-model-changes --project src/Ticketing.Infrastructure --startup-project src/Ticketing.Infrastructure`.
+
+Migrations run automatically at API startup (EF Core takes a migration lock, so several instances are safe).
 
 ## Authentication in short
 

@@ -8,7 +8,7 @@ How a feature slice is delivered in this repo. Every slice is full-stack: use ca
 2. `main` moves while you work. Bring it in with `git fetch && git merge origin/main` (not rebase) whenever you need something that landed there.
 3. Commit in logical steps and push your branch.
 4. Only touch files that belong to your slice. Shared files you may need to touch (keep the diff minimal and mention it in your report): `web/src/app/app.routes.ts`, shared UI kit components (`web/src/app/shared/**`) when you need a genuinely reusable addition.
-5. Schema: the whole model already exists in `InitialCreate`. If you must change it, regenerate `InitialCreate` (ADR 0006) and say so in your report.
+5. Schema: `InitialCreate` is frozen since v1. Schema changes are new additive migrations (ADR 0006, backend.md); say so in your report.
 
 ## Read first
 

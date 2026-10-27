@@ -1,6 +1,6 @@
 # 6. Schema migration policy
 
-- Status: Accepted
+- Status: Accepted (post-v1 phase active since 2026-10-27, tag `v1.0.0`)
 - Date: 2026-10-26
 
 ## Context

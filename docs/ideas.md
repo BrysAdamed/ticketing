@@ -2,6 +2,17 @@
 
 Items triaged as LATER in [product/02-improvements-triage.md](product/02-improvements-triage.md). IDs match that file. Sizes: S = up to 3 dev-days, M = up to 2 weeks, L = more. Within each theme, items are in suggested order.
 
+This file is the pool of unscheduled ideas. Once an idea is scheduled it becomes a ticket in the Ticketing instance itself (project `TKT`) and its row here links to that ticket.
+
+## Shipped in v1 after all
+
+| ID | Idea | Where it landed |
+| --- | --- | --- |
+| I-58 | Dark mode | Light and dark themes from the design tokens, OS default plus toggle. |
+| I-36 | Board swimlanes | By assignee, epic, project and priority. |
+| I-40 (part) | Bulk field edit | Backlog bulk bar sets status, priority, assignee and type, and moves to a board; labels and version remain (see I-40 below). |
+| I-56 (part) | Restore deleted tickets | Delete has a 10-minute Undo (D-82); a "recently deleted" list remains (see I-56 below). |
+
 ## Notifications and collaboration
 
 | ID | Idea | Why | Size |
@@ -34,7 +45,6 @@ Items triaged as LATER in [product/02-improvements-triage.md](product/02-improve
 | ID | Idea | Why | Size |
 | --- | --- | --- | --- |
 | I-62 | Board column options (hide columns, WIP limits) | Eight columns are wide and some teams skip statuses. | S |
-| I-36 | Board swimlanes by assignee, project or epic | Large multi-project boards. | M |
 | I-35 | Sprints with dates, goal, velocity and burndown | Scrum metrics. Board archive covers the flow until then. | L |
 | I-53 | Releases with release notes | Turns the free-text version into a managed release. | M |
 | I-75 | Stale ticket housekeeping | Bulk close or flag long-untouched tickets. | S |
@@ -46,15 +56,14 @@ Items triaged as LATER in [product/02-improvements-triage.md](product/02-improve
 | --- | --- | --- | --- |
 | I-38 | Saved and shared filters | Named searches beyond bookmarks. | S |
 | I-65 | Search in comments | Finds discussions, not just descriptions. | S |
-| - | Relevance sort for text search | 	s_rank ordering needs a cursor on a float; v1 sorts by updated. | S |
+| - | Relevance sort for text search | `ts_rank` ordering needs a cursor on a float; v1 sorts by updated. | S |
 | - | Custom date ranges in the search UI | v1 offers presets; any range works through the URL. | S |
 | - | Server-side image thumbnails | The attachments list scales full images down in the browser. | S |
-| - | Attachment upload over MCP | Spec 9.3 LATER; needs a size-safe transport. | S |
 | I-42 | Clone ticket | Convenience for repeated work. | S |
 | I-43 | Description templates per ticket type | Better bug reports. | S |
 | I-46 | Due dates | Some teams track deadlines. | S |
 | I-56 | Restore deleted tickets from the UI | Undo for Owner mistakes. The 10-minute Undo exists (D-82); this is a "recently deleted" list for older deletions. | S |
-| I-40 | Bulk field edit in the UI | Change many tickets at once without MCP. | M |
+| I-40 | Bulk edit of labels and version | The backlog bulk bar already sets status, priority, assignee and type; labels and version are still per ticket. | S |
 | I-41 | Move ticket to another project | New key plus redirect from the old one. | M |
 | I-64 | Project key rename with redirects | Rare, risky, but asked for eventually. | M |
 | I-39 | Query language | Power-user search. | L |
@@ -94,7 +103,6 @@ Items triaged as LATER in [product/02-improvements-triage.md](product/02-improve
 
 | ID | Idea | Why | Size |
 | --- | --- | --- | --- |
-| I-58 | Dark mode | Cheap if the UI uses design tokens from day one. | S |
 | I-52 | Multi-variant A/B tests with exposure tracking | Builds on the v1 flag contract and view registry. | M |
 | I-59 | Mobile layout | Checking tickets on the go. | M |
 | I-60 | Internationalization (Polish first) | Brief says English for now. | M |

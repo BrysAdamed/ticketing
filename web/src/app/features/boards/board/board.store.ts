@@ -16,6 +16,7 @@ import { BoardsApi } from '@core/boards/boards.api';
 import { ToastService } from '@core/notify/toast.service';
 import { LoadStatus } from '@core/projects/project-directory';
 import { TicketEvents } from '@core/tickets/ticket-events';
+import { TicketsApi } from '@core/tickets/tickets.api';
 import { Ticket } from '@core/tickets/ticket.models';
 import { TICKET_STATUSES, TicketStatus } from '@shared/domain/enums';
 import {
@@ -36,6 +37,7 @@ const COLLAPSED_KEY = 'tk-board-collapsed';
 @Injectable()
 export class BoardStore {
   private readonly api = inject(BoardsApi);
+  private readonly ticketsApi = inject(TicketsApi);
   private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
   private readonly directory = inject(BoardDirectory);
@@ -166,7 +168,9 @@ export class BoardStore {
     this.board.set({ ...board, columns: applyMove(before, ids, status, anchor) });
     this.moving.set(true);
     try {
-      await firstValueFrom(this.api.move({ keys, target: board.id, status, beforeKey, afterKey }));
+      await firstValueFrom(
+        this.ticketsApi.move({ keys, target: board.id, from: board.id, status, beforeKey, afterKey }),
+      );
       return true;
     } catch (error) {
       if (seq === this.moveSeq && this.board())
@@ -205,7 +209,7 @@ export class BoardStore {
     });
     this.selection.set(new Set());
     try {
-      await firstValueFrom(this.api.move({ keys, target: 'backlog' }));
+      await firstValueFrom(this.ticketsApi.move({ keys, target: 'backlog', from: board.id }));
       this.toast.success(
         keys.length === 1
           ? `${keys[0]} moved to the backlog`
@@ -222,7 +226,9 @@ export class BoardStore {
     const board = this.board();
     if (!board || keys.length === 0) return false;
     try {
-      await firstValueFrom(this.api.move({ keys: [...keys], target: board.id }));
+      await firstValueFrom(
+        this.ticketsApi.move({ keys: [...keys], target: board.id, from: 'backlog' }),
+      );
       this.toast.success(
         keys.length === 1
           ? `${keys[0]} added to the board`

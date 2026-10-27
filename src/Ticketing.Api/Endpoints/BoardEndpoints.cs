@@ -6,7 +6,7 @@ using Ticketing.Domain.Tickets;
 
 namespace Ticketing.Api.Endpoints;
 
-/// <summary>Boards (spec 4.12, 5.4, 6.4) and ticket moves between backlogs and boards. Boards are addressed by id.</summary>
+/// <summary>Boards (spec 4.12, 5.4, 6.4). Boards are addressed by id; ticket moves are <c>POST /tickets/move</c> in <see cref="TicketEndpoints"/>.</summary>
 public sealed class BoardEndpoints : IEndpointModule
 {
     public void MapEndpoints(RouteGroupBuilder api)
@@ -78,14 +78,5 @@ public sealed class BoardEndpoints : IEndpointModule
             .WithSummary("Deletes the board; all its tickets, Done included, return to the top of their backlogs. Owner or Admin.")
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound);
-
-        api.MapPost("/tickets/move", async (MoveTickets.Command command, MoveTickets.Handler handler, CancellationToken ct) =>
-                TypedResults.Ok(await handler.HandleAsync(command, ct)))
-            .WithTags("Boards")
-            .WithSummary("Moves 1..50 tickets as a block to 'backlog' or a board id, optionally into a status column, before or after another ticket. Also reorders.")
-            .ProducesProblem(StatusCodes.Status400BadRequest)
-            .ProducesProblem(StatusCodes.Status403Forbidden)
-            .ProducesProblem(StatusCodes.Status404NotFound)
-            .ProducesProblem(StatusCodes.Status409Conflict);
     }
 }

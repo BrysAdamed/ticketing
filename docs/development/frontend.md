@@ -132,7 +132,7 @@ The tickets slice (`features/tickets`, `features/backlog`) keeps everything othe
 
 | Need | Use |
 | --- | --- |
-| Ticket REST calls | `TicketsApi` (`get`, `create`, `update(key, patch, rowVersion?)`, `backlog`, `rank`, `find`, `hints`, comments, links, history). Wire types are in `ticket.models.ts`. |
+| Ticket REST calls | `TicketsApi` (`get`, `create`, `update(key, patch, rowVersion?)`, `backlog`, `move`, `find`, `hints`, comments, links, history). Wire types are in `ticket.models.ts`. |
 | Instant ticket views | `TicketCache.peek/fetch/prefetch(key)`. Lists call `prefetch` after a 150 ms hover, so the peek opens with data already loaded. |
 | Keep lists in sync | `TicketEvents.events` emits `created`, `updated` (with the full ticket) and `deleted`. Emit them after your own ticket writes, and subscribe in list stores (backlog, boards) to patch rows without a refetch. |
 | Open a ticket | `PeekService.open(key)` for the side panel, or route to `/tickets/:key`. |

@@ -108,6 +108,7 @@ Rules:
    - `IClock.Now` is fixed for the request, so the entity and its activity entries share one timestamp.
 6. **Use the shared helpers for numbering, ranking and retries.**
    - Numbered entities (tickets, test cases, sessions): call `IProjectCounters.NextAsync(projectId, CounterKind.X)` inside `db.InTransactionAsync(...)`, together with the insert.
+   - Placement: every user-driven placement change (backlog reorder, backlog to board and back, board to board, column change) goes through `MoveTickets.Handler` (`POST /tickets/move`, MCP `move_ticket`, D-73). Don't add another endpoint that ranks or moves tickets; extend `MoveTickets.Command` instead. Board-level relocations (archive carry-over, unlink, delete, project archive) use `BoardRelocation`.
    - Ranks: use `ITicketRanker` (`BottomAsync`, `TopAsync`, `BetweenAsync`, and `PlaceManyAsync` for a block of tickets at a `RankAnchor`: top, bottom, before or after a ticket) inside the same transaction; it throws without one.
    - Tickets: resolve user input with `TicketLookup.ReadAsync/WriteAsync/OwnerAsync` (key or id; 404 for unreadable, `ticket.deleted` for deleted). Features that create tickets (bugs from regressions) inject `CreateTicket.Handler` and call `HandleAsync`, or `CreateAsync` inside their own transaction; `Placement = BacklogPlacement.Top` puts the ticket at the backlog top.
      - Each call takes a per-container advisory lock held until commit, so parallel placements get distinct ranks.

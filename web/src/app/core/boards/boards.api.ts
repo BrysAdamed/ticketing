@@ -2,7 +2,6 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiClient } from '../api/api-client';
 import { Page, PageRequest } from '../api/page';
-import { TicketSummary } from '../tickets/ticket.models';
 import {
   ArchiveBoardResult,
   Board,
@@ -10,12 +9,11 @@ import {
   BoardPatch,
   BoardSummary,
   CarryOverTarget,
-  MoveTicketsRequest,
   NewBoard,
 } from './board.models';
 
-/// Typed client for the boards REST API. `move` also serves backlog moves from other features
-/// (for example "Move to board…" in the backlog or the ticket view).
+/// Typed client for the boards REST API. Ticket moves go through `TicketsApi.move`.
+
 @Injectable({ providedIn: 'root' })
 export class BoardsApi {
   private readonly api = inject(ApiClient);
@@ -48,7 +46,4 @@ export class BoardsApi {
     return this.api.delete(`/boards/${boardId}`);
   }
 
-  move(request: MoveTicketsRequest): Observable<TicketSummary[]> {
-    return this.api.post<TicketSummary[]>('/tickets/move', request);
-  }
 }

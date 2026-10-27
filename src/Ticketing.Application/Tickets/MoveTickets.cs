@@ -9,34 +9,52 @@ using Ticketing.Domain.Tickets;
 
 namespace Ticketing.Application.Tickets;
 
+public enum RankPosition
+{
+    Top = 1,
+    Bottom = 2,
+}
+
 /// <summary>
-/// Moves 1..50 tickets as one block (spec 6.4, 6.6, I-11): backlog to board, board to backlog, board to board, or a
-/// reorder inside the same container. The block keeps the order sent and lands right before or after an anchor ticket,
-/// or at the default position (bottom of the board's status column, top of the backlog). A target status applies the
-/// ticket status rules (<see cref="Ticket.ChangeStatus"/>) and writes field history; a container change writes
-/// <c>ticket.moved</c>. A pure reorder writes no history (D-48). Serves REST <c>POST /tickets/move</c> and MCP <c>move_ticket</c>.
+/// The single application path for every placement change (spec 6.4, 6.6, I-11, D-66): backlog reorder, backlog to board,
+/// board to backlog, board to board and column changes. 1..100 tickets move as one block, keep the order sent and land
+/// right before or after an anchor ticket, at the top or bottom of the target, or at the default position (bottom of the
+/// board's status column, top of the backlog). A target status applies the ticket status rules (<see cref="Ticket.ChangeStatus"/>)
+/// and writes field history; a container change writes <c>ticket.moved</c>. A pure reorder writes no history and keeps
+/// <c>UpdatedAt</c> (D-48). An optional source guards stale views: every ticket must still be there. Serves REST
+/// <c>POST /tickets/move</c> and MCP <c>move_ticket</c>.
 /// </summary>
 public static class MoveTickets
 {
-    public const int MaxTickets = 50;
+    public const int MaxTickets = 100;
     public const string BacklogTarget = "backlog";
 
     /// <param name="Keys">Ticket keys or ids, in the order they should end up in.</param>
     /// <param name="Target"><c>backlog</c> (each ticket goes to its own project backlog) or a board id.</param>
     /// <param name="Status">The target column; omitted keeps each ticket's status.</param>
+    /// <param name="Position">Top or bottom of the target; an alternative to <paramref name="BeforeKey"/> and <paramref name="AfterKey"/>.</param>
+    /// <param name="From"><c>backlog</c> or a board id the tickets are expected to be in; a mismatch is a conflict.</param>
     public sealed record Command(
         IReadOnlyList<string> Keys,
         string Target,
         TicketStatus? Status = null,
         string? BeforeKey = null,
-        string? AfterKey = null) : IValidatable
+        string? AfterKey = null,
+        RankPosition? Position = null,
+        string? From = null) : IValidatable
     {
-        public void Validate(Validator validator) => validator
-            .Must(Keys is { Count: > 0 and <= MaxTickets }, "keys", $"Send 1..{MaxTickets} ticket keys.")
-            .Must(
-                string.Equals(Target?.Trim(), BacklogTarget, StringComparison.OrdinalIgnoreCase) || Guid.TryParse(Target, out _),
-                "target", "target must be 'backlog' or a board id.")
-            .Must(BeforeKey is null || AfterKey is null, "beforeKey", "Send beforeKey or afterKey, not both.");
+        public void Validate(Validator validator)
+        {
+            var anchors = (BeforeKey is null ? 0 : 1) + (AfterKey is null ? 0 : 1) + (Position is null ? 0 : 1);
+            validator
+                .Must(Keys is { Count: > 0 and <= MaxTickets }, "keys", $"Send 1..{MaxTickets} ticket keys.")
+                .Must(IsContainer(Target), "target", "target must be 'backlog' or a board id.")
+                .Must(anchors <= 1, "position", "Send at most one of beforeKey, afterKey or position (Top or Bottom).")
+                .Must(From is null || IsContainer(From), "from", "from must be 'backlog' or a board id.");
+        }
+
+        private static bool IsContainer(string? value) =>
+            string.Equals(value?.Trim(), BacklogTarget, StringComparison.OrdinalIgnoreCase) || Guid.TryParse(value, out _);
     }
 
     public sealed class Handler(
@@ -62,11 +80,19 @@ public static class MoveTickets
             return await TicketQueries.SummariesAsync(db, ids, cancellationToken);
         }
 
-        private async Task<RankAnchor?> AnchorAsync(Command command, IReadOnlyList<TicketTarget> targets, Guid? boardId, CancellationToken cancellationToken)
+        private async Task<RankAnchor> AnchorAsync(Command command, IReadOnlyList<TicketTarget> targets, Guid? boardId, CancellationToken cancellationToken)
         {
             var anchorKey = command.BeforeKey ?? command.AfterKey;
             if (anchorKey is null)
-                return null;
+            {
+                return command.Position switch
+                {
+                    RankPosition.Top => RankAnchor.Top,
+                    RankPosition.Bottom => RankAnchor.Bottom,
+                    _ => boardId is null ? RankAnchor.Top : RankAnchor.Bottom,
+                };
+            }
+
             var field = command.BeforeKey is not null ? "beforeKey" : "afterKey";
             var anchor = await TicketLookup.ReadAsync(db, access, anchorKey, cancellationToken);
             if (targets.Any(t => t.Id == anchor.Id))
@@ -77,12 +103,13 @@ public static class MoveTickets
         }
 
         private async Task<bool> MoveAsync(
-            Command command, IReadOnlyList<TicketTarget> targets, Guid? boardId, RankAnchor? anchor, CancellationToken cancellationToken)
+            Command command, IReadOnlyList<TicketTarget> targets, Guid? boardId, RankAnchor anchor, CancellationToken cancellationToken)
         {
             var ids = targets.Select(t => t.Id).ToList();
             var tickets = await db.Tickets.Where(t => ids.Contains(t.Id)).ToDictionaryAsync(t => t.Id, cancellationToken);
             var sourceBoards = tickets.Values.Where(t => t.BoardId is not null).Select(t => t.BoardId!.Value);
             await BoardAccess.LockAsync(db, boardId is { } b ? sourceBoards.Append(b) : sourceBoards, exclusive: false, cancellationToken);
+            EnsureSource(command.From, targets, tickets);
             await EnsureBoardsAsync(targets, tickets, boardId, cancellationToken);
 
             var now = clock.Now;
@@ -92,7 +119,7 @@ public static class MoveTickets
                     .Select(g => (RankContainer.Backlog(g.Key), g.Select(t => t.Id).ToList())).ToList();
             foreach (var (container, containerIds) in containers)
             {
-                var ranks = await ranker.PlaceManyAsync(container, anchor ?? (boardId is null ? RankAnchor.Top : RankAnchor.Bottom), containerIds.Count, containerIds, cancellationToken);
+                var ranks = await ranker.PlaceManyAsync(container, anchor, containerIds.Count, containerIds, cancellationToken);
                 for (var i = 0; i < containerIds.Count; i++)
                     Apply(tickets[containerIds[i]], boardId, ranks[i], command.Status, now);
             }
@@ -124,6 +151,20 @@ public static class MoveTickets
 
             if (changed)
                 ticket.Touch(now);
+        }
+
+        private static void EnsureSource(string? from, IReadOnlyList<TicketTarget> targets, IReadOnlyDictionary<Guid, Ticket> tickets)
+        {
+            if (from is null)
+                return;
+            Guid? expected = Guid.TryParse(from, out var board) ? board : null;
+            var moved = targets.FirstOrDefault(t => tickets[t.Id].BoardId != expected);
+            if (moved is null)
+                return;
+            throw AppException.Conflict(
+                TicketErrors.NotInSource,
+                expected is null ? $"{moved.Key} is on a board, not in the backlog." : $"{moved.Key} is no longer on this board.",
+                "Reload the list; the ticket was moved.");
         }
 
         /// <summary>Source boards must be active (archived boards are read-only); a target board must be active and link every ticket's project.</summary>

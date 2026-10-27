@@ -650,7 +650,7 @@ Tickets
 | `create_ticket` | `projectKey`, `title`, `type`, optional `description`, `status`, `priority`, `severity`, `storyPoints`, `version`, `labels`, `parentKey`, `assignee`, `boardId`, `idempotencyKey` | Created ticket (summary + rowVersion). |
 | `create_tickets` | `projectKey`, `tickets` (1..50 objects with the `create_ticket` fields except `projectKey`; `parentKey` may also reference an earlier item in the batch as `#index`) | Created ticket summaries in input order. All-or-nothing (I-26). |
 | `update_ticket` | `key`, any of `title`, `description`, `type`, `status`, `resolution`, `priority`, `severity`, `storyPoints`, `version`, `labels` (replace), `addLabels`, `removeLabels`, `parentKey` (null to clear), `assignee` (null to clear), `reporter`, optional `expectedVersion` | Updated ticket. Null clears an optional field; omitted leaves it. |
-| `move_ticket` | `keys` (1..50), `target` (`backlog` or a board id), optional `status` (target column), optional `beforeKey` or `afterKey` | Moved ticket summaries. |
+| `move_ticket` | `keys` (1..100), `target` (`backlog` or a board id), optional `status` (target column), optional `beforeKey`, `afterKey` or `position` (`Top`/`Bottom`) | Moved ticket summaries. |
 | `delete_ticket` | `key` | Confirmation. Owner only. |
 | `get_ticket_history` | `key`, `limit`, `cursor` | Activity entries: when, actor, channel, action, field, old, new. |
 | `link_tickets` | `sourceKey`, `targetKey`, `type` | Created link. |

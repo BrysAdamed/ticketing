@@ -231,9 +231,17 @@ export interface Backlog {
 
 export type RankPosition = 'Top' | 'Bottom';
 
-export interface RankRequest {
-  tickets: string[];
+/// `backlog` (each ticket's own project backlog) or a board id.
+export type TicketContainer = 'backlog' | string;
+
+/// `POST /tickets/move`, the one placement call (D-66): keys in their final order, the target container,
+/// an optional column and at most one anchor. `from` makes the server reject tickets that left that container.
+export interface MoveTicketsRequest {
+  keys: string[];
+  target: TicketContainer;
+  status?: TicketStatus;
   beforeKey?: string;
   afterKey?: string;
   position?: RankPosition;
+  from?: TicketContainer;
 }

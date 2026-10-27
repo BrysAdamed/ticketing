@@ -258,7 +258,7 @@ Format: question, options considered, decision, rationale. "PO" marks decisions 
 
 ### D-48 Backlog reorder moves a block
 
-- Decision: `POST /projects/{key}/backlog/rank` takes 1..100 tickets in the order they should end up in, plus exactly one anchor: `beforeKey`, `afterKey` or `position` (`Top`/`Bottom`). The ranker reads the anchor's neighbours under the container lock and generates all keys at once. When a key would grow too long, it rebalances with free slots (`ITicketRanker.PlaceManyAsync`). Reordering writes no history (rank is never shown) and does not bump `UpdatedAt`.
+- Decision: a backlog reorder takes 1..100 tickets in the order they should end up in, plus one anchor: `beforeKey`, `afterKey` or `position` (`Top`/`Bottom`). It is served by `POST /tickets/move` with target `backlog` since D-73 (it started as `POST /projects/{key}/backlog/rank`). The ranker reads the anchor's neighbours under the container lock and generates all keys at once. When a key would grow too long, it rebalances with free slots (`ITicketRanker.PlaceManyAsync`). Reordering writes no history (rank is never shown) and does not bump `UpdatedAt`.
 - Rationale: one call covers single and multi-select drag and is race-free. The same primitive serves board moves (`move_ticket`).
 
 ### D-49 Link history and visibility
@@ -380,6 +380,13 @@ Format: question, options considered, decision, rationale. "PO" marks decisions 
   - Archived boards are read-only for renames, project changes and ownership transfer as well; unarchive and delete stay possible.
   - Board deletion is REST only (no MCP tool, spec 9.3) but is allowed to PATs, like other owner actions.
 - Rationale: keeps D-44's "placement, not content" rule and the per-viewer counting rule of spec 5.4 consistent across every board operation.
+
+### D-73 One application path for every placement change
+
+- Question: the tickets slice shipped `POST /projects/{key}/backlog/rank` (`RankBacklogTickets`) and the boards slice `POST /tickets/move` (`MoveTickets`, D-66), which also reorders backlogs. Two handlers kept the same ranking rules.
+- Decision: `MoveTickets` is the only handler for backlog reorder, backlog to board and back, board to board and column changes; the backlog rank endpoint is removed and the web backlog calls `/tickets/move` with target `backlog`. `MoveTickets` gained what only the rank endpoint had: `position` (`Top`/`Bottom`), 1..100 keys (was 50), and a stale-view guard: optional `from` (`backlog` or a board id) makes the call fail with 409 `ticket.notInSource` (was `ticket.notInBacklog`) when a ticket already left that container. The web backlog and board send `from`; MCP `move_ticket` does not need it.
+- Rationale: one place for rank, status side effects, `ticket.moved` history and the no-history reorder rule (D-48). The more general handler won; the other only added the three features above.
+
 ## Needs product owner
 
 None of these block v1. The implementation follows each recommendation provisionally; the product owner confirms or overrides them at the v1 review.

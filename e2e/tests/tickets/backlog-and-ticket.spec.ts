@@ -97,14 +97,14 @@ test.describe('backlog and ticket view', () => {
 
         // Act
         const ranked = page.waitForResponse(
-            (r) => r.url().includes('/backlog/rank') && r.request().method() === 'POST',
+            (r) => r.url().includes('/tickets/move') && r.request().method() === 'POST',
         );
         await backlog.dragBefore(`${projectKey}-4`, `${projectKey}-2`);
 
         // Assert: optimistic order, then the server order after a reload
         const expected = [1, 4, 2, 3].map((n) => `${projectKey}-${n}`);
         await expect.poll(() => backlog.keys()).toEqual(expected);
-        expect((await ranked).status()).toBe(204);
+        expect((await ranked).status()).toBe(200);
         await page.reload();
         await expect(backlog.row(`${projectKey}-1`)).toBeVisible();
         await expect.poll(() => backlog.keys()).toEqual(expected);

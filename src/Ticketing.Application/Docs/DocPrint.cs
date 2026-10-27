@@ -312,6 +312,7 @@ public static partial class DocPrint
             .band { box-sizing: border-box; width: 100%; padding: 0 18mm; display: flex; gap: 16px;
               font-family: 'DejaVu Sans', sans-serif; font-size: 8px; color: #62656e; -webkit-print-color-adjust: exact; }
             .band > span { flex: 1 1 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .band > span:first-child { flex-grow: 3; }
             .band > span:last-child { text-align: right; }
             .band > span:nth-child(2):not(:last-child) { text-align: center; }
             </style></head><body><div class="band">{{content}}</div></body></html>

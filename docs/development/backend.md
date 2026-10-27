@@ -50,8 +50,24 @@ Configuration (environment variables override `appsettings*.json`):
 | `ForwardedHeaders__ForwardLimit` | Proxy hops to unwrap (default 1 = nginx; 2 with a TLS proxy in front, whose address must then be trusted too) |
 | `TICKETING_SEED_DEMO` | `true` seeds [demo data](#demo-data) at startup into a workspace without projects (default false; development and demos only) |
 | `TICKETING_DEMO_PASSWORD` | Password of the demo users (12+ characters, not a common password); without it their set-password links are logged |
+| `Pdf__Password` | Basic-auth password of the PDF renderer (compose: `PDF_RENDERER_PASSWORD`, shared with the `pdf` service). Empty: PDF export answers 503 `doc.export.unavailable` and the `pdf` container idles. |
+| `Pdf__Url`, `Pdf__Username` | Gotenberg (default `http://pdf:3000`, `ticketing`) |
+| `Pdf__BundlePath` | The print bundle (`print.js`, `print.css`, fonts); `/app/print` in the image, `../../web/dist/print` in Development |
+| `Pdf__WarmUp` | Render a small page after startup so the first export is fast (default true) |
 
 Logs are JSON on the console (`simple` in Development).
+
+### PDF export (D-100, D-116)
+
+The API image builds the print bundle in a Node stage (`npm run build:print` → `/app/print`) and posts exports to the `pdf` service (Gotenberg 8.39 Chromium) on the internal `render` network, which has no egress and no published port. To try exports with `dotnet run`, build the bundle once (`cd web && npm run build:print`), start a renderer and pass the same password:
+
+```bash
+docker run --rm -p 127.0.0.1:3010:3000 -e GOTENBERG_API_BASIC_AUTH_USERNAME=ticketing -e GOTENBERG_API_BASIC_AUTH_PASSWORD=dev-pdf \
+  gotenberg/gotenberg:8.39.0-chromium gotenberg --api-enable-basic-auth --chromium-allow-list='^file:///tmp/.*' --chromium-deny-public-ips --chromium-deny-private-ips
+Pdf__Password=dev-pdf dotnet run --project src/Ticketing.Api      # Development points Pdf__Url at localhost:3010
+```
+
+**Upgrading an existing installation**: add `PDF_RENDERER_PASSWORD=<long random value>` to `.env` (see `.env.example`), then `docker compose up -d --build`. Without it the stack still starts and only PDF export is off. Integration tests replace the renderer with `FakePdfRenderer` (assert on the posted bundle); `DocExportGotenbergTests` runs the real one when `TICKETING_PDF_TESTS=1` (trait `Category=Pdf`, needs the built bundle).
 
 ## Demo data
 

@@ -90,8 +90,13 @@ public sealed record AgentPromptVersionDto(
     DateTimeOffset CreatedAt,
     int? RestoredFrom);
 
-/// <summary>A rendered preview (nothing is stored). <see cref="Prompt"/> is null when the template has errors.</summary>
-public sealed record AgentPromptPreviewDto(string? Prompt, int Length, int LengthLimit, string TicketKey, IReadOnlyList<AgentPromptIssueDto> Errors);
+/// <summary>
+/// A rendered preview (nothing is stored). <see cref="Prompt"/> is null when the template has errors.
+/// <see cref="GuardrailsStart"/> is the index in <see cref="Prompt"/> where the guardrails begin, null without guardrails, so
+/// the editor can tell the edited part from the guardrails.
+/// </summary>
+public sealed record AgentPromptPreviewDto(
+    string? Prompt, int Length, int LengthLimit, string TicketKey, IReadOnlyList<AgentPromptIssueDto> Errors, int? GuardrailsStart = null);
 
 /// <summary>Which template a resolved prompt used.</summary>
 public sealed record AgentPromptTemplateRefDto(AgentPromptSource Source, int Version, DateTimeOffset UpdatedAt, UserLookupDto? UpdatedBy);

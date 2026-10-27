@@ -77,7 +77,8 @@ public static class PreviewAgentPrompt
 
             var rendering = composer.TryCompose(typeBody, guardrailsBody, composer.Context(project, number, ticketType, templateId));
             return new AgentPromptPreviewDto(
-                rendering.Prompt, rendering.Prompt?.Length ?? 0, AgentPrompt.LengthLimit, HumanKeys.Ticket(project.Key, number), rendering.Errors);
+                rendering.Prompt, rendering.Prompt?.Length ?? 0, AgentPrompt.LengthLimit, HumanKeys.Ticket(project.Key, number), rendering.Errors,
+                rendering.GuardrailsStart);
         }
 
         private async Task<(AgentPromptProject Project, int Number, TicketType Type)> SubjectAsync(

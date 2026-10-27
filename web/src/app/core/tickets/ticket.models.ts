@@ -107,6 +107,8 @@ export interface Comment {
   deletedAt: string | null;
   canEdit: boolean;
   canDelete: boolean;
+  /// Users mentioned in the body who are active and can read the project (D-95); other tokens render as text.
+  mentions: UserRef[];
 }
 
 export interface Ticket {
@@ -118,6 +120,8 @@ export interface Ticket {
   number: number;
   title: string;
   description: string | null;
+  /// Users mentioned in the description who are active and can read the project (D-95).
+  mentions: UserRef[];
   type: TicketType;
   status: TicketStatus;
   resolution: Resolution | null;

@@ -111,6 +111,8 @@
           [canEdit]="store.canEdit()"
           [save]="saveDescription"
           [uploadHandler]="t.permissions.canEdit ? uploadHandler : null"
+          [mentionSearch]="t.permissions.canEdit ? mentionSearch : null"
+          [mentions]="t.mentions"
         />
 
         @if (t.type !== 'Spike' || (t.children?.length ?? 0) > 0) {
@@ -167,6 +169,7 @@
           [canComment]="t.permissions.canComment"
           [add]="addComment"
           [uploadHandler]="t.permissions.canComment ? uploadHandler : null"
+          [mentionSearch]="t.permissions.canComment ? mentionSearch : null"
           (tabChange)="onActivityTab($event)"
           (loadMoreHistory)="store.loadHistory(true)"
           (loadAllComments)="store.loadAllComments()"

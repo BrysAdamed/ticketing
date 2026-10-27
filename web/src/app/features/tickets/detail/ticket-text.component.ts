@@ -11,11 +11,13 @@ import {
   viewChild,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { UserRef } from '@core/tickets/ticket.models';
 import {
   MarkdownEditorComponent,
   MarkdownUploadHandler,
 } from '@shared/markdown/markdown-editor.component';
 import { MarkdownViewerComponent } from '@shared/markdown/markdown-viewer.component';
+import { MentionSearch } from '@shared/markdown/mentions';
 import { IconComponent } from '@shared/ui/icon/icon.component';
 
 /// Resolves true when the value was saved (the editor closes), false to keep editing.
@@ -151,6 +153,8 @@ export class TicketTitleComponent {
         [maxRows]="30"
         [maxLength]="50000"
         [uploadHandler]="uploadHandler()"
+        [mentionSearch]="mentionSearch()"
+        [mentions]="mentions()"
         [(value)]="draft"
         (submitted)="commit()"
         (cancelled)="cancel()"
@@ -168,7 +172,7 @@ export class TicketTitleComponent {
       </tk-markdown-editor>
     } @else if (value()) {
       <div class="body" data-testid="ticket-description">
-        <tk-markdown [source]="value()" />
+        <tk-markdown [source]="value()" [mentions]="mentions()" />
         @if (canEdit()) {
           <button
             type="button"
@@ -234,6 +238,8 @@ export class TicketDescriptionComponent {
   readonly canEdit = input(false);
   readonly save = input.required<TextSave>();
   readonly uploadHandler = input<MarkdownUploadHandler | null>(null);
+  readonly mentionSearch = input<MentionSearch | null>(null);
+  readonly mentions = input<readonly UserRef[] | null | undefined>(null);
 
   protected readonly editing = signal(false);
   protected readonly saving = signal(false);

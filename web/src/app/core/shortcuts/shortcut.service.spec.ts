@@ -34,6 +34,26 @@ describe('ShortcutService', () => {
     expect(calls).toContain('gb');
   });
 
+  it('matches shifted symbol chords by the physical key', () => {
+    // Arrange
+    const calls: string[] = [];
+    service.register({ keys: 'mod+.', description: 'key', handler: () => calls.push('key') });
+    service.register({
+      keys: 'mod+shift+.',
+      description: 'link',
+      handler: () => calls.push('link'),
+    });
+
+    // Act
+    press('.', { ctrlKey: true, metaKey: true, code: 'Period' });
+    press('>', { ctrlKey: true, metaKey: true, shiftKey: true, code: 'Period' });
+    press('.', { ctrlKey: true, metaKey: true, shiftKey: true, code: 'Period' });
+    press('?', { shiftKey: true, code: 'Slash' });
+
+    // Assert
+    expect(calls).toEqual(['key', 'link', 'link']);
+  });
+
   it('ignores single keys typed into inputs unless allowed', () => {
     // Arrange
     const input = document.createElement('input');

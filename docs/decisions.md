@@ -635,6 +635,15 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
   - Deviation from the mockup: version rows show the change note and "Restored from vN" but no `+12 −3` line counts, which would need a diff per row on the server; the counts are shown above the diff instead.
 - Rationale: one endpoint gives the panel and LLMs the whole story in order without a second request; making restore a normal publish keeps `DocPublisher` the only writer (references, Canvas outline and later hooks apply to restores for free), and keeping drafts makes restore lossless for everyone, including the restorer.
 
+### D-108 Docs tree panel collapses with `Ctrl \`; `Ctrl .` / `Ctrl Shift .` copy the doc key and link; shifted symbol shortcuts match the physical key (TKT-39)
+
+- Question: the refinement (1.1, 1.16) collapses the tree with `[` and copies the key / link with `⌘.` / `⌘⇧.`. `[` already toggles the app sidebar, `]` toggles the page's right rail (screens.md 3), and screens.md uses `Ctrl Shift .` for a heading link instead. Also, `Ctrl Shift .` never fired anywhere: browsers report the shifted character (`>`), and `ShortcutService` drops `Shift` for symbols, so the ticket view's "Copy link" was dead.
+- Decision:
+  - `Ctrl \` (`⌘\`) shows and hides the tree panel, as in Notion; buttons in the tree header and in the 40 px strip that replaces the collapsed panel do the same. The state is remembered per browser (`tk-docs-tree-collapsed`, like the width). A collapsed tree is removed, so its single-key shortcuts (`N`, `J`/`K`, `Del`…) are off; `Ctrl Shift E` opens it and focuses it.
+  - `Ctrl .` copies the open doc's key and `Ctrl Shift .` its link, the same keys as on a ticket (refinement wins over screens.md; copying a heading link stays with the hover anchor).
+  - `ShortcutService` first tries the physical-key form of a shifted symbol (`mod+shift+.` from `event.code` `Period`), then the reported character (`?`), so both notations work on any layout that has the key.
+- Rationale: the bracket keys are taken by the two other panels, and a modifier keeps the tree toggle from firing while reading. Matching shifted symbols by physical key fixes the ticket shortcut as well without per-layout tables.
+
 ## Product owner answers (v1 review, 2026-10-27)
 
 These were open questions (Q-01..Q-05); the product owner resolved them as follows.

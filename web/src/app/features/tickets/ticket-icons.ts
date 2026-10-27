@@ -1,6 +1,8 @@
 import {
   tablerArrowsExchange,
   tablerChevronUp,
+  tablerEye,
+  tablerEyeOff,
   tablerHierarchy,
   tablerLink,
   tablerLayoutList,
@@ -17,6 +19,8 @@ import {
 export const TICKET_ICONS = {
   tablerArrowsExchange,
   tablerChevronUp,
+  tablerEye,
+  tablerEyeOff,
   tablerHierarchy,
   tablerLink,
   tablerLayoutList,

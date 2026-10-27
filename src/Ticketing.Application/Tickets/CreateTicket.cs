@@ -24,6 +24,8 @@ public enum BacklogPlacement
 /// </summary>
 public static class CreateTicket
 {
+    public const string Action = "ticket.created";
+
     public sealed record Command(
         string Title,
         TicketType? Type,
@@ -120,7 +122,7 @@ public static class CreateTicket
                         ticket.AssignTo(await TicketUsers.AssigneeAsync(db, currentUser, grant, command.Assignee, ct));
 
                     db.Tickets.Add(ticket);
-                    activity.Record(ActivityEntityType.Ticket, ticket.Id, grant.ProjectId, "ticket.created", new
+                    activity.Record(ActivityEntityType.Ticket, ticket.Id, grant.ProjectId, Action, new
                     {
                         key = HumanKeys.Ticket(grant.ProjectKey, number),
                         ticket.Title,

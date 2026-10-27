@@ -76,6 +76,7 @@ function stripNulls(update: Partial<Ticket>): Partial<Ticket> {
     'comments',
     'commentCount',
     'testCases',
+    'watchers',
   ];
   const result: Partial<Ticket> = { ...update };
   for (const field of collections) {

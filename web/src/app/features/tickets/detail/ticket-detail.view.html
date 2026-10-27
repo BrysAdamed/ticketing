@@ -29,6 +29,13 @@
           <span [title]="t.createdAt | absoluteTime">opened by {{ t.createdBy.displayName }}</span>
         </span>
         <span class="right">
+          @if (t.watchers; as watchers) {
+            <tk-ticket-watch
+              [watchers]="watchers"
+              [meId]="store.me()?.id ?? null"
+              (toggled)="store.toggleWatch()"
+            />
+          }
           <button
             type="button"
             class="tk-icon-btn"

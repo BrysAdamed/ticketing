@@ -53,6 +53,9 @@ public sealed record TicketSearchCriteria
 
     public bool FromRegression { get; init; }
 
+    /// <summary>Only tickets the caller watches.</summary>
+    public bool Watching { get; init; }
+
     public TicketSort Sort { get; init; } = TicketSort.Updated;
 
     /// <summary>Null means the sort's default direction.</summary>

@@ -6,6 +6,8 @@ namespace Ticketing.Application.Regressions;
 
 internal static class RegressionItemWrites
 {
+    public const string AssignedAction = "regression.item.assigned";
+
     /// <summary>
     /// Inside a transaction: share-locks the session, ensures it is still in progress and returns the session and the
     /// tracked item. The item's row version makes concurrent changes to the same item fail with 409.

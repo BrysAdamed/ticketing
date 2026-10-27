@@ -40,6 +40,7 @@ public sealed class SearchTools
         [Description("Resolved (entered Done) on/after: date or UTC timestamp.")] string? resolvedFrom = null,
         [Description("Resolved on/before: date (inclusive) or UTC timestamp (exclusive).")] string? resolvedTo = null,
         [Description("Only bugs created from regression session items.")] bool? fromRegression = null,
+        [Description("Only tickets you watch.")] bool? watching = null,
         [Description("Sort: updated (default), created, priority, key or rank (rank is meaningful inside one backlog or board).")] TicketSort? sort = null,
         [Description("Asc or Desc. Default: Desc for updated/created, Asc otherwise (priority Asc = Highest first).")] SortOrder? order = null,
         [Description("Page size 1..100, default 25.")] int? limit = null,
@@ -74,6 +75,7 @@ public sealed class SearchTools
         Add("resolvedFrom", resolvedFrom is null ? null : [resolvedFrom]);
         Add("resolvedTo", resolvedTo is null ? null : [resolvedTo]);
         Add("fromRegression", fromRegression is null ? null : [fromRegression.Value ? "true" : "false"]);
+        Add("watching", watching is null ? null : [watching.Value ? "true" : "false"]);
         Add("sort", sort is null ? null : [sort.Value.ToString()]);
         Add("order", order is null ? null : [order.Value.ToString()]);
 

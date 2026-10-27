@@ -15,7 +15,7 @@ public sealed class SearchEndpoints : IEndpointModule
     private const string FilterHelp =
         "Filters (all optional, lists comma-separated): project, q, type, status, category, priority, severity (incl. none), assignee, assigneeNot " +
         "(me, unassigned, id or email), reporter, label (all of), version (none = no version), parent, location (backlog, board, board id), " +
-        "createdFrom/To, updatedFrom/To, resolvedFrom/To (date or UTC timestamp), fromRegression; sort (updated, created, priority, key, rank) and order (asc, desc). " +
+        "createdFrom/To, updatedFrom/To, resolvedFrom/To (date or UTC timestamp), fromRegression, watching (tickets I watch); sort (updated, created, priority, key, rank) and order (asc, desc). " +
         "See docs/architecture/search-url-format.md.";
 
     public void MapEndpoints(RouteGroupBuilder api)
@@ -47,7 +47,7 @@ public sealed class SearchEndpoints : IEndpointModule
         api.MapGet("/me/work", async (GetMyWork.Handler handler, CancellationToken ct) =>
                 TypedResults.Ok(await handler.HandleAsync(new GetMyWork.Query(), ct)))
             .WithTags("Search")
-            .WithSummary("Open tickets assigned to me grouped by project (at most 500), and my waiting regression items.");
+            .WithSummary("Open tickets assigned to me grouped by project (at most 500), my waiting regression items, and open tickets I watch (at most 100).");
     }
 
     private static TicketSearchCriteria Criteria(HttpRequest request) =>

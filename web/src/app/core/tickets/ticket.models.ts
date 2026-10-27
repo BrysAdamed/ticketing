@@ -89,6 +89,13 @@ export interface TicketPermissions {
   canComment: boolean;
 }
 
+/// `GET/PUT/DELETE /tickets/{key}/watchers[/me]`: active watchers who can read the project, by name.
+export interface Watchers {
+  count: number;
+  watching: boolean;
+  users: UserRef[];
+}
+
 export interface Comment {
   id: string;
   ticketId: string;
@@ -138,6 +145,7 @@ export interface Ticket {
   comments: Comment[] | null;
   commentCount: number | null;
   testCases: TestCaseRef[] | null;
+  watchers: Watchers | null;
 }
 
 export interface ActivityEntry {

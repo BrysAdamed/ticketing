@@ -7,6 +7,7 @@ export class SearchPage {
     readonly results: Locator;
     readonly count: Locator;
     readonly exportButton: Locator;
+    readonly watchingFilter: Locator;
 
     constructor(private readonly page: Page) {
         this.root = page.getByTestId('view-search.results');
@@ -14,6 +15,7 @@ export class SearchPage {
         this.results = page.getByTestId('search-results');
         this.count = page.getByTestId('search-count');
         this.exportButton = page.getByTestId('search-export');
+        this.watchingFilter = page.getByTestId('filter-watching');
     }
 
     async goto(query = ''): Promise<void> {

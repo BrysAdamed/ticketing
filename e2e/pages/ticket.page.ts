@@ -6,6 +6,8 @@ export class TicketPage {
     readonly title: Locator;
     readonly composer: Locator;
     readonly activity: Locator;
+    readonly watchToggle: Locator;
+    readonly watchersCount: Locator;
 
     constructor(
         private readonly page: Page,
@@ -18,6 +20,8 @@ export class TicketPage {
         this.title = this.root.getByTestId('ticket-title');
         this.composer = this.root.getByTestId('comment-composer').getByRole('textbox');
         this.activity = this.root.getByTestId('activity-feed');
+        this.watchToggle = this.root.getByTestId('ticket-watch-toggle');
+        this.watchersCount = this.root.getByTestId('ticket-watchers-count');
     }
 
     async goto(key: string): Promise<void> {

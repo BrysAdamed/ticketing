@@ -91,6 +91,7 @@ public sealed record DocMentionsDto(int Total, IReadOnlyList<DocSummaryDto> Item
 }
 
 /// <summary>One node of the flat, depth-first tree (root children have depth 1), in the manual order of each folder.</summary>
+/// <param name="CommentCount">The comments that are not deleted (always 0 for folders).</param>
 public sealed record DocTreeItemDto(
     Guid Id,
     string Key,
@@ -103,7 +104,8 @@ public sealed record DocTreeItemDto(
     int ChildCount,
     DateTimeOffset UpdatedAt,
     bool HasMyDraft,
-    bool CanDelete);
+    bool CanDelete,
+    int CommentCount);
 
 /// <param name="CanManageTrash">Owners only: list the trash and restore anything from it.</param>
 public sealed record DocTreeDto(string ProjectKey, ProjectRole MyRole, bool CanWrite, bool CanManageTrash, int Total, IReadOnlyList<DocTreeItemDto> Items);

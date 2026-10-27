@@ -7,6 +7,7 @@ import {
   indexTree,
   NodeRow,
   reorderPlacement,
+  rowTooltip,
   validateMove,
   visibleRows,
 } from './doc-tree-logic';
@@ -31,6 +32,7 @@ function node(
     childCount: 0,
     updatedAt: '2026-10-27T10:00:00Z',
     hasMyDraft: false,
+    commentCount: 0,
     canDelete: true,
   };
 }
@@ -285,5 +287,19 @@ describe('doc tree logic', () => {
     expect(reorderPlacement(index, 'C', -1)).toEqual({ parent: 'root', beforeKey: 'A' });
     expect(reorderPlacement(index, 'C', 1)).toEqual({ parent: 'root', afterKey: 'D' });
     expect(reorderPlacement(index, 'D', 1)).toBeNull();
+  });
+
+  it('shows the comment count in the row tooltip of pages and diagrams only', () => {
+    // Arrange
+    const page = { ...node('P', null, 'Page', 'Design'), commentCount: 3 };
+    const diagram = { ...node('G', null, 'Diagram', 'Flow'), commentCount: 1 };
+    const quiet = node('Q', null, 'Page', 'Quiet');
+    const folder = { ...node('F', null, 'Folder', 'Specs'), commentCount: 2 };
+
+    // Act
+    const tooltips = [page, diagram, quiet, folder].map(rowTooltip);
+
+    // Assert
+    expect(tooltips).toEqual(['Design\n3 comments', 'Flow\n1 comment', 'Quiet', 'Specs']);
   });
 });

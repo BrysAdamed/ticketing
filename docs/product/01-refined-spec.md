@@ -768,7 +768,7 @@ Docs (12)
 
 | Tool | Inputs | Output |
 | --- | --- | --- |
-| `list_docs` | `projectKey`, optional `folder` (key or path), `depth` (1..6), `kinds` | The tree, flat and depth-first in manual order: key, kind, diagramFormat, title, parentKey, depth, version, childCount, updatedAt. No content. |
+| `list_docs` | `projectKey`, optional `folder` (key or path), `depth` (1..6), `kinds` | The tree, flat and depth-first in manual order: key, kind, diagramFormat, title, parentKey, depth, version, childCount, updatedAt, commentCount. No content. |
 | `get_doc` | `docKey`, or `projectKey` + `path`, optional `version` | The doc (12.6) with raw `content`; folders also list `children`. With `version`, `content` is that version's and `atVersion` describes it (12.10); `references`, `embeds` and `backlinks` resolved for the caller (12.11). |
 | `get_doc_history` | `docKey`, optional `limit`, `cursor` | `{ docKey, currentVersion, items, nextCursor }`: versions and other activity, newest first (12.10). |
 | `list_doc_comments` | `docKey`, optional `cursor`, `limit` | `{ items, nextCursor }`: the comments of a page or diagram, oldest first (12.9). |
@@ -854,7 +854,7 @@ Section [1.5 of the refinement](03-docs-refinement.md#15-permissions-mapped-to-5
 
 | Method and path | Purpose |
 | --- | --- |
-| `GET /projects/{pk}/docs/tree?folder=&depth=&kind=` | The tree, unpaged, depth-first: `{ projectKey, myRole, canWrite, canManageTrash, total, items }`, each item with key, kind, diagramFormat, title, parentKey, depth, version, childCount, updatedAt, `hasMyDraft`, `canDelete` |
+| `GET /projects/{pk}/docs/tree?folder=&depth=&kind=` | The tree, unpaged, depth-first: `{ projectKey, myRole, canWrite, canManageTrash, total, items }`, each item with key, kind, diagramFormat, title, parentKey, depth, version, childCount, updatedAt, `hasMyDraft`, `canDelete`, `commentCount` (comments not deleted, counted inside the one tree query) |
 | `GET /projects/{pk}/docs/recent?limit=10` | Latest updated pages and diagrams (1..50) |
 | `GET /projects/{pk}/docs/by-path?path=` | A doc by path |
 | `GET /projects/{pk}/docs/trash?limit=&cursor=` | Delete groups, newest first (Owners) |
@@ -907,7 +907,7 @@ The doc URL in the SPA is `/projects/{PK}/docs/{KEY}/{slug}`; the slug is cosmet
 
 - Pages and diagrams (not folders: 409 `doc.kind.unsupported` on add, an empty list on read) have one comment thread below the content, oldest first, with the rules of ticket comments (6.9): markdown 1..20 000 characters rendered by the shared renderer (ticket keys link), writers add (Owners and Members; on public projects every signed-in user), the author edits (`EditedAt`, "edited" marker; the previous body goes to the doc's activity), the author or an Owner deletes (the body is cleared and a "Comment deleted" placeholder keeps its place), `comment.notAuthor` (403) and `comment.deleted` (409) as for tickets. Viewers and read-only tokens read only; archived projects answer 409 `project.archived` on every write. @mentions and watching docs are not part of v1 (the "Docs collaboration" follow-up, I-85, I-86).
 - Doc comments share the `comments` table with ticket comments through a nullable owner pair (`ticket_id` or `doc_node_id`, exactly one; D-106). Ticket comment endpoints and tools never see doc comments and the doc ones never see ticket comments (404 `comment.notFound`). Unreadable projects answer 404 like a missing doc or comment; search and quick jump never read comments.
-- Adding, editing or deleting a comment creates no version and leaves the doc's `updatedAt` and row version as they are. `GET /docs/{key}` returns `commentCount` (comments that are not deleted). Comments stay with a deleted doc (its comment routes answer 404 `doc.deleted`) and return with it on restore.
+- Adding, editing or deleting a comment creates no version and leaves the doc's `updatedAt` and row version as they are. `GET /docs/{key}`, the tree items (`GET …/docs/tree`, `list_docs`) and a folder's `children` return `commentCount` (comments that are not deleted); the tree row tooltip shows it ("3 comments") for pages and diagrams. Comments stay with a deleted doc (its comment routes answer 404 `doc.deleted`) and return with it on restore.
 - Notifications (6.16): a new comment notifies the doc's creator and the authors of the doc's earlier comments that are not deleted, never the actor, only while they can read the project; edits and deletes notify nobody.
 - Web: the `comments` footer section (`provideDocPageSection`, order 90, pages and diagrams) with the thread, edit and delete on hover, a composer for writers (`Shift+C` focuses it, `Mod+Enter` posts), optimistic add, edit and delete with rollback, and `#comments` scrolling to it.
 

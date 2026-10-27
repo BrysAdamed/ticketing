@@ -27,7 +27,7 @@ public sealed class DocTools
 
     [McpServerTool(Name = "list_docs", ReadOnly = true, Idempotent = true, Title = "List docs")]
     [Description("The docs tree of a project as a flat list, depth-first in each folder's manual order: key, kind (" + Kinds + "), diagramFormat, "
-        + "title, parentKey, depth (root children are 1), version, childCount, updatedAt. No content: read a doc with get_doc.")]
+        + "title, parentKey, depth (root children are 1), version, childCount, updatedAt, commentCount. No content: read a doc with get_doc.")]
     public static Task<DocTreeDto> ListDocs(
         GetDocTree.Handler handler,
         [Description("Project key, for example WEB.")] string projectKey,

@@ -27,15 +27,20 @@ public static class GetDocVersion
     {
         var nodeId = target.Id;
         var key = target.Key;
-        return await (
+        var row = await (
                 from v in db.DocVersions.AsNoTracking()
                 where v.NodeId == nodeId && v.Number == number
                 join u in db.Users on v.AuthorId equals u.Id
-                select new DocVersionDto(
-                    key, v.Number, v.Title, v.Content, v.ChangeNote, new UserRefDto(u.Id, u.Email, u.DisplayName, u.IsActive), v.Channel,
-                    v.CreatedAt, v.RestoredFrom))
+                select new
+                {
+                    Version = new DocVersionDto(
+                        key, v.Number, v.Title, v.Content, v.ChangeNote, new UserRefDto(u.Id, u.Email, u.DisplayName, u.IsActive), v.Channel,
+                        v.CreatedAt, v.RestoredFrom),
+                    HasSnapshot = v.SnapshotSvg != null,
+                })
             .SingleOrDefaultAsync(cancellationToken)
             ?? throw AppException.NotFound(
                 DocErrors.VersionNotFound, string.Create(CultureInfo.InvariantCulture, $"{key} has no version {number}."));
+        return row.HasSnapshot ? row.Version with { SnapshotUrl = DocQueries.SnapshotUrl(key, number) } : row.Version;
     }
 }

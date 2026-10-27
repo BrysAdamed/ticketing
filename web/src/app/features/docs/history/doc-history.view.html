@@ -86,13 +86,15 @@
             <div class="side-label">
               {{ from() ? 'v' + from()!.number : 'No earlier version' }}
             </div>
-            @if (from(); as before) {
-              <tk-doc-version-content [doc]="page" [version]="before" />
+            @if (fromPicture(); as before) {
+              <tk-canvas-picture [source]="before" />
             }
           </section>
           <section>
             <div class="side-label">v{{ after.number }}</div>
-            <tk-doc-version-content [doc]="page" [version]="after" />
+            @if (toPicture(); as shown) {
+              <tk-canvas-picture [source]="shown" />
+            }
           </section>
         </div>
       } @else {

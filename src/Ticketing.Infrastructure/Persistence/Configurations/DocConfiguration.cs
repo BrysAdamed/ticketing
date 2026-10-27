@@ -63,6 +63,7 @@ internal sealed class DocVersionConfiguration : IEntityTypeConfiguration<DocVers
         builder.Property(v => v.Title).HasMaxLength(DocNode.TitleMaxLength);
         builder.Property(v => v.Content).UseCompressionMethod("lz4");
         builder.Property(v => v.ChangeNote).HasMaxLength(DocNode.ChangeNoteMaxLength);
+        builder.Property(v => v.SnapshotSvg).UseCompressionMethod("lz4");
         builder.HasOne<DocNode>().WithMany().HasForeignKey(v => v.NodeId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<User>().WithMany().HasForeignKey(v => v.AuthorId).OnDelete(DeleteBehavior.Restrict);
         builder.HasIndex(v => new { v.NodeId, v.Number }).IsUnique();

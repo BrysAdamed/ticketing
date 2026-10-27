@@ -1,7 +1,7 @@
 import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { toApiError } from '@core/api/api-error';
-import { Doc, DocDraft, SaveDocDraft } from '@core/docs/doc.models';
+import { Doc, DocDraft, SaveDocDraft, UpdateDoc } from '@core/docs/doc.models';
 import { DocsApi } from '@core/docs/docs.api';
 import { ToastService } from '@core/notify/toast.service';
 import { DocStore } from '../doc/doc.store';
@@ -21,15 +21,24 @@ export interface EditText {
   content: string;
 }
 
-/// Overlapping concurrent edits (spec 1.7): the latest published doc, my text, and where they clash.
+/// Overlapping concurrent edits (spec 1.7): the latest published doc, my text, and where they clash
+/// (no regions for formats published without a text merge).
 export interface EditConflict {
   theirs: Doc;
   mine: EditText;
   regions: readonly MergeConflict[];
 }
 
-/// One user's edit of a page (or Mermaid source): the private draft with autosave, publishing
-/// with `baseVersion`, and the 3-way merge when someone else published meanwhile (spec 1.6, 1.7).
+/// How an editor publishes. `textMerge: false` (Canvas, D-113) turns a stale base straight into
+/// the conflict view instead of a 3-way line merge. `attach` adds fields to the publish of
+/// `content` (the Canvas picture of exactly that content).
+export interface EditSessionOptions {
+  textMerge?: boolean;
+  attach?: (content: string) => Promise<Partial<UpdateDoc>>;
+}
+
+/// One user's edit of a page or diagram source: the private draft with autosave, publishing with
+/// `baseVersion`, and the 3-way merge when someone else published meanwhile (spec 1.6, 1.7).
 /// Provided by the editor view; it reads and updates the open doc through `DocStore`.
 @Injectable()
 export class DocEditSession {
@@ -58,6 +67,7 @@ export class DocEditSession {
   });
 
   private readonly bases = new Map<number, EditText>();
+  private options: EditSessionOptions = {};
   private dirty = false;
   private hasDraft = false;
   private timer: ReturnType<typeof setTimeout> | null = null;
@@ -65,6 +75,10 @@ export class DocEditSession {
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.clearTimer());
+  }
+
+  configure(options: EditSessionOptions): void {
+    this.options = options;
   }
 
   /// Starts editing `doc`: from my draft when I have one, otherwise from the published text.
@@ -135,9 +149,10 @@ export class DocEditSession {
     try {
       return await this.send(mine, this.baseVersion(), changeNote);
     } catch (error) {
-      if (toApiError(error).code === 'doc.version.conflict')
-        return this.merge(mine, changeNote, MAX_MERGE_ATTEMPTS);
-      return this.failed(error);
+      if (toApiError(error).code !== 'doc.version.conflict') return this.failed(error);
+      return this.options.textMerge === false
+        ? this.conflictWithoutMerge(mine)
+        : this.merge(mine, changeNote, MAX_MERGE_ATTEMPTS);
     }
   }
 
@@ -242,9 +257,13 @@ export class DocEditSession {
     baseVersion: number,
     changeNote: string | null | undefined,
   ): Promise<Doc> {
-    const base = await this.baseOf(baseVersion);
+    const [base, extra] = await Promise.all([
+      this.baseOf(baseVersion),
+      this.options.attach?.(mine.content) ?? Promise.resolve({}),
+    ]);
     const doc = await firstValueFrom(
       this.api.update(this.key(), {
+        ...extra,
         title: mine.title !== base.title ? mine.title : undefined,
         content: mine.content,
         baseVersion,
@@ -304,6 +323,20 @@ export class DocEditSession {
         }
         throw error;
       }
+    } catch (error) {
+      return this.failed(error);
+    }
+  }
+
+  /// Someone published while I edited a format without a text merge: show theirs and mine.
+  private async conflictWithoutMerge(mine: EditText): Promise<Doc | null> {
+    try {
+      const theirs = await firstValueFrom(this.api.get(this.key()));
+      this.docs.set(theirs);
+      this.bases.set(theirs.version, { title: theirs.title, content: theirs.content ?? '' });
+      this.conflict.set({ theirs, mine, regions: [] });
+      this.status.set('conflict');
+      return null;
     } catch (error) {
       return this.failed(error);
     }

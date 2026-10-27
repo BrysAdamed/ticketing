@@ -44,7 +44,7 @@ public static class RestoreDocVersion
             var number = command.Number;
             var version = await db.DocVersions.AsNoTracking()
                 .Where(v => v.NodeId == node.Id && v.Number == number)
-                .Select(v => new { v.Title, v.Content })
+                .Select(v => new { v.Title, v.Content, v.SnapshotSvg })
                 .SingleOrDefaultAsync(cancellationToken)
                 ?? throw AppException.NotFound(
                     DocErrors.VersionNotFound, string.Create(CultureInfo.InvariantCulture, $"{target.Key} has no version {number}."));
@@ -59,7 +59,7 @@ public static class RestoreDocVersion
                 node.Rename(version.Title, currentUser.Id, clock.Now);
             }
 
-            await publisher.PublishAsync(node, version.Content, command.ChangeNote, number, cancellationToken);
+            await publisher.PublishAsync(node, version.Content, command.ChangeNote, number, version.SnapshotSvg, cancellationToken);
             await DocTree.SaveAsync(db, node.Title, cancellationToken);
             return true;
         }

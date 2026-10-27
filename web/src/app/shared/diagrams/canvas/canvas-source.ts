@@ -45,6 +45,16 @@ export function parseCanvasSource(text: string | null | undefined): CanvasSource
   };
 }
 
+/// True when the source has no drawn (non-deleted) element; source that is not a scene is not
+/// empty, so it is reported instead of being offered as a blank canvas.
+export function isEmptyCanvasSource(text: string | null | undefined): boolean {
+  try {
+    return parseCanvasSource(text).elements.every((element) => element['isDeleted'] === true);
+  } catch {
+    return false;
+  }
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

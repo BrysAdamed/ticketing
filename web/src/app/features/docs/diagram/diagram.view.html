@@ -71,10 +71,18 @@
           @if (rendered.kind === 'error') {
             <div class="dgm-error tk-md">
               <div class="tk-mermaid-error" role="alert" data-testid="doc-diagram-error">
-                <p class="tk-mermaid-error-title">Mermaid syntax error</p>
+                <p class="tk-mermaid-error-title">
+                  {{
+                    diagram.diagramFormat === 'Mermaid'
+                      ? 'Mermaid syntax error'
+                      : "Couldn't draw this diagram"
+                  }}
+                </p>
                 <div class="tk-mermaid-error-message">{{ rendered.message }}</div>
               </div>
-              <pre data-testid="doc-diagram-source"><code>{{ diagram.content }}</code></pre>
+              @if (diagram.diagramFormat === 'Mermaid') {
+                <pre data-testid="doc-diagram-source"><code>{{ diagram.content }}</code></pre>
+              }
             </div>
           }
         }

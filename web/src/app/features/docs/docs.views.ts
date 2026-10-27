@@ -73,6 +73,14 @@ export const DOCS_DIAGRAM_MERMAID_EDIT_VIEW = defineView({
   },
 });
 
+/// The Canvas editor (Excalidraw, ADR 0013), a lazy chunk that loads React and Excalidraw on top.
+export const DOCS_DIAGRAM_CANVAS_EDIT_VIEW = defineView({
+  viewId: 'docs.diagram.canvas.edit',
+  variants: {
+    default: () => import('./diagram/canvas/canvas-editor.view').then((m) => m.CanvasEditorView),
+  },
+});
+
 export const DOCS_FOLDER_VIEW = defineView({
   viewId: 'docs.folder',
   variants: {
@@ -87,9 +95,10 @@ export const DOC_CONTENT_VIEWS: Readonly<Record<DocKind, ViewDefinition>> = {
 };
 
 /// The editor of each diagram format, rendered by `docs.diagram` for `?mode=edit` with the input
-/// `doc`. A format without one is read-only (no Edit); Canvas (TKT-18) adds its editor here.
+/// `doc`. A format without one is read-only (no Edit).
 export const DIAGRAM_EDIT_VIEWS: Readonly<Partial<Record<DiagramFormat, ViewDefinition>>> = {
   Mermaid: DOCS_DIAGRAM_MERMAID_EDIT_VIEW,
+  Canvas: DOCS_DIAGRAM_CANVAS_EDIT_VIEW,
 };
 
 /// Whether the content view of `doc` renders an editor for `?mode=edit`: pages, and diagrams whose

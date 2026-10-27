@@ -29,7 +29,7 @@ public sealed class DocSearchTests(TicketingApiFactory api)
             "# Payment flow\n\nThe order id is the **idempotency** key, so a double click on Pay never creates two charges.");
         var rules = await client.CreatePageAsync("SRA", "Idempotency rules", content: "Short page.");
         var mermaid = await client.CreateDiagramAsync("SRA", "Checkout sequence", "Mermaid", "sequenceDiagram\n  Shop->>Ledger: idempotent charge");
-        var canvas = await client.CreateDiagramAsync("SRA", "Architecture sketch", "Canvas", "{}");
+        var canvas = await client.CreateDiagramAsync("SRA", "Architecture sketch", "Canvas", """{"type":"excalidraw","elements":[]}""");
         await api.SetOutlineAsync(canvas.Id, "API → Ledger\nIdempotency store");
         await client.CreatePageAsync("SRA", "Unrelated", content: "Nothing to see.");
 

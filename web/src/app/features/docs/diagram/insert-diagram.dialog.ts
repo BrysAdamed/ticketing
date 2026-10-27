@@ -6,7 +6,7 @@ import { tablerCode, tablerPlus } from '@ng-icons/tabler-icons';
 import { firstValueFrom } from 'rxjs';
 import { SwrCache } from '@core/api/swr-cache';
 import { toApiError } from '@core/api/api-error';
-import { DocTreeItem } from '@core/docs/doc.models';
+import { DiagramFormat, DocTreeItem } from '@core/docs/doc.models';
 import { DocsApi } from '@core/docs/docs.api';
 import { ToastService } from '@core/notify/toast.service';
 import { IconComponent } from '@shared/ui/icon/icon.component';
@@ -26,8 +26,8 @@ export type InsertDiagramResult =
 const MAX_SHOWN = 50;
 
 /// "Insert diagram" of the page editor (spec 1.8): pick a diagram of the project to embed
-/// (`![Title](KEY)`), create a new Mermaid diagram next to the page and embed it, or insert an
-/// inline Mermaid block. Enter in the search picks the first match (or creates one).
+/// (`![Title](KEY)`), create a new Mermaid diagram or Canvas drawing next to the page and embed it,
+/// or insert an inline Mermaid block. Enter in the search picks the first match (or creates one).
 @Component({
   selector: 'tk-insert-diagram-dialog',
   imports: [MatButtonModule, MatDialogModule, IconComponent],
@@ -79,6 +79,17 @@ const MAX_SHOWN = 50;
           <tk-icon name="tablerPlus" [size]="16" />
           <span class="title">New Mermaid diagram "{{ newTitle() }}"</span>
           <span class="hint">embedded, next to this page</span>
+        </button>
+        <button
+          type="button"
+          class="row"
+          data-testid="insert-diagram-create-canvas"
+          [disabled]="busy()"
+          (click)="create('Canvas')"
+        >
+          <tk-icon name="tablerChalkboard" [size]="16" />
+          <span class="title">New Canvas drawing "{{ newTitle() }}"</span>
+          <span class="hint">draw it after publishing</span>
         </button>
         <button type="button" class="row" data-testid="insert-diagram-inline" (click)="inline()">
           <tk-icon name="tablerCode" [size]="16" />
@@ -210,7 +221,7 @@ export class InsertDiagramDialog {
     else void this.create();
   }
 
-  protected async create(): Promise<void> {
+  protected async create(format: DiagramFormat = 'Mermaid'): Promise<void> {
     if (this.busy()) return;
     this.busy.set(true);
     try {
@@ -219,7 +230,7 @@ export class InsertDiagramDialog {
           this.data.projectKey,
           {
             kind: 'Diagram',
-            diagramFormat: 'Mermaid',
+            diagramFormat: format,
             title: this.newTitle(),
             parent: this.tree.item(this.data.docKey)?.parentKey ?? 'root',
           },

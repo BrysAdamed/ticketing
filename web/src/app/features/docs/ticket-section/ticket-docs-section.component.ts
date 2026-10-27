@@ -36,7 +36,7 @@ const MAX_TITLE_ATTEMPTS = 5;
 /// "Docs mentioning this ticket" in the ticket view (spec 1.9, registered through
 /// `provideTicketDetailSection`): readable docs whose latest content names the ticket, newest
 /// first, at most 20 and then "and N more" linking to docs search. Hidden while empty. A row opens the
-/// doc at its first mention (`#mention-KEY`); writers get "Write doc" (D-113).
+/// doc at its first mention (`#mention-KEY`); writers get "Write doc" (D-114).
 @Component({
   selector: 'tk-ticket-docs-section',
   imports: [RouterLink, MatButtonModule, IconComponent, RelativeTimePipe, AbsoluteTimePipe],

@@ -254,6 +254,30 @@ $icon-octagon: tabler-icon(
     place-items: center;
   }
 
+  a.tk-doc-embed-open {
+    display: block;
+    max-width: 100%;
+    border-radius: var(--tk-radius-md);
+    cursor: zoom-in;
+
+    &:focus-visible {
+      outline: 2px solid var(--tk-focus);
+      outline-offset: 2px;
+    }
+
+    > img {
+      display: block;
+      max-width: 100%;
+      height: auto;
+    }
+  }
+
+  .tk-doc-embed-notice {
+    margin: 0;
+    color: var(--tk-text-subtle);
+    font-size: var(--tk-text-sm);
+  }
+
   .tk-doc-embed-missing {
     padding: 14px 16px;
     border-style: dashed;

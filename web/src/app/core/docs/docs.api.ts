@@ -13,6 +13,7 @@ import {
   DocVersion,
   NewDoc,
   SaveDocDraft,
+  StoredDocSnapshot,
   UpdateDoc,
 } from './doc.models';
 
@@ -68,6 +69,14 @@ export class DocsApi {
 
   version(key: string, number: number): Observable<DocVersion> {
     return this.api.get<DocVersion>(`/docs/${encodeURIComponent(key)}/versions/${number}`);
+  }
+
+  /// Stores the picture of a Canvas version that has none yet (writers; the first one wins).
+  storeSnapshot(key: string, version: number, svg: string): Observable<StoredDocSnapshot> {
+    return this.api.put<StoredDocSnapshot>(
+      `/docs/${encodeURIComponent(key)}/versions/${version}/snapshot`,
+      { svg },
+    );
   }
 
   draft(key: string): Observable<DocDraft> {

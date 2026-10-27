@@ -26,4 +26,9 @@ public static class DocErrors
     public const string RestoreForbidden = "doc.restore.forbidden";
     public const string RestoreExpired = "doc.restore.expired";
     public const string DraftNotFound = "doc.draft.notFound";
+    public const string DiagramInvalidSource = "doc.diagram.invalidSource";
+    public const string DiagramEmbeddedFiles = "doc.diagram.embeddedFiles";
+    public const string DiagramTooManyElements = "doc.diagram.tooManyElements";
+    public const string SnapshotInvalid = "doc.snapshot.invalid";
+    public const string SnapshotNotFound = "doc.snapshot.notFound";
 }

@@ -46,8 +46,14 @@ public static class DuplicateDoc
                         grant.ProjectId, number, original.Kind, original.DiagramFormat, original.ParentId, rank, title, original.Content, currentUser.Id, clock.Now);
                     node.SetOutline(original.Outline);
                     db.DocNodes.Add(node);
+                    var snapshot = original.IsCanvas
+                        ? await db.DocVersions.AsNoTracking()
+                            .Where(v => v.NodeId == original.Id && v.Number == original.CurrentVersion)
+                            .Select(v => v.SnapshotSvg)
+                            .SingleOrDefaultAsync(ct)
+                        : null;
                     await publisher.AddInitialVersionAsync(
-                        node, string.Create(CultureInfo.InvariantCulture, $"Duplicated from {source.Key} v{original.CurrentVersion}"), ct);
+                        node, string.Create(CultureInfo.InvariantCulture, $"Duplicated from {source.Key} v{original.CurrentVersion}"), snapshot, ct);
                     activity.Record(ActivityEntityType.Doc, node.Id, grant.ProjectId, CreateDoc.Action, new
                     {
                         key = node.KeyIn(grant.ProjectKey),

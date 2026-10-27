@@ -19,6 +19,7 @@ import { provideIcons } from '@ng-icons/core';
 import { tablerCopy } from '@ng-icons/tabler-icons';
 import { map } from 'rxjs';
 import { Doc } from '@core/docs/doc.models';
+import { DocsApi } from '@core/docs/docs.api';
 import { ToastService } from '@core/notify/toast.service';
 import { ShortcutService } from '@core/shortcuts/shortcut.service';
 import { ThemeService } from '@core/theme/theme.service';
@@ -33,7 +34,7 @@ import { docIcon, DOCS_ICONS } from '../docs-icons';
 import { DIAGRAM_EDIT_VIEWS, hasDocEditor } from '../docs.views';
 import { DocPageSectionsComponent } from '../page/doc-page-sections.component';
 import { DocPresenceComponent } from '../page/doc-presence.component';
-import { DIAGRAM_RENDERERS } from './diagram-renderers';
+import { DIAGRAM_RENDERERS, DiagramSource, isDiagramEmpty } from './diagram-renderers';
 import { DiagramViewportComponent, ViewportContent } from './diagram-viewport.component';
 
 /// Performance entry measured for every diagram render in the diagram view (e2e budget: < 1 s).
@@ -78,6 +79,7 @@ export class DiagramView {
   private readonly toast = inject(ToastService);
   private readonly theme = inject(ThemeService).theme;
   private readonly store = inject(DocStore);
+  private readonly docs = inject(DocsApi);
   private readonly viewport = viewChild(DiagramViewportComponent);
 
   readonly doc = input.required<Doc>();
@@ -99,6 +101,7 @@ export class DiagramView {
   protected readonly icon = computed(() => docIcon('Diagram', this.doc().diagramFormat));
   protected readonly label = computed(() => {
     const doc = this.doc();
+    if (doc.diagramFormat === 'Canvas') return 'Canvas';
     if (doc.diagramFormat !== 'Mermaid') return `${doc.diagramFormat ?? 'Unknown'} diagram`;
     const type = mermaidDiagramType(doc.content ?? '');
     return type ? `Mermaid · ${type}` : 'Mermaid';
@@ -124,9 +127,15 @@ export class DiagramView {
       const doc = this.doc();
       const theme = this.theme();
       if (this.editing()) return;
-      const source = { key: doc.key, version: doc.version, content: doc.content };
+      const source: DiagramSource = {
+        key: doc.key,
+        version: doc.version,
+        content: doc.content,
+        snapshotUrl: doc.snapshotUrl,
+      };
       const format = doc.diagramFormat;
-      untracked(() => void this.render(source, format, theme));
+      const canStore = doc.permissions.canEdit && untracked(() => this.latest());
+      untracked(() => void this.render(source, format, theme, canStore));
     });
 
     inject(ShortcutService).registerScoped([
@@ -173,12 +182,13 @@ export class DiagramView {
   }
 
   private async render(
-    source: { key: string; version: number; content: string | null },
+    source: DiagramSource,
     format: Doc['diagramFormat'],
     theme: 'light' | 'dark',
+    canStore: boolean,
   ): Promise<void> {
     const generation = ++this.generation;
-    if (!source.content?.trim()) {
+    if (isDiagramEmpty(format, source.content)) {
       this.state.set({ kind: 'empty' });
       return;
     }
@@ -197,5 +207,19 @@ export class DiagramView {
     }
     this.state.set({ kind: 'ready', content: rendered });
     performance.measure(DIAGRAM_RENDER_MEASURE, { start: started });
+    if (rendered.exported && canStore) this.storeSnapshot(source, rendered.exported);
+  }
+
+  /// A version written over MCP has no picture until a writer opens it (D-99): store the one the
+  /// browser just made, without creating a version. Failures only cost the next writer an export.
+  private storeSnapshot(source: DiagramSource, svg: string): void {
+    this.docs.storeSnapshot(source.key, source.version, svg).subscribe({
+      next: (stored) => {
+        const doc = this.store.doc();
+        if (doc?.key === source.key && doc.version === source.version && !doc.snapshotUrl)
+          this.store.set({ ...doc, snapshotUrl: stored.snapshotUrl });
+      },
+      error: () => undefined,
+    });
   }
 }

@@ -519,7 +519,26 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
   - Picker: `GET /users?projectKey=KEY&access=read` (and `find_users` with `access: Read`) lists active users who can read the project, viewers included; `access=write`, the default, keeps the assignee picker's meaning.
 - Rationale: ids keep mentions stable across renames without rewriting stored text, and checking access when reading means a chip never reveals a user to someone who could not pick them. Comparing with the previous text is enough to tell new mentions from old ones without a mention table, and it keeps edits of old text working. Limiting mentions to the two texts people discuss in keeps the notification model simple; other fields can opt in later.
 
-### D-97 Canvas diagrams store Excalidraw JSON plus a light SVG snapshot per version (TKT-11)
+### D-97 Doc attachments share the attachments table through a nullable owner pair
+
+- Question: page images (Docs, TKT-10) need attachments. Generalize the ticket attachment table, or add a separate `doc_attachments` table as the research suggested (refinement §5)?
+- Decision: `attachments.ticket_id` becomes nullable and `attachments.doc_node_id` is added, with the check constraint `ck_attachments_owner` (`num_nonnulls(ticket_id, doc_node_id) = 1`). Same store, allow-list, 10 MiB limit, content sniffing and `/api/v1/attachments/{id}` URL; the limit for a doc is 200 (`Attachment.MaxPerDoc`, `Attachment.CreateForDoc`). Ticket reads join on `ticket_id`, so they never see doc attachments. The doc upload, list and delete use cases come with TKT-14, which also extends `AttachmentQueries.ReadAsync` to resolve a doc owner's project for the download check.
+- Rationale: one attachment system means one download path, one access check and one backup story. Relaxing `NOT NULL` is additive (ADR 0006), and the check constraint keeps every row owned by exactly one thing. A second table would duplicate the metadata, the store wiring and the download authorization for no gain.
+
+### D-98 The docs tree is serialized per project and ranked by the shared ranker
+
+- Question: how to keep the docs tree rules (depth 6, 500 per folder, 5 000 per project, no cycles, sibling-unique titles) and keys race-free, and how to order siblings (TKT-12).
+- Decision:
+  - Every tree change (create, move, duplicate, delete, restore) first takes a transaction-scoped advisory lock on the project's docs tree (`docs:tree:{projectId}`), then loads the tree shape (ids, parents, kinds of non-deleted nodes) and checks the rules in memory (`DocTreeShape`). Content publishes lock only their own row (`SELECT … FOR UPDATE`), so versions are numbered one at a time without blocking the tree.
+  - Sibling order uses the existing fractional-index ranker, generalized with a `DocFolder(projectId, parentId)` container whose lock is the same tree lock; rebalancing rewrites `doc_nodes`. `ITicketRanker` keeps its name; anchors carry an `ItemId`.
+  - Doc numbers come from `project_counters` (`CounterKind.Doc`), like tickets, test cases and sessions (D-42), instead of the `Project.NextDocNumber` column the refinement proposed: same race-free upsert, and allocating a number does not bump the project's row version.
+  - Sibling-unique titles are also a partial unique expression index (`ux_doc_nodes_sibling_title` on `project_id, parent_id, lower(title)` `NULLS NOT DISTINCT WHERE deleted_at IS NULL`), mapped to `doc.title.duplicate`, so a rename (which takes no tree lock) cannot race either.
+  - The project root has no 500 limit; only folders do. Path segments escape `\` as `\\` as well as `/` as `\/`, so every title round-trips.
+  - A stale `baseVersion` answers `doc.version.conflict` with `currentVersion`, `updatedBy` and `updatedAt` as extra members of the problem details and of the MCP error (`AppException.Details`); `updatedBy` is the author of the latest version.
+  - Drafts may have an empty title while it is being typed; publishing still requires one.
+- Rationale: a docs tree is small (at most 5 000 nodes) and written rarely compared with how often it is read, so one lock per project costs nothing and makes every multi-row rule exact, including cycle checks of concurrent moves, which per-folder locks could not guarantee. Reusing the ranker and the counters keeps one implementation of ordering and numbering.
+
+### D-99 Canvas diagrams store Excalidraw JSON plus a light SVG snapshot per version (TKT-11)
 
 - Question: what is a Canvas diagram's stored `Source`, and how do pages, dark mode, search and the PDF show it without loading the 450 KB editor (refinement §1.2, §5)?
 - Decision:
@@ -530,7 +549,7 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
   - The server extracts the outline (`CanvasOutline.Extract`: labels in reading order plus `A → B (label)` relations from bound arrows, with `↔` and `—` for two-headed and headless arrows) on publish, for search (weight B) and MCP `get_doc`.
 - Rationale: the native format keeps every Excalidraw feature and the round trip lossless. A snapshot per version makes embeds, history comparison and the PDF cheap and identical everywhere without a server-side Excalidraw. The outline gives LLMs and search the meaning of the drawing without the noisy element fields.
 
-### D-98 PDF export renders the SPA's own markdown renderer offline in a Gotenberg sidecar (TKT-11)
+### D-100 PDF export renders the SPA's own markdown renderer offline in a Gotenberg sidecar (TKT-11)
 
 - Question: §1.11 wants the same renderer for screen and PDF; the research proposed Markdig HTML. Which rendering source, and how is the renderer isolated?
 - Decision:
@@ -541,7 +560,7 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
 - Rejected: the SPA print route (Chromium would need network access to `web`/`api`, a new auth scheme and the whole SPA per export) and Markdig (a second markdown implementation that drifts).
 - Rationale: one renderer without drift, and the strongest isolation. The renderer sees only what the API decided the user may see.
 
-### D-99 PDF headers and footers are per export, not per document (TKT-11)
+### D-101 PDF headers and footers are per export, not per document (TKT-11)
 
 - Question: §1.11 puts `{DocKey} v{n}` in the footer centre, but Chromium's header and footer templates are fixed for a whole render (only page number, total pages, title, URL and date are filled in). A folder export must be one render, so contents links and cross-document links keep working.
 - Decision:

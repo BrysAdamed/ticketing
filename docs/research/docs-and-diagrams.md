@@ -409,7 +409,7 @@ const post = (m: object) => iframe.contentWindow!.postMessage(JSON.stringify(m),
 
 ## 9. Spike results (TKT-11, 2026-10-27)
 
-Spikes 1–3 of section 8 were run; the decisions are in [ADR 0013](../adr/0013-diagram-editor-and-pdf-pipeline.md) and D-97..D-99. Spikes 4 (Markdig parity) and 5 (CodeMirror) are moot or belong to TKT-14. The PDF does not use Markdig, and the code-highlighting library is still TKT-14's choice. Measured against the production build behind the real nginx configuration, with cache disabled:
+Spikes 1–3 of section 8 were run; the decisions are in [ADR 0013](../adr/0013-diagram-editor-and-pdf-pipeline.md) and D-99..D-101. Spikes 4 (Markdig parity) and 5 (CodeMirror) are moot or belong to TKT-14. The PDF does not use Markdig, and the code-highlighting library is still TKT-14's choice. Measured against the production build behind the real nginx configuration, with cache disabled:
 
 | Question | Result |
 | --- | --- |
@@ -421,7 +421,7 @@ Spikes 1–3 of section 8 were run; the decisions are in [ADR 0013](../adr/0013-
 | Mermaid security | Click callbacks, `javascript:` links, HTML labels, `init` directives and front-matter asking for `loose`/`htmlLabels` all render inert with `securityLevel: 'strict'`, `htmlLabels: false` and the extended `secure` list. Nothing active was found even before our DOMPurify pass, and no `alert` fired without CSP. |
 | Excalidraw → Gotenberg | The light SVG snapshot (fonts inlined) prints as vectors from an `<img>` with no network. |
 | Gotenberg 8.39 | One page: 1.3–2.5 s warm, 3.4–4 s after a restart, 17 s for the very first render. 50 documents (203 pages): 9–12 s warm, 26 s first, peak ~560 MiB. Runs with a read-only root (`tmpfs` for `/tmp` and `/home/gotenberg`). Injected public, Docker-host and metadata URLs were filtered and logged. Chromium's own calls to Google are blocked too. |
-| Markdig vs SPA renderer | Neither: the PDF runs the SPA renderer offline as a print bundle (D-98). The bundle is 5.3 MB raw and Angular-free once `initialsOf` left the avatar component. |
+| Markdig vs SPA renderer | Neither: the PDF runs the SPA renderer offline as a print bundle (D-100). The bundle is 5.3 MB raw and Angular-free once `initialsOf` left the avatar component. |
 
 ## Sources
 

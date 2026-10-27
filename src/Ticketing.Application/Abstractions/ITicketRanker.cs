@@ -1,11 +1,12 @@
 namespace Ticketing.Application.Abstractions;
 
 /// <summary>
-/// Computes ticket ranks inside a container (a project backlog or a board, spec 6.6). Must run inside
-/// <c>InTransactionAsync</c>: each call takes a per-container lock held until commit, so concurrent placements into the
-/// same container get distinct, ordered ranks. When a key would get too long, or the neighbours are equal or out of
-/// order, the container is rebalanced in place (one UPDATE). Tickets in <c>movingTicketIds</c> are never rewritten by a
-/// rebalance, so the tracked entities being moved stay consistent; do not keep other tickets of the container tracked.
+/// Computes fractional-index ranks inside a container (spec 6.6): a project backlog or a board for tickets, a docs folder
+/// (or the docs root) for doc nodes (D-97). Must run inside <c>InTransactionAsync</c>: each call takes a per-container lock
+/// held until commit, so concurrent placements into the same container get distinct, ordered ranks. When a key would get
+/// too long, or the neighbours are equal or out of order, the container is rebalanced in place (one UPDATE). Items in
+/// <c>movingTicketIds</c> (tickets or doc nodes) are never rewritten by a rebalance, so the tracked entities being moved
+/// stay consistent; do not keep other items of the container tracked.
 /// </summary>
 public interface ITicketRanker
 {
@@ -19,46 +20,49 @@ public interface ITicketRanker
         RankContainer container, string? before, string? after, IReadOnlyCollection<Guid>? movingTicketIds, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Returns <paramref name="count"/> ordered ranks for a block of tickets placed at <paramref name="anchor"/>. The anchor's
+    /// Returns <paramref name="count"/> ordered ranks for a block of items placed at <paramref name="anchor"/>. The anchor's
     /// neighbours are read under the container lock, ignoring <paramref name="movingTicketIds"/>. Throws a
-    /// <c>ticket.rank.anchor</c> conflict when an anchor ticket is not in the container (or is itself moving).
+    /// <c>ticket.rank.anchor</c> (or <c>doc.rank.anchor</c>) conflict when the anchor is not in the container (or is itself moving).
     /// </summary>
     Task<IReadOnlyList<string>> PlaceManyAsync(
         RankContainer container, RankAnchor anchor, int count, IReadOnlyCollection<Guid> movingTicketIds, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Returns <paramref name="rank"/> when no other ticket of the container holds it (checked under the container lock), so a
-    /// ticket can go back to where it was; otherwise a rank at <paramref name="fallback"/>, as <see cref="PlaceManyAsync"/> gives.
+    /// Returns <paramref name="rank"/> when no other item of the container holds it (checked under the container lock), so an
+    /// item can go back to where it was; otherwise a rank at <paramref name="fallback"/>, as <see cref="PlaceManyAsync"/> gives.
     /// </summary>
     Task<string> ReuseOrPlaceAsync(
         RankContainer container, string rank, RankAnchor fallback, IReadOnlyCollection<Guid> movingTicketIds, CancellationToken cancellationToken);
 }
 
-/// <summary>Where a block of tickets goes inside its container: the top, the bottom, or right before or after another ticket.</summary>
+/// <summary>Where a block of items goes inside its container: the top, the bottom, or right before or after another item.</summary>
 public abstract record RankAnchor
 {
     public static RankAnchor Top { get; } = new TopAnchor();
 
     public static RankAnchor Bottom { get; } = new BottomAnchor();
 
-    public static RankAnchor Before(Guid ticketId) => new BeforeAnchor(ticketId);
+    public static RankAnchor Before(Guid itemId) => new BeforeAnchor(itemId);
 
-    public static RankAnchor After(Guid ticketId) => new AfterAnchor(ticketId);
+    public static RankAnchor After(Guid itemId) => new AfterAnchor(itemId);
 }
 
 public sealed record TopAnchor : RankAnchor;
 
 public sealed record BottomAnchor : RankAnchor;
 
-public sealed record BeforeAnchor(Guid TicketId) : RankAnchor;
+public sealed record BeforeAnchor(Guid ItemId) : RankAnchor;
 
-public sealed record AfterAnchor(Guid TicketId) : RankAnchor;
+public sealed record AfterAnchor(Guid ItemId) : RankAnchor;
 
 public abstract record RankContainer
 {
     public static RankContainer Backlog(Guid projectId) => new BacklogContainer(projectId);
 
     public static RankContainer Board(Guid boardId) => new BoardContainer(boardId);
+
+    /// <summary>The children of a docs folder, or the docs root of the project when <paramref name="parentId"/> is null.</summary>
+    public static RankContainer DocFolder(Guid projectId, Guid? parentId) => new DocFolderContainer(projectId, parentId);
 
     public abstract string LockKey { get; }
 }
@@ -71,4 +75,12 @@ public sealed record BacklogContainer(Guid ProjectId) : RankContainer
 public sealed record BoardContainer(Guid BoardId) : RankContainer
 {
     public override string LockKey => $"rank:board:{BoardId}";
+}
+
+/// <summary>Locks the project's whole docs tree (<see cref="TreeLockKey"/>), the same lock tree changes take before their checks.</summary>
+public sealed record DocFolderContainer(Guid ProjectId, Guid? ParentId) : RankContainer
+{
+    public override string LockKey => TreeLockKey(ProjectId);
+
+    public static string TreeLockKey(Guid projectId) => $"docs:tree:{projectId}";
 }

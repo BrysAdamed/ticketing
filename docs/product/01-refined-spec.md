@@ -763,6 +763,21 @@ Notifications (6.16)
 | `list_notifications` | optional `unreadOnly`, `cursor`, `limit` | `{ items, nextCursor }` of notifications, newest first, in the REST shape (6.16). |
 | `mark_notifications_read` | `ids` (1..100) or `all` (true) | `{ unreadCount }`. Write-scoped tokens only. |
 
+Docs (12)
+
+| Tool | Inputs | Output |
+| --- | --- | --- |
+| `list_docs` | `projectKey`, optional `folder` (key or path), `depth` (1..6), `kinds` | The tree, flat and depth-first in manual order: key, kind, diagramFormat, title, parentKey, depth, version, childCount, updatedAt. No content. |
+| `get_doc` | `docKey`, or `projectKey` + `path` | The doc (12.6) with raw `content`; folders also list `children`. |
+| `create_folder` | `projectKey`, `title`, optional `parent` (key, path or `root`), `position` (`Top`, `Bottom`) or `beforeKey`/`afterKey`, `idempotencyKey` | The folder. |
+| `create_page` | as `create_folder`, plus `content` (markdown), `changeNote` | The page at version 1. |
+| `update_doc` | `docKey`, any of `title`, `content` (needs `baseVersion`), `changeNote` | The doc. Stale `baseVersion`: `doc.version.conflict` with `currentVersion`, `updatedBy`, `updatedAt`. |
+| `edit_doc` | `docKey`, `edits` (1..50 of `{ oldText, newText, replaceAll? }`), `changeNote` | The doc at its new version. `doc.edit.noMatch`, `doc.edit.ambiguous`; all or nothing. |
+| `move_doc` | `docKey`, optional `parent` (key, path or `root`; omitted keeps the folder), `position` or `beforeKey`/`afterKey` | The doc. |
+| `delete_doc` | `docKey` | `{ id, key, deletedCount, deletedAt, undoUntil }`. Destructive. |
+
+Diagram tools (`create_diagram`), history (`get_doc_history`, `restore_doc_version`), search (`search_docs`) and the export link come with their stories (TKT-15, TKT-17, TKT-19, TKT-20). Restoring deleted docs stays REST and UI only (D-82).
+
 Out of MCP in v1: user administration, PAT management, feature flags, project deletion, board deletion. These stay in the web UI.
 
 ## 10. Non-functional requirements
@@ -777,3 +792,66 @@ Out of MCP in v1: user administration, PAT management, feature flags, project de
 | Accessibility | All actions reachable by keyboard; visible focus; WCAG 2.1 AA colour contrast. |
 | Operations | Docker Compose with `api`, `web` and `db` services. `/health/live` and `/health/ready` endpoints. Structured JSON logs. Database migrations applied on API start. Documented `pg_dump` backup procedure, attachments included. |
 | Security | All writes authorised server-side. Private-project data never leaks through search, boards, links, hints, dashboards or MCP. Tests cover each of these paths. |
+
+## 12. Docs
+
+Each project has documentation: a tree of folders, markdown pages and diagrams (Mermaid or Canvas). The full feature spec, including the UI, links, search, history and PDF export, is [03-docs-refinement.md §1](03-docs-refinement.md#1-refined-v1-of-docs-spec); this section states the rules the backend enforces (TKT-12, D-97, D-98).
+
+### 12.1 Model and keys
+
+- `DocNode` (one table for all kinds): `Kind` (`Folder`, `Page`, `Diagram`), `DiagramFormat` (`Mermaid`, `Canvas`; required for diagrams only), `ParentId` (null = project root, otherwise a folder of the same project), `Rank`, `Title`, `Content` (latest published copy; null for folders), `Outline` (Canvas labels for search), `CurrentVersion` (0 for folders), created/updated by and at, soft delete with `DeletedRootId`.
+- Keys are `{PK}-D-{n}` (`WEB-D-12`), from one per-project counter for every kind, allocated race-free like ticket numbers and never reused. Lookup is case-insensitive; a key or an id is accepted everywhere.
+- `DocVersion`: an immutable full snapshot (title, content, change note, author, channel, time, `RestoredFrom`) per publish; content columns use lz4 TOAST compression. `DocDraft`: one private draft per user and doc. `DocReference`: the derived ticket/doc mention index (filled by TKT-16).
+- Paths: titles joined by `/`, case-insensitive, `/` inside a title written `\/` and `\` written `\\`.
+
+### 12.2 Tree rules
+
+| Rule | Code |
+| --- | --- |
+| At most 6 levels (root children are level 1), checked for the whole moved subtree | `doc.tree.depth` |
+| A folder cannot move into itself or its subtree | `doc.tree.cycle` |
+| At most 500 docs in one folder (the root is limited only by the project limit) | `doc.tree.folderFull` |
+| At most 5 000 non-deleted docs per project | `doc.project.limit` |
+| Titles: 1..200 characters, one line, unique among non-deleted siblings ignoring case (also enforced by a unique index) | `doc.title.duplicate` |
+| The parent must be a folder of the same project | `doc.parent.invalid` (400) |
+| `beforeKey`/`afterKey` must be a sibling in the target folder | `doc.rank.anchor` |
+
+- Every tree change takes the project's docs tree lock first and ranks through the shared ranker (D-98), so concurrent creates and moves cannot break the limits.
+- Create places at the bottom unless `position: Top` or an anchor is given. Duplicate (pages and diagrams) places "Copy of …" (then " (2)" …) right after the original at version 1. Move without `parent` reorders inside the current folder.
+
+### 12.3 Permissions
+
+Section [1.5 of the refinement](03-docs-refinement.md#15-permissions-mapped-to-5) applies as written: readers read everything, Owners and Members write (on public projects every signed-in user), Viewers and read-only tokens get 403, archived projects 409 `project.archived` on every write including drafts, unreadable projects 404 on every path. Members delete only docs they created (`doc.delete.forbidden`), folders only while empty (`doc.folder.notEmpty`). The trash is for Owners.
+
+### 12.4 Content, versions and drafts
+
+- Size limits: page 100 000 characters, Mermaid 20 000, Canvas 2 000 000 (`doc.content.tooLong`). Line endings are stored as `\n`. Folders have no content (`doc.kind.unsupported`).
+- Replacing content requires `baseVersion` (`doc.baseVersion.required`); a stale one is 409 `doc.version.conflict` with `currentVersion`, `updatedBy` (the latest version's author) and `updatedAt`. Content equal to the current one creates no version. A rename creates no version; the next version snapshots the new title.
+- Find/replace edits (`POST /docs/{key}/edits`, MCP `edit_doc`) apply to the latest version without `baseVersion`, 1..50 per call, in order, all or nothing; pages and Mermaid only.
+- Publishing deletes the publisher's own draft. A draft (`baseVersion` 1..current, title may be empty while typing, same size limits) is never visible to others; `GET /docs/{key}` lists as `editors` the other users whose draft changed in the last 10 minutes.
+- Activity (`EntityType = Doc`, with channel): `doc.created`, `doc.updated` (new version number), `doc.renamed` (title), `doc.moved` (parent key; parent changes only), `doc.deleted` (`deletedRootId`, `count`), `doc.restored`.
+
+### 12.5 Delete and restore
+
+- Delete is immediate and soft. A folder takes its subtree with it; all nodes deleted together share `DeletedRootId`. Versions, drafts and attachments stay.
+- `POST /docs/{key}/restore` restores the whole group of that doc: the deleter within 10 minutes (`doc.restore.expired` after, `doc.restore.forbidden` for others), Owners at any time. The group returns to its former folder if that still exists, otherwise to the root; a title clash appends " (restored)". Nothing is purged in v1.
+
+### 12.6 REST
+
+| Method and path | Purpose |
+| --- | --- |
+| `GET /projects/{pk}/docs/tree?folder=&depth=&kind=` | The tree, unpaged, depth-first: `{ projectKey, myRole, canWrite, canManageTrash, total, items }`, each item with key, kind, diagramFormat, title, parentKey, depth, version, childCount, updatedAt, `hasMyDraft`, `canDelete` |
+| `GET /projects/{pk}/docs/recent?limit=10` | Latest updated pages and diagrams (1..50) |
+| `GET /projects/{pk}/docs/by-path?path=` | A doc by path |
+| `GET /projects/{pk}/docs/trash?limit=&cursor=` | Delete groups, newest first (Owners) |
+| `POST /projects/{pk}/docs` | Create: `kind`, `title`, `parent`, `position` or `beforeKey`/`afterKey`, `content`, `diagramFormat`, `changeNote`; `Idempotency-Key` |
+| `GET /docs/{key}` | The doc: key, kind, diagramFormat, title, path, parentKey, breadcrumb, content, version, created/updated by and at, myRole, permissions, editors, myDraft, children (folders), url, rowVersion |
+| `PATCH /docs/{key}` | `title`, `content` + `baseVersion`, `changeNote`; `If-Match` optional |
+| `POST /docs/{key}/edits` | `{ edits, changeNote }` |
+| `POST /docs/{key}/move` | `{ parent, position, beforeKey, afterKey }` |
+| `POST /docs/{key}/duplicate` | Copy next to it |
+| `DELETE /docs/{key}` | `{ id, key, deletedCount, deletedAt, undoUntil }` |
+| `POST /docs/{key}/restore` | Restore the delete group |
+| `GET`, `PUT`, `DELETE /docs/{key}/draft` | My draft: `{ baseVersion, title, content }`; 404 `doc.draft.notFound` when none |
+
+The doc URL in the SPA is `/p/{PK}/docs/{KEY}/{slug}`; the slug is cosmetic.

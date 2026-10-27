@@ -22,4 +22,5 @@ public enum CounterKind
     Ticket = 1,
     TestCase = 2,
     Regression = 3,
+    Doc = 4,
 }

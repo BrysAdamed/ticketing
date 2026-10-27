@@ -92,7 +92,7 @@ Both targets of §1.11 (single page p95 < 3 s, 50 documents < 30 s) hold warm. T
 
 **Limits of Chromium printing.**
 
-- Header and footer templates are static per render; only `pageNumber`, `totalPages`, `title`, `url` and `date` are filled in. So a folder export cannot show each document's key in the footer (D-99).
+- Header and footer templates are static per render; only `pageNumber`, `totalPages`, `title`, `url` and `date` are filled in. So a folder export cannot show each document's key in the footer (D-101).
 - There are no page numbers in the contents page (no `target-counter()`); the linked contents page and bookmarks are the accepted fallback (§1.11).
 
 ## Consequences
@@ -100,6 +100,6 @@ Both targets of §1.11 (single page p95 < 3 s, 50 documents < 30 s) hold warm. T
 - Mermaid, Excalidraw and React never touch the initial bundle. Code must import them only through `shared/diagrams` loaders.
 - The web image grows by about 13 MB of Excalidraw fonts and the lazy chunks. The API image (TKT-20) gains a Node build stage for the print bundle and `/app/print`.
 - The worker CSP on hashed scripts is a deliberate exception and must stay limited to script responses. It must never reach `security-headers.conf`.
-- Canvas snapshots are made in the browser. A Canvas version written over MCP (`create_diagram`, `update_doc`) has no snapshot until a writer opens it: the diagram view mounts the island anyway, so it exports the snapshot and stores it for that version without creating a new one (D-97). Until then embeds and the PDF show a "Preview not rendered yet" placeholder.
+- Canvas snapshots are made in the browser. A Canvas version written over MCP (`create_diagram`, `update_doc`) has no snapshot until a writer opens it: the diagram view mounts the island anyway, so it exports the snapshot and stores it for that version without creating a new one (D-99). Until then embeds and the PDF show a "Preview not rendered yet" placeholder.
 - The Gotenberg sidecar is a new service with its own upgrade cadence. `IPdfRenderer` keeps it replaceable (Playwright or WeasyPrint).
 - Excalidraw releases are slow (research F6). The island is our own component, so swapping editors stays a local change.

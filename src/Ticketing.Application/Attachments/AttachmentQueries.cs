@@ -35,9 +35,9 @@ internal static class AttachmentQueries
     {
         var row = await (
                 from a in db.Attachments.AsNoTracking()
-                join t in db.Tickets on a.TicketId equals t.Id
+                join t in db.Tickets on a.TicketId equals (Guid?)t.Id
                 where a.Id == id && t.DeletedAt == null
-                select new { a.Id, a.TicketId, t.ProjectId, a.FileName, a.ContentType, a.SizeBytes, a.Sha256, a.UploadedById })
+                select new { a.Id, TicketId = t.Id, t.ProjectId, a.FileName, a.ContentType, a.SizeBytes, a.Sha256, a.UploadedById })
             .SingleOrDefaultAsync(cancellationToken) ?? throw NotFound();
         var grant = await access.FindAsync(row.ProjectId, cancellationToken) ?? throw NotFound();
         return new AttachmentTarget(row.Id, row.TicketId, row.ProjectId, row.FileName, row.ContentType, row.SizeBytes, row.Sha256, row.UploadedById, grant);
@@ -57,7 +57,7 @@ internal static class AttachmentQueries
                 select new { Attachment = a, u.Email, u.DisplayName, u.IsActive })
             .ToListAsync(cancellationToken);
         return [.. rows.Select(r => new AttachmentDto(
-            r.Attachment.Id, r.Attachment.TicketId, r.Attachment.FileName, r.Attachment.ContentType, r.Attachment.SizeBytes, r.Attachment.Sha256,
+            r.Attachment.Id, ticketId, r.Attachment.FileName, r.Attachment.ContentType, r.Attachment.SizeBytes, r.Attachment.Sha256,
             r.Attachment.IsImage, r.Attachment.UploadedAt, new UserRefDto(r.Attachment.UploadedById, r.Email, r.DisplayName, r.IsActive),
             Url(r.Attachment.Id), CanDelete(grant, currentUser, r.Attachment.UploadedById)))];
     }

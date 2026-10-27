@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Ticketing.Application.Abstractions;
 using Ticketing.Domain.Common;
+using Ticketing.Domain.Docs;
 using Ticketing.Domain.Ordering;
 using Ticketing.Domain.Tickets;
 
@@ -39,8 +40,8 @@ internal sealed class TicketRanker(TicketingDbContext db) : ITicketRanker
         {
             TopAnchor => ((string?)null, await others.OrderBy(t => t.Rank).Select(t => t.Rank).FirstOrDefaultAsync(cancellationToken)),
             BottomAnchor => (await others.OrderByDescending(t => t.Rank).Select(t => t.Rank).FirstOrDefaultAsync(cancellationToken), (string?)null),
-            BeforeAnchor b => await BeforeAsync(others, await AnchorRankAsync(others, b.TicketId, cancellationToken), cancellationToken),
-            AfterAnchor a => await AfterAsync(others, await AnchorRankAsync(others, a.TicketId, cancellationToken), cancellationToken),
+            BeforeAnchor b => await BeforeAsync(others, await AnchorRankAsync(container, others, b.ItemId, cancellationToken), cancellationToken),
+            AfterAnchor a => await AfterAsync(others, await AnchorRankAsync(container, others, a.ItemId, cancellationToken), cancellationToken),
             _ => throw new ArgumentOutOfRangeException(nameof(anchor)),
         };
 
@@ -59,16 +60,17 @@ internal sealed class TicketRanker(TicketingDbContext db) : ITicketRanker
         return (await PlaceManyAsync(container, fallback, 1, movingTicketIds, cancellationToken))[0];
     }
 
-    private static async Task<string> AnchorRankAsync(IQueryable<Ticket> others, Guid anchorId, CancellationToken cancellationToken) =>
+    private static async Task<string> AnchorRankAsync(RankContainer container, IQueryable<RankedItem> others, Guid anchorId, CancellationToken cancellationToken) =>
         await others.Where(t => t.Id == anchorId).Select(t => t.Rank).FirstOrDefaultAsync(cancellationToken)
-        ?? throw DomainException.Conflict(
-            TicketErrors.RankAnchorInvalid, "The ticket to place next to is not in this list any more.", "Reload the list and try again.");
+        ?? throw (container is DocFolderContainer
+            ? DomainException.Conflict(DocErrors.RankAnchorInvalid, "The doc to place next to is not in this folder any more.", "Reload the tree and try again.")
+            : DomainException.Conflict(TicketErrors.RankAnchorInvalid, "The ticket to place next to is not in this list any more.", "Reload the list and try again."));
 
-    private static async Task<(string? Before, string? After)> BeforeAsync(IQueryable<Ticket> others, string anchorRank, CancellationToken cancellationToken) =>
+    private static async Task<(string? Before, string? After)> BeforeAsync(IQueryable<RankedItem> others, string anchorRank, CancellationToken cancellationToken) =>
         (await others.Where(t => string.Compare(t.Rank, anchorRank) < 0).OrderByDescending(t => t.Rank).Select(t => t.Rank).FirstOrDefaultAsync(cancellationToken),
             anchorRank);
 
-    private static async Task<(string? Before, string? After)> AfterAsync(IQueryable<Ticket> others, string anchorRank, CancellationToken cancellationToken) =>
+    private static async Task<(string? Before, string? After)> AfterAsync(IQueryable<RankedItem> others, string anchorRank, CancellationToken cancellationToken) =>
         (anchorRank,
             await others.Where(t => string.Compare(t.Rank, anchorRank) > 0).OrderBy(t => t.Rank).Select(t => t.Rank).FirstOrDefaultAsync(cancellationToken));
 
@@ -109,7 +111,7 @@ internal sealed class TicketRanker(TicketingDbContext db) : ITicketRanker
         }
     }
 
-    /// <summary>Rewrites the container (except moving tickets) with short, evenly spaced ranks; returns the ranks for the slots after <paramref name="before"/>.</summary>
+    /// <summary>Rewrites the container (except moving items) with short, evenly spaced ranks; returns the ranks for the slots after <paramref name="before"/>.</summary>
     private async Task<IReadOnlyList<string>> RebalanceAsync(
         RankContainer container, string? before, int insertCount, IReadOnlyCollection<Guid>? movingTicketIds, CancellationToken cancellationToken)
     {
@@ -122,22 +124,46 @@ internal sealed class TicketRanker(TicketingDbContext db) : ITicketRanker
         var plan = Ranks.PlanRebalance(items.Count, insertIndex, insertCount);
         var ids = items.Select(i => i.Id).ToArray();
         var ranks = plan.ExistingRanks.ToArray();
-        await db.Database.ExecuteSqlAsync(
-            $"UPDATE tickets AS t SET rank = v.rank FROM unnest({ids}, {ranks}) AS v(id, rank) WHERE t.id = v.id",
-            cancellationToken);
+        if (container is DocFolderContainer)
+            await db.Database.ExecuteSqlAsync(
+                $"UPDATE doc_nodes AS n SET rank = v.rank FROM unnest({ids}, {ranks}) AS v(id, rank) WHERE n.id = v.id",
+                cancellationToken);
+        else
+            await db.Database.ExecuteSqlAsync(
+                $"UPDATE tickets AS t SET rank = v.rank FROM unnest({ids}, {ranks}) AS v(id, rank) WHERE t.id = v.id",
+                cancellationToken);
         return plan.InsertedRanks;
     }
 
-    private IQueryable<Ticket> Others(RankContainer container, IReadOnlyCollection<Guid>? movingTicketIds)
+    private IQueryable<RankedItem> Others(RankContainer container, IReadOnlyCollection<Guid>? movingTicketIds)
     {
-        var tickets = db.Tickets.AsNoTracking().Where(t => t.DeletedAt == null);
-        if (movingTicketIds is { Count: > 0 })
-            tickets = tickets.Where(t => !movingTicketIds.Contains(t.Id));
+        var moving = movingTicketIds is { Count: > 0 } ? movingTicketIds : null;
         return container switch
         {
-            BacklogContainer backlog => tickets.Where(t => t.ProjectId == backlog.ProjectId && t.BoardId == null),
-            BoardContainer board => tickets.Where(t => t.BoardId == board.BoardId),
+            BacklogContainer backlog => Tickets(moving).Where(t => t.ProjectId == backlog.ProjectId && t.BoardId == null).Select(t => new RankedItem { Id = t.Id, Rank = t.Rank }),
+            BoardContainer board => Tickets(moving).Where(t => t.BoardId == board.BoardId).Select(t => new RankedItem { Id = t.Id, Rank = t.Rank }),
+            DocFolderContainer { ParentId: null } root => Docs(root.ProjectId, moving).Where(n => n.ParentId == null).Select(n => new RankedItem { Id = n.Id, Rank = n.Rank }),
+            DocFolderContainer folder => Docs(folder.ProjectId, moving).Where(n => n.ParentId == folder.ParentId).Select(n => new RankedItem { Id = n.Id, Rank = n.Rank }),
             _ => throw new ArgumentOutOfRangeException(nameof(container)),
         };
+    }
+
+    private IQueryable<Ticket> Tickets(IReadOnlyCollection<Guid>? moving)
+    {
+        var tickets = db.Tickets.AsNoTracking().Where(t => t.DeletedAt == null);
+        return moving is null ? tickets : tickets.Where(t => !moving.Contains(t.Id));
+    }
+
+    private IQueryable<DocNode> Docs(Guid projectId, IReadOnlyCollection<Guid>? moving)
+    {
+        var nodes = db.DocNodes.AsNoTracking().Where(n => n.DeletedAt == null && n.ProjectId == projectId);
+        return moving is null ? nodes : nodes.Where(n => !moving.Contains(n.Id));
+    }
+
+    private sealed class RankedItem
+    {
+        public Guid Id { get; init; }
+
+        public string Rank { get; init; } = string.Empty;
     }
 }

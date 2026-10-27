@@ -61,6 +61,24 @@ Call the ticketing MCP tool get_agent_prompt with key "$ARGUMENTS" and follow th
 
 Then `/ticket TKT-42` in Claude Code. A ticket whose project has no agent setup fails with `agent.project.disabled`, a ticket type the project switched off with `agent.type.off`.
 
+Without a slash command, the same works as a one-off: start `claude` in your clone of the project's repository and send
+
+```text
+Call the ticketing MCP tool get_agent_prompt with key "TKT-42" and follow the prompt it returns as your instructions.
+```
+
+What to expect from the prompt it returns (spec §13.10):
+
+- It first compares `git remote get-url origin` with the project's repository URL and stops if they differ, so start the session in the right clone. The comparison ignores case, scheme, user, port and `.git`, so an SSH clone of an HTTPS URL passes.
+- It reads the ticket, its comments and its parent with `get_ticket`, follows the repository's `CLAUDE.md`, and keeps the status current over MCP. The token you connected with is the identity it works and comments as.
+- It ends with one comment on the ticket that starts with `Delegated run · <Type> v<n> / <D|C>`, naming the template it ran.
+- Whether it stops at Review or merges depends on the project's merge policy (`get_project` → `agent.mergePolicy`).
+- The prompt is the same text **Copy prompt** gives on the ticket page; nothing is recorded in the ticket's history when you start a session this way.
+
+### Tools that always ask first
+
+`delete_ticket`, `delete_comment`, `unlink_tickets`, `cancel_regression_session` and `archive_board` are marked destructive (`destructiveHint`) and carry `_meta["anthropic/requiresUserInteraction"]: true`. Claude Code asks you before every call of these tools, even in a session where it otherwise runs tools without asking. Keep them out of allow lists; a delegated run has no reason to call them.
+
 ## Verified with a real client
 
 On 2026-10-27 a headless Claude Code session (`claude -p --mcp-config …`) connected to a local stack with a fresh PAT and, using only these tools, created a project, an epic with two stories in one batch, updated fields, commented, created manual and automatic test cases, ran a regression session where a failure produced a linked bug, created a board, moved a ticket into a column, searched and read the dashboard statistics — 16 calls, no errors. The integration tests also exercise every tool through an MCP client (`tests/Ticketing.IntegrationTests`).

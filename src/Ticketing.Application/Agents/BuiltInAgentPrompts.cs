@@ -12,14 +12,14 @@ public interface IBuiltInAgentPrompts
 
     BuiltInPrompt For(AgentPromptSlot slot);
 
-    /// <summary>The fixed sentence <c>{{finish}}</c> renders to for a merge policy.</summary>
+    /// <summary>The fixed template <c>{{finish}}</c> renders to for a merge policy; it may use every placeholder except <c>finish</c>.</summary>
     string FinishSentence(AgentMergePolicy policy);
 }
 
 /// <summary>Built-ins embedded from <c>Agents/BuiltIns/*.txt</c>.</summary>
 internal sealed class EmbeddedAgentPrompts : IBuiltInAgentPrompts
 {
-    public const string Release = "2026.10.1";
+    public const string Release = "2026.10.2";
 
     private static readonly Lazy<FrozenDictionary<string, string>> Texts = new(Load);
 

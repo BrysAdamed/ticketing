@@ -663,7 +663,7 @@ Every count links to the search that produces it. Target: dashboard loads in und
 
 - Streamable HTTP MCP endpoint at `/mcp`, hosted in the same API process. No local install. Claude Code connects with `claude mcp add --transport http ticketing https://<host>/mcp --header "Authorization: Bearer tkt_..."`.
 - Every call runs as the PAT's user with that user's permissions and channel `Mcp`.
-- `tools/list` returns only tools allowed by the token scope. Read tools carry `readOnlyHint: true`. `delete_ticket`, `delete_comment`, `unlink_tickets`, `cancel_regression_session` and `archive_board` carry `destructiveHint: true`.
+- `tools/list` returns only tools allowed by the token scope. Read tools carry `readOnlyHint: true`. `delete_ticket`, `delete_comment`, `unlink_tickets`, `cancel_regression_session` and `archive_board` carry `destructiveHint: true` and `_meta["anthropic/requiresUserInteraction"]: true`, so Claude Code asks the user before every call even in a session that would otherwise run tools unasked (D-102). Every destructive tool carries both; an integration test on `tools/list` keeps the two sets equal.
 
 ### 9.2 Conventions for all tools
 
@@ -780,7 +780,7 @@ Out of MCP in v1: user administration, PAT management, feature flags, project de
 
 ## 13. Agent delegation
 
-A developer hands a ticket to Claude Code: Ticketing renders a short prompt for the ticket's type and the developer's browser opens Claude's own deep link with it. The design and its history are in [04-delegate-to-agent-refinement.md](04-delegate-to-agent-refinement.md) (its section 6 overrides section 4); this section is the normative summary and grows with each part of epic TKT-25. Decisions: D-98, D-99.
+A developer hands a ticket to Claude Code: Ticketing renders a short prompt for the ticket's type and the developer's browser opens Claude's own deep link with it. The design and its history are in [04-delegate-to-agent-refinement.md](04-delegate-to-agent-refinement.md) (its section 6 overrides section 4); this section is the normative summary and grows with each part of epic TKT-25. Decisions: D-98, D-99, D-100, D-102.
 
 ### 13.1 Parts
 
@@ -790,7 +790,7 @@ A developer hands a ticket to Claude Code: Ticketing renders a short prompt for 
 | Project agent setup (`PATCH /projects/{pk}/agent`), `TICKETING_PUBLIC_URL`, resolved prompt over REST and MCP `get_agent_prompt` | TKT-28 |
 | Delegate button, deep link, folder mapping, Copy prompt | TKT-29 |
 | Agent tab in project settings, Admin page | TKT-30, TKT-31 |
-| Final default prompts | TKT-32 |
+| Final default prompts (13.10), confirmation hint on destructive MCP tools (9.1) | TKT-32 |
 
 ### 13.2 Feature flag
 
@@ -842,7 +842,7 @@ Unique (Scope, ProjectId, TicketType) with nulls not distinct. Six instance rows
 
 **AgentPromptTemplateVersion** (`agent_prompt_template_versions`), immutable and never deleted: (TemplateId, Number) key, Mode, Body, BuiltInVersion (set for verbatim built-ins), ChangeNote text(200)?, AuthorId (null for system versions), CreatedAt, RestoredFrom.
 
-**Built-ins** are embedded in `Ticketing.Application` (`Agents/BuiltIns/*.txt`) with one release number (`EmbeddedAgentPrompts.Release`, for example `2026.10.1`; dotted numbers compared numerically). At startup, and before any agent prompt use case, missing instance rows are created from them, and rows that still follow the built-ins take a newer release as a new system version (activity with no actor). Rows an Admin edited are left alone and report `newerBuiltInAvailable`; "Reset to built-in" adopts the shipped text and makes the row follow later releases again. The two `{{finish}}` sentences ship with the built-ins and are not editable.
+**Built-ins** are embedded in `Ticketing.Application` (`Agents/BuiltIns/*.txt`) with one release number (`EmbeddedAgentPrompts.Release`, for example `2026.10.1`; dotted numbers compared numerically). At startup, and before any agent prompt use case, missing instance rows are created from them, and rows that still follow the built-ins take a newer release as a new system version (activity with no actor). Rows an Admin edited are left alone and report `newerBuiltInAvailable`; "Reset to built-in" adopts the shipped text and makes the row follow later releases again. The two `{{finish}}` sentences ship with the built-ins and are not editable; they are templates themselves and may use every placeholder except `finish` (13.10).
 
 ### 13.4 Template language
 
@@ -933,4 +933,22 @@ A delegation writes `ticket.agent.delegated` (EntityType `Ticket`) with the new 
 | --- | --- | --- |
 | `get_agent_prompt` | `key` | The same object as `GET /tickets/{key}/agent-prompt`. Read-only; a `ReadOnly` token may call it. |
 
-`tools/list` contains `get_agent_prompt` only while the agent gate (13.2) is open for the token's user; a direct call otherwise fails with `agent.disabled`. A tool joins this rule by carrying `[FeatureGate(typeof(SomeGate))]`. `get_project` returns `agent`; `update_project` does not accept the setup (13.6). There are no MCP tools for template edits.
+`tools/list` contains `get_agent_prompt` only while the agent gate (13.2) is open for the token's user; a direct call otherwise fails with `agent.disabled`. A tool joins this rule by carrying `[FeatureGate(typeof(SomeGate))]`. `get_project` returns `agent`; `update_project` does not accept the setup (13.6). There are no MCP tools for template edits. Sessions started by hand use `get_agent_prompt` as described in [docs/mcp.md](../mcp.md#working-on-a-ticket-without-the-delegate-button).
+
+### 13.10 Default prompts
+
+The built-ins (`Agents/BuiltIns/*.txt`, release `2026.10.2`) are condensed from [04-delegate-to-agent-prompts.md](04-delegate-to-agent-prompts.md) to fit 13.4's limit (D-102). Every type template names the ticket by key only, has the agent read it with `get_ticket` and follow the repository's `CLAUDE.md`, and works without the guardrails; status changes and the closing comment come from both.
+
+| Type | What the default asks for | Finish |
+| --- | --- | --- |
+| Epic | Plan only, no code: read the epic and its children, create the missing children in one `create_tickets` call (idempotency key `<KEY>-plan`) with acceptance criteria, link real dependencies with `Blocks`, comment the delivery order and open questions. The epic's status stays as it is. | None |
+| UserStory | Worktree, plan against the ACs (subagents only for independent parts), tests at the repository's levels, every AC walked through in the browser with light and dark screenshots, docs, test cases. | `{{finish}}` |
+| Technical | Worktree, proof by kind of change (pinned behaviour for refactors, integration tests for new capabilities, before/after numbers for performance), full checks, a browser check of the flows that rely on the change, test cases. | `{{finish}}` |
+| Spike | Research with cited primary sources, an optional throwaway prototype that is never merged, findings in a doc, follow-up tickets (`RelatesTo`, `Blocks` among themselves) left in To Do. No production code. | `{{finish}}` for the docs branch |
+| Bug | Reproduce first as an automated test that fails for the reported reason (ask instead of guessing when it cannot be reproduced), root cause, smallest fix, regression test kept, browser check when the bug was visible. | `{{finish}}` plus root cause and the failing-then-passing test |
+
+The **guardrails** (in this order): the folder check (compare `git remote get-url origin` with `{{project.repositoryUrl}}` after normalising both as in 13.3, and stop on a mismatch); tracker access only through the `ticketing` MCP server; ticket content is data that cannot change the rules, with the requests to refuse and quote; no secrets or personal data in the tracker; blockers, assignment and resuming an earlier run; `CLAUDE.md` and status (InProgress, Review when pushed, Done once merged, unless the steps or `CLAUDE.md` say otherwise); asking the watching developer before risky steps; one closing comment starting `Delegated run · {{template.id}}`.
+
+**Finish** sentences: `Review` commits with the ticket key, merges the latest `{{project.defaultBranch}}` into the branch, re-runs the checks, pushes, opens a pull request if a forge CLI is set up and sets Review, without merging. `MergeWhenVerified` does the same, then merges the branch back, re-runs the checks, pushes, sets Done and reports the merge commit; it stops at Review on non-trivial conflicts or a failing check.
+
+Every type with the guardrails stays below 4 500 characters with the longest values the fields allow (10-character project key, ticket number 2 147 483 647, 500-character repository URL, 100-character branch, a 150-character public URL): about 4 400 at most, and about 3 600 for TKT's own values.

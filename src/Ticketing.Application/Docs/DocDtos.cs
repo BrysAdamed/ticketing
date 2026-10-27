@@ -1,4 +1,5 @@
 using Ticketing.Application.Tickets;
+using Ticketing.Domain.Activity;
 using Ticketing.Domain.Docs;
 using Ticketing.Domain.Projects;
 
@@ -83,6 +84,19 @@ public sealed record DocSummaryDto(
     UserRefDto UpdatedBy,
     DateTimeOffset UpdatedAt,
     string Url);
+
+/// <summary>One immutable published version of a page or diagram.</summary>
+/// <param name="RestoredFrom">The version this one restored, if it was created by a version restore.</param>
+public sealed record DocVersionDto(
+    string DocKey,
+    int Number,
+    string Title,
+    string? Content,
+    string? ChangeNote,
+    UserRefDto Author,
+    WriteChannel Channel,
+    DateTimeOffset CreatedAt,
+    int? RestoredFrom);
 
 public sealed record DocDraftDto(string DocKey, int BaseVersion, int CurrentVersion, string Title, string Content, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
 

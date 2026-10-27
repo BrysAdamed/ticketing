@@ -173,6 +173,57 @@ public sealed class DocContentTests(TicketingApiFactory api)
         await none.ShouldBeProblemAsync(HttpStatusCode.BadRequest, "validation");
     }
 
+    [Fact]
+    public async Task Each_published_version_is_readable_with_its_content_and_author()
+    {
+        // Arrange
+        var (jane, janeUser, joe, joeUser) = await TwoWritersAsync("VER");
+        var page = await jane.CreatePageAsync("VER", "Spec", content: "one");
+        await (await joe.PatchDocAsync(page.Key, new { content = "two", baseVersion = 1, changeNote = "Second" })).ReadAsync<DocDto>();
+
+        // Act
+        var first = await (await joe.GetAsync($"/api/v1/docs/{page.Key}/versions/1", _ct)).ReadAsync<DocVersionDto>();
+        var second = await (await jane.GetAsync($"/api/v1/docs/{page.Id}/versions/2", _ct)).ReadAsync<DocVersionDto>();
+        var missing = await jane.GetAsync($"/api/v1/docs/{page.Key}/versions/3", _ct);
+        var folder = await jane.CreateFolderAsync("VER", "Folder");
+        var ofFolder = await jane.GetAsync($"/api/v1/docs/{folder.Key}/versions/1", _ct);
+
+        // Assert
+        Assert.Equal((page.Key, 1, "Spec", "one", (string?)null, janeUser.Email, WriteChannel.Web, (int?)null),
+            (first.DocKey, first.Number, first.Title, first.Content, first.ChangeNote, first.Author.Email, first.Channel, first.RestoredFrom));
+        Assert.Equal((2, "two", "Second", joeUser.Email), (second.Number, second.Content, second.ChangeNote, second.Author.Email));
+        Assert.True(second.CreatedAt >= first.CreatedAt);
+        await missing.ShouldBeProblemAsync(HttpStatusCode.NotFound, DocErrors.VersionNotFound);
+        await ofFolder.ShouldBeProblemAsync(HttpStatusCode.NotFound, DocErrors.VersionNotFound);
+    }
+
+    [Fact]
+    public async Task Pages_export_their_latest_markdown_as_a_file_named_after_the_title()
+    {
+        // Arrange
+        var (jane, _, _, _) = await TwoWritersAsync("EXP");
+        var page = await jane.CreatePageAsync("EXP", "Q1/Q2: plans", content: "# Plans\n\nŻółw ships.");
+        var empty = await jane.CreatePageAsync("EXP", "???");
+        var folder = await jane.CreateFolderAsync("EXP", "Folder");
+
+        // Act
+        var export = await jane.GetAsync($"/api/v1/docs/{page.Key}/export.md", _ct);
+        var emptyExport = await jane.GetAsync($"/api/v1/docs/{empty.Key}/export.md", _ct);
+        var folderExport = await jane.GetAsync($"/api/v1/docs/{folder.Key}/export.md", _ct);
+
+        // Assert
+        await export.ShouldHaveStatusAsync(HttpStatusCode.OK);
+        Assert.Equal(("text/markdown", "utf-8"), (export.Content.Headers.ContentType?.MediaType, export.Content.Headers.ContentType?.CharSet));
+        Assert.Equal("attachment", export.Content.Headers.ContentDisposition?.DispositionType);
+        Assert.Equal("Q1 Q2 plans.md", FileName(export));
+        Assert.Equal("nosniff", export.Headers.GetValues("X-Content-Type-Options").Single());
+        Assert.Equal("# Plans\n\nŻółw ships.", await export.Content.ReadAsStringAsync(_ct));
+        await emptyExport.ShouldHaveStatusAsync(HttpStatusCode.OK);
+        Assert.Equal($"{empty.Key}.md", FileName(emptyExport));
+        Assert.Equal(string.Empty, await emptyExport.Content.ReadAsStringAsync(_ct));
+        await folderExport.ShouldBeProblemAsync(HttpStatusCode.Conflict, DocErrors.KindUnsupported);
+    }
+
     private async Task<(HttpClient Jane, TestUser JaneUser, HttpClient Joe, TestUser JoeUser)> TwoWritersAsync(string key)
     {
         var janeUser = await api.CreateUserAsync();
@@ -185,6 +236,9 @@ public sealed class DocContentTests(TicketingApiFactory api)
 
     private Task<HttpResponseMessage> Edits(HttpClient client, string key, params object[] edits) =>
         client.PostAsJsonAsync($"/api/v1/docs/{key}/edits", new { edits }, _ct);
+
+    private static string? FileName(HttpResponseMessage response) =>
+        response.Content.Headers.ContentDisposition?.FileNameStar ?? response.Content.Headers.ContentDisposition?.FileName?.Trim('"');
 
     private static async Task<(string? Content, int Version)> ContentAsync(HttpClient client, string key)
     {

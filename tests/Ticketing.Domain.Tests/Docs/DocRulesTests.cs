@@ -37,6 +37,15 @@ public sealed class DocRulesTests
     [InlineData("???", "doc")]
     public void Slugs_are_lower_case_ascii_words(string title, string slug) => Assert.Equal(slug, DocPaths.Slug(title));
 
+    [Theory]
+    [InlineData("Q1/Q2: plans?", "Q1 Q2 plans.md")]
+    [InlineData("Release \"notes\" <draft>", "Release notes draft.md")]
+    [InlineData("Café déjà vu", "Café déjà vu.md")]
+    [InlineData("/:*?|", "WEB-D-7.md")]
+    [InlineData("...", "WEB-D-7.md")]
+    public void File_names_drop_reserved_characters_and_fall_back_to_the_key(string title, string expected) =>
+        Assert.Equal(expected, DocTitles.FileName(title, "WEB-D-7", ".md"));
+
     [Fact]
     public void Copy_and_restored_titles_avoid_taken_ones_ignoring_case()
     {

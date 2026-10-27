@@ -5,10 +5,13 @@ using Microsoft.EntityFrameworkCore;
 using ModelContextProtocol.Protocol;
 using Ticketing.Application.Abstractions;
 using Ticketing.Application.Access;
+using Ticketing.Application.Attachments;
 using Ticketing.Application.Docs;
+using Ticketing.Domain.Attachments;
 using Ticketing.Domain.Docs;
 using Ticketing.Domain.Projects;
 using Ticketing.Domain.Users;
+using Ticketing.IntegrationTests.Attachments;
 using Ticketing.IntegrationTests.Infrastructure;
 using Ticketing.IntegrationTests.Projects;
 using Ticketing.IntegrationTests.Tickets;
@@ -47,6 +50,54 @@ public sealed class DocLeakTests(TicketingApiFactory api)
             await outsider.PostAsJsonAsync("/api/v1/projects/SECRET/docs", new { kind = "Page", title = "x" }, _ct),
         })
             Assert.Equal(HttpStatusCode.NotFound, write.StatusCode);
+    }
+
+    [Fact]
+    public async Task Outsiders_get_the_same_404_as_for_missing_docs_for_attachments_versions_and_exports()
+    {
+        // Arrange
+        var owner = await api.LoginAsync(await api.CreateUserAsync());
+        await owner.CreateProjectAsync("VAULT");
+        var page = await owner.CreatePageAsync("VAULT", "Plans", content: "secret");
+        var uploaded = await (await owner.UploadDocAttachmentAsync(page.Key, "plan.json", "application/json", "{\"a\":1}"u8.ToArray()))
+            .ReadAsync<DocAttachmentDto>(HttpStatusCode.Created);
+        var outsider = await api.LoginAsync(await api.CreateUserAsync());
+        var missingAttachment = $"/api/v1/attachments/{Guid.NewGuid()}";
+
+        // Act + Assert
+        foreach (var path in new[] { "/attachments", "/versions/1", "/export.md" })
+            await SameAsMissingAsync(outsider, $"/api/v1/docs/{page.Key}{path}", $"/api/v1/docs/VAULT-D-999{path}", page.Key, "VAULT-D-999");
+        await SameAsMissingAsync(
+            await outsider.UploadDocAttachmentAsync(page.Key, "a.png", "image/png", AttachmentTests.Png),
+            await outsider.UploadDocAttachmentAsync("VAULT-D-999", "a.png", "image/png", AttachmentTests.Png),
+            page.Key, "VAULT-D-999");
+        await SameAsMissingAsync(outsider, uploaded.Url, missingAttachment, uploaded.Url, missingAttachment);
+        await SameAsMissingAsync(await outsider.DeleteAsync(uploaded.Url, _ct), await outsider.DeleteAsync(missingAttachment, _ct), uploaded.Url, missingAttachment);
+        Assert.Equal(1, await api.WithDbAsync(db => db.Attachments.CountAsync(_ct)));
+    }
+
+    [Fact]
+    public async Task Outsiders_get_not_found_from_mcp_doc_attachment_tools()
+    {
+        // Arrange
+        var owner = await api.LoginAsync(await api.CreateUserAsync());
+        await owner.CreateProjectAsync("LOCK");
+        var page = await owner.CreatePageAsync("LOCK", "Plans");
+        var uploaded = await (await owner.UploadDocAttachmentAsync(page.Key, "plan.txt", "text/plain", "secret"u8.ToArray()))
+            .ReadAsync<DocAttachmentDto>(HttpStatusCode.Created);
+        await using var mcp = await api.CreateMcpClientAsync(await api.CreatePatAsync(await api.CreateUserAsync()));
+
+        // Act
+        var list = await mcp.CallToolAsync("list_doc_attachments", new Dictionary<string, object?> { ["docKey"] = page.Key }, cancellationToken: _ct);
+        var missingList = await mcp.CallToolAsync("list_doc_attachments", new Dictionary<string, object?> { ["docKey"] = "LOCK-D-999" }, cancellationToken: _ct);
+        var text = await mcp.CallToolAsync("get_attachment_text", new Dictionary<string, object?> { ["attachmentId"] = uploaded.Id }, cancellationToken: _ct);
+        var missingText = await mcp.CallToolAsync("get_attachment_text", new Dictionary<string, object?> { ["attachmentId"] = Guid.NewGuid() }, cancellationToken: _ct);
+
+        // Assert
+        Assert.Equal(DocErrors.NotFound, Code(list));
+        Assert.Equal(Message(missingList).Replace("LOCK-D-999", page.Key, StringComparison.Ordinal), Message(list));
+        Assert.Equal(AttachmentErrors.NotFound, Code(text));
+        Assert.Equal(Message(missingText), Message(text));
     }
 
     [Fact]
@@ -98,10 +149,11 @@ public sealed class DocLeakTests(TicketingApiFactory api)
         Assert.Equal([1], asOutsider);
     }
 
-    private async Task SameAsMissingAsync(HttpClient client, string hiddenUrl, string missingUrl, string hiddenRef, string? missingRef)
+    private async Task SameAsMissingAsync(HttpClient client, string hiddenUrl, string missingUrl, string hiddenRef, string? missingRef) =>
+        await SameAsMissingAsync(await client.GetAsync(hiddenUrl, _ct), await client.GetAsync(missingUrl, _ct), hiddenRef, missingRef);
+
+    private async Task SameAsMissingAsync(HttpResponseMessage hidden, HttpResponseMessage missing, string hiddenRef, string? missingRef)
     {
-        var hidden = await client.GetAsync(hiddenUrl, _ct);
-        var missing = await client.GetAsync(missingUrl, _ct);
         Assert.Equal(HttpStatusCode.NotFound, hidden.StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, missing.StatusCode);
         var hiddenBody = await hidden.Content.ReadFromJsonAsync<JsonElement>(_ct);

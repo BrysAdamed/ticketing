@@ -70,14 +70,14 @@ public sealed class DocMcpTests(TicketingApiFactory api)
         var user = await api.CreateUserAsync();
         await using var readOnly = await api.CreateMcpClientAsync(await api.CreatePatAsync(user, PatScope.ReadOnly));
         await using var readWrite = await api.CreateMcpClientAsync(await api.CreatePatAsync(user, PatScope.ReadWrite));
-        string[] docTools = ["list_docs", "get_doc", "create_folder", "create_page", "update_doc", "edit_doc", "move_doc", "delete_doc"];
+        string[] docTools = ["list_docs", "get_doc", "list_doc_attachments", "create_folder", "create_page", "update_doc", "edit_doc", "move_doc", "delete_doc"];
 
         // Act
         var readOnlyTools = (await readOnly.ListToolsAsync(cancellationToken: _ct)).Select(t => t.Name).Intersect(docTools).Order().ToList();
         var readWriteTools = (await readWrite.ListToolsAsync(cancellationToken: _ct)).Where(t => docTools.Contains(t.Name)).ToList();
 
         // Assert
-        Assert.Equal(["get_doc", "list_docs"], readOnlyTools);
+        Assert.Equal(new[] { "get_doc", "list_doc_attachments", "list_docs" }.Order(), readOnlyTools);
         Assert.Equal(docTools.Order(), readWriteTools.Select(t => t.Name).Order());
         Assert.True(readWriteTools.Single(t => t.Name == "delete_doc").ProtocolTool.Annotations?.DestructiveHint);
     }

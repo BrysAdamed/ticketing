@@ -11,10 +11,12 @@ import {
 import { DomSanitizer } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import { DIAGRAM_THEME } from '../diagrams/diagram-theme.token';
-import { renderMermaidBlocks } from '../diagrams/mermaid/mermaid-blocks';
 import { highlightCodeBlocks } from './highlight-code';
 import { MentionUser } from './mentions';
 import { INTERNAL_LINK_ATTR, renderMarkdown } from './render-markdown';
+
+/// `MERMAID_BLOCK_SELECTOR`, repeated so the block renderer stays out of the initial bundle.
+const MERMAID_BLOCK = 'pre > code.language-mermaid';
 
 /// Renders markdown safely (see `renderMarkdown`). In-app links navigate with the router. Mention
 /// tokens of the users in `mentions` show as chips, others as plain `@Name` text. Fenced code with
@@ -52,8 +54,16 @@ export class MarkdownViewerComponent {
       const host = this.host.nativeElement;
       void highlightCodeBlocks(host);
       this.diagrams?.abort();
-      this.diagrams = new AbortController();
-      void renderMermaidBlocks(host, this.theme(), { signal: this.diagrams.signal });
+      this.diagrams = null;
+      if (!host.querySelector(MERMAID_BLOCK)) return;
+      const controller = new AbortController();
+      this.diagrams = controller;
+      const theme = this.theme();
+      void import('../diagrams/mermaid/mermaid-blocks').then(({ renderMermaidBlocks }) =>
+        controller.signal.aborted
+          ? undefined
+          : renderMermaidBlocks(host, theme, { signal: controller.signal }),
+      );
     });
     inject(DestroyRef).onDestroy(() => this.diagrams?.abort());
   }

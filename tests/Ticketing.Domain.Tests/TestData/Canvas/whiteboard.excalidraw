@@ -1,0 +1,18 @@
+{
+  "type": "excalidraw",
+  "version": 2,
+  "source": "https://excalidraw.com",
+  "elements": [
+    { "id": "frame-1", "type": "frame", "x": -40, "y": -80, "width": 900, "height": 600, "isDeleted": false, "name": "Sprint 42 retro" },
+    { "id": "note-1", "type": "rectangle", "x": 0, "y": 0, "width": 200, "height": 120, "isDeleted": false, "backgroundColor": "#ffec99", "frameId": "frame-1" },
+    { "id": "note-1-text", "type": "text", "x": 10, "y": 40, "isDeleted": false, "containerId": "note-1", "text": "Keep WIP\nlow", "originalText": "Keep WIP low" },
+    { "id": "free-1", "type": "text", "x": 300, "y": 10, "isDeleted": false, "containerId": null, "text": "What went\nwell?", "originalText": "What went\nwell?" },
+    { "id": "free-2", "type": "text", "x": 300, "y": 300, "isDeleted": false, "containerId": null, "text": "Ship the Docs epic", "originalText": "Ship the Docs epic" },
+    { "id": "old-1", "type": "text", "x": 0, "y": 200, "isDeleted": true, "containerId": null, "text": "Old idea", "originalText": "Old idea" },
+    { "id": "scribble-1", "type": "freedraw", "x": 600, "y": 100, "isDeleted": false, "points": [[0, 0], [10, 20], [30, 5]] },
+    { "id": "loose-arrow", "type": "arrow", "x": 220, "y": 60, "isDeleted": false, "points": [[0, 0], [70, 0]], "startBinding": { "elementId": "note-1", "focus": 0, "gap": 4 }, "endBinding": null, "startArrowhead": null, "endArrowhead": "arrow" },
+    { "id": "empty-text", "type": "text", "x": 500, "y": 400, "isDeleted": false, "containerId": null, "text": "   ", "originalText": "   " }
+  ],
+  "appState": { "viewBackgroundColor": "#ffffff", "gridSize": 20 },
+  "files": {}
+}

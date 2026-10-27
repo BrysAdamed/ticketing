@@ -145,3 +145,65 @@ export interface NewDoc extends DocPlacement {
 }
 
 export const DOC_ROOT = 'root';
+
+/// Most characters a page may hold (spec 12.2).
+export const PAGE_CONTENT_MAX_LENGTH = 100_000;
+
+/// The caller's private, unpublished edit of a page or diagram (`GET|PUT /docs/{key}/draft`).
+/// `title` may be empty while it is being typed.
+export interface DocDraft {
+  docKey: string;
+  baseVersion: number;
+  currentVersion: number;
+  title: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SaveDocDraft {
+  baseVersion: number;
+  title: string;
+  content: string;
+}
+
+/// `PATCH /docs/{key}`: a rename and/or new content; `content` needs `baseVersion`, and a stale
+/// one answers 409 `doc.version.conflict`.
+export interface UpdateDoc {
+  title?: string;
+  content?: string;
+  baseVersion?: number;
+  changeNote?: string | null;
+}
+
+export type WriteChannel = 'Web' | 'Api' | 'Mcp';
+
+/// One published version with its full content (`GET /docs/{key}/versions/{n}`).
+export interface DocVersion {
+  docKey: string;
+  number: number;
+  title: string;
+  content: string | null;
+  changeNote: string | null;
+  author: UserRef;
+  channel: WriteChannel;
+  createdAt: string;
+  restoredFrom: number | null;
+}
+
+/// A file attached to a page (`GET /docs/{key}/attachments`); pasted images embed `url`.
+export interface DocAttachment {
+  id: string;
+  docKey: string;
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+  sha256: string;
+  isImage: boolean;
+  uploadedAt: string;
+  uploadedBy: UserRef;
+  url: string;
+  canDelete: boolean;
+}
+
+export const MAX_ATTACHMENTS_PER_PAGE = 200;

@@ -3,6 +3,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   effect,
   inject,
   input,
@@ -12,11 +13,15 @@ import {
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
-import { NavigationEnd, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, NavigationEnd, Router, RouterLink } from '@angular/router';
 import { provideIcons } from '@ng-icons/core';
+import { tablerDownload } from '@ng-icons/tabler-icons';
 import { filter, map } from 'rxjs';
 import { docsHomeUrl, docSlug, docUrl } from '@core/docs/doc-links';
 import { Doc, DocKind } from '@core/docs/doc.models';
+import { DocsApi } from '@core/docs/docs.api';
+import { ShortcutService } from '@core/shortcuts/shortcut.service';
+import { KbdComponent } from '@shared/ui/kbd/kbd.component';
 import { Breadcrumbs } from '@core/layout/breadcrumbs';
 import { PageTitleStrategy } from '@core/layout/page-title';
 import { ToastService } from '@core/notify/toast.service';
@@ -30,9 +35,14 @@ import { DOC_CONTENT_VIEWS } from '../docs.views';
 import { DocTreeStore } from '../tree/doc-tree.store';
 import { DocStore } from './doc.store';
 
+/// Presence ("Jane is editing") and newer versions are picked up this often while a doc is open.
+const PRESENCE_REFRESH_MS = 30_000;
+
 /// One doc (`docs.doc`): loads it (cached per key), replaces a stale or missing slug, selects it in
 /// the tree, sets the title and breadcrumbs, and renders the page bar plus the content view of its
-/// kind (`docs.page`, `docs.diagram`, `docs.folder`) with the input `doc`.
+/// kind (`docs.page`, `docs.diagram`, `docs.folder`) with the input `doc`. The bar holds Download
+/// .md (pages) and Edit (`E`, `?mode=edit`; in edit mode the content view's editor bar replaces
+/// it). The doc is refetched every 30 s for presence and newer versions.
 @Component({
   selector: 'tk-doc-view',
   imports: [
@@ -42,62 +52,92 @@ import { DocStore } from './doc.store';
     IconComponent,
     AvatarComponent,
     EmptyStateComponent,
+    KbdComponent,
     RelativeTimePipe,
   ],
   providers: [DocStore],
-  viewProviders: [provideIcons(DOCS_ICONS)],
+  viewProviders: [provideIcons({ ...DOCS_ICONS, tablerDownload })],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { 'data-testid': 'view-docs.doc' },
+  host: { 'data-testid': 'view-docs.doc', '[class.editing]': 'editing()' },
   template: `
     @if (viewDoc(); as doc) {
-      <div class="pbar" data-testid="doc-bar">
-        <span class="meta">
-          <tk-icon
-            class="i"
-            [name]="doc.breadcrumb.length ? 'tablerFolder' : 'tablerBook'"
-            [size]="16"
-          />
-          @for (crumb of doc.breadcrumb; track crumb.key; let last = $last) {
-            <a class="crumb" [routerLink]="url(crumb.key, crumb.title)">{{ crumb.title }}</a>
-            @if (!last) {
-              <span class="sep">/</span>
+      @if (!editing()) {
+        <div class="pbar" data-testid="doc-bar">
+          <span class="meta">
+            <tk-icon
+              class="i"
+              [name]="doc.breadcrumb.length ? 'tablerFolder' : 'tablerBook'"
+              [size]="16"
+            />
+            @for (crumb of doc.breadcrumb; track crumb.key; let last = $last) {
+              <a class="crumb" [routerLink]="url(crumb.key, crumb.title)">{{ crumb.title }}</a>
+              @if (!last) {
+                <span class="sep">/</span>
+              }
+            } @empty {
+              <a class="crumb" [routerLink]="homeUrl()">Docs</a>
             }
-          } @empty {
-            <a class="crumb" [routerLink]="homeUrl()">Docs</a>
-          }
-          @if (doc.kind !== 'Folder') {
-            <span class="sep">·</span>
-            <span class="edited">Edited by</span>
-            <tk-avatar [userId]="doc.updatedBy.id" [name]="doc.updatedBy.displayName" [size]="20" />
-            <span class="who">{{ doc.updatedBy.displayName }}</span>
-            <span>{{ doc.updatedAt | relativeTime }}</span>
-            <span class="sep">·</span>
-            <span class="badge tnum" data-testid="doc-version">v{{ doc.version }}</span>
-          }
-        </span>
-        <div class="right">
-          <button
-            type="button"
-            class="tk-icon-btn"
-            title="Copy link"
-            aria-label="Copy link"
-            data-testid="doc-copy-link"
-            (click)="copyLink(doc)"
-          >
-            <tk-icon name="tablerLink" [size]="16" />
-          </button>
-          <button
-            type="button"
-            class="tk-icon-btn"
-            title="More"
-            aria-label="More actions"
-            data-testid="doc-bar-more"
-            (click)="openMenu($event, doc)"
-          >
-            <tk-icon name="tablerDots" [size]="16" />
-          </button>
+            @if (doc.kind !== 'Folder') {
+              <span class="sep">·</span>
+              <span class="edited">Edited by</span>
+              <tk-avatar
+                [userId]="doc.updatedBy.id"
+                [name]="doc.updatedBy.displayName"
+                [size]="20"
+              />
+              <span class="who">{{ doc.updatedBy.displayName }}</span>
+              <span>{{ doc.updatedAt | relativeTime }}</span>
+              <span class="sep">·</span>
+              <span class="badge tnum" data-testid="doc-version">v{{ doc.version }}</span>
+            }
+          </span>
+          <div class="right">
+            @if (doc.kind === 'Page') {
+              <a
+                class="tk-icon-btn"
+                title="Download .md"
+                aria-label="Download as markdown"
+                data-testid="doc-download-md"
+                download
+                [href]="markdownUrl(doc)"
+              >
+                <tk-icon name="tablerDownload" [size]="16" />
+              </a>
+            }
+            <button
+              type="button"
+              class="tk-icon-btn"
+              title="Copy link"
+              aria-label="Copy link"
+              data-testid="doc-copy-link"
+              (click)="copyLink(doc)"
+            >
+              <tk-icon name="tablerLink" [size]="16" />
+            </button>
+            <button
+              type="button"
+              class="tk-icon-btn"
+              title="More"
+              aria-label="More actions"
+              data-testid="doc-bar-more"
+              (click)="openMenu($event, doc)"
+            >
+              <tk-icon name="tablerDots" [size]="16" />
+            </button>
+            @if (canEditContent()) {
+              <button
+                mat-stroked-button
+                type="button"
+                class="edit"
+                data-testid="doc-edit"
+                (click)="edit()"
+              >
+                <tk-icon name="tablerPencil" [size]="16" />Edit<tk-kbd>E</tk-kbd>
+              </button>
+            }
+          </div>
         </div>
-      </div>
+      }
       @if (content(); as component) {
         <ng-container *ngComponentOutlet="component; inputs: { doc }" />
       }
@@ -148,6 +188,9 @@ export class DocView {
   private readonly breadcrumbs = inject(Breadcrumbs);
   private readonly pageTitle = inject(PageTitleStrategy);
   private readonly toast = inject(ToastService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly api = inject(DocsApi);
+  private readonly shortcuts = inject(ShortcutService);
 
   readonly projectKey = input.required<string>();
   readonly docKey = input.required<string>();
@@ -173,9 +216,37 @@ export class DocView {
     ),
     { initialValue: -1 },
   );
+  private readonly mode = toSignal(this.route.queryParamMap.pipe(map((q) => q.get('mode'))), {
+    initialValue: null,
+  });
   private contentKind: DocKind | null = null;
 
+  /// Pages and diagrams of a writable project can be edited (`E`, `?mode=edit`).
+  protected readonly canEditContent = computed(() => {
+    const doc = this.store.doc();
+    return !!doc && doc.kind !== 'Folder' && doc.permissions.canEdit;
+  });
+  /// In edit mode the content view's editor bar replaces the page bar.
+  protected readonly editing = computed(() => this.mode() === 'edit' && this.canEditContent());
+
   constructor() {
+    this.shortcuts.registerScoped([
+      {
+        keys: 'e',
+        description: 'Edit the doc',
+        section: 'Docs',
+        handler: () => {
+          if (this.canEditContent() && !this.editing()) this.edit();
+        },
+      },
+    ]);
+
+    const presence = setInterval(() => {
+      if (document.visibilityState === 'visible' && this.store.doc()?.kind !== 'Folder')
+        void this.store.refresh();
+    }, PRESENCE_REFRESH_MS);
+    inject(DestroyRef).onDestroy(() => clearInterval(presence));
+
     effect(() => {
       const key = this.docKey().toUpperCase();
       untracked(() => {
@@ -206,7 +277,13 @@ export class DocView {
           routeKey !== doc.key ||
           routeProject.toUpperCase() !== doc.projectKey
         )
-          void this.router.navigateByUrl(docUrl(doc.key, doc.title), { replaceUrl: true });
+          void this.router.navigateByUrl(
+            this.router.createUrlTree([docUrl(doc.key, doc.title)], {
+              queryParamsHandling: 'preserve',
+              preserveFragment: true,
+            }),
+            { replaceUrl: true },
+          );
       });
     });
 
@@ -246,6 +323,18 @@ export class DocView {
     effect(() => {
       if (this.tree.structureVersion() > 0) untracked(() => void this.store.refresh());
     });
+  }
+
+  protected edit(): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { mode: 'edit' },
+      queryParamsHandling: 'merge',
+    });
+  }
+
+  protected markdownUrl(doc: Doc): string {
+    return this.api.markdownExportUrl(doc.key);
   }
 
   protected copyLink(doc: Doc): void {

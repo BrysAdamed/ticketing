@@ -1,0 +1,97 @@
+@if (editing()) {
+  @if (editor(); as component) {
+    <ng-container *ngComponentOutlet="component; inputs: { doc: doc() }" />
+  } @else {
+    <div
+      class="edit-skeleton"
+      role="status"
+      aria-label="Loading the editor"
+      data-testid="doc-editor-loading"
+    >
+      <div class="sk-bar"></div>
+      <div class="sk-split">
+        <div class="sk-pane">
+          @for (width of lines; track $index) {
+            <span class="sk" [style.width.%]="width"></span>
+          }
+        </div>
+        <div class="sk-pane">
+          @for (width of lines; track $index) {
+            <span class="sk" [style.width.%]="width - 20"></span>
+          }
+        </div>
+      </div>
+    </div>
+  }
+} @else {
+  @let page = doc();
+  <div class="layout">
+    <article class="pbody">
+      @if (page.myDraft && page.permissions.canEdit) {
+        <div class="draft-banner" role="status" data-testid="doc-draft-banner">
+          <tk-icon name="tablerPencil" [size]="16" />
+          <span class="msg"
+            >You have unpublished changes from {{ draftTime(page.myDraft.updatedAt) }}</span
+          >
+          <button mat-button type="button" data-testid="doc-draft-continue" (click)="edit()">
+            Continue editing
+          </button>
+          <button mat-button type="button" data-testid="doc-draft-discard" (click)="discardDraft()">
+            Discard
+          </button>
+        </div>
+      }
+      <h1 class="ptitle" data-testid="doc-title">{{ page.title }}</h1>
+      <div class="pmeta" data-testid="doc-meta">
+        <span class="key tnum">{{ page.key }}</span>
+        <span class="dot">·</span>
+        <span class="tnum">v{{ page.version }}</span>
+        <span class="dot">·</span>
+        <span [title]="page.updatedAt | absoluteTime"
+          >Edited by {{ page.updatedBy.displayName }}, {{ page.updatedAt | relativeTime }}</span
+        >
+        <span class="dot">·</span>
+        <span class="path" [title]="page.path">{{ page.path }}</span>
+        <tk-doc-presence class="presence" [editors]="page.editors" />
+      </div>
+      @if (page.content) {
+        <tk-doc-markdown
+          data-testid="doc-content"
+          [source]="page.content"
+          [docKey]="page.key"
+          (rendered)="onRendered($event)"
+        />
+      } @else {
+        <div class="empty" data-testid="doc-page-empty">
+          <p>This page is empty.</p>
+          @if (page.permissions.canEdit) {
+            <button mat-stroked-button type="button" (click)="edit()">
+              Start writing <tk-kbd>E</tk-kbd>
+            </button>
+          }
+        </div>
+      }
+      <div class="footer">
+        <tk-doc-page-sections placement="footer" [doc]="page" />
+      </div>
+    </article>
+    <aside class="rail" aria-label="On this page">
+      @if (outline().length > 1) {
+        <nav class="rsec toc" data-testid="doc-outline">
+          <div class="rlabel">On this page</div>
+          @for (entry of outline(); track entry.id) {
+            <a
+              [href]="'#' + entry.id"
+              [class.on]="entry.id === activeId()"
+              [style.--d]="entry.depth - 1"
+              [attr.aria-current]="entry.id === activeId() ? 'location' : null"
+              (click)="goTo($event, entry)"
+              >{{ entry.text }}</a
+            >
+          }
+        </nav>
+      }
+      <tk-doc-page-sections placement="rail" [doc]="page" />
+    </aside>
+  </div>
+}

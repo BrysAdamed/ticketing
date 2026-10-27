@@ -24,11 +24,19 @@ export const DOCS_DOC_VIEW = defineView({
 });
 
 /// Content views by kind, rendered inside the doc frame with the input `doc` (and `DocStore`
-/// injectable). Later stories swap these: the page reader and editor (TKT-14), Mermaid and Canvas
-/// diagrams (TKT-17, TKT-18).
+/// injectable). `?mode=edit` switches a page or diagram to its editor. Mermaid and Canvas diagrams
+/// (TKT-17, TKT-18) replace the diagram placeholder.
 export const DOCS_PAGE_VIEW = defineView({
   viewId: 'docs.page',
-  variants: { default: () => import('./doc/page-content.view').then((m) => m.PageContentView) },
+  variants: { default: () => import('./page/page.view').then((m) => m.PageView) },
+});
+
+/// The page editor (CodeMirror split view), a lazy chunk the page view renders for `?mode=edit`.
+export const DOCS_PAGE_EDIT_VIEW = defineView({
+  viewId: 'docs.page.edit',
+  variants: {
+    default: () => import('./page/editor/page-editor.view').then((m) => m.PageEditorView),
+  },
 });
 
 export const DOCS_DIAGRAM_VIEW = defineView({

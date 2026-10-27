@@ -411,3 +411,7 @@ tk-board-card.ghost:not(.cdk-drag-placeholder) {
   width: 220px;
   height: 22px;
 }
+
+.mat-mdc-button-base tk-icon {
+  margin-right: 4px;
+}

@@ -114,6 +114,9 @@ import { CreateBoardDialog, CreateBoardDialogData } from './create-board.dialog'
     }
   `,
   styles: `
+    .mat-mdc-button-base tk-icon {
+      margin-right: 4px;
+    }
     .filter {
       height: 24px;
       width: 240px;

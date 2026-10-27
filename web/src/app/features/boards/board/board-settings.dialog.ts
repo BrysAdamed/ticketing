@@ -141,6 +141,9 @@ const MAX_PROJECTS = 20;
     </mat-dialog-actions>
   `,
   styles: `
+    .mat-mdc-button-base tk-icon {
+      margin-right: 4px;
+    }
     section {
       padding: 4px 0 16px;
       border-bottom: 1px solid var(--tk-border-subtle);

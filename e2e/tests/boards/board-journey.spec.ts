@@ -74,6 +74,30 @@ test.describe('boards', () => {
     expect(shipped.location.boardId).toBe(boardId);
   });
 
+  test('dragging one card of a multi-selection moves the whole selection in board order', async ({ page, api }) => {
+    // Arrange
+    const key = (await api.createProject({ visibility: 'Public' })).key;
+    const created = await api.post<{ id: string }>('/boards', { name: `Multi ${key}`, projectKeys: [key] });
+    const tickets = [];
+    for (const title of ['One', 'Two', 'Three']) tickets.push(await createTicket(api, key, title));
+    await api.post('/tickets/move', { keys: tickets.map((t) => t.key), target: created.id });
+    const board = new BoardPage(page);
+    await board.goto(created.id);
+
+    // Act
+    await board.card(tickets[0].key).click({ modifiers: ['Control'] });
+    await board.card(tickets[2].key).click({ modifiers: ['Control'] });
+    await expect(page.getByTestId('board-bulk')).toContainText('2 selected');
+    await board.dragToColumn(tickets[2].key, 'Review');
+
+    // Assert
+    await expect.poll(() => board.keys('Review')).toEqual([tickets[0].key, tickets[2].key]);
+    await expect
+      .poll(async () => (await api.get<{ status: string }>(`/tickets/${tickets[0].key}`)).status)
+      .toBe('Review');
+    expect(await board.keys('ToDo')).toEqual([tickets[1].key]);
+  });
+
   test('a board link appears in the sidebar after visiting it', async ({ page, api }) => {
     // Arrange
     const key = (await api.createProject({ visibility: 'Public' })).key;

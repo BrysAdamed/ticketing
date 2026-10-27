@@ -61,9 +61,9 @@ export class BoardPage {
 
   /// Drags a card into another column's empty space (bottom of the column), with a CDK-friendly mouse path.
   async dragToColumn(key: string, status: string): Promise<void> {
-    const source = await this.card(key).boundingBox();
     const column = this.cell(status);
     await column.scrollIntoViewIfNeeded();
+    const source = await this.card(key).boundingBox();
     const target = await column.boundingBox();
     if (!source || !target) throw new Error('Card or column is not visible.');
     await this.page.mouse.move(source.x + source.width / 2, source.y + 20);

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Http.Json;
 using Scalar.AspNetCore;
 using Ticketing.Api;
 using Ticketing.Api.Auth;
+using Ticketing.Api.DemoData;
 using Ticketing.Api.Endpoints;
 using Ticketing.Api.Health;
 using Ticketing.Api.Http;
@@ -15,6 +16,7 @@ builder.Services
     .AddApplication()
     .AddInfrastructure(builder.Configuration)
     .AddHostedService<DatabaseStartup>()
+    .AddDemoData(builder.Configuration)
     .AddTicketingAuth(builder.Configuration)
     .AddTicketingRateLimiting(builder.Configuration)
     .AddTicketingMcp()
@@ -26,6 +28,12 @@ builder.Services
     .Configure<RouteHandlerOptions>(o => o.ThrowOnBadRequest = true);
 
 var app = builder.Build();
+
+if (DemoDataSetup.IsSeedCommand(args))
+{
+    await app.RunSeedCommandAsync();
+    return;
+}
 
 app.UseExceptionHandler();
 app.UseStatusCodePages();

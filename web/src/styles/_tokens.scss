@@ -68,6 +68,11 @@ $tk-bp-xl: 1600px;
   --tk-gray: #80838d;
   --tk-gray-fg: #62656e;
 
+  // Solid fills that carry --tk-text-on-solid (white) at 4.5:1 or more; the semantic intents below use them.
+  --tk-green-solid: #18794e;
+  --tk-red-solid: #ce2c31;
+  --tk-blue-solid: #1f63c4;
+
   --tk-tint-bg: 10%;
   --tk-tint-border: 24%;
 
@@ -205,8 +210,9 @@ $tk-bp-xl: 1600px;
   --tk-z-peek: 30;
   --tk-z-bulkbar: 40;
 
-  // Semantic intents
-  --tk-success: var(--tk-green);
+  // Semantic intents. The solid (--tk-success, --tk-danger, --tk-info) is a fill for white text and an icon
+  // colour; --tk-warning is a fill for --tk-warning-on-solid. Status and run icons keep the brighter hues.
+  --tk-success: var(--tk-green-solid);
   --tk-success-fg: var(--tk-green-fg);
   --tk-success-bg: color-mix(in srgb, var(--tk-green) var(--tk-tint-bg), transparent);
   --tk-success-border: color-mix(in srgb, var(--tk-green) var(--tk-tint-border), transparent);
@@ -215,11 +221,11 @@ $tk-bp-xl: 1600px;
   --tk-warning-bg: color-mix(in srgb, var(--tk-amber) var(--tk-tint-bg), transparent);
   --tk-warning-border: color-mix(in srgb, var(--tk-amber) var(--tk-tint-border), transparent);
   --tk-warning-on-solid: var(--tk-gray-950);
-  --tk-danger: var(--tk-red);
+  --tk-danger: var(--tk-red-solid);
   --tk-danger-fg: var(--tk-red-fg);
   --tk-danger-bg: color-mix(in srgb, var(--tk-red) var(--tk-tint-bg), transparent);
   --tk-danger-border: color-mix(in srgb, var(--tk-red) var(--tk-tint-border), transparent);
-  --tk-info: var(--tk-blue);
+  --tk-info: var(--tk-blue-solid);
   --tk-info-fg: var(--tk-blue-fg);
   --tk-info-bg: color-mix(in srgb, var(--tk-blue) var(--tk-tint-bg), transparent);
   --tk-info-border: color-mix(in srgb, var(--tk-blue) var(--tk-tint-border), transparent);
@@ -327,6 +333,10 @@ $tk-bp-xl: 1600px;
   --tk-pink-fg: #ff8dcc;
   --tk-gray: #80838d;
   --tk-gray-fg: #a4a6af;
+
+  --tk-green-solid: #268356;
+  --tk-red-solid: #d93036;
+  --tk-blue-solid: #2f6fd6;
 
   --tk-tint-bg: 16%;
   --tk-tint-border: 32%;

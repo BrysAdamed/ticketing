@@ -63,12 +63,12 @@ import { IconComponent } from '@shared/ui/icon/icon.component';
       border: 1px solid var(--tk-border-strong);
       border-radius: var(--tk-radius-sm);
       background: var(--tk-surface);
-      color: var(--tk-text-on);
+      color: var(--tk-text-on-solid);
       cursor: pointer;
     }
     .check[aria-pressed='true'] {
-      border-color: var(--tk-run-passed);
-      background: var(--tk-run-passed);
+      border-color: var(--tk-success);
+      background: var(--tk-success);
     }
     .n {
       width: 22px;

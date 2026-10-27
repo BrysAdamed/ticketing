@@ -538,6 +538,16 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
   - Drafts may have an empty title while it is being typed; publishing still requires one.
 - Rationale: a docs tree is small (at most 5 000 nodes) and written rarely compared with how often it is read, so one lock per project costs nothing and makes every multi-row rule exact, including cycle checks of concurrent moves, which per-folder locks could not guarantee. Reusing the ranker and the counters keeps one implementation of ordering and numbering.
 
+### D-99 Docs search: one ranked query, plain-text snippets from ts_headline, docs inside quick jump
+
+- Question: how docs search (TKT-19, refinement 1.10) ranks, builds snippets that are "plain text plus highlight ranges, never HTML", and reaches the command palette.
+- Decision:
+  - One query over `doc_nodes` (the published copy; drafts live in `doc_drafts` and are never read) composed with `ReadableProjects()`. Text matches the generated `search_vector` (`websearch_to_tsquery('english')`), a title substring from 3 characters (trigram index) or a doc key. Relevance orders by `10 × exact key + 1 × title contains the text + ts_rank`, then `updatedAt`, `id`; at most 100, no cursor. Without text the only sort is `updated` with a keyset cursor (`updatedAt`, `id`).
+  - Snippets come from `ts_headline` over the content (Canvas: the outline) with the control characters U+0002/U+0003 as start and stop marks, `MaxWords=30, MinWords=12, ShortWord=0`, run only for the returned page. `DocSnippets` turns that into text plus UTF-16 ranges, collapses whitespace, drops markdown emphasis and heading marks and cuts at 240 characters. HTML in content stays literal text; the SPA renders snippets with text bindings only.
+  - `folder` resolves to the folder's whole subtree in memory from the project's folder rows (at most 5 000), so no recursive SQL. Unreadable or unknown projects, folders and tickets match nothing (no 404, no leak); a readable non-folder in `folder` is 400 `validation`.
+  - Quick jump stays one request: the existing `/quick-jump` also answers doc keys and appends up to 5 docs with snippets after the tickets (`QuickJumpKind.Doc`, new optional fields). The palette's "Recent docs" (empty query) are the docs the user viewed last, kept per user in `localStorage` like recent boards, so they need no endpoint.
+  - The endpoint lives in `SearchEndpoints` and the tool in `SearchTools`, next to ticket search, and reuses its query-string parameter reader.
+- Rationale: one ranked query keeps search and quick jump consistent and fast (p95 under 150 ms with 20 000 docs and 200 000 tickets, `DocSearchPerformanceTests`). Control-character marks cannot be confused with markup in the content, and returning ranges instead of `<mark>` HTML keeps the API safe for every client, including LLMs.
 ## Product owner answers (v1 review, 2026-10-27)
 
 These were open questions (Q-01..Q-05); the product owner resolved them as follows.

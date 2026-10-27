@@ -20,7 +20,7 @@ public static class SearchQueryParser
     public static TicketSearchCriteria Parse(IReadOnlyDictionary<string, IReadOnlyList<string?>> query)
     {
         var v = new Validator();
-        var parameters = new Parameters(query);
+        var parameters = new QueryParameters(query);
 
         var severityTokens = parameters.List("severity");
         var version = parameters.Single("version");
@@ -77,7 +77,7 @@ public static class SearchQueryParser
 
     private static bool IsToken(string value, string token) => string.Equals(value, token, StringComparison.OrdinalIgnoreCase);
 
-    private static List<T> Enums<T>(Validator v, string name, IReadOnlyList<string> values)
+    internal static List<T> Enums<T>(Validator v, string name, IReadOnlyList<string> values)
         where T : struct, Enum
     {
         var result = new List<T>();
@@ -140,7 +140,7 @@ public static class SearchQueryParser
         return null;
     }
 
-    private static DateRange Range(Validator v, string name, string? from, string? to)
+    internal static DateRange Range(Validator v, string name, string? from, string? to)
     {
         var lower = Bound(v, name + "From", from, isUpper: false);
         var upper = Bound(v, name + "To", to, isUpper: true);
@@ -195,28 +195,30 @@ public static class SearchQueryParser
         return null;
     }
 
-    private sealed class Parameters(IReadOnlyDictionary<string, IReadOnlyList<string?>> query)
+}
+
+/// <summary>Reads single and comma-separated list parameters of a search query string (search-url-format.md encoding rules).</summary>
+internal sealed class QueryParameters(IReadOnlyDictionary<string, IReadOnlyList<string?>> query)
+{
+    public Dictionary<string, int> ListCounts { get; } = new(StringComparer.Ordinal);
+
+    public string? Single(string name)
     {
-        public Dictionary<string, int> ListCounts { get; } = new(StringComparer.Ordinal);
+        if (!query.TryGetValue(name, out var values))
+            return null;
+        var value = values.LastOrDefault(s => !string.IsNullOrWhiteSpace(s));
+        return value?.Trim();
+    }
 
-        public string? Single(string name)
-        {
-            if (!query.TryGetValue(name, out var values))
-                return null;
-            var value = values.LastOrDefault(s => !string.IsNullOrWhiteSpace(s));
-            return value?.Trim();
-        }
-
-        public IReadOnlyList<string> List(string name)
-        {
-            if (!query.TryGetValue(name, out var values))
-                return [];
-            var items = values
-                .Where(s => s is not null)
-                .SelectMany(s => s!.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
-                .ToList();
-            ListCounts[name] = items.Count;
-            return items;
-        }
+    public IReadOnlyList<string> List(string name)
+    {
+        if (!query.TryGetValue(name, out var values))
+            return [];
+        var items = values
+            .Where(s => s is not null)
+            .SelectMany(s => s!.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+            .ToList();
+        ListCounts[name] = items.Count;
+        return items;
     }
 }

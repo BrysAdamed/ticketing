@@ -64,6 +64,8 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Doc path**: A doc's titles from the root joined by `/` (`Architecture/ADRs/0001 Use Postgres`), case-insensitive; `/` inside a title is written `\/`. Unique because titles are unique within a folder. [§12.1](product/01-refined-spec.md#121-model-and-keys)
 
+**Doc search**: Search over doc titles, the latest published content and Canvas labels in readable projects (never drafts or deleted docs), by relevance or newest first. Each result carries a snippet. [§12.7](product/01-refined-spec.md#127-search)
+
 **Doc version**: An immutable full snapshot of a page or diagram's title and content, numbered 1..n, created by every publish. `baseVersion` names the version an edit started from. [§12.4](product/01-refined-spec.md#124-content-versions-and-drafts)
 
 **Effective access**: A user's resulting role on a project, computed from global role, membership and visibility. It decides every project permission. [§5.1](product/01-refined-spec.md#51-effective-project-access)
@@ -122,7 +124,7 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Public project**: A project every signed-in user can read and write with Member access (D-02). Settings, membership and destructive actions stay with Owners. [§5.1](product/01-refined-spec.md#51-effective-project-access)
 
-**Quick jump**: `Ctrl+K` or `/`: type a ticket, test case or regression session key to open it, or text to list the 10 best ticket title matches across readable projects. [§6.8](product/01-refined-spec.md#68-search-lists-and-export)
+**Quick jump**: `Ctrl+K` or `/`: type a ticket, test case, regression session or doc key to open it, or text to list the 10 best ticket title matches and, below them, the 5 best docs with a snippet, across readable projects. With an empty query the palette lists recently viewed docs. [§6.8](product/01-refined-spec.md#68-search-lists-and-export), [§12.7](product/01-refined-spec.md#127-search)
 
 **Rank**: Hidden fractional-index string that orders tickets within their container; compared byte-wise (`COLLATE "C"`). [§6.6](product/01-refined-spec.md#66-ranking), [ADR 0010](adr/0010-fractional-index-ranking.md)
 

@@ -53,10 +53,12 @@ public sealed class SearchEndpoints : IEndpointModule
             .WithDescription(DocFilterHelp)
             .ProducesProblem(StatusCodes.Status400BadRequest);
 
-        api.MapGet("/quick-jump", async (string? q, QuickJump.Handler handler, CancellationToken ct) =>
-                TypedResults.Ok(await handler.HandleAsync(new QuickJump.Query(q), ct)))
+        api.MapGet("/quick-jump", async (string? q, QuickJumpScope? scope, QuickJump.Handler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.HandleAsync(new QuickJump.Query(q, scope), ct)))
             .WithTags("Search")
-            .WithSummary("Command palette lookup: an exact ticket, test case (KEY-TC-n), session (KEY-R-n) or doc (KEY-D-n) key first, then up to 10 tickets by title, then up to 5 docs with a snippet.");
+            .WithSummary("Command palette lookup: an exact ticket, test case (KEY-TC-n), session (KEY-R-n) or doc (KEY-D-n) key first, then up to 10 tickets by title, then up to 5 docs with a snippet.")
+            .WithDescription("scope=Tickets keeps only tickets (an exact ticket key, then up to 20 by title); scope=Docs only docs (an exact doc key, then up to 20 by relevance).")
+            .ProducesProblem(StatusCodes.Status400BadRequest);
 
         api.MapGet("/me/work", async (GetMyWork.Handler handler, CancellationToken ct) =>
                 TypedResults.Ok(await handler.HandleAsync(new GetMyWork.Query(), ct)))

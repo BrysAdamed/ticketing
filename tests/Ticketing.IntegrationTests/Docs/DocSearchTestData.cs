@@ -16,8 +16,8 @@ public static class DocSearchTestData
     public static async Task<List<string>> SearchDocKeysAsync(this HttpClient client, string query) =>
         [.. (await client.SearchDocsAsync(query)).Items.Select(d => d.Key)];
 
-    public static async Task<List<QuickJumpItem>> QuickJumpAsync(this HttpClient client, string text) =>
-        await (await client.GetAsync($"/api/v1/quick-jump?q={Uri.EscapeDataString(text)}")).ReadAsync<List<QuickJumpItem>>();
+    public static async Task<List<QuickJumpItem>> QuickJumpAsync(this HttpClient client, string text, string? scope = null) =>
+        await (await client.GetAsync($"/api/v1/quick-jump?q={Uri.EscapeDataString(text)}{(scope is null ? "" : $"&scope={scope}")}")).ReadAsync<List<QuickJumpItem>>();
 
     public static Task<DocDto> CreateDiagramAsync(this HttpClient client, string projectKey, string title, string format, string content, string? parent = null) =>
         client.CreateDocAsync(projectKey, new { kind = "Diagram", diagramFormat = format, title, parent, content });

@@ -5,6 +5,7 @@ using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 using Ticketing.Application.Docs;
 using Ticketing.Application.Search;
+using Ticketing.Application.Tickets;
 using Ticketing.Domain.Docs;
 using Ticketing.Domain.Tokens;
 using Ticketing.IntegrationTests.Infrastructure;
@@ -189,6 +190,39 @@ public sealed class DocSearchTests(TicketingApiFactory api)
         Assert.Equal(QuickJump.MaxDocMatches, docHits.Count);
         Assert.All(docHits, d => Assert.Equal("webhook", d.Snippet!.Highlighted(), ignoreCase: true));
         Assert.Equal(byText.Count - docHits.Count, byText.FindIndex(i => i.Kind == QuickJumpKind.Doc));
+    }
+
+    [Fact]
+    public async Task Quick_jump_scope_keeps_only_docs_or_only_tickets_and_lists_more_of_them()
+    {
+        // Arrange
+        var client = await api.LoginAsync(await api.CreateUserAsync());
+        await client.CreateProjectAsync("SRS");
+        var tickets = new List<TicketSummaryDto>();
+        for (var i = 0; i < 12; i++)
+            tickets.Add(await client.CreateTicketAsync("SRS", $"Ledger export {i}"));
+        await Testing.TestingTestData.CreateTestCaseAsync(client, "SRS", "Ledger export works");
+        var docs = new List<DocDto>();
+        for (var i = 0; i < 7; i++)
+            docs.Add(await client.CreatePageAsync("SRS", $"Ledger guide {i}", content: "How the ledger is exported."));
+
+        // Act
+        var docsOnly = await client.QuickJumpAsync("ledger", "Docs");
+        var ticketsOnly = await client.QuickJumpAsync("ledger", "Tickets");
+        var docKeyAsTickets = await client.QuickJumpAsync(docs[0].Key, "Tickets");
+        var ticketKeyAsDocs = await client.QuickJumpAsync(tickets[0].Key, "Docs");
+        var docKeyAsDocs = await client.QuickJumpAsync(docs[0].Key, "Docs");
+        var invalid = await client.GetAsync("/api/v1/quick-jump?q=ledger&scope=pages", _ct);
+
+        // Assert
+        Assert.Equal(docs.Count, docsOnly.Count);
+        Assert.All(docsOnly, i => Assert.Equal(QuickJumpKind.Doc, i.Kind));
+        Assert.Equal(tickets.Count, ticketsOnly.Count);
+        Assert.All(ticketsOnly, i => Assert.Equal(QuickJumpKind.Ticket, i.Kind));
+        Assert.DoesNotContain(docKeyAsTickets, i => i.Kind != QuickJumpKind.Ticket);
+        Assert.DoesNotContain(ticketKeyAsDocs, i => i.Kind != QuickJumpKind.Doc);
+        Assert.Equal((QuickJumpKind.Doc, docs[0].Key), (docKeyAsDocs[0].Kind, docKeyAsDocs[0].Key));
+        Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
     }
 
     [Fact]

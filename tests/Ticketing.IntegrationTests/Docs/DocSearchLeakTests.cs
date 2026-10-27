@@ -48,6 +48,8 @@ public sealed class DocSearchLeakTests(TicketingApiFactory api)
         var byMention = await outsider.SearchDocsAsync($"mentions={ticket.Key}");
         var jumpKey = await outsider.QuickJumpAsync(secret.Key);
         var jumpText = await outsider.QuickJumpAsync("quasar");
+        var jumpDocs = await outsider.QuickJumpAsync("quasar", "Docs");
+        var jumpTickets = await outsider.QuickJumpAsync("quasar", "Tickets");
         var viaMcp = await mcp.CallToolAsync("search_docs", new Dictionary<string, object?> { ["text"] = "quasar" }, cancellationToken: _ct);
         var asViewer = await viewer.SearchDocKeysAsync("q=quasar");
         var asAdmin = await admin.SearchDocKeysAsync("q=quasar");
@@ -62,6 +64,8 @@ public sealed class DocSearchLeakTests(TicketingApiFactory api)
         });
         Assert.Empty(jumpKey);
         Assert.Equal([open.Key], jumpText.Where(i => i.Kind == QuickJumpKind.Doc).Select(i => i.Key));
+        Assert.Equal([open.Key], jumpDocs.Select(i => i.Key));
+        Assert.Empty(jumpTickets);
         var mcpText = Assert.IsType<TextContentBlock>(Assert.Single(viaMcp.Content)).Text;
         Assert.DoesNotContain("LKA", mcpText, StringComparison.Ordinal);
         Assert.DoesNotContain("confidential", mcpText, StringComparison.Ordinal);

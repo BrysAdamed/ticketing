@@ -104,6 +104,48 @@ test.describe('docs search and quick jump', () => {
         await expect(page.getByTestId('doc-filter-kind')).toContainText('Page');
     });
 
+    test('Ctrl+K prefixes p: and t: narrow the results to docs or tickets', async ({
+        page,
+        api,
+        shell,
+    }) => {
+        // Arrange
+        const projectKey = (await api.createProject()).key;
+        const word = `quokka${Date.now().toString(36)}`;
+        const ticket = await api.post<DocRef>(`/projects/${projectKey}/tickets`, {
+            title: `Fix the ${word} export`,
+            type: 'Bug',
+        });
+        const docs: DocRef[] = [];
+        for (let i = 0; i < 7; i++)
+            docs.push(await createPage(api, projectKey, `Guide ${i}`, `How the ${word} works.`));
+        await page.goto('/my-work');
+        await shell.expectVisible();
+        await page.keyboard.press('ControlOrMeta+k');
+        const input = page.getByTestId('command-palette-input');
+        const palette = page.getByTestId('command-palette');
+
+        // Act
+        await input.fill(`p: ${word}`);
+
+        // Assert
+        await expect(palette.locator('[data-testid^="palette-item-Doc:"]')).toHaveCount(7);
+        await expect(page.getByTestId(`palette-item-Ticket:${ticket.key}`)).toHaveCount(0);
+        await expect(page.getByTestId('palette-item-search:docs')).toBeVisible();
+        await expect(page.getByTestId('palette-item-search:open')).toHaveCount(0);
+        await expect(page.getByTestId('palette-scope-docs')).toHaveClass(/active/);
+
+        // Act
+        await input.fill(`t: ${word}`);
+
+        // Assert
+        await expect(page.getByTestId(`palette-item-Ticket:${ticket.key}`)).toBeVisible();
+        await expect(palette.locator('[data-testid^="palette-item-Doc:"]')).toHaveCount(0);
+        await expect(page.getByTestId('palette-item-search:docs')).toHaveCount(0);
+        await expect(page.getByTestId('command-palette-footer')).toContainText('docs only');
+        await expect(page.getByTestId('command-palette-footer')).toContainText('tickets only');
+    });
+
     test('Ctrl+K with an empty query lists recently viewed docs', async ({ page, api, shell }) => {
         // Arrange
         const projectKey = (await api.createProject()).key;

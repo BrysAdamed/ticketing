@@ -1,5 +1,75 @@
 import { describe, expect, it, vi } from 'vitest';
-import { docLocation, keyJumpItem, recentDocItem, toPaletteItem } from './quick-jump';
+import { parsePaletteQuery } from '@core/commands/command';
+import {
+  docLocation,
+  keyJumpItem,
+  QUICK_JUMP_SCOPES,
+  recentDocItem,
+  searchPageItems,
+  toPaletteItem,
+} from './quick-jump';
+
+describe('quick jump scopes', () => {
+  it.each([
+    ['p: idempotency', 'docs', 'idempotency'],
+    ['P:idempotency', 'docs', 'idempotency'],
+    ['  t:  login fails', 'tickets', 'login fails'],
+    ['p:', 'docs', ''],
+    ['t: WEB-42', 'tickets', 'WEB-42'],
+  ])('reads the prefix of "%s" as the %s scope', (query, scope, text) => {
+    // Act
+    const parsed = parsePaletteQuery(query, QUICK_JUMP_SCOPES);
+
+    // Assert
+    expect(parsed.scope?.id).toBe(scope);
+    expect(parsed.text).toBe(text);
+  });
+
+  it.each(['idempotency', 'tp: x', 'pay: x', 'WEB-42', ''])(
+    'leaves "%s" unscoped and untouched',
+    (query) => {
+      // Act
+      const parsed = parsePaletteQuery(query, QUICK_JUMP_SCOPES);
+
+      // Assert
+      expect(parsed).toEqual({ scope: null, text: query });
+    },
+  );
+
+  it('jumps only to keys of the scope kind', () => {
+    // Arrange
+    const navigate = vi.fn();
+
+    // Act
+    const docInDocs = keyJumpItem('web-d-12', navigate, 'docs');
+    const ticketInDocs = keyJumpItem('web-42', navigate, 'docs');
+    const ticketInTickets = keyJumpItem('web-42', navigate, 'tickets');
+    const testCaseInTickets = keyJumpItem('web-tc-7', navigate, 'tickets');
+    const docInTickets = keyJumpItem('web-d-12', navigate, 'tickets');
+
+    // Assert
+    expect(docInDocs?.label).toBe('Go to WEB-D-12');
+    expect(ticketInTickets?.label).toBe('Go to WEB-42');
+    expect([ticketInDocs, testCaseInTickets, docInTickets]).toEqual([null, null, null]);
+  });
+
+  it('offers only the search page of the scope', () => {
+    // Arrange
+    const open = vi.fn();
+
+    // Act
+    const all = searchPageItems('ledger', null, open).map((i) => i.id);
+    const docs = searchPageItems('ledger', 'docs', open);
+    const tickets = searchPageItems('ledger', 'tickets', open).map((i) => i.id);
+    docs[0].run();
+
+    // Assert
+    expect(all).toEqual(['search:open', 'search:docs']);
+    expect(docs.map((i) => i.id)).toEqual(['search:docs']);
+    expect(tickets).toEqual(['search:open']);
+    expect(open).toHaveBeenCalledWith({ scope: 'docs', q: 'ledger' });
+  });
+});
 
 describe('quick jump', () => {
   it('jumps to ticket, test case and session keys in any case', () => {

@@ -438,7 +438,7 @@ export class BoardView {
     const data: AddTicketsDialogData = {
       boardName: board.name,
       projects: board.projects.filter((p) => p.canWrite && !p.isArchived),
-      add: (keys) => this.store.addFromBacklog(keys),
+      add: (keys, childCounts) => this.store.addFromBacklog(keys, childCounts),
     };
     this.dialog.open<AddTicketsDialog, AddTicketsDialogData, string[]>(AddTicketsDialog, {
       data,

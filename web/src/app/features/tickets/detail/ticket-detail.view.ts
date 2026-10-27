@@ -18,7 +18,7 @@ import { provideIcons } from '@ng-icons/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Breadcrumbs } from '@core/layout/breadcrumbs';
 import { PageTitleStrategy } from '@core/layout/page-title';
-import { MoveTarget } from '@core/tickets/move-targets';
+import { MoveTarget, MoveTargets } from '@core/tickets/move-targets';
 import { TicketEvents } from '@core/tickets/ticket-events';
 import { PeekService } from '@core/layout/peek/peek';
 import { ConfirmService } from '@core/notify/confirm.service';
@@ -98,6 +98,7 @@ export class TicketDetailView {
   private readonly breadcrumbs = inject(Breadcrumbs);
   private readonly pageTitle = inject(PageTitleStrategy);
   private readonly events = inject(TicketEvents);
+  private readonly moveTargets = inject(MoveTargets);
 
   readonly ticketKey = input.required<string>();
   protected readonly uploadHandler = inject(TicketAttachments).markdownUploader(() =>
@@ -312,8 +313,14 @@ export class TicketDetailView {
     if (this.store.ticket()?.permissions.canDelete) await this.store.delete();
   }
 
-  protected onMoved(target: MoveTarget): void {
-    void this.store.moveTo(target);
+  protected async onMoved(target: MoveTarget): Promise<void> {
+    const ticket = this.store.ticket();
+    if (!ticket) return;
+    const options =
+      target === 'backlog'
+        ? []
+        : await this.moveTargets.options(ticket.projectKey, ticket.location).catch(() => []);
+    await this.store.moveTo(target, options.find((o) => o.value === target)?.label);
   }
 
   /// Title and description saves carry If-Match; a conflict offers to reload and keeps the editor open.

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc;
 using Ticketing.Api.Http;
 using Ticketing.Application.Backlog;
 using Ticketing.Application.Comments;
@@ -20,9 +21,19 @@ public sealed class TicketEndpoints : IEndpointModule
                 TypedResults.Ok(await handler.HandleAsync(command, ct)))
             .WithTags("Tickets")
             .WithSummary("The one placement call: moves 1..100 tickets as a block to 'backlog' or a board id, optionally into a status column, "
-                + "before/after another ticket or to the Top/Bottom. Reorders a backlog or board too. 'from' guards against stale views.")
+                + "before/after another ticket or to the Top/Bottom. Reorders a backlog or board too. 'from' guards against stale views. "
+                + "includeChildren also moves each ticket's sub-tickets that are still in the place it is leaving and not Done, right after it.")
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
+
+        api.MapGet("/tickets/move/children", async ([FromQuery] string[] keys, string? from, GetMoveChildren.Handler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.HandleAsync(new GetMoveChildren.Query(keys, from), ct)))
+            .WithTags("Tickets")
+            .WithSummary("Previews a move with includeChildren: per ticket, the sub-tickets that would come along (still in the place it is "
+                + "leaving, not Done) and how many stay behind because they are on another board, in the backlog or Done.")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict);
     }

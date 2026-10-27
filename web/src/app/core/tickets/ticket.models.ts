@@ -280,4 +280,30 @@ export interface MoveTicketsRequest {
   afterKey?: string;
   position?: RankPosition;
   from?: TicketContainer;
+  /// Also moves the descendants (up to 3 levels) still in the place each ticket leaves and not Done;
+  /// each lands right after its nearest selected ancestor. `status` applies to the selected tickets only.
+  includeChildren?: boolean;
+}
+
+/// `GET /tickets/move/children`: what `includeChildren` would add, per selected ticket (in `keys`
+/// order), and the descendants it would leave behind.
+export interface MoveChildrenPreview {
+  parents: MoveChildrenParent[];
+  /// Qualifying children over all parents, a selected ticket never counted as a child.
+  count: number;
+  /// Skipped: on a board other than the place the parent is leaving.
+  onOtherBoard: number;
+  /// Skipped: in the backlog while the parent is on a board.
+  inBacklog: number;
+  /// Skipped: Done.
+  done: number;
+}
+
+export interface MoveChildrenParent {
+  key: string;
+  /// In the order they would be placed.
+  children: TicketSummary[];
+  onOtherBoard: number;
+  inBacklog: number;
+  done: number;
 }

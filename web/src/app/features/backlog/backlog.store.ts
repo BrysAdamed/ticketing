@@ -6,6 +6,7 @@ import { AuthService } from '@core/auth/auth.service';
 import { ToastService } from '@core/notify/toast.service';
 import { LoadStatus } from '@core/projects/project-directory';
 import { FieldHints } from '@core/tickets/field-hints';
+import { MoveChildren } from '@core/tickets/move-children';
 import { TicketCache } from '@core/tickets/ticket-cache';
 import { SwrCache } from '@core/api/swr-cache';
 import { TicketDeletion } from '@core/tickets/ticket-deletion';
@@ -66,6 +67,7 @@ export class BacklogStore {
   private readonly events = inject(TicketEvents);
   private readonly deletion = inject(TicketDeletion);
   private readonly swr = inject(SwrCache);
+  private readonly moveChildren = inject(MoveChildren);
 
   readonly projectKey = signal('');
   readonly status = signal<LoadStatus>('idle');
@@ -436,28 +438,57 @@ export class BacklogStore {
     return this.rank(ids, { position }, { position });
   }
 
-  /// `M` / "Move to board": the tickets leave the backlog at once; Undo brings them back to the same
-  /// place (before the ticket that followed them).
+  /// `M` / "Move to board": asks whether sub-tickets come along (TKT-71), then the tickets (and those
+  /// sub-tickets) leave the backlog at once; Undo brings them back to the same place (before the
+  /// ticket that followed them).
   async moveToBoard(ids: readonly string[], boardId: string, boardName: string): Promise<void> {
     const order = this.order();
-    const moving = order.filter((id) => ids.includes(id) && !isPending(id));
-    const keys = moving.map((id) => this.item(id)!.key);
+    const selected = order.filter((id) => ids.includes(id) && !isPending(id));
+    const keys = selected.map((id) => this.item(id)!.key);
     if (keys.length === 0) return;
+    const decision = await this.moveChildren.ask({
+      keys,
+      from: 'backlog',
+      childCounts: selected.map((id) => this.item(id)?.childCount ?? 0),
+      source: { kind: 'backlog' },
+      destination: { kind: 'board', name: boardName },
+    });
+    if (!decision) return;
+    const childKeys = new Set(decision.childKeys);
+    const moving = [
+      ...selected,
+      ...this.items()
+        .filter((i) => childKeys.has(i.key) && !selected.includes(i.id))
+        .map((i) => i.id),
+    ];
     const snapshot = this.items();
-    const last = order.indexOf(moving[moving.length - 1]);
+    const last = Math.max(...moving.map((id) => order.indexOf(id)));
     const nextId = order.slice(last + 1).find((id) => !moving.includes(id) && !isPending(id));
     const anchorKey = nextId ? this.item(nextId)?.key : undefined;
     this.items.update((items) => items.filter((i) => !moving.includes(i.id)));
     this.clearSelection();
     try {
-      await firstValueFrom(this.api.move({ keys, target: boardId, from: 'backlog' }));
-      keys.forEach((key) => this.cache.evict(key));
-      this.onBoardsCount.update((n) => n + keys.length);
+      const moved = await firstValueFrom(
+        this.api.move({
+          keys,
+          target: boardId,
+          from: 'backlog',
+          ...(decision.includeChildren ? { includeChildren: true } : {}),
+        }),
+      );
+      const movedKeys = moved?.length ? moved.map((t) => t.key) : keys;
+      movedKeys.forEach((key) => this.cache.evict(key));
+      this.onBoardsCount.update((n) => n + movedKeys.length);
+      const children = movedKeys.length - keys.length;
       this.toast.success(
-        keys.length === 1
-          ? `${keys[0]} moved to ${boardName}`
-          : `${keys.length} tickets moved to ${boardName}`,
-        { action: { label: 'Undo', run: () => void this.moveBack(keys, boardId, anchorKey) } },
+        (keys.length === 1 ? `${keys[0]} moved` : `${keys.length} tickets moved`) +
+          (children > 0
+            ? ` with ${children} ${children === 1 ? 'sub-ticket' : 'sub-tickets'}`
+            : '') +
+          ` to ${boardName}`,
+        {
+          action: { label: 'Undo', run: () => void this.moveBack(movedKeys, boardId, anchorKey) },
+        },
       );
     } catch (error) {
       const present = new Set(this.items().map((i) => i.id));

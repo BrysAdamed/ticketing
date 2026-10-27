@@ -49,6 +49,8 @@ This file is the pool of unscheduled ideas. Once an idea is scheduled it becomes
 | I-35 | Sprints with dates, goal, velocity and burndown | Scrum metrics. Board archive covers the flow until then. | L |
 | I-53 | Releases with release notes | Turns the free-text version into a managed release. | M |
 | I-75 | Stale ticket housekeeping | Bulk close or flag long-untouched tickets. | S |
+| I-125 | "Don't ask again" for the move-with-sub-tickets prompt | D-107 asks before every move that has qualifying sub-tickets; a per-browser default would save a click for people who always choose the same. | S |
+| I-126 | Drop backlog rows onto a board in the "on boards" panel | Today the panel only counts tickets on boards; tracked as TKT-73, which also wires in the D-107 prompt. | S |
 | – | Readable board URLs | `/boards/{guid}` is hard to read and share by voice; a short board key or slug (`/boards/web-sprint-42`) with the id as fallback (UX review UX-38). Needs a unique, renamable slug and redirects from old slugs. | S |
 
 ## Tickets and search

@@ -8,6 +8,7 @@ import {
   Comment,
   HintField,
   NewTicket,
+  MoveChildrenPreview,
   MoveTicketsRequest,
   Ticket,
   TicketGraph,
@@ -15,6 +16,7 @@ import {
   TicketLink,
   TicketPatch,
   TicketRef,
+  TicketContainer,
   TicketSummary,
   Watchers,
 } from './ticket.models';
@@ -70,6 +72,11 @@ export class TicketsApi {
   /// Every placement change: backlog reorder, backlog to board and back, board to board, column change.
   move(request: MoveTicketsRequest): Observable<TicketSummary[]> {
     return this.api.post<TicketSummary[]>('/tickets/move', request);
+  }
+
+  /// Read-only preview of the sub-tickets `move` with `includeChildren` would take along.
+  moveChildren(keys: readonly string[], from?: TicketContainer): Observable<MoveChildrenPreview> {
+    return this.api.get<MoveChildrenPreview>('/tickets/move/children', { keys, from });
   }
 
   find(projectKey: string, text: string, types?: readonly TicketType[]): Observable<TicketRef[]> {

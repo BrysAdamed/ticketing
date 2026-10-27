@@ -1,0 +1,251 @@
+<div class="query">
+  <label class="qbox">
+    <tk-icon name="tablerSearch" [size]="16" />
+    <input
+      #textInput
+      type="search"
+      placeholder="Search doc titles and content, or type a doc key"
+      aria-label="Search docs"
+      data-testid="doc-search-text"
+      autocomplete="off"
+      [value]="text()"
+      (input)="onText(textInput.value)"
+      (keydown.enter)="submitText()"
+      (keydown.escape)="textInput.blur()"
+    />
+    @if (!text()) {
+      <tk-kbd>/</tk-kbd>
+    }
+  </label>
+</div>
+
+<div class="tk-toolbar filters">
+  <div class="chips" role="toolbar" aria-label="Filters">
+    <button
+      type="button"
+      class="fchip"
+      [class.on]="f().project.length"
+      [matMenuTriggerFor]="projectMenu"
+      data-testid="doc-filter-project"
+    >
+      @if (f().project.length) {
+        Project: <b>{{ summary(f().project) }}</b>
+      } @else {
+        <tk-icon name="tablerPlus" [size]="14" />Project
+      }
+    </button>
+    <mat-menu #projectMenu="matMenu" class="tk-filter-menu">
+      @for (project of projects(); track project.key) {
+        <button
+          mat-menu-item
+          type="button"
+          [attr.data-testid]="'doc-filter-project-' + project.key"
+          (click)="$event.stopPropagation(); toggle('project', project.key)"
+        >
+          <span class="opt"
+            ><span class="box" [class.on]="f().project.includes(project.key)"></span
+            ><tk-project-tile [projectKey]="project.key" />{{ project.name }}</span
+          >
+        </button>
+      } @empty {
+        <div class="empty">No projects</div>
+      }
+    </mat-menu>
+
+    <button
+      type="button"
+      class="fchip"
+      [class.on]="f().kind.length"
+      [matMenuTriggerFor]="kindMenu"
+      data-testid="doc-filter-kind"
+    >
+      @if (f().kind.length) {
+        Kind: <b>{{ summary(f().kind) }}</b>
+      } @else {
+        <tk-icon name="tablerPlus" [size]="14" />Kind
+      }
+    </button>
+    <mat-menu #kindMenu="matMenu" class="tk-filter-menu">
+      @for (kind of kinds; track kind) {
+        <button
+          mat-menu-item
+          type="button"
+          [attr.data-testid]="'doc-filter-kind-' + kind"
+          (click)="$event.stopPropagation(); toggle('kind', kind)"
+        >
+          <span class="opt"
+            ><span class="box" [class.on]="f().kind.includes(kind)"></span
+            >{{ kindLabels[kind] }}</span
+          >
+        </button>
+      }
+    </mat-menu>
+
+    <button
+      type="button"
+      class="fchip"
+      [class.on]="f().updatedFrom || f().updatedTo"
+      [matMenuTriggerFor]="updatedMenu"
+      data-testid="doc-filter-updated"
+    >
+      @if (f().updatedFrom || f().updatedTo) {
+        Updated: <b>{{ rangeLabel(f().updatedFrom, f().updatedTo) }}</b>
+      } @else {
+        <tk-icon name="tablerPlus" [size]="14" />Updated
+      }
+    </button>
+    <mat-menu #updatedMenu="matMenu" class="tk-filter-menu">
+      @for (preset of presets; track preset.label) {
+        <button mat-menu-item type="button" (click)="setRange(preset)">{{ preset.label }}</button>
+      }
+      <button mat-menu-item type="button" (click)="setRange(null)">Any time</button>
+    </mat-menu>
+
+    @if (f().folder) {
+      <span class="fchip on fixed" data-testid="doc-filter-folder">
+        In folder {{ f().folder }}
+        <button
+          type="button"
+          class="x"
+          aria-label="Remove folder filter"
+          (click)="patch({ folder: '' })"
+        >
+          <tk-icon name="tablerX" [size]="12" />
+        </button>
+      </span>
+    }
+    @if (f().mentions) {
+      <span class="fchip on fixed" data-testid="doc-filter-mentions">
+        Mentions {{ f().mentions }}
+        <button
+          type="button"
+          class="x"
+          aria-label="Remove mentions filter"
+          (click)="patch({ mentions: '' })"
+        >
+          <tk-icon name="tablerX" [size]="12" />
+        </button>
+      </span>
+    }
+    @if (chipFilters()) {
+      <button type="button" class="clear" data-testid="doc-filters-clear" (click)="clearChips()">
+        Clear
+      </button>
+    }
+  </div>
+  <span class="right">
+    <span class="count" data-testid="doc-search-count">{{ countLabel() }}</span>
+    <tk-segmented
+      ariaLabel="Sort"
+      testId="doc-search-sort"
+      [options]="sortOptions()"
+      [value]="sort()"
+      (valueChange)="setSort($event)"
+    />
+  </span>
+</div>
+
+@if (store.status() === 'error') {
+  @if (store.error()?.isValidation) {
+    <tk-empty-state
+      icon="tablerAlertTriangle"
+      title="This search link has invalid filters"
+      [description]="'Check: ' + invalidFields()"
+    >
+      <button mat-stroked-button type="button" (click)="clearAll()">Clear filters</button>
+    </tk-empty-state>
+  } @else {
+    <tk-empty-state
+      icon="tablerAlertCircle"
+      tone="danger"
+      title="Couldn't search docs"
+      [description]="store.error()?.title ?? null"
+    >
+      <button mat-stroked-button type="button" (click)="store.reload()">Retry</button>
+    </tk-empty-state>
+  }
+} @else if (!store.hasData() || (store.status() === 'loading' && !store.items().length)) {
+  <tk-skeleton-rows [count]="10" />
+} @else if (!store.items().length) {
+  @if (filtered()) {
+    <tk-empty-state
+      icon="tablerSearch"
+      title="No docs match"
+      description="Try fewer filters or other words."
+    >
+      <button mat-stroked-button type="button" data-testid="doc-search-clear" (click)="clearAll()">
+        Clear filters
+      </button>
+    </tk-empty-state>
+  } @else {
+    <tk-empty-state
+      icon="tablerFileText"
+      title="No docs yet"
+      description="Pages, folders and diagrams from every project you can read show up here."
+    />
+  }
+} @else {
+  <div
+    #list
+    class="list"
+    role="listbox"
+    aria-label="Doc results"
+    data-testid="doc-search-results"
+    [class.stale]="store.status() === 'loading'"
+  >
+    @for (item of store.items(); track item.id; let i = $index) {
+      <a
+        class="row"
+        role="option"
+        [routerLink]="item.url"
+        [attr.data-index]="i"
+        [attr.data-testid]="'doc-search-row-' + item.key"
+        [attr.aria-selected]="store.focusIndex() === i"
+        [class.focused]="store.focusIndex() === i"
+        (mouseenter)="store.focusIndex.set(i)"
+      >
+        <tk-icon class="kind" [name]="icon(item)" [size]="16" />
+        <span class="body">
+          <span class="line">
+            <tk-highlighted-text
+              class="title plain"
+              [text]="item.title"
+              [ranges]="titleRanges(item)"
+            />
+            <span class="key">{{ item.key }}</span>
+            <span class="where">{{ location(item) }}</span>
+            <span class="when" [title]="item.updatedAt | absoluteTime">
+              {{ item.updatedBy.displayName }} · {{ item.updatedAt | relativeTime }}
+            </span>
+          </span>
+          @if (item.snippet; as snippet) {
+            <tk-highlighted-text
+              class="snippet"
+              [text]="snippet.text"
+              [ranges]="snippet.highlights"
+            />
+          }
+        </span>
+      </a>
+    }
+    @if (relevanceCapped()) {
+      <div class="note">
+        Showing the {{ store.items().length }} best matches. Refine the text or sort by Updated to
+        see every result.
+      </div>
+    }
+    @if (store.nextCursor()) {
+      <div class="more">
+        <button
+          mat-stroked-button
+          type="button"
+          data-testid="doc-search-more"
+          [disabled]="store.loadingMore()"
+          (click)="store.loadMore()"
+        >
+          {{ store.loadingMore() ? 'Loading…' : 'Load more' }}
+        </button>
+      </div>
+    }
+  </div>
+}

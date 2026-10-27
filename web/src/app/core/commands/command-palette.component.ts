@@ -12,6 +12,9 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
+import { provideIcons } from '@ng-icons/core';
+import { tablerChalkboard, tablerFolder, tablerSitemap } from '@ng-icons/tabler-icons';
+import { HighlightedTextComponent } from '@shared/ui/highlighted-text/highlighted-text.component';
 import { IconComponent } from '@shared/ui/icon/icon.component';
 import { KbdComponent } from '@shared/ui/kbd/kbd.component';
 import { ShortcutService } from '../shortcuts/shortcut.service';
@@ -29,7 +32,8 @@ interface Group {
 
 @Component({
   selector: 'tk-command-palette',
-  imports: [IconComponent, KbdComponent],
+  imports: [HighlightedTextComponent, IconComponent, KbdComponent],
+  viewProviders: [provideIcons({ tablerChalkboard, tablerFolder, tablerSitemap })],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { 'data-testid': 'command-palette' },
   template: `
@@ -64,6 +68,7 @@ interface Group {
               role="option"
               [id]="'tk-palette-' + entry.index"
               [class.active]="entry.index === active()"
+              [class.two]="!!entry.item.snippet"
               [attr.aria-selected]="entry.index === active()"
               [attr.data-testid]="'palette-item-' + entry.item.id"
               (mouseenter)="active.set(entry.index)"
@@ -73,7 +78,29 @@ interface Group {
               (keydown.enter)="choose(entry.item)"
             >
               <tk-icon class="icon" [name]="entry.item.icon ?? 'tablerArrowRight'" [size]="16" />
-              <span class="label">{{ entry.item.label }}</span>
+              @if (entry.item.detail !== undefined || entry.item.snippet) {
+                <span class="text">
+                  <span class="line">
+                    <tk-highlighted-text
+                      class="label plain"
+                      [text]="entry.item.label"
+                      [ranges]="entry.item.labelHighlights ?? []"
+                    />
+                    @if (entry.item.detail) {
+                      <span class="detail">{{ entry.item.detail }}</span>
+                    }
+                  </span>
+                  @if (entry.item.snippet; as snippet) {
+                    <tk-highlighted-text
+                      class="snippet"
+                      [text]="snippet.text"
+                      [ranges]="snippet.highlights"
+                    />
+                  }
+                </span>
+              } @else {
+                <span class="label">{{ entry.item.label }}</span>
+              }
               @if (entry.item.hint) {
                 <span class="hint">{{ entry.item.hint }}</span>
               }
@@ -153,8 +180,44 @@ interface Group {
       border-radius: var(--tk-radius-md);
       cursor: pointer;
     }
+    .item.two {
+      height: 48px;
+    }
     .item.active {
       background: var(--tk-bg-hover);
+    }
+    .text {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .line {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      min-width: 0;
+      white-space: nowrap;
+    }
+    .line .label {
+      flex: none;
+      max-width: 70%;
+    }
+    .detail,
+    .snippet {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: var(--tk-text-sm);
+    }
+    .detail {
+      color: var(--tk-text-subtle);
+    }
+    .snippet {
+      display: block;
+      color: var(--tk-text-muted);
     }
     .icon {
       color: var(--tk-text-muted);

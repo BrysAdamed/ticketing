@@ -495,7 +495,7 @@ Rules in 5.4. Additionally:
 
 ### 6.8 Search, lists and export
 
-- Quick jump (Ctrl+K or `/`): typing a ticket or test case key opens it directly. Otherwise it searches ticket titles across readable projects and shows the top 10 (I-03, I-04).
+- Quick jump (Ctrl+K or `/`): typing a ticket, test case or doc key opens it directly. Otherwise it searches ticket titles across readable projects and shows the top 10, then the top 5 docs (12.7) (I-03, I-04).
 - Ticket search filters: projects, text, type, status, status category, priority, severity, assignee (including "unassigned" and "me"), reporter, labels (all of), version, parent, location (backlog, any board, a given board), created and updated date ranges, watching (tickets I watch, 6.15), include deleted = no. Sort: updated, created, priority, key, rank.
 - Text search uses PostgreSQL full text (`websearch_to_tsquery('english', ...)`) over title (weight A) and description (weight B), plus a trigram index on title for partial words. Comments are not searched in v1.
 - Every filter state is in the URL, so searches can be bookmarked and shared (I-21).
@@ -775,8 +775,9 @@ Docs (12)
 | `edit_doc` | `docKey`, `edits` (1..50 of `{ oldText, newText, replaceAll? }`), `changeNote` | The doc at its new version. `doc.edit.noMatch`, `doc.edit.ambiguous`; all or nothing. |
 | `move_doc` | `docKey`, optional `parent` (key, path or `root`; omitted keeps the folder), `position` or `beforeKey`/`afterKey` | The doc. |
 | `delete_doc` | `docKey` | `{ id, key, deletedCount, deletedAt, undoUntil }`. Destructive. |
+| `search_docs` | optional `text`, `projectKeys`, `kinds`, `folder` (key or id), `mentions` (ticket key), `updatedFrom`/`updatedTo`, `sort` (`Relevance`, `Updated`), `limit`, `cursor` | `{ items, nextCursor, total, totalCapped, sort }` (12.7); each item has key, kind, title, path, folderPath, version, updatedBy, updatedAt, url and a plain-text `snippet` with highlight ranges. |
 
-Diagram tools (`create_diagram`), history (`get_doc_history`, `restore_doc_version`), search (`search_docs`) and the export link come with their stories (TKT-15, TKT-17, TKT-19, TKT-20). Restoring deleted docs stays REST and UI only (D-82).
+Diagram tools (`create_diagram`), history (`get_doc_history`, `restore_doc_version`) and the export link come with their stories (TKT-15, TKT-17, TKT-20). Restoring deleted docs stays REST and UI only (D-82).
 
 Out of MCP in v1: user administration, PAT management, feature flags, project deletion, board deletion. These stay in the web UI.
 
@@ -855,3 +856,12 @@ Section [1.5 of the refinement](03-docs-refinement.md#15-permissions-mapped-to-5
 | `GET`, `PUT`, `DELETE /docs/{key}/draft` | My draft: `{ baseVersion, title, content }`; 404 `doc.draft.notFound` when none |
 
 The doc URL in the SPA is `/projects/{PK}/docs/{KEY}/{slug}`; the slug is cosmetic and replaced when stale. `/docs/{KEY}` and the `/p/{PK}/docs/{KEY}/{slug}` form that the API returns as `url` redirect to it (D-102).
+
+### 12.7 Search
+
+- `GET /docs/search?project=&q=&kind=&folder=&mentions=&updatedFrom=&updatedTo=&sort=&limit=&cursor=` and MCP `search_docs` search the title (weight A), the latest published content of pages and Mermaid diagrams and the Canvas outline (weight B) of non-deleted docs in readable projects. Drafts are never searched. The encoding follows [search-url-format.md](../architecture/search-url-format.md#docs-search); unreadable projects, folders and tickets match nothing.
+- `q` uses `websearch_to_tsquery('english')` syntax, also matches a case-insensitive substring of the title (from 3 characters) and a doc key. `folder` is a folder key or id and covers its whole subtree (a non-folder doc is 400 `validation`); `mentions` is a ticket key and uses the reference index (12.1).
+- Sort `relevance` (the default with `q`): an exact key first, then titles containing the text, then `ts_rank`; at most 100 (`limit`), no cursor (a cursor is 400). Sort `updated` (the default without `q`): newest first by `updatedAt`, `id` with a keyset cursor. The response is `{ items, nextCursor, total, totalCapped, sort }`; `total` is counted on the first page only, capped at 1 000.
+- Each item: id, key, projectKey, kind, diagramFormat, title, path, folderPath, version, updatedBy, updatedAt, url and `snippet: { text, highlights: [{ start, length }] }` (null for folders and empty docs). The snippet is plain text, never HTML: up to 30 words around the best match (`ts_headline`), whitespace collapsed, markdown emphasis and heading marks removed, at most 240 characters; ranges are UTF-16 offsets. Without `q` it is the start of the doc.
+- Quick jump (`GET /quick-jump`, 6.8) also answers doc keys (exact match first) and lists up to 5 docs by relevance after the tickets, each with `docKind`, `diagramFormat`, `folderPath` and `snippet`.
+- p95 under 150 ms with 20 000 docs and 200 000 tickets (`DocSearchPerformanceTests`, D-103).

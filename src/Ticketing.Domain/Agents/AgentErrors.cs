@@ -19,4 +19,5 @@ public static class AgentErrors
     public const string UnclosedPlaceholder = "agent.template.unclosedPlaceholder";
     public const string UnbalancedIf = "agent.template.unbalancedIf";
     public const string NestedIf = "agent.template.nestedIf";
+    public const string TemplateInvalid = "agent.template.invalid";
 }

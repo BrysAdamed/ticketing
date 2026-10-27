@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
@@ -101,6 +102,38 @@ public sealed class GetAgentPromptTests(TicketingApiFactory api)
         // Assert
         await projectOff.ShouldBeProblemAsync(HttpStatusCode.Conflict, AgentErrors.ProjectDisabled);
         Assert.Equal(AgentErrors.TypeOff, Payload(typeOff).GetProperty("code").GetString());
+    }
+
+    [Theory]
+    [InlineData(AgentPromptScope.Project, "project's Agent settings")]
+    [InlineData(AgentPromptScope.Instance, "Admin → Agent prompts")]
+    public async Task A_stored_template_that_no_longer_parses_is_agent_template_invalid_over_rest_and_mcp(AgentPromptScope corrupted, string fixHere)
+    {
+        // Arrange
+        var owner = await api.CreateUserAsync();
+        var ticket = await api.TicketAsync(await api.ProjectAsync(owner, "TKT"), owner);
+        await api.EnableAgentFlagAsync(owner);
+        var client = await api.LoginAsync(owner);
+        await (await client.PutPromptAsync("TKT", "Bug", new { mode = "Custom", body = "Fix {{ticket.key}}.", baseVersion = 0 })).ShouldHaveStatusAsync(HttpStatusCode.OK);
+        TicketType? slot = corrupted == AgentPromptScope.Project ? TicketType.Bug : null;
+        await api.WithDbAsync(db => db.AgentPromptTemplates
+            .Where(t => t.Scope == corrupted && t.TicketType == slot)
+            .ExecuteUpdateAsync(s => s.SetProperty(t => t.Body, "Fix {{ticket.key}}.\n{{ticket.retired}}"), _ct));
+        await using var mcp = await api.CreateMcpClientAsync(await api.CreatePatAsync(owner));
+
+        // Act
+        var overRest = await client.GetAsync(Path(ticket), _ct);
+        var overMcp = await mcp.CallToolAsync(Tool, new Dictionary<string, object?> { ["key"] = ticket }, cancellationToken: _ct);
+
+        // Assert
+        var problem = await overRest.ShouldBeProblemAsync(HttpStatusCode.Conflict, AgentErrors.TemplateInvalid);
+        Assert.Contains("line 2, column 1", problem.GetProperty("title").GetString(), StringComparison.Ordinal);
+        Assert.DoesNotContain("ticket.retired", problem.GetRawText(), StringComparison.Ordinal);
+        Assert.Contains(fixHere, problem.GetProperty("hint").GetString(), StringComparison.Ordinal);
+        Assert.True(overMcp.IsError);
+        var payload = Payload(overMcp);
+        Assert.Equal(AgentErrors.TemplateInvalid, payload.GetProperty("code").GetString());
+        Assert.Contains(fixHere, payload.GetProperty("hint").GetString(), StringComparison.Ordinal);
     }
 
     [Fact]

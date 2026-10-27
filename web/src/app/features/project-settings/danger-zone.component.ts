@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltip } from '@angular/material/tooltip';
 import { Router } from '@angular/router';
+import { BOARDS_NOT_RELINKED } from '@core/projects/project-context';
 import { ConfirmService } from '@core/notify/confirm.service';
 import { ToastService } from '@core/notify/toast.service';
 import { ProjectSettingsStore } from './project-settings.store';
@@ -22,7 +23,7 @@ import { ProjectSettingsStore } from './project-settings.store';
           @if (store.isArchived()) {
             <div class="text">
               <strong>Unarchive this project</strong>
-              <span>Make it writable again. Board links are not restored.</span>
+              <span>Make it writable again. Boards it was unlinked from are not linked again.</span>
             </div>
             <button
               mat-stroked-button
@@ -146,7 +147,7 @@ export class DangerZoneComponent {
   protected async unarchive(): Promise<void> {
     try {
       await this.store.unarchive();
-      this.toast.success(`${this.key()} unarchived.`);
+      this.toast.success(`${this.key()} unarchived. ${BOARDS_NOT_RELINKED}`);
     } catch (error) {
       this.toast.error(error);
     }

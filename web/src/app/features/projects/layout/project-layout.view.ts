@@ -5,7 +5,7 @@ import { RouterLink, RouterOutlet } from '@angular/router';
 import { provideIcons } from '@ng-icons/core';
 import { tablerArchive } from '@ng-icons/tabler-icons';
 import { ToastService } from '@core/notify/toast.service';
-import { ProjectContext } from '@core/projects/project-context';
+import { BOARDS_NOT_RELINKED, ProjectContext } from '@core/projects/project-context';
 import { AbsoluteTimePipe } from '@shared/pipes/relative-time.pipe';
 import { BadgeComponent } from '@shared/ui/domain/badge.component';
 import { ProjectTileComponent } from '@shared/ui/domain/project-tile.component';
@@ -80,7 +80,9 @@ const TABS: readonly RouteTab[] = [
         >
           <tk-icon name="tablerArchive" [size]="16" />
           <span class="banner-text">
-            This project was archived on {{ archivedAt | absoluteTime }} and is read-only.
+            This project was archived on {{ archivedAt | absoluteTime }} and is read-only. It was
+            unlinked from every board and its board tickets went back to the backlog; unarchiving
+            does not link the boards again.
           </span>
           @if (context.isOwner()) {
             <button
@@ -164,7 +166,7 @@ export class ProjectLayoutView {
   protected async unarchive(): Promise<void> {
     try {
       await this.layout.unarchive();
-      this.toast.success(`${this.context.projectKey()} unarchived.`);
+      this.toast.success(`${this.context.projectKey()} unarchived. ${BOARDS_NOT_RELINKED}`);
     } catch (error) {
       this.toast.error(error);
     }

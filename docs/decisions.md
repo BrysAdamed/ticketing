@@ -206,7 +206,7 @@ Format: question, options considered, decision, rationale. "PO" marks decisions 
 
 ### D-38 Password and session policy
 
-- Decision: no email in v1; Admin-issued set-password links (72 h new user, 24 h reset). 12+ character passwords, common-password check, 5-attempt lockout for 15 minutes.
+- Decision: no email in v1; Admin-issued set-password links (72 h new user, 24 h reset). 12+ character passwords, common-password check, 5-attempt lockout for 15 minutes (per client address, D-74).
 - Rationale: follows NIST 800-63B guidance without SMTP on the VM.
 
 ### D-39 Search technology
@@ -357,6 +357,35 @@ Format: question, options considered, decision, rationale. "PO" marks decisions 
 
 - Decision: the test case list returns `counts` (New, Manual, Automatic, Archived) for the text and ticket filters, ignoring the status filter, so the counts can serve as filter chips. Each row also carries the case's last result in a non-cancelled session. A test case view lists its last 10 runs. Session summaries come from one `GROUP BY` over the items per page, never from loading items. Session items are returned unpaged (bounded by the project's test cases) and are addressed by test case key (`WEB-TC-7`), item id or test case id.
 - Rationale: testers see coverage and the latest outcome where they work. The items of one session are a small, bounded set that the execution view needs in full.
+
+### D-73 Client addresses behind proxies
+
+- Question: the login and set-password limits are per client IP, but the API trusted `X-Forwarded-For` from anyone (`ASPNETCORE_FORWARDEDHEADERS_ENABLED`) and the base compose file published the API port, so a client could bypass nginx and pick a new "IP" for every request.
+- Decision: the base `docker-compose.yml` publishes only `web`; the API port (5080, for `ng serve`) and PostgreSQL are in `docker-compose.override.yml`, which a server does not load (`docker compose -f docker-compose.yml up -d`). The API reads `X-Forwarded-For` and `X-Forwarded-Proto` only from loopback and the CIDR ranges in `ForwardedHeaders__KnownNetworks` (compose: `TICKETING_TRUSTED_PROXIES`, default `172.16.0.0/12,192.168.0.0/16`, Docker's default address pools), and unwraps one hop (`ForwardedHeaders__ForwardLimit`, compose `TICKETING_FORWARD_LIMIT`). nginx appends the peer it saw, so the rightmost entry is the real client and anything a client prepends is ignored. With a TLS proxy in front of nginx, set the limit to 2 and add the proxy's address. nginx passes on the `X-Forwarded-Proto` it receives (else its own scheme). Invalid ranges fail startup.
+- Rationale: the default trusts only private Docker networks, which in production only nginx can reach. In development the published API port is reached through Docker's gateway, which is inside those ranges, so spoofing works there; that is accepted for a development-only port.
+
+### D-74 Sign-in lockout per account and address
+
+- Question: the lockout told an attacker which emails exist (423 only for real accounts) and let anyone lock any account, including the last Admin, for everyone.
+- Decision: failures are counted in `login_throttles` per (user, client address). Five in a row lock that pair for 15 minutes; a correct password from that address during the lock is refused too, and a success resets the pair. Every failure, locked or not, known email or not, is `401 auth.invalidCredentials`, and the password hasher runs on every path (a dummy hash for unknown emails), so neither the status nor the timing tells them apart. The per-address login rate limit (20 per minute) stays. Attempts for one account are still serialised by the user row lock. Admins see the latest active lock (`lockedUntil` in the user list); a set-password link lifts all of a user's locks. Rows without a failure for a day are purged by the retention job. `423` and `auth.lockedOut` no longer exist.
+- Rationale: an attacker can only lock themselves out, while each address still gets five guesses per 15 minutes and 20 requests per minute. Counting unknown emails is unnecessary once a lock looks like a wrong password.
+
+### D-75 Server-side web sessions
+
+- Question: the session cookie was self-contained, so a copy kept working after sign-out until it expired (12 h, sliding).
+- Decision: signing in inserts a `user_sessions` row; the cookie carries its id, and the per-request revalidation (which already re-reads the user and checks the security stamp, D-55) also requires the row. Sign-out deletes it; re-issuing a session (password change) replaces it. `last_seen_at` is written at most every 5 minutes; the retention job deletes sessions idle for longer than the cookie can live. Signing out ends only that session, not the user's others.
+- Rationale: rotating the security stamp on sign-out would also have signed out every other browser of the user. The row lookup joins the user read that already runs on every cookie request. It is also the base for listing or ending sessions later (I-78).
+
+### D-76 Hardening of the edges
+
+- Decision:
+  - The OpenAPI document needs a signed-in caller (cookie or any PAT) in Production; it stays anonymous elsewhere, where Scalar uses it. Scalar is not mapped in Production. nginx no longer has an `/openapi` location (the document lives under `/api/`).
+  - `Strict-Transport-Security: max-age=31536000` is sent on SPA responses only when the request reached the stack over HTTPS (nginx's scheme or the TLS proxy's `X-Forwarded-Proto`). If the company proxy sets HSTS itself, it may also strip ours.
+  - nginx logs a custom format: `/set-password` is logged without its query string (the token), and Referer headers without query strings.
+  - Request bodies: nginx `client_max_body_size 11m` and Kestrel `MaxRequestBodySize` 11 MiB (a 10 MiB attachment plus multipart framing; the largest JSON body, 50 tickets with full descriptions, is smaller).
+  - Text matched with `LIKE` is cut to 500 characters (the search `q` limit), and pages are clamped to 1..100 everywhere. There are no user-supplied regular expressions.
+  - CSV export prefixes an apostrophe when a cell, after leading whitespace, starts with `= + - @`, or starts with a tab or CR.
+- Rationale: closes the remaining findings of the security review without changing how the SPA works.
 
 
 ### D-65 Board read is one lean response

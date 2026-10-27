@@ -4,6 +4,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Ticketing.Domain.Tokens;
+using Ticketing.Domain.Users;
 using Ticketing.Infrastructure.Persistence;
 
 namespace Ticketing.Infrastructure.Maintenance;
@@ -20,11 +21,14 @@ public sealed class MaintenanceOptions
     public TimeSpan InitialDelay { get; set; } = TimeSpan.FromMinutes(1);
 }
 
-public sealed record RetentionResult(int PurgedTokens, int PurgedIdempotencyRecords);
+public sealed record RetentionResult(int PurgedTokens, int PurgedIdempotencyRecords, int PurgedSessions, int PurgedLoginThrottles)
+{
+    public int Total => PurgedTokens + PurgedIdempotencyRecords + PurgedSessions + PurgedLoginThrottles;
+}
 
 /// <summary>
-/// Deletes data whose retention has ended: personal access tokens revoked or expired more than 90 days ago (spec 6.12)
-/// and expired idempotency records (24 hours, spec 8).
+/// Deletes data whose retention has ended: personal access tokens revoked or expired more than 90 days ago (spec 6.12),
+/// expired idempotency records (24 hours, spec 8), idle web sessions and stale sign-in throttles (D-74, D-75).
 /// </summary>
 public sealed class DataRetention(TicketingDbContext db, TimeProvider time)
 {
@@ -38,7 +42,15 @@ public sealed class DataRetention(TicketingDbContext db, TimeProvider time)
         var idempotency = await db.IdempotencyRecords
             .Where(r => r.ExpiresAt <= now)
             .ExecuteDeleteAsync(cancellationToken);
-        return new RetentionResult(tokens, idempotency);
+        var sessionCutoff = UserSession.IdleCutoff(now);
+        var sessions = await db.UserSessions
+            .Where(s => s.LastSeenAt <= sessionCutoff)
+            .ExecuteDeleteAsync(cancellationToken);
+        var throttleCutoff = now - LoginThrottle.Retention;
+        var throttles = await db.LoginThrottles
+            .Where(t => t.LastFailedAt <= throttleCutoff)
+            .ExecuteDeleteAsync(cancellationToken);
+        return new RetentionResult(tokens, idempotency, sessions, throttles);
     }
 }
 
@@ -70,8 +82,8 @@ internal sealed partial class DataRetentionService(
         {
             await using var scope = scopes.CreateAsyncScope();
             var result = await scope.ServiceProvider.GetRequiredService<DataRetention>().PurgeAsync(cancellationToken);
-            if (result.PurgedTokens + result.PurgedIdempotencyRecords > 0)
-                LogPurged(logger, result.PurgedTokens, result.PurgedIdempotencyRecords);
+            if (result.Total > 0)
+                LogPurged(logger, result.PurgedTokens, result.PurgedIdempotencyRecords, result.PurgedSessions, result.PurgedLoginThrottles);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -79,8 +91,10 @@ internal sealed partial class DataRetentionService(
         }
     }
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Retention job purged {Tokens} tokens and {IdempotencyRecords} idempotency records.")]
-    private static partial void LogPurged(ILogger logger, int tokens, int idempotencyRecords);
+    [LoggerMessage(
+        Level = LogLevel.Information,
+        Message = "Retention job purged {Tokens} tokens, {IdempotencyRecords} idempotency records, {Sessions} sessions and {LoginThrottles} sign-in throttles.")]
+    private static partial void LogPurged(ILogger logger, int tokens, int idempotencyRecords, int sessions, int loginThrottles);
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Retention job failed; it runs again at the next interval.")]
     private static partial void LogFailed(ILogger logger, Exception exception);

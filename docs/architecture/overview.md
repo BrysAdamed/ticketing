@@ -6,11 +6,11 @@
 flowchart LR
   Browser -->|HTTPS| Web[web: nginx<br/>Angular SPA]
   LLM[LLM client<br/>Claude Code] -->|/mcp + PAT| Web
-  Web -->|/api, /mcp, /openapi| Api[api: ASP.NET Core]
+  Web -->|/api, /mcp| Api[api: ASP.NET Core]
   Api --> Db[(PostgreSQL)]
 ```
 
-* **web** — nginx serving the compiled Angular app and reverse-proxying `/api`, `/mcp`, `/openapi`, `/scalar` and `/health` to the API. The SPA and API are same-origin, so the session cookie never crosses origins.
+* **web** — nginx serving the compiled Angular app and reverse-proxying `/api`, `/mcp`, `/scalar` and `/health` to the API. It is the only published port in production (D-73). The SPA and API are same-origin, so the session cookie never crosses origins.
 * **api** — a single ASP.NET Core process hosting the REST API, the MCP server (`/mcp`) and background jobs.
 * **db** — PostgreSQL. The only stateful component.
 

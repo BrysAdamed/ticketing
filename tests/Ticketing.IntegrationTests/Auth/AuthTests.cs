@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using Ticketing.Application.Auth;
 using Ticketing.Domain.Users;
+using Ticketing.Infrastructure.Maintenance;
 using Ticketing.Infrastructure.Persistence;
 using Ticketing.IntegrationTests.Infrastructure;
 
@@ -85,12 +86,12 @@ public sealed class AuthTests(TicketingApiFactory api)
     }
 
     [Fact]
-    public async Task Five_failed_logins_lock_the_account_even_for_the_correct_password()
+    public async Task Five_failed_logins_lock_the_address_even_for_the_correct_password_with_the_same_answer()
     {
         // Arrange
         var user = await api.CreateUserAsync();
         var client = api.CreateBrowserClient();
-        for (var i = 0; i < User.MaxFailedLogins - 1; i++)
+        for (var i = 0; i < LoginThrottle.MaxFailedLogins - 1; i++)
             await (await client.PostAsJsonAsync("/api/v1/auth/login", new { email = user.Email, password = "wrong-password-123" }, _ct))
                 .ShouldBeProblemAsync(HttpStatusCode.Unauthorized, "auth.invalidCredentials");
 
@@ -99,8 +100,8 @@ public sealed class AuthTests(TicketingApiFactory api)
         var correct = await client.PostAsJsonAsync("/api/v1/auth/login", new { email = user.Email, password = user.Password }, _ct);
 
         // Assert
-        await locking.ShouldBeProblemAsync(HttpStatusCode.Locked, "auth.lockedOut");
-        await correct.ShouldBeProblemAsync(HttpStatusCode.Locked, "auth.lockedOut");
+        await locking.ShouldBeProblemAsync(HttpStatusCode.Unauthorized, "auth.invalidCredentials");
+        await correct.ShouldBeProblemAsync(HttpStatusCode.Unauthorized, "auth.invalidCredentials");
     }
 
     [Fact]
@@ -128,6 +129,71 @@ public sealed class AuthTests(TicketingApiFactory api)
         // Assert
         await logout.ShouldHaveStatusAsync(HttpStatusCode.NoContent);
         await me.ShouldBeProblemAsync(HttpStatusCode.Unauthorized, "auth.unauthenticated");
+    }
+
+    [Fact]
+    public async Task A_copied_session_cookie_stops_working_after_logout()
+    {
+        // Arrange
+        var user = await api.CreateUserAsync();
+        var client = api.CreateBrowserClient();
+        var login = await client.PostAsJsonAsync("/api/v1/auth/login", new { email = user.Email, password = user.Password }, _ct);
+        await login.ShouldHaveStatusAsync(HttpStatusCode.OK);
+        var cookie = login.Headers.GetValues("Set-Cookie").Single(c => c.StartsWith("tkt_session=", StringComparison.Ordinal)).Split(';')[0];
+        var copy = api.CreateDefaultClient(new Uri("https://localhost"));
+        copy.DefaultRequestHeaders.Add("Cookie", cookie);
+        await (await copy.GetAsync("/api/v1/me", _ct)).ShouldHaveStatusAsync(HttpStatusCode.OK);
+
+        // Act
+        await (await client.PostAsync("/api/v1/auth/logout", null, _ct)).ShouldHaveStatusAsync(HttpStatusCode.NoContent);
+        var response = await copy.GetAsync("/api/v1/me", _ct);
+
+        // Assert
+        await response.ShouldBeProblemAsync(HttpStatusCode.Unauthorized, "auth.unauthenticated");
+    }
+
+    [Fact]
+    public async Task Logout_ends_only_its_own_session()
+    {
+        // Arrange
+        var user = await api.CreateUserAsync();
+        var laptop = await api.LoginAsync(user);
+        var phone = await api.LoginAsync(user);
+
+        // Act
+        await (await laptop.PostAsync("/api/v1/auth/logout", null, _ct)).ShouldHaveStatusAsync(HttpStatusCode.NoContent);
+        var phoneMe = await phone.GetAsync("/api/v1/me", _ct);
+
+        // Assert
+        await phoneMe.ShouldHaveStatusAsync(HttpStatusCode.OK);
+        Assert.Equal(1, await api.WithDbAsync(db => db.UserSessions.CountAsync(s => s.UserId == user.Id, _ct)));
+    }
+
+    [Fact]
+    public async Task Retention_purges_idle_sessions_and_stale_sign_in_throttles()
+    {
+        // Arrange
+        var user = await api.CreateUserAsync();
+        var now = DateTimeOffset.UtcNow;
+        await api.WithDbAsync(async db =>
+        {
+            db.UserSessions.AddRange(UserSession.Start(user.Id, now.AddHours(-13)), UserSession.Start(user.Id, now.AddHours(-1)));
+            var stale = LoginThrottle.Create(user.Id, "203.0.113.1");
+            stale.RegisterFailure(now.AddDays(-2));
+            var recent = LoginThrottle.Create(user.Id, "203.0.113.2");
+            recent.RegisterFailure(now.AddHours(-1));
+            db.LoginThrottles.AddRange(stale, recent);
+            return await db.SaveChangesAsync(_ct);
+        });
+
+        // Act
+        RetentionResult result;
+        await using (var scope = api.Services.CreateAsyncScope())
+            result = await scope.ServiceProvider.GetRequiredService<DataRetention>().PurgeAsync(_ct);
+
+        // Assert
+        Assert.Equal(new RetentionResult(0, 0, 1, 1), result);
+        Assert.Equal(["203.0.113.2"], await api.WithDbAsync(db => db.LoginThrottles.Select(t => t.ClientAddress).ToListAsync(_ct)));
     }
 
     [Fact]

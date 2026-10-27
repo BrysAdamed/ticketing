@@ -1,6 +1,13 @@
 # Development additions, loaded automatically by `docker compose up`.
 # On a server, run only the base file: docker compose -f docker-compose.yml up -d
+# (then only `web` is published; the API and the database are reachable on the compose network only).
 services:
   db:
     ports:
       - "${DB_HOST_PORT:-5433}:5432"
+
+  # For `ng serve` (proxy.conf.json targets localhost:5080). Requests through this port arrive from Docker's gateway,
+  # which is inside the trusted proxy ranges, so X-Forwarded-For is believed here: a development-only shortcut.
+  api:
+    ports:
+      - "${API_HOST_PORT:-5080}:8080"

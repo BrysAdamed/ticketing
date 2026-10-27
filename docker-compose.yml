@@ -24,14 +24,13 @@ services:
       dockerfile: src/Ticketing.Api/Dockerfile
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
-      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+      ForwardedHeaders__KnownNetworks: ${TICKETING_TRUSTED_PROXIES:-172.16.0.0/12,192.168.0.0/16}
+      ForwardedHeaders__ForwardLimit: ${TICKETING_FORWARD_LIMIT:-1}
       ConnectionStrings__Db: Host=db;Port=5432;Database=ticketing;Username=ticketing;Password=${DB_PASSWORD:?set DB_PASSWORD in .env}
       Database__MigrateOnStartup: "true"
       Auth__CookieSecurePolicy: ${COOKIE_SECURE_POLICY:-SameAsRequest}
       TICKETING_BOOTSTRAP_ADMIN_EMAIL: ${TICKETING_BOOTSTRAP_ADMIN_EMAIL:?set TICKETING_BOOTSTRAP_ADMIN_EMAIL in .env}
       TICKETING_BOOTSTRAP_ADMIN_PASSWORD: ${TICKETING_BOOTSTRAP_ADMIN_PASSWORD:?set TICKETING_BOOTSTRAP_ADMIN_PASSWORD in .env}
-    ports:
-      - "${API_HOST_PORT:-5080}:8080"
     depends_on:
       db:
         condition: service_healthy

@@ -96,7 +96,7 @@ test.describe('boards', () => {
             name: `Multi ${key}`,
             projectKeys: [key],
         });
-        const tickets = [];
+        const tickets: TicketSummary[] = [];
         for (const title of ['One', 'Two', 'Three'])
             tickets.push(await createTicket(api, key, title));
         await api.post('/tickets/move', { keys: tickets.map((t) => t.key), target: created.id });

@@ -119,12 +119,75 @@
   }
 }
 
+.cols,
 .row {
-  height: var(--tk-row-h);
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 0 20px 0 12px;
+
+  .st {
+    width: 92px;
+    flex: none;
+  }
+
+  .key {
+    width: 104px;
+    flex: none;
+  }
+
+  .t {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .tk {
+    width: 96px;
+    flex: none;
+  }
+
+  .steps {
+    width: 40px;
+    flex: none;
+  }
+
+  .run {
+    width: 32px;
+    flex: none;
+  }
+
+  .upd {
+    width: 64px;
+    flex: none;
+    text-align: right;
+  }
+}
+
+.cols {
+  height: 30px;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--tk-bg-subtle);
+  border-bottom: 1px solid var(--tk-border);
+  color: var(--tk-text-subtle);
+  font-size: var(--tk-text-xs);
+  font-weight: var(--tk-weight-medium);
+  white-space: nowrap;
+
+  .steps,
+  .run {
+    overflow: visible;
+  }
+
+  .run {
+    justify-content: center;
+    display: inline-flex;
+  }
+}
+
+.row {
+  height: var(--tk-row-h);
   border-bottom: 1px solid var(--tk-border-subtle);
   position: relative;
   cursor: pointer;
@@ -156,17 +219,10 @@
     color: var(--tk-text-muted);
   }
 
-  .st {
-    width: 92px;
-    flex: none;
-  }
-
   .key {
-    width: 104px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    flex: none;
     color: var(--tk-text-muted);
     text-decoration: none;
 
@@ -177,8 +233,6 @@
   }
 
   .t {
-    flex: 1;
-    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -193,11 +247,6 @@
     font-size: var(--tk-text-xs);
     font-weight: var(--tk-weight-medium);
     line-height: 18px;
-  }
-
-  .tk {
-    width: 96px;
-    flex: none;
   }
 
   .ticket {
@@ -221,8 +270,6 @@
   }
 
   .steps {
-    width: 40px;
-    flex: none;
     display: inline-flex;
     align-items: center;
     gap: 3px;
@@ -231,21 +278,16 @@
   }
 
   .run {
-    width: 20px;
-    flex: none;
     display: inline-flex;
   }
 
   .upd {
-    width: 64px;
-    flex: none;
-    text-align: right;
     color: var(--tk-text-subtle);
     font-size: var(--tk-text-sm);
   }
 }
 
-.with-pane .row {
+.with-pane :is(.row, .cols) {
   .upd,
   .steps {
     display: none;

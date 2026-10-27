@@ -1,4 +1,4 @@
-import { NewTestCase, TestCase, TestCasePatch } from '@core/testing/testing.models';
+import { LinkedTicket, NewTestCase, TestCase, TestCasePatch } from '@core/testing/testing.models';
 import { TestCaseStatus } from '@shared/domain/enums';
 
 export const TITLE_MAX = 200;
@@ -17,6 +17,12 @@ export interface TestCaseForm {
   expectedResult: string;
   automationReference: string;
   ticketKey: string | null;
+}
+
+/// Edits that could not be saved yet, kept while the user looks at another case.
+export interface TestCaseDraft {
+  form: TestCaseForm;
+  linkedTicket: LinkedTicket | null;
 }
 
 export interface FormStep {

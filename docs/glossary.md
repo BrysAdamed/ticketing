@@ -34,7 +34,7 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Bug**: Ticket type for a defect. Severity is shown prominently for bugs. Bugs can be created from a failed regression item. [§3](product/01-refined-spec.md#3-enumerations), [§6.11](product/01-refined-spec.md#611-regression-session-lifecycle)
 
-**Bug draft**: The pre-filled bug the server builds from a failed regression item's snapshot (title, templated repro steps, Severity Major, Priority High, session version, label `regression`). The create-bug dialog, REST and MCP all start from it (D-62). [§6.11](product/01-refined-spec.md#611-regression-session-lifecycle)
+**Bug draft**: The pre-filled bug the server builds from a failed regression item's snapshot (title, templated repro steps, Severity Major, Priority High, session version, label `regression`). The create-bug dialog, REST and MCP all start from it (D-70). [§6.11](product/01-refined-spec.md#611-regression-session-lifecycle)
 
 **Carry-over**: Moving a board's unfinished tickets elsewhere when it is archived: to their project backlogs (top) or to another non-archived board. [§6.4](product/01-refined-spec.md#64-backlog-and-boards)
 
@@ -100,7 +100,7 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Public project**: A project every signed-in user can read and write with Member access (D-02). Settings, membership and destructive actions stay with Owners. [§5.1](product/01-refined-spec.md#51-effective-project-access)
 
-**Quick jump**: `Ctrl+K` or `/`: type a ticket or test case key to open it, or text to search ticket titles. [§6.8](product/01-refined-spec.md#68-search-lists-and-export)
+**Quick jump**: `Ctrl+K` or `/`: type a ticket, test case or regression session key to open it, or text to list the 10 best ticket title matches across readable projects. [§6.8](product/01-refined-spec.md#68-search-lists-and-export)
 
 **Rank**: Hidden fractional-index string that orders tickets within their container; compared byte-wise (`COLLATE "C"`). [§6.6](product/01-refined-spec.md#66-ranking), [ADR 0010](adr/0010-fractional-index-ranking.md)
 

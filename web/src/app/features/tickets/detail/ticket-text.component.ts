@@ -8,7 +8,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { MarkdownEditorComponent } from '@shared/markdown/markdown-editor.component';
+import { MarkdownEditorComponent, MarkdownUploadHandler } from '@shared/markdown/markdown-editor.component';
 import { MarkdownViewerComponent } from '@shared/markdown/markdown-viewer.component';
 import { IconComponent } from '@shared/ui/icon/icon.component';
 
@@ -139,6 +139,7 @@ export class TicketTitleComponent {
         [minRows]="6"
         [maxRows]="30"
         [maxLength]="50000"
+        [uploadHandler]="uploadHandler()"
         [(value)]="draft"
         (submitted)="commit()"
         (cancelled)="cancel()"
@@ -204,6 +205,7 @@ export class TicketDescriptionComponent {
   readonly value = input<string | null>(null);
   readonly canEdit = input(false);
   readonly save = input.required<TextSave>();
+  readonly uploadHandler = input<MarkdownUploadHandler | null>(null);
 
   protected readonly editing = signal(false);
   protected readonly saving = signal(false);

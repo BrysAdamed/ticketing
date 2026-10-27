@@ -28,6 +28,8 @@ import { providePeekView } from '@core/layout/peek/peek';
 import { ThemeService } from '@core/theme/theme.service';
 import { provideTicketCreation } from '@core/tickets/create-ticket';
 import { provideTicketDetailSection } from '@core/tickets/ticket-sections';
+import { provideAttachments } from '@features/attachments/attachments.providers';
+import { provideSearch } from '@features/search/search.providers';
 import { TICKET_DETAIL_VIEW } from '@features/tickets/tickets.views';
 import { APP_ICONS } from '@shared/ui/icon/app-icons';
 import { routes } from './app.routes';
@@ -52,6 +54,8 @@ export const appConfig: ApplicationConfig = {
     }),
     provideIcons(APP_ICONS),
     providePeekView(TICKET_DETAIL_VIEW),
+    provideSearch(),
+    provideAttachments(),
     provideTicketCreation(() => import('@features/tickets/create/create-ticket.dialog').then((m) => m.CreateTicketDialog)),
     provideTicketDetailSection({
       id: 'test-cases',

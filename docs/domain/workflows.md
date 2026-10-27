@@ -15,6 +15,7 @@ Every write described below runs inside one application handler, in one database
 7. [User onboarding](#7-user-onboarding)
 8. [Feature flag evaluation and view variants](#8-feature-flag-evaluation-and-view-variants)
 9. [MCP request flow](#9-mcp-request-flow)
+10. [Attachment upload](#10-attachment-upload)
 
 ## 1. Ticket lifecycle and status side effects
 
@@ -350,8 +351,8 @@ sequenceDiagram
 
 - The bug description follows the template in [§6.11](../product/01-refined-spec.md#611-regression-session-lifecycle). The server builds the draft, so the UI dialog, REST and MCP (`record_regression_result` with `createBug: true`, which records the result and creates the bug in one call) produce identical bugs.
 - Owners can assign or unassign items for others; only the assignee records results.
-- Bugs are created only while the session is `InProgress`. With `createBug`, the result and the bug are saved together or not at all (D-62).
-- Item writes share-lock the session row; complete and cancel lock it exclusively, so no result lands on a completed session (D-63).
+- Bugs are created only while the session is `InProgress`. With `createBug`, the result and the bug are saved together or not at all (D-70).
+- Item writes share-lock the session row; complete and cancel lock it exclusively, so no result lands on a completed session (D-71).
 
 Completing a session:
 
@@ -586,3 +587,27 @@ sequenceDiagram
 - A browser cookie on `/mcp` gets `401`: MCP accepts PATs only.
 - Every call is one HTTP request; there is no MCP session to keep.
 - User administration, PAT management, feature flags, project deletion and board deletion are not exposed over MCP.
+
+## 10. Attachment upload
+
+Spec [§4.8](../product/01-refined-spec.md#48-attachment-i-07), D-63. The same flow serves the Attach button, drag and drop on the attachments section, and paste or drop into a markdown editor (which then inserts `![name](/api/v1/attachments/{id})`).
+
+```mermaid
+sequenceDiagram
+    participant B as Browser
+    participant A as API (UploadAttachment)
+    participant DB as PostgreSQL
+    B->>A: POST /tickets/WEB-42/attachments (multipart "file")
+    A->>A: Write access to the ticket's project (404 unreadable, 403 viewer, 409 archived)
+    A->>A: Size 1 B..10 MiB, allow-listed type, bytes match the type
+    A->>DB: BEGIN; SELECT ticket FOR UPDATE; count attachments
+    alt 50 already
+        A-->>B: 409 attachment.limitReached
+    else
+        A->>DB: INSERT attachment + attachment_content, bump ticket UpdatedAt, activity attachment.added
+        A-->>B: 201 attachment (url /api/v1/attachments/{id})
+    end
+```
+
+- Delete: the uploader (with write access) or a project Owner. It removes the metadata and the content and records `attachment.removed`.
+- Read: anyone who can read the ticket. Attachments of deleted tickets answer 404 like the ticket.

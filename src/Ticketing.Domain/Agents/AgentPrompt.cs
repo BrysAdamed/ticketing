@@ -5,8 +5,8 @@ namespace Ticketing.Domain.Agents;
 
 /// <summary>
 /// Composes the final prompt: the rendered type template, then a blank line and the rendered guardrails when they are
-/// non-empty. The result must stay below <see cref="LengthLimit"/> characters so it fits Claude's 5 000-character deep link
-/// with room for URL encoding of the folder (D-98).
+/// non-empty. The result must stay below <see cref="LengthLimit"/> characters, well inside the 5 000 characters Claude Code
+/// accepts in a deep link (D-97, D-98).
 /// </summary>
 public static class AgentPrompt
 {

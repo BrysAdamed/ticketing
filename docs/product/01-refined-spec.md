@@ -837,7 +837,7 @@ Plain text; Markdown is shown as written.
 - `{{#if name}}…{{/if}}` keeps its content when the value is non-empty. No `else`, nesting, loops or filters.
 - `\{{` renders a literal `{{`.
 - Errors, each with a 1-based line and column: `agent.template.unknownPlaceholder`, `agent.template.unclosedPlaceholder`, `agent.template.unbalancedIf`, `agent.template.nestedIf`; also `agent.template.empty` (a `Custom` type template without a body) and `agent.template.tooLong` (body over 4 500 characters).
-- The composed prompt is the rendered type template, then a blank line and the rendered guardrails when they are non-empty. It must stay **below 4 500 characters** (`agent.prompt.tooLong`), so it fits Claude's 5 000-character deep link with room for the folder. Saves check it for a sample ticket; resolution checks the real one.
+- The composed prompt is the rendered type template, then a blank line and the rendered guardrails when they are non-empty. It must stay **below 4 500 characters** (`agent.prompt.tooLong`), well inside the 5 000 characters Claude Code accepts in a deep link (D-97). Saves check it for a sample ticket; resolution checks the real one.
 
 Placeholders, deliberately only trusted values (D-98): there is **no** title, description or comment placeholder; the agent reads the ticket over MCP.
 

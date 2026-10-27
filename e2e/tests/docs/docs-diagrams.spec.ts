@@ -187,6 +187,7 @@ test.describe('Mermaid diagrams', () => {
 
         // Assert
         await expect(page.locator('figure.tk-mermaid svg').first()).toBeVisible();
+        await page.getByTestId('comment-composer').scrollIntoViewIfNeeded();
         await expect(page.locator('figure.tk-mermaid svg')).toHaveCount(2);
         await expect(page.locator('figure.tk-mermaid svg').last()).toContainText('Merge');
     });

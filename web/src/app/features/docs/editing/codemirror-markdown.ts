@@ -159,7 +159,7 @@ export function replaceSelection(
 /// Inserts `text` as its own block after the current line, with blank lines around; the caret
 /// goes to `caret` (an offset in `text`, default its end).
 export function insertBlock(view: EditorView, text: string, caret = text.length): void {
-  const line = view.state.doc.lineAt(view.state.selection.main.head);
+  const line = view.state.doc.lineAt(blockEnd(view, view.state.selection.main.head));
   const blank = line.text.trim() === '';
   const insertAt = blank ? line.from : line.to;
   const before = blank ? '' : '\n\n';
@@ -173,6 +173,15 @@ export function insertBlock(view: EditorView, text: string, caret = text.length)
     userEvent: 'input',
   });
   view.focus();
+}
+
+/// Where a block inserted at `position` goes: after the fenced code block the position is in (so
+/// a block never lands inside a fence), else `position` itself.
+function blockEnd(view: EditorView, position: number): number {
+  const start = syntaxTree(view.state).resolveInner(position, -1);
+  for (let node: typeof start | null = start; node; node = node.parent)
+    if (node.name === 'FencedCode') return node.to;
+  return position;
 }
 
 /// Wraps the selection in `before`/`after`, or inserts `placeholderText` wrapped and selected.

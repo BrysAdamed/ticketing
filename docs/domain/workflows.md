@@ -634,7 +634,7 @@ sequenceDiagram
     H->>H: change entities, record activity (ticket.created, ticket.field.changed assignee, comment.added)
     H->>I: SaveChangesAsync
     I->>P: activity entries added since the last save
-    P->>P: read events, WatchingRules: reporter + assignee, new assignee, commenter
+    P->>P: read events, MentionRules, WatchingRules: reporter + assignee, new assignee, commenter, newly mentioned
     P->>DB: who of them can read the project (active; Admin, public or member), who already watches
     P->>I: add TicketWatcher rows for the rest
     I->>DB: one transaction: entities, activity, watchers
@@ -644,7 +644,7 @@ sequenceDiagram
 ```mermaid
 stateDiagram-v2
     [*] --> NotWatching
-    NotWatching --> Watching: watch (PUT watchers/me) / created as reporter or assignee / assigned / comments
+    NotWatching --> Watching: watch (PUT watchers/me) / created as reporter or assignee / assigned / comments / newly mentioned
     Watching --> NotWatching: unwatch (DELETE watchers/me)
     Watching --> Hidden: loses read access or is deactivated
     Hidden --> Watching: access returns
@@ -663,8 +663,8 @@ sequenceDiagram
     participant P as CollaborationProjector
     participant DB as PostgreSQL
     H->>P: activity entries of this save (SaveChangesAsync)
-    P->>P: WatchingRules, then NotificationRules
-    Note over P: assignee of a new or reassigned ticket: Assigned<br/>assignee of a regression item: RegressionItemAssigned<br/>watchers on comment, status, priority raised to High/Highest,<br/>move (incl. board archive/delete), delete
+    P->>P: MentionRules, WatchingRules, then NotificationRules
+    Note over P: newly mentioned users: Mentioned (instead of Commented for that comment)<br/>assignee of a new or reassigned ticket: Assigned<br/>assignee of a regression item: RegressionItemAssigned<br/>watchers on comment, status, priority raised to High/Highest,<br/>move (incl. board archive/delete), delete
     P->>DB: watchers of the tickets (stored + added in this save)
     P->>DB: who of the recipients can read the project (active; Admin, public or member)
     P->>DB: board and session names for summaries
@@ -689,3 +689,33 @@ stateDiagram-v2
 - A change after the 5-minute window, by another actor, or after the notification was read starts a new notification.
 - The summary is rendered on the server without user-written text; ticket key and title come from the ticket when listing, and a deleted ticket is flagged.
 - Hidden notifications keep their row: the list and the unread count join the projects the reader can read now.
+
+### Mentions
+
+D-95. A mention is stored as `@[Name](user:<id>)` in a ticket description or comment. The handler (`CreateTicket`, `UpdateTicket`, `AddComment`, `UpdateComment`) runs `MentionNormalizer` before the change: it compares the new text with the previous one, so only newly added mentions are checked; the projector compares them again from the activity values to decide who is notified.
+
+```mermaid
+sequenceDiagram
+    participant C as Client (web picker, REST or MCP)
+    participant H as Handler
+    participant N as MentionNormalizer
+    participant P as CollaborationProjector
+    participant DB as PostgreSQL
+    C->>H: description or comment with @[Name](user:id) or @email
+    H->>N: previous text, new text
+    N->>DB: one query: the new ids and emails, and whether each can read the project
+    alt a new mention of an inactive, unknown or outside user
+        N-->>C: 400 mention.invalid (field, hint)
+    else
+        N->>H: text with @email turned into @[Name](user:id), new tokens with current names
+        H->>P: SaveChangesAsync (ticket.created, description changed, comment.added or comment.edited)
+        P->>P: MentionRules: ids in the new text not in the old one, minus the actor
+        P->>DB: newly mentioned users watch the ticket and get Mentioned
+    end
+    C->>H: GET ticket or comments
+    H->>DB: one query per ticket load or comment page: mentioned users who are active and can read the project
+    H-->>C: mentions (others render as plain text)
+```
+
+- Editing a text without adding a mention notifies nobody; a mention removed and added back later counts as new.
+- A mention whose `@` is in an inline code span or a fenced code block does not count, on the server and in the web client alike.

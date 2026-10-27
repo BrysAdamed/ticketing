@@ -7,9 +7,10 @@ namespace Ticketing.Application.Collaboration;
 public sealed record NotificationCandidate(Guid RecipientId, CollaborationEvent Event, NotificationKind Kind);
 
 /// <summary>
-/// Who is notified about what (I-30, D-94): the new assignee of a ticket or regression item, and the watchers of a ticket
-/// when it is commented, changes status, has its priority raised to High or Highest, moves between backlog and boards or
-/// is deleted. The actor is never notified about their own action. TKT-8 adds mentions as another source of candidates.
+/// Who is notified about what (I-30, D-94, D-95): the new assignee of a ticket or regression item, newly mentioned users,
+/// and the watchers of a ticket when it is commented, changes status, has its priority raised to High or Highest, moves
+/// between backlog and boards or is deleted. A watcher mentioned in a new comment gets <c>Mentioned</c> instead of
+/// <c>Commented</c> for it. The actor is never notified about their own action.
 /// </summary>
 public static class NotificationRules
 {
@@ -17,8 +18,10 @@ public static class NotificationRules
     public static IReadOnlyCollection<Guid> WatchedTickets(IEnumerable<CollaborationEvent> events) =>
         [.. events.Where(e => WatcherKind(e) is not null).Select(e => ((TicketEvent)e).TicketId).Distinct()];
 
-    public static IReadOnlyList<NotificationCandidate> Candidates(IEnumerable<CollaborationEvent> events, ILookup<Guid, Guid> watchersByTicket)
+    public static IReadOnlyList<NotificationCandidate> Candidates(
+        IEnumerable<CollaborationEvent> events, ILookup<Guid, Guid> watchersByTicket, IReadOnlyList<MentionCandidate> mentions)
     {
+        var mentioned = mentions.ToLookup(m => (CollaborationEvent)m.Event, m => m.UserId);
         var candidates = new List<NotificationCandidate>();
         foreach (var e in events)
         {
@@ -35,9 +38,13 @@ public static class NotificationRules
                     break;
             }
 
+            var mentionedHere = mentioned[e].ToHashSet();
+            foreach (var userId in mentionedHere)
+                Add(candidates, e, userId, NotificationKind.Mentioned);
+
             if (WatcherKind(e) is { } kind)
             {
-                foreach (var watcher in watchersByTicket[((TicketEvent)e).TicketId].Distinct())
+                foreach (var watcher in watchersByTicket[((TicketEvent)e).TicketId].Distinct().Where(w => !mentionedHere.Contains(w)))
                     Add(candidates, e, watcher, kind);
             }
         }

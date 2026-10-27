@@ -9,10 +9,10 @@ using Ticketing.Domain.Tickets;
 namespace Ticketing.Application.Collaboration;
 
 /// <summary>
-/// The collaboration side effects of every write (D-93, D-94): reads the pending activity into events, applies the rules and
-/// adds what they derive (watchers, then notifications, so watchers added by this save are notified too) to the same unit of
-/// work. Each save costs a fixed number of queries however many entries it holds, and read access is cached for the scope,
-/// so creating a batch of tickets does not query per ticket.
+/// The collaboration side effects of every write (D-93, D-94, D-95): reads the pending activity into events, applies the rules
+/// (mentions feed both others) and adds what they derive (watchers, then notifications, so watchers added by this save are
+/// notified too) to the same unit of work. Each save costs a fixed number of queries however many entries it holds, and read
+/// access is cached for the scope, so creating a batch of tickets does not query per ticket.
 /// </summary>
 internal sealed class CollaborationProjector(ITicketingDbContext db) : IActivityObserver
 {
@@ -24,12 +24,13 @@ internal sealed class CollaborationProjector(ITicketingDbContext db) : IActivity
         if (events.Count == 0)
             return;
 
-        var candidates = WatchingRules.Candidates(events);
+        var mentions = MentionRules.Candidates(events);
+        var candidates = WatchingRules.Candidates(events, mentions);
         if (candidates.Count > 0)
             await AddWatchersAsync(candidates, cancellationToken);
 
         var watchers = await WatchersAsync(NotificationRules.WatchedTickets(events), cancellationToken);
-        var notifications = NotificationRules.Candidates(events, watchers);
+        var notifications = NotificationRules.Candidates(events, watchers, mentions);
         if (notifications.Count > 0)
             await NotifyAsync(notifications, cancellationToken);
     }

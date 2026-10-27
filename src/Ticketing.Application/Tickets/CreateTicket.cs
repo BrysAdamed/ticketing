@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using Ticketing.Application.Abstractions;
 using Ticketing.Application.Access;
+using Ticketing.Application.Collaboration;
 using Ticketing.Application.Common;
 using Ticketing.Domain.Activity;
 using Ticketing.Domain.Common;
@@ -67,7 +68,8 @@ public static class CreateTicket
         IActivityLog activity,
         IProjectCounters counters,
         ITicketRanker ranker,
-        IIdempotency idempotency) : IHandler<Command, TicketSummaryDto>
+        IIdempotency idempotency,
+        MentionNormalizer mentions) : IHandler<Command, TicketSummaryDto>
     {
         public async Task<TicketSummaryDto> HandleAsync(Command command, CancellationToken cancellationToken)
         {
@@ -99,6 +101,7 @@ public static class CreateTicket
                 async ct =>
                 {
                     var now = clock.Now;
+                    var description = await mentions.NormalizeAsync(grant, null, command.Description, "description", ct);
                     var container = await ContainerAsync(grant, command.BoardId, ct);
                     var rank = command.Placement == BacklogPlacement.Top && command.BoardId is null
                         ? await ranker.TopAsync(container, null, ct)
@@ -108,7 +111,7 @@ public static class CreateTicket
                     var ticket = Ticket.Create(grant.ProjectId, number, command.Title, command.Type!.Value, currentUser.Id, rank, now);
                     if (command.BoardId is { } boardId)
                         ticket.PlaceOnBoard(boardId, rank);
-                    ticket.ChangeDescription(command.Description);
+                    ticket.ChangeDescription(description);
                     ticket.ChangePriority(command.Priority ?? Priority.Medium);
                     ticket.ChangeSeverity(command.Severity);
                     ticket.ChangeStoryPoints(command.StoryPoints);

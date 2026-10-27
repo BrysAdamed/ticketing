@@ -91,7 +91,8 @@ public sealed record TicketDto(
     IReadOnlyList<CommentDto>? Comments,
     int? CommentCount,
     IReadOnlyList<TestCaseRefDto>? TestCases,
-    WatchersDto? Watchers);
+    WatchersDto? Watchers,
+    IReadOnlyList<UserRefDto> Mentions);
 
 public sealed record CommentDto(
     Guid Id,
@@ -103,7 +104,8 @@ public sealed record CommentDto(
     bool Deleted,
     DateTimeOffset? DeletedAt,
     bool CanEdit,
-    bool CanDelete);
+    bool CanDelete,
+    IReadOnlyList<UserRefDto> Mentions);
 
 public sealed record ActivityEntryDto(
     Guid Id,

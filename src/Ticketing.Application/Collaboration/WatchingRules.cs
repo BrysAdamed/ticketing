@@ -4,12 +4,12 @@ namespace Ticketing.Application.Collaboration;
 public sealed record WatchCandidate(Guid TicketId, Guid ProjectId, Guid UserId, DateTimeOffset At);
 
 /// <summary>
-/// Who starts watching automatically (I-32): the reporter and the assignee of a new ticket, each new assignee, and whoever
-/// comments. Someone who unwatched is added again only by a new trigger.
+/// Who starts watching automatically (I-32): the reporter and the assignee of a new ticket, each new assignee, whoever
+/// comments and whoever is newly mentioned (D-95). Someone who unwatched is added again only by a new trigger.
 /// </summary>
 public static class WatchingRules
 {
-    public static IReadOnlyList<WatchCandidate> Candidates(IEnumerable<CollaborationEvent> events)
+    public static IReadOnlyList<WatchCandidate> Candidates(IEnumerable<CollaborationEvent> events, IEnumerable<MentionCandidate> mentions)
     {
         var candidates = new List<WatchCandidate>();
         foreach (var e in events)
@@ -28,6 +28,8 @@ public static class WatchingRules
                     break;
             }
         }
+        foreach (var mention in mentions)
+            Add(candidates, mention.Event, mention.UserId);
         return [.. candidates.DistinctBy(c => (c.TicketId, c.UserId))];
     }
 

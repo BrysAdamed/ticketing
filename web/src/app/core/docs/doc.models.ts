@@ -88,6 +88,8 @@ export interface Doc {
   children: DocTreeItem[] | null;
   url: string;
   rowVersion: number;
+  /// Comments that are not deleted (0 for folders).
+  commentCount: number;
 }
 
 /// A recently updated page or diagram (Docs home).

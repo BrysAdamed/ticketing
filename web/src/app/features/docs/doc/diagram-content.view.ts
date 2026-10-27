@@ -3,12 +3,13 @@ import { provideIcons } from '@ng-icons/core';
 import { Doc } from '@core/docs/doc.models';
 import { IconComponent } from '@shared/ui/icon/icon.component';
 import { docIcon, DOCS_ICONS } from '../docs-icons';
+import { DocPageSectionsComponent } from '../page/doc-page-sections.component';
 
 /// A diagram's content (`docs.diagram`): its title and, for Mermaid, the source as text. The
 /// rendered Mermaid view and the Canvas editor replace it (TKT-17, TKT-18).
 @Component({
   selector: 'tk-doc-diagram-content',
-  imports: [IconComponent],
+  imports: [IconComponent, DocPageSectionsComponent],
   viewProviders: [provideIcons(DOCS_ICONS)],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { 'data-testid': 'view-docs.diagram' },
@@ -27,6 +28,9 @@ import { docIcon, DOCS_ICONS } from '../docs-icons';
             {{ doc().content ? 'The canvas view is not available yet.' : 'This diagram is empty.' }}
           </p>
         }
+      </div>
+      <div class="footer">
+        <tk-doc-page-sections placement="footer" [doc]="doc()" />
       </div>
     </article>
   `,
@@ -75,6 +79,12 @@ import { docIcon, DOCS_ICONS } from '../docs-icons';
       margin: 0;
       padding: 24px 16px;
       color: var(--tk-text-muted);
+    }
+    .footer {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      margin-top: 40px;
     }
   `,
 })

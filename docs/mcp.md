@@ -41,7 +41,7 @@ A `ReadOnly` token only lists and accepts the read tools. Tokens cannot manage u
 | Test cases | `list_test_cases`, `get_test_case`, `create_test_case`, `update_test_case` |
 | Regressions | `list_regression_sessions`, `get_regression_session`, `start_regression_session`, `take_regression_item`, `assign_regression_item`, `record_regression_result` (optionally creates the bug), `complete_regression_session`, `cancel_regression_session` |
 | Boards | `list_boards`, `get_board`, `create_board`, `update_board`, `archive_board` |
-| Docs | `list_docs`, `get_doc` (by `docKey`, or `projectKey` + `path`), `search_docs`, `list_doc_attachments`, `create_folder`, `create_page`, `update_doc`, `edit_doc` (find/replace), `move_doc`, `delete_doc` |
+| Docs | `list_docs`, `get_doc` (by `docKey`, or `projectKey` + `path`), `search_docs`, `list_doc_attachments`, `list_doc_comments`, `create_folder`, `create_page`, `update_doc`, `edit_doc` (find/replace), `move_doc`, `delete_doc`, `add_doc_comment`, `update_doc_comment`, `delete_doc_comment` |
 
 Inputs and outputs are specified in [spec §9](product/01-refined-spec.md#9-mcp-server) and [§12](product/01-refined-spec.md#12-docs). Tickets, test cases, sessions and docs are referenced by key (`PAY-42`, `PAY-TC-7`, `PAY-R-3`, `PAY-D-12`); enum values are listed in each tool's description. Errors come back as `{ code, message, hint }`, plus details where a code has them (`doc.version.conflict` adds `currentVersion`, `updatedBy` and `updatedAt`).
 
@@ -56,6 +56,7 @@ Each project has a docs tree of folders, markdown pages and diagrams, up to 6 le
 - A rename (`update_doc` with only `title`) and `move_doc` create no version. Deleting a folder deletes its subtree; Members can delete only docs they created and empty folders. Undo and the trash are in the web app and the REST API only.
 - Unpublished drafts are a web feature: MCP writes publish directly, and the publisher's own draft of that doc is discarded.
 - Images and files on a page are attachments, embedded in the markdown as `![name](/api/v1/attachments/{id})`. `list_doc_attachments` lists them with their download URLs; `get_attachment_text` reads text, CSV and JSON ones, as for tickets. Uploading is web and REST only.
+- Pages and diagrams have a comment thread: `list_doc_comments` (oldest first, paged), `add_doc_comment`, `update_doc_comment` (your own) and `delete_doc_comment` (your own; Owners any) with the ticket comment rules. Comments create no version. A new comment notifies the doc's author and earlier commenters (`list_notifications` items then carry `doc` instead of `ticket`). Doc comment ids and ticket comment ids are not interchangeable.
 
 ### Mentioning people
 

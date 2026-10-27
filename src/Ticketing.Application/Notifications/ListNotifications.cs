@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Ticketing.Application.Abstractions;
 using Ticketing.Application.Access;
 using Ticketing.Application.Common;
+using Ticketing.Application.Docs;
 using Ticketing.Application.Search;
 using Ticketing.Application.Tickets;
 using Ticketing.Domain.Collaboration;
@@ -36,6 +37,8 @@ public static class ListNotifications
                     from t in tickets.DefaultIfEmpty()
                     join s in db.RegressionSessions on n.RegressionSessionId equals (Guid?)s.Id into sessions
                     from s in sessions.DefaultIfEmpty()
+                    join d in db.DocNodes on n.DocNodeId equals (Guid?)d.Id into docs
+                    from d in docs.DefaultIfEmpty()
                     join u in db.Users on n.ActorId equals (Guid?)u.Id into actors
                     from u in actors.DefaultIfEmpty()
                     orderby n.CreatedAt descending, n.Id descending
@@ -52,6 +55,9 @@ public static class ListNotifications
                         s == null ? null : (int?)s.Number,
                         s == null ? null : s.Name,
                         n.TestCaseKey,
+                        d == null ? null : (int?)d.Number,
+                        d == null ? null : d.Title,
+                        d != null && d.DeletedAt != null,
                         n.CreatedAt,
                         n.UpdatedAt,
                         n.ReadAt))
@@ -64,6 +70,7 @@ public static class ListNotifications
         {
             NotificationTicketDto? ticket = null;
             NotificationRegressionDto? regression = null;
+            NotificationDocDto? doc = null;
             var url = $"/projects/{r.ProjectKey}";
             if (r.TicketNumber is { } number)
             {
@@ -77,8 +84,14 @@ public static class ListNotifications
                 regression = new NotificationRegressionDto(sessionKey, r.SessionName!, testCaseKey);
                 url = SearchUrls.RegressionItem(r.ProjectKey, sessionKey, testCaseKey);
             }
+            else if (r.DocNumber is { } docNumber)
+            {
+                var key = HumanKeys.Doc(r.ProjectKey, docNumber);
+                doc = new NotificationDocDto(key, r.DocTitle!, r.DocDeleted);
+                url = DocQueries.Url(r.ProjectKey, key, r.DocTitle!) + "#comments";
+            }
             return new NotificationDto(
-                r.Id, r.Kind, r.Summary, r.EventCount, r.Actor, r.ProjectKey, ticket, regression, url, r.CreatedAt, r.UpdatedAt, r.ReadAt);
+                r.Id, r.Kind, r.Summary, r.EventCount, r.Actor, r.ProjectKey, ticket, regression, doc, url, r.CreatedAt, r.UpdatedAt, r.ReadAt);
         }
 
         private sealed record Row(
@@ -94,6 +107,9 @@ public static class ListNotifications
             int? SessionNumber,
             string? SessionName,
             string? TestCaseKey,
+            int? DocNumber,
+            string? DocTitle,
+            bool DocDeleted,
             DateTimeOffset CreatedAt,
             DateTimeOffset UpdatedAt,
             DateTimeOffset? ReadAt);

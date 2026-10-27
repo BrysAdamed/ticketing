@@ -14,7 +14,8 @@ public sealed class NotificationTools
     [McpServerTool(Name = "list_notifications", ReadOnly = true, Idempotent = true, Title = "List notifications")]
     [Description("Lists your notifications, newest first: { items, nextCursor }. Each item has id, kind (Assigned, Mentioned, Commented, "
         + "StatusChanged, PriorityRaised, Moved, Deleted, RegressionItemAssigned), summary (what the actor did), eventCount (changes merged "
-        + "into it), actor, projectKey, ticket { key, title, deleted } or regression { sessionKey, sessionName, testCaseKey }, url, "
+        + "into it), actor, projectKey, ticket { key, title, deleted }, regression { sessionKey, sessionName, testCaseKey } "
+        + "or doc { key, title, deleted } (comments on a page or diagram), url, "
         + "createdAt, updatedAt and readAt (null while unread).")]
     public static Task<CursorPage<NotificationDto>> ListNotifications(
         ListNotifications.Handler handler,

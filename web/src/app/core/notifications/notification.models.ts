@@ -24,6 +24,12 @@ export interface NotificationRegressionRef {
   testCaseKey: string | null;
 }
 
+export interface NotificationDocRef {
+  key: string;
+  title: string;
+  deleted: boolean;
+}
+
 /// `GET /me/notifications`: one row per recipient, collapsed per actor and ticket within five
 /// minutes (`eventCount`). `summary` is a server-rendered one-liner without the actor's name.
 export interface UserNotification {
@@ -35,6 +41,8 @@ export interface UserNotification {
   projectKey: string;
   ticket: NotificationTicketRef | null;
   regression: NotificationRegressionRef | null;
+  /// The page or diagram, for doc comments (`url` opens its comments).
+  doc: NotificationDocRef | null;
   url: string;
   createdAt: string;
   updatedAt: string;

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Ticketing.Domain.Collaboration;
+using Ticketing.Domain.Docs;
 using Ticketing.Domain.Projects;
 using Ticketing.Domain.Regressions;
 using Ticketing.Domain.Tickets;
@@ -22,6 +23,8 @@ internal sealed class NotificationConfiguration : IEntityTypeConfiguration<Notif
         builder.HasOne<Project>().WithMany().HasForeignKey(n => n.ProjectId).OnDelete(DeleteBehavior.Cascade);
         builder.HasOne<Ticket>().WithMany().HasForeignKey(n => n.TicketId).OnDelete(DeleteBehavior.Cascade);
         builder.HasOne<RegressionSession>().WithMany().HasForeignKey(n => n.RegressionSessionId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne<DocNode>().WithMany().HasForeignKey(n => n.DocNodeId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasIndex(n => n.DocNodeId).HasFilter("doc_node_id IS NOT NULL");
         builder.HasIndex(n => new { n.RecipientId, n.ReadAt, n.CreatedAt, n.Id });
         builder.HasIndex(n => new { n.RecipientId, n.CreatedAt, n.Id });
         builder.HasIndex(n => n.CreatedAt);

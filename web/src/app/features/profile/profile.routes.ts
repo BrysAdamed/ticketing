@@ -7,7 +7,11 @@ export default [
     path: '',
     children: [
       viewRoute(PROFILE_GENERAL_VIEW, { path: '' }),
-      viewRoute(ACCESS_TOKENS_VIEW, { path: 'tokens', data: { breadcrumb: 'Access tokens' } }),
+      viewRoute(ACCESS_TOKENS_VIEW, {
+        path: 'tokens',
+        title: 'Access tokens',
+        data: { breadcrumb: 'Access tokens' },
+      }),
     ],
   }),
 ] satisfies Routes;

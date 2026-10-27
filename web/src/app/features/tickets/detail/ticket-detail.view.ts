@@ -15,7 +15,11 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltip } from '@angular/material/tooltip';
 import { Router, RouterLink } from '@angular/router';
 import { provideIcons } from '@ng-icons/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Breadcrumbs } from '@core/layout/breadcrumbs';
+import { PageTitleStrategy } from '@core/layout/page-title';
+import { MoveTarget } from '@core/tickets/move-targets';
+import { TicketEvents } from '@core/tickets/ticket-events';
 import { PeekService } from '@core/layout/peek/peek';
 import { ConfirmService } from '@core/notify/confirm.service';
 import { ToastService } from '@core/notify/toast.service';
@@ -85,6 +89,8 @@ export class TicketDetailView {
   private readonly peek = inject(PeekService);
   private readonly document = inject(DOCUMENT);
   private readonly breadcrumbs = inject(Breadcrumbs);
+  private readonly pageTitle = inject(PageTitleStrategy);
+  private readonly events = inject(TicketEvents);
 
   readonly ticketKey = input.required<string>();
   protected readonly uploadHandler = inject(TicketAttachments).markdownUploader(() =>
@@ -141,6 +147,19 @@ export class TicketDetailView {
         untracked(() => void this.store.loadHistory());
     });
 
+    effect(() => {
+      const ticket = this.store.ticket();
+      if (this.presentation() !== 'page' || !ticket) return;
+      untracked(() => this.pageTitle.setSubject(`${ticket.key} ${ticket.title}`));
+    });
+
+    this.events.events.pipe(takeUntilDestroyed()).subscribe((event) => {
+      if (event.kind !== 'deleted' || event.key.toUpperCase() !== this.store.key()) return;
+      const projectKey = this.store.ticket()?.projectKey ?? event.key.split('-')[0];
+      if (this.presentation() === 'peek') this.peek.close();
+      else void this.router.navigate(['/projects', projectKey, 'backlog']);
+    });
+
     inject(ShortcutService).registerScoped([
       {
         keys: 'e',
@@ -155,12 +174,6 @@ export class TicketDetailView {
         handler: () => this.description()?.start(),
       },
       {
-        keys: 'a',
-        section: 'Ticket',
-        description: 'Assign to me',
-        handler: () => this.assignToMe(),
-      },
-      {
         keys: 's',
         section: 'Ticket',
         description: 'Change status',
@@ -173,10 +186,47 @@ export class TicketDetailView {
         handler: () => this.fields()?.openPicker('priority'),
       },
       {
-        keys: 'i',
+        keys: 't',
+        section: 'Ticket',
+        description: 'Change type',
+        handler: () => this.fields()?.openPicker('type'),
+      },
+      {
+        keys: 'a',
         section: 'Ticket',
         description: 'Assign to…',
         handler: () => this.fields()?.openPicker('assignee'),
+      },
+      {
+        keys: 'i',
+        section: 'Ticket',
+        description: 'Assign to me',
+        handler: () => this.assignToMe(),
+      },
+      {
+        keys: 'l',
+        section: 'Ticket',
+        description: 'Change labels',
+        handler: () => this.fields()?.openPicker('labels'),
+      },
+      {
+        keys: 'm',
+        section: 'Ticket',
+        description: 'Move to…',
+        handler: () => this.fields()?.openPicker('location'),
+      },
+      {
+        keys: 'delete',
+        section: 'Ticket',
+        description: 'Delete ticket',
+        handler: () => void this.deleteTicket(),
+      },
+      {
+        keys: 'mod+backspace',
+        section: 'Ticket',
+        description: 'Delete ticket',
+        handler: () => void this.deleteTicket(),
+        showInHelp: false,
       },
       { keys: 'mod+.', section: 'Ticket', description: 'Copy key', handler: () => this.copyKey() },
       {
@@ -228,19 +278,13 @@ export class TicketDetailView {
     if (this.clipboard.copy(`${origin}/tickets/${key}`)) this.toast.success('Link copied');
   }
 
+  /// Immediate delete with an Undo toast (D-82); the view closes on the `deleted` event.
   protected async deleteTicket(): Promise<void> {
-    const ticket = this.store.ticket();
-    if (!ticket) return;
-    const ok = await this.confirm.confirm({
-      title: `Delete ${ticket.key}?`,
-      message:
-        'It disappears from every list and board, its links are removed and its key is never reused.',
-      confirmLabel: 'Delete',
-      danger: true,
-    });
-    if (!ok || !(await this.store.delete())) return;
-    if (this.presentation() === 'peek') this.peek.close();
-    else void this.router.navigate(['/projects', ticket.projectKey, 'backlog']);
+    if (this.store.ticket()?.permissions.canDelete) await this.store.delete();
+  }
+
+  protected onMoved(target: MoveTarget): void {
+    void this.store.moveTo(target);
   }
 
   /// Title and description saves carry If-Match; a conflict offers to reload and keeps the editor open.

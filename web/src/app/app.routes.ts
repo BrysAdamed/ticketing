@@ -7,13 +7,13 @@ import { ShellComponent } from '@core/layout/shell/shell.component';
 export const routes: Routes = [
   {
     path: 'login',
-    title: 'Sign in · Ticketing',
+    title: 'Sign in',
     canActivate: [guestGuard],
     loadChildren: () => import('@features/auth/auth.routes').then((m) => m.LOGIN_ROUTES),
   },
   {
     path: 'set-password',
-    title: 'Set password · Ticketing',
+    title: 'Set password',
     loadChildren: () => import('@features/auth/auth.routes').then((m) => m.SET_PASSWORD_ROUTES),
   },
   {
@@ -24,13 +24,13 @@ export const routes: Routes = [
       { path: '', pathMatch: 'full', redirectTo: 'my-work' },
       {
         path: 'my-work',
-        title: 'My work · Ticketing',
+        title: 'My work',
         data: { breadcrumb: 'My work' },
         loadChildren: () => import('@features/my-work/my-work.routes'),
       },
       {
         path: 'projects',
-        title: 'Projects · Ticketing',
+        title: 'Projects',
         data: { breadcrumb: 'Projects' },
         loadChildren: () => import('@features/projects/projects.routes'),
       },
@@ -40,38 +40,38 @@ export const routes: Routes = [
       },
       {
         path: 'boards',
-        title: 'Boards · Ticketing',
+        title: 'Boards',
         data: { breadcrumb: 'Boards' },
         loadChildren: () => import('@features/boards/boards.routes'),
       },
       {
         path: 'search',
-        title: 'Search · Ticketing',
+        title: 'Search',
         data: { breadcrumb: 'Search' },
         loadChildren: () => import('@features/search/search.routes'),
       },
       {
         path: 'profile',
-        title: 'Profile · Ticketing',
+        title: 'Profile',
         data: { breadcrumb: 'Profile' },
         loadChildren: () => import('@features/profile/profile.routes'),
       },
       {
         path: 'admin',
-        title: 'Admin · Ticketing',
+        title: 'Admin',
         canMatch: [adminGuard],
         data: { breadcrumb: 'Admin' },
         loadChildren: () => import('@features/admin/admin.routes'),
       },
       {
         path: 'dev/ui-kit',
-        title: 'UI kit · Ticketing',
+        title: 'UI kit',
         data: { breadcrumb: 'UI kit' },
         loadChildren: () => import('@features/ui-kit/ui-kit.routes'),
       },
       {
         path: '**',
-        title: 'Not found · Ticketing',
+        title: 'Not found',
         loadChildren: () => import('@features/not-found/not-found.routes'),
       },
     ],

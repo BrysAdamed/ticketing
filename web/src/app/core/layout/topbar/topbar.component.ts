@@ -9,6 +9,7 @@ import { KbdComponent } from '@shared/ui/kbd/kbd.component';
 import { AuthService } from '../../auth/auth.service';
 import { CommandPaletteService } from '../../commands/command-palette.service';
 import { CommandRegistry } from '../../commands/command-registry';
+import { OpenProjectState } from '../../projects/open-project';
 import { ProjectDirectory } from '../../projects/project-directory';
 import { ShortcutService } from '../../shortcuts/shortcut.service';
 import { ThemeService } from '../../theme/theme.service';
@@ -40,6 +41,7 @@ export class TopbarComponent {
   protected readonly actions = inject(ShellActions);
   private readonly breadcrumbs = inject(Breadcrumbs);
   private readonly directory = inject(ProjectDirectory);
+  private readonly openProject = inject(OpenProjectState);
   private readonly commands = inject(CommandRegistry);
   private readonly shortcuts = inject(ShortcutService);
 
@@ -52,14 +54,17 @@ export class TopbarComponent {
   protected readonly createTicket = computed(() =>
     this.commands.commands().some((c) => c.id === CREATE_TICKET_COMMAND),
   );
-  protected readonly crumbs = computed(() =>
-    this.breadcrumbs.trail().map((crumb) => ({
+  protected readonly crumbs = computed(() => {
+    const open = this.openProject.project();
+    return this.breadcrumbs.trail().map((crumb) => ({
       ...crumb,
-      label: crumb.projectKey
-        ? (this.directory.byKey(crumb.projectKey)?.name ?? crumb.label)
-        : crumb.label,
-    })),
-  );
+      label: !crumb.projectKey
+        ? crumb.label
+        : open?.key === crumb.projectKey
+          ? open.name
+          : (this.directory.byKey(crumb.projectKey)?.name ?? crumb.label),
+    }));
+  });
 
   protected runCreateTicket(): void {
     this.commands.run(CREATE_TICKET_COMMAND);

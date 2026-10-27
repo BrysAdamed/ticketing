@@ -13,6 +13,7 @@ import {
   CdkVirtualScrollViewport,
 } from '@angular/cdk/scrolling';
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -20,6 +21,7 @@ import {
   effect,
   ElementRef,
   inject,
+  Injector,
   input,
   signal,
   untracked,
@@ -35,11 +37,11 @@ import { MatTooltip } from '@angular/material/tooltip';
 import { ActivatedRoute, Params, Router } from '@angular/router';
 import { provideIcons } from '@ng-icons/core';
 import { PeekService } from '@core/layout/peek/peek';
-import { ConfirmService } from '@core/notify/confirm.service';
 import { ProjectContext } from '@core/projects/project-context';
 import { ShortcutService } from '@core/shortcuts/shortcut.service';
 import { ThemeService } from '@core/theme/theme.service';
 import { FieldHints } from '@core/tickets/field-hints';
+import { MoveTarget, MoveTargets } from '@core/tickets/move-targets';
 import { ProjectPeople } from '@core/tickets/project-people';
 import { TicketCache } from '@core/tickets/ticket-cache';
 import { UserRef } from '@core/tickets/ticket.models';
@@ -51,7 +53,12 @@ import {
   TicketStatus,
   TicketType,
 } from '@shared/domain/enums';
-import { PRIORITY_OPTIONS, TICKET_STATUS_OPTIONS } from '@shared/domain/picker-options';
+import {
+  PRIORITY_OPTIONS,
+  TICKET_STATUS_OPTIONS,
+  TICKET_TYPE_OPTIONS,
+} from '@shared/domain/picker-options';
+import { PickerOption } from '@shared/ui/inline-picker/picker-option';
 import { AvatarComponent } from '@shared/ui/domain/avatar.component';
 import { StatusIconComponent } from '@shared/ui/domain/status-icon.component';
 import { TypeIconComponent } from '@shared/ui/domain/type-icon.component';
@@ -74,11 +81,14 @@ import {
   SortBy,
   stickyGroupAt,
 } from './backlog-logic';
-import { BacklogRowComponent, RowEdit } from './backlog-row.component';
-import { BacklogStore, CreateRow, ListRow } from './backlog.store';
+import { BacklogRowComponent, RowEdit, RowPicker } from './backlog-row.component';
+import { BacklogStore, CreateRow, isPending, ListRow } from './backlog.store';
 import { QuickCreate, QuickCreateRowComponent } from './quick-create-row.component';
 
 const PREFETCH_DELAY_MS = 150;
+const PEEK_FOLLOW_MS = 120;
+const ON_BOARDS_FOOTER_PX = 36;
+const BULK_BAR_CLEARANCE_PX = 72;
 
 @Component({
   selector: 'tk-backlog-view',
@@ -125,7 +135,7 @@ export class BacklogView {
   private readonly cache = inject(TicketCache);
   private readonly hints = inject(FieldHints);
   private readonly people = inject(ProjectPeople);
-  private readonly confirm = inject(ConfirmService);
+  private readonly moveTargets = inject(MoveTargets);
   protected readonly project = inject(ProjectContext);
 
   readonly projectKey = input.required<string>();
@@ -138,7 +148,7 @@ export class BacklogView {
   protected readonly assigneeSearch = this.people.picker(() => this.store.projectKey());
   protected readonly labelOptions = signal<readonly string[]>([]);
   protected readonly versionOptions = signal<readonly string[]>([]);
-  protected readonly creating = signal(false);
+  protected readonly typeOptions = TICKET_TYPE_OPTIONS;
   protected readonly dropIndex = signal<number | null>(null);
   protected readonly dragCount = signal(0);
   protected readonly filterUsers = computed(() =>
@@ -163,17 +173,32 @@ export class BacklogView {
     viewChild<InlinePickerDirective<Priority>>('bulkPriorityPicker');
   private readonly bulkAssigneePicker =
     viewChild<SearchPickerDirective<UserRef | null>>('bulkAssigneePicker');
+  private readonly bulkTypePicker = viewChild<InlinePickerDirective<TicketType>>('bulkTypePicker');
+  private readonly bulkLabelsPicker = viewChild<LabelsPickerDirective>('bulkLabelsPicker');
+  private readonly movePicker = viewChild<InlinePickerDirective<MoveTarget>>('movePicker');
+  private moveOptions: readonly PickerOption<MoveTarget>[] = [];
   private readonly listWrap = viewChild<ElementRef<HTMLElement>>('listWrap');
   protected readonly listHeight = signal(480);
+  /// The list fills the window below the toolbar, minus the "on boards" footer and, while tickets
+  /// are selected, the floating bulk bar, so the last rows can scroll above it.
+  protected readonly viewportHeight = computed(() =>
+    Math.max(
+      160,
+      this.listHeight() -
+        (this.store.onBoardsCount() > 0 ? ON_BOARDS_FOOTER_PX : 0) -
+        (this.selectionCount() > 0 ? BULK_BAR_CLEARANCE_PX : 0),
+    ),
+  );
   private readonly scrollTop = signal(0);
   protected readonly scrollbarWidth = signal(0);
   protected readonly stickyGroup = computed(() =>
     stickyGroupAt(this.store.rows(), this.scrollTop(), this.rowHeight()),
   );
   private readonly filtersBar = viewChild(BacklogFiltersComponent);
-  private readonly quickCreate = viewChild(QuickCreateRowComponent);
   private readonly queryParams = toSignal(this.route.queryParams, { initialValue: {} as Params });
+  private readonly injector = inject(Injector);
   private movingIds: string[] = [];
+  private followTimer: ReturnType<typeof setTimeout> | null = null;
   private prefetchTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
@@ -214,29 +239,40 @@ export class BacklogView {
       untracked(() => this.scrollIntoView(viewport, focus));
     });
 
+    inject(DestroyRef).onDestroy(() => {
+      if (this.followTimer) clearTimeout(this.followTimer);
+    });
+
+    effect(() => {
+      this.viewportHeight();
+      const viewport = this.viewport();
+      if (viewport)
+        afterNextRender(() => viewport.checkViewportSize(), { injector: this.injector });
+    });
+
     inject(ShortcutService).registerScoped([
       {
         keys: 'j',
         section: 'Backlog',
         description: 'Next ticket',
-        handler: () => this.store.move(1),
+        handler: () => this.step(1),
       },
       {
         keys: 'k',
         section: 'Backlog',
         description: 'Previous ticket',
-        handler: () => this.store.move(-1),
+        handler: () => this.step(-1),
       },
       {
         keys: 'arrowdown',
         description: 'Next ticket',
-        handler: () => this.store.move(1),
+        handler: () => this.step(1),
         showInHelp: false,
       },
       {
         keys: 'arrowup',
         description: 'Previous ticket',
-        handler: () => this.store.move(-1),
+        handler: () => this.step(-1),
         showInHelp: false,
       },
       {
@@ -288,12 +324,6 @@ export class BacklogView {
         handler: () => this.store.openCreate(null),
       },
       {
-        keys: 'a',
-        section: 'Backlog',
-        description: 'Assign to me',
-        handler: () => this.assignToMe(),
-      },
-      {
         keys: 's',
         section: 'Backlog',
         description: 'Change status',
@@ -306,10 +336,47 @@ export class BacklogView {
         handler: () => this.openPicker('priority'),
       },
       {
-        keys: 'i',
+        keys: 't',
+        section: 'Backlog',
+        description: 'Change type',
+        handler: () => this.openPicker('type'),
+      },
+      {
+        keys: 'a',
         section: 'Backlog',
         description: 'Assign to…',
         handler: () => this.openPicker('assignee'),
+      },
+      {
+        keys: 'i',
+        section: 'Backlog',
+        description: 'Assign to me',
+        handler: () => this.assignToMe(),
+      },
+      {
+        keys: 'l',
+        section: 'Backlog',
+        description: 'Change labels',
+        handler: () => this.openPicker('labels'),
+      },
+      {
+        keys: 'm',
+        section: 'Backlog',
+        description: 'Move to board…',
+        handler: () => void this.openMove(),
+      },
+      {
+        keys: 'delete',
+        section: 'Backlog',
+        description: 'Delete ticket',
+        handler: () => this.deleteTargets(),
+      },
+      {
+        keys: 'mod+backspace',
+        section: 'Backlog',
+        description: 'Delete ticket',
+        handler: () => this.deleteTargets(),
+        showInHelp: false,
       },
       {
         keys: 'mod+a',
@@ -376,6 +443,7 @@ export class BacklogView {
   // Rows
 
   protected onRowClick(event: MouseEvent, id: string, key: string): void {
+    if (isPending(id)) return;
     if (event.shiftKey) this.store.click(id, 'range');
     else if (event.ctrlKey || event.metaKey) this.store.click(id, 'toggle');
     else {
@@ -395,6 +463,9 @@ export class BacklogView {
     switch (edit.field) {
       case 'status':
         void this.store.setStatus(ids, edit.value);
+        break;
+      case 'type':
+        void this.store.setType(ids, edit.value);
         break;
       case 'priority':
         void this.store.setPriority(ids, edit.value);
@@ -433,31 +504,45 @@ export class BacklogView {
     void this.store.toggleLabel(this.store.selectedIds(), toggle.label, toggle.add);
   }
 
-  protected async bulkDelete(): Promise<void> {
-    const ids = this.store.selectedIds();
-    const keys = ids.map((id) => this.store.item(id)?.key).filter(Boolean);
-    const ok = await this.confirm.confirm({
-      title: ids.length === 1 ? `Delete ${keys[0]}?` : `Delete ${ids.length} tickets?`,
-      message: 'Deleted tickets disappear from every list and board. Their keys are never reused.',
-      confirmLabel: 'Delete',
-      danger: true,
+  protected bulkType(type: TicketType): void {
+    void this.store.setType(this.store.selectedIds(), type);
+  }
+
+  protected bulkDelete(): void {
+    void this.store.remove(this.store.selectedIds());
+  }
+
+  /// "Move to board" (bulk bar) and `M`: boards that link this project, under the bulk button or
+  /// the focused row.
+  protected async openMove(origin?: Element): Promise<void> {
+    const ids = this.store.targets();
+    if (!ids.length || !this.store.canWrite()) return;
+    const anchor = origin ?? this.focusedRowElement();
+    const options = await this.moveTargets.options(this.store.projectKey(), {
+      kind: 'Backlog',
+      boardId: null,
+      boardName: null,
     });
-    if (ok) void this.store.remove(ids);
+    this.moveOptions = options;
+    this.movePicker()?.open(anchor ?? undefined, options);
+  }
+
+  protected moveTo(target: MoveTarget): void {
+    const board = this.moveOptions.find((o) => o.value === target);
+    if (!board || target === 'backlog') return;
+    void this.store.moveToBoard(this.store.targets(), target, board.label);
   }
 
   // Quick create
 
   protected async submitCreate(row: CreateRow, request: QuickCreate): Promise<void> {
-    this.creating.set(true);
+    if (request.open) this.store.closeCreate();
     const created = await this.store.quickCreate(request.title, request.type, row);
-    this.creating.set(false);
-    if (!created) return;
-    if (request.open) {
-      this.store.closeCreate();
-      this.peek.open(created.key);
-    } else {
-      this.quickCreate()?.reset();
-    }
+    if (created && request.open) this.peek.open(created.key);
+  }
+
+  protected isPending(id: string): boolean {
+    return isPending(id);
   }
 
   // Drag and drop (CDK drag with our own drop index: rows have a fixed height, so the target row
@@ -500,9 +585,23 @@ export class BacklogView {
 
   // Keyboard
 
+  /// j / k / ↑ / ↓: moves the focus; an open peek follows it after a short pause.
+  private step(delta: 1 | -1): void {
+    this.store.move(delta);
+    if (this.followTimer) clearTimeout(this.followTimer);
+    this.followTimer = null;
+    const focus = this.store.focusId();
+    const key = focus && !isPending(focus) ? this.store.item(focus)?.key : undefined;
+    if (!this.peek.isOpen() || !key || this.peek.ticketKey() === key) return;
+    this.cache.prefetch(key);
+    this.followTimer = setTimeout(() => {
+      if (this.peek.isOpen()) this.peek.open(key);
+    }, PEEK_FOLLOW_MS);
+  }
+
   private openFocused(fullPage: boolean): void {
     const id = this.store.focusId();
-    const item = id ? this.store.item(id) : null;
+    const item = id && !isPending(id) ? this.store.item(id) : null;
     if (!item) return;
     if (fullPage) void this.router.navigate(['/tickets', item.key]);
     else this.peek.open(item.key);
@@ -513,24 +612,49 @@ export class BacklogView {
     if (id) this.store.click(id, 'toggle');
   }
 
-  /// s / p / i: the bulk bar picker when tickets are selected, otherwise the focused row's.
-  private openPicker(field: 'status' | 'priority' | 'assignee'): void {
+  /// s / p / t / a / l: the bulk bar picker when tickets are selected, otherwise the focused row's.
+  private openPicker(field: RowPicker): void {
     if (!this.store.canWrite()) return;
     if (this.selectionCount()) {
-      if (field === 'status') this.bulkStatusPicker()?.open();
-      else if (field === 'priority') this.bulkPriorityPicker()?.open();
-      else this.bulkAssigneePicker()?.open();
-      return;
+      switch (field) {
+        case 'status':
+          return this.bulkStatusPicker()?.open();
+        case 'priority':
+          return this.bulkPriorityPicker()?.open();
+        case 'type':
+          return this.bulkTypePicker()?.open();
+        case 'assignee':
+          return this.bulkAssigneePicker()?.open();
+        case 'labels':
+          return this.bulkLabelsPicker()?.open();
+      }
     }
-    const focus = this.store.focusId();
-    this.rows()
-      .find((row) => row.item().id === focus)
-      ?.openPicker(field);
+    this.focusedRow()?.openPicker(field);
   }
 
   private assignToMe(): void {
     const ids = this.store.targets();
     if (ids.length && this.store.canWrite()) void this.store.assignToMe(ids);
+  }
+
+  private deleteTargets(): void {
+    if (!this.project.isOwner() || !this.store.canWrite()) return;
+    const ids = this.store.targets();
+    if (ids.length) void this.store.remove(ids);
+  }
+
+  private focusedRow(): BacklogRowComponent | undefined {
+    const focus = this.store.focusId();
+    return this.rows().find((row) => row.item().id === focus);
+  }
+
+  private focusedRowElement(): Element | null {
+    const key = this.store.item(this.store.focusId() ?? '')?.key;
+    return key
+      ? (this.viewport()?.elementRef.nativeElement.querySelector(
+          `[data-testid="backlog-row-${key}"]`,
+        ) ?? null)
+      : null;
   }
 
   private escape(): void {

@@ -43,11 +43,14 @@ export class InlinePickerDirective<T> {
   readonly pickerShortcut = input<string | null>(null);
   readonly pickerOptionTemplate = input<PickerOptionTemplate<T> | null>(null);
   readonly pickerDisabled = input(false);
+  /// Loads the options when the picker opens (instead of the bound list), e.g. boards to move to.
+  readonly pickerLoad = input<(() => Promise<readonly PickerOption<T>[]>) | null>(null);
 
   readonly picked = output<T>();
 
   readonly isOpen = signal(false);
   private overlayRef: OverlayRef | null = null;
+  private loading = false;
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.overlayRef?.dispose());
@@ -59,8 +62,20 @@ export class InlinePickerDirective<T> {
   }
 
   /// Opens the picker under the host, or under `origin` (for example a focused card) when given.
-  open(origin?: Element): void {
-    if (this.isOpen() || this.pickerDisabled()) return;
+  /// `options` replaces the bound options for this opening (for options loaded on demand).
+  open(origin?: Element, options?: readonly PickerOption<T>[]): void {
+    if (this.isOpen() || this.loading || this.pickerDisabled()) return;
+    const load = this.pickerLoad();
+    if (!options && load) {
+      this.loading = true;
+      void load()
+        .then((loaded) => {
+          this.loading = false;
+          this.open(origin, loaded);
+        })
+        .catch(() => (this.loading = false));
+      return;
+    }
     const overlayRef = createOverlayRef(this.injector, {
       positionStrategy: createFlexibleConnectedPositionStrategy(this.injector, origin ?? this.host)
         .withPositions([
@@ -76,7 +91,7 @@ export class InlinePickerDirective<T> {
     const panel = overlayRef.attach(
       new ComponentPortal(InlinePickerPanelComponent<T>, null, this.injector),
     );
-    panel.setInput('options', this.tkInlinePicker());
+    panel.setInput('options', options ?? this.tkInlinePicker());
     panel.setInput('selected', this.pickerValue());
     panel.setInput('placeholder', this.pickerPlaceholder());
     panel.setInput('shortcut', this.pickerShortcut());

@@ -85,9 +85,57 @@ describe('describeAuditEntry', () => {
 
   it('keeps unknown action codes readable', () => {
     // Act / Assert
-    expect(describeAuditEntry(entry({ action: 'project.member.added' })).verb).toBe(
-      'project.member.added',
+    expect(describeAuditEntry(entry({ action: 'project.thing.done' })).verb).toBe(
+      'project.thing.done',
     );
+  });
+
+  it('names the member and the role in membership entries', () => {
+    // Act
+    const added = describeAuditEntry(
+      entry({
+        entityType: 'Project',
+        entityLabel: 'Payments',
+        action: 'project.member.added',
+        newValue: { userId: 'u2', email: 'ann@example.com', role: 'Member' },
+      }),
+    );
+    const changed = describeAuditEntry(
+      entry({
+        entityType: 'Project',
+        entityLabel: 'Payments',
+        action: 'project.member.roleChanged',
+        field: 'role',
+        oldValue: { userId: 'u2', email: 'ann@example.com', role: 'Member' },
+        newValue: { userId: 'u2', email: 'ann@example.com', role: 'Owner' },
+      }),
+    );
+
+    // Assert
+    expect(added).toEqual({
+      verb: 'added member',
+      target: 'ann@example.com',
+      detail: 'Payments, as Member',
+    });
+    expect(changed).toEqual({
+      verb: 'changed the role of',
+      target: 'ann@example.com',
+      detail: 'Payments: Member → Owner',
+    });
+  });
+
+  it('falls back to "a member" for old entries without an e-mail', () => {
+    // Act / Assert
+    expect(
+      describeAuditEntry(
+        entry({
+          entityType: 'Project',
+          entityLabel: 'Payments',
+          action: 'project.member.removed',
+          newValue: { userId: 'u2', role: 'Viewer' },
+        }),
+      ),
+    ).toEqual({ verb: 'removed member', target: 'a member', detail: 'Payments, was Viewer' });
   });
 });
 

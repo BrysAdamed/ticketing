@@ -8,6 +8,8 @@ import { LoadStatus } from '@core/projects/project-directory';
 import { FieldHints } from '@core/tickets/field-hints';
 import { TicketCache } from '@core/tickets/ticket-cache';
 import { TicketAttachments } from '@core/tickets/ticket-attachments';
+import { MoveTarget } from '@core/tickets/move-targets';
+import { TicketDeletion } from '@core/tickets/ticket-deletion';
 import { TicketEvents } from '@core/tickets/ticket-events';
 import {
   ActivityEntry,
@@ -37,6 +39,7 @@ export class TicketDetailStore {
   private readonly toast = inject(ToastService);
   private readonly hints = inject(FieldHints);
   private readonly auth = inject(AuthService);
+  private readonly deletion = inject(TicketDeletion);
 
   readonly key = signal('');
   readonly ticket = signal<Ticket | null>(null);
@@ -142,13 +145,52 @@ export class TicketDetailStore {
     }
   }
 
-  assignToMe(): Promise<SaveResult> {
+  /// `i`: assigns the ticket to the signed-in user, with an Undo toast that puts the previous
+  /// assignee back (D-81).
+  async assignToMe(): Promise<void> {
     const me = this.me();
-    if (!me) return Promise.resolve('failed');
-    return this.patch(
+    const before = this.ticket();
+    if (!me || !before || before.assignee?.id === me.id) return;
+    const previous = before.assignee;
+    const result = await this.patch(
       { assignee: me.id },
       { assignee: { id: me.id, email: me.email, displayName: me.displayName, isActive: true } },
     );
+    if (result !== 'saved') return;
+    this.toast.success(`${before.key} assigned to you`, {
+      action: {
+        label: 'Undo',
+        run: () => void this.patch({ assignee: previous?.id ?? null }, { assignee: previous }),
+      },
+    });
+  }
+
+  /// Moves the ticket to its backlog (top) or a board (bottom of its status column), spec 6.4.
+  async moveTo(target: MoveTarget): Promise<void> {
+    const ticket = this.ticket();
+    if (!ticket) return;
+    const from: MoveTarget =
+      ticket.location.kind === 'Backlog' ? 'backlog' : (ticket.location.boardId ?? 'backlog');
+    if (target === from) return;
+    try {
+      await firstValueFrom(
+        this.api.move({
+          keys: [ticket.key],
+          target,
+          from,
+          ...(target === 'backlog' ? { position: 'Top' as const } : {}),
+        }),
+      );
+      this.cache.evict(ticket.key);
+      const fresh = await this.cache.fetch(ticket.key);
+      this.applyServer(fresh);
+      this.toast.success(
+        `${ticket.key} moved to ${fresh.location.kind === 'Backlog' ? 'the backlog' : fresh.location.boardName}`,
+      );
+      if (this.historyStatus() !== 'idle') void this.loadHistory();
+    } catch (error) {
+      this.toast.error(`Couldn't move ${ticket.key}: ${toApiError(error).title}`);
+    }
   }
 
   // Comments
@@ -306,19 +348,10 @@ export class TicketDetailStore {
     }
   }
 
-  async delete(): Promise<boolean> {
+  /// Deletes at once with an Undo toast (D-82); the view closes on the `deleted` event.
+  async delete(): Promise<void> {
     const ticket = this.ticket();
-    if (!ticket) return false;
-    try {
-      await firstValueFrom(this.api.delete(ticket.key));
-      this.cache.evict(ticket.key);
-      this.events.emit({ kind: 'deleted', key: ticket.key });
-      this.toast.success(`${ticket.key} deleted`);
-      return true;
-    } catch (error) {
-      this.toast.error(`Couldn't delete ${ticket.key}: ${toApiError(error).title}`);
-      return false;
-    }
+    if (ticket) await this.deletion.delete([ticket.key]);
   }
 
   private afterCommentChange(): void {

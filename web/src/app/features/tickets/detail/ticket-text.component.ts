@@ -1,7 +1,10 @@
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   ElementRef,
+  inject,
+  Injector,
   input,
   output,
   signal,
@@ -90,17 +93,22 @@ export class TicketTitleComponent {
   protected readonly editing = signal(false);
   protected readonly draft = signal('');
   private readonly inputEl = viewChild<ElementRef<HTMLInputElement>>('input');
+  private readonly injector = inject(Injector);
   private saving = false;
 
+  /// Switches to the input and focuses it once it is rendered (zoneless: after the next render).
   start(): void {
     if (!this.canEdit() || this.editing()) return;
     this.draft.set(this.value());
     this.editing.set(true);
     this.editingChange.emit(true);
-    queueMicrotask(() => {
-      this.inputEl()?.nativeElement.focus();
-      this.inputEl()?.nativeElement.select();
-    });
+    afterNextRender(
+      () => {
+        this.inputEl()?.nativeElement.focus();
+        this.inputEl()?.nativeElement.select();
+      },
+      { injector: this.injector },
+    );
   }
 
   protected async commit(): Promise<void> {
@@ -188,11 +196,12 @@ export class TicketTitleComponent {
     .body {
       position: relative;
       max-width: 72ch;
+      padding-right: 32px;
     }
     .edit {
       position: absolute;
       top: -4px;
-      right: -36px;
+      right: 0;
       opacity: 0;
     }
     .body:hover .edit,
@@ -230,12 +239,13 @@ export class TicketDescriptionComponent {
   protected readonly saving = signal(false);
   protected readonly draft = signal('');
   private readonly editor = viewChild(MarkdownEditorComponent);
+  private readonly injector = inject(Injector);
 
   start(): void {
     if (!this.canEdit() || this.editing()) return;
     this.draft.set(this.value() ?? '');
     this.editing.set(true);
-    queueMicrotask(() => this.editor()?.focus());
+    afterNextRender(() => this.editor()?.focus(), { injector: this.injector });
   }
 
   protected async commit(): Promise<void> {

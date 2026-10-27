@@ -5,6 +5,7 @@ import { IconComponent } from '@shared/ui/icon/icon.component';
 import { ProjectTileComponent } from '@shared/ui/domain/project-tile.component';
 import { AuthService } from '../../auth/auth.service';
 import { BoardDirectory } from '../../boards/board-directory';
+import { OpenProjectState } from '../../projects/open-project';
 import { ProjectDirectory } from '../../projects/project-directory';
 import { LayoutState } from '../layout-state';
 import { NavigationContext } from '../navigation-context';
@@ -52,6 +53,13 @@ const ADMIN_NAV: readonly NavLink[] = [
 
 const MAX_PROJECTS = 8;
 
+interface NavProject {
+  id: string;
+  key: string;
+  name: string;
+  archived?: boolean;
+}
+
 @Component({
   selector: 'tk-sidebar',
   imports: [RouterLink, RouterLinkActive, IconComponent, ProjectTileComponent, MatTooltip],
@@ -66,6 +74,7 @@ export class SidebarComponent {
   protected readonly directory = inject(ProjectDirectory);
   protected readonly boardDirectory = inject(BoardDirectory);
   private readonly context = inject(NavigationContext);
+  private readonly openProject = inject(OpenProjectState);
 
   protected readonly projectNav = PROJECT_NAV;
   protected readonly adminNav = ADMIN_NAV;
@@ -74,7 +83,12 @@ export class SidebarComponent {
 
   protected readonly currentProjectKey = this.context.projectKey;
   protected readonly projects = computed(() => {
-    const all = this.directory.activeProjects();
+    const open = this.openProject.project();
+    const listed = this.directory.activeProjects();
+    const all: readonly NavProject[] =
+      open && open.key === this.currentProjectKey() && !listed.some((p) => p.key === open.key)
+        ? [...listed, { id: open.key, ...open }]
+        : listed;
     const current = this.currentProjectKey();
     const shown = all.slice(0, MAX_PROJECTS);
     const active = all.find((p) => p.key === current);

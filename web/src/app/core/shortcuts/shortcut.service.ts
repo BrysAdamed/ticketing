@@ -22,7 +22,8 @@ const SEQUENCE_TIMEOUT_MS = 1000;
 
 /// Global keyboard shortcuts on `document`. Later registrations of the same keys take precedence
 /// over earlier ones until they are removed, so a page can temporarily override a global key
-/// (for example `/`). Single-key shortcuts are ignored while typing in form fields.
+/// (for example `/`). Single-key shortcuts are ignored while typing in form fields, and every
+/// shortcut is ignored while a modal overlay (dialog, menu, picker) is open.
 @Injectable({ providedIn: 'root' })
 export class ShortcutService {
   private readonly document = inject(DOCUMENT);
@@ -59,6 +60,12 @@ export class ShortcutService {
     destroyRef.onDestroy(() => removers.forEach((remove) => remove()));
   }
 
+  /// Whether a shortcut with these keys is registered right now (reactive).
+  isRegistered(keys: string): boolean {
+    const normalized = normalizeKeys(keys);
+    return this.registry().some((s) => s.keys === normalized);
+  }
+
   /// Display form of a key combo, e.g. `mod+k` → `Ctrl K` or `⌘K`.
   format(keys: string): string[] {
     return normalizeKeys(keys)
@@ -86,6 +93,7 @@ export class ShortcutService {
       arrowleft: '←',
       arrowright: '→',
       backspace: '⌫',
+      delete: 'Del',
       space: 'Space',
     };
     return (
@@ -97,6 +105,10 @@ export class ShortcutService {
 
   private onKeydown(event: KeyboardEvent): void {
     if (event.defaultPrevented || event.isComposing || event.repeat) return;
+    if (this.isOverlayOpen()) {
+      this.clearPending();
+      return;
+    }
     const combo = comboOf(event, this.isMac);
     if (!combo) return;
     const editable = isEditableTarget(event.target);
@@ -124,6 +136,11 @@ export class ShortcutService {
       this.pendingPrefix = combo;
       this.pendingTimer = setTimeout(() => this.clearPending(), SEQUENCE_TIMEOUT_MS);
     }
+  }
+
+  /// A dialog, menu, picker or any other overlay with a backdrop owns the keyboard while it is open.
+  private isOverlayOpen(): boolean {
+    return this.document.querySelector('.cdk-overlay-backdrop-showing') !== null;
   }
 
   private clearPending(): void {

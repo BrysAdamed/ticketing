@@ -1,5 +1,6 @@
 :host {
   height: var(--tk-row-h);
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -15,12 +16,20 @@
   background: var(--tk-bg-hover);
 }
 
-:host(.sel) {
+:host(.focus) {
+  background: var(--tk-bg-hover);
+}
+
+:host(.sel),
+:host(.sel):hover {
   background: var(--tk-selection);
 }
 
-:host(.focus) {
-  background: var(--tk-bg-hover);
+:host(.pending) {
+  .title,
+  .key {
+    color: var(--tk-text-subtle);
+  }
 }
 
 :host(.focus)::before {

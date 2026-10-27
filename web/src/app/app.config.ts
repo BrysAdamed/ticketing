@@ -17,6 +17,7 @@ import { MAT_SNACK_BAR_DEFAULT_OPTIONS } from '@angular/material/snack-bar';
 import { MAT_TOOLTIP_DEFAULT_OPTIONS } from '@angular/material/tooltip';
 import {
   provideRouter,
+  TitleStrategy,
   withComponentInputBinding,
   withInMemoryScrolling,
   withRouterConfig,
@@ -24,7 +25,9 @@ import {
 import { provideIcons } from '@ng-icons/core';
 import { apiErrorInterceptor } from '@core/api/api-error.interceptor';
 import { AuthService } from '@core/auth/auth.service';
+import { PageTitleStrategy } from '@core/layout/page-title';
 import { providePeekView } from '@core/layout/peek/peek';
+import { ShortcutService } from '@core/shortcuts/shortcut.service';
 import { ThemeService } from '@core/theme/theme.service';
 import { provideTicketCreation } from '@core/tickets/create-ticket';
 import { provideTicketDetailSection } from '@core/tickets/ticket-sections';
@@ -32,6 +35,7 @@ import { provideAttachments } from '@features/attachments/attachments.providers'
 import { provideSearch } from '@features/search/search.providers';
 import { TICKET_DETAIL_VIEW } from '@features/tickets/tickets.views';
 import { APP_ICONS } from '@shared/ui/icon/app-icons';
+import { PICKER_SHORTCUT_AVAILABLE } from '@shared/ui/inline-picker/picker-option';
 import { routes } from './app.routes';
 
 export const appConfig: ApplicationConfig = {
@@ -68,6 +72,14 @@ export const appConfig: ApplicationConfig = {
           (m) => m.TicketTestCasesComponent,
         ),
     }),
+    { provide: TitleStrategy, useExisting: PageTitleStrategy },
+    {
+      provide: PICKER_SHORTCUT_AVAILABLE,
+      useFactory: () => {
+        const shortcuts = inject(ShortcutService);
+        return (keys: string) => shortcuts.isRegistered(keys);
+      },
+    },
     { provide: MAT_RIPPLE_GLOBAL_OPTIONS, useValue: { disabled: true } },
     {
       provide: MAT_FORM_FIELD_DEFAULT_OPTIONS,

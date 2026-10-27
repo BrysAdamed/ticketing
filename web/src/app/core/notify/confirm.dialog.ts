@@ -45,6 +45,7 @@ export interface ConfirmOptions {
         mat-flat-button
         type="button"
         data-testid="confirm-ok"
+        [attr.cdkFocusInitial]="options.requireText ? null : ''"
         [class.danger]="options.danger"
         [disabled]="!canConfirm()"
         (click)="ref.close(true)"

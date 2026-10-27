@@ -18,26 +18,31 @@ export default [
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
       {
         path: 'dashboard',
+        title: 'Dashboard',
         data: { breadcrumb: 'Dashboard' },
         loadChildren: () => import('@features/dashboard/dashboard.routes'),
       },
       {
         path: 'backlog',
+        title: 'Backlog',
         data: { breadcrumb: 'Backlog' },
         loadChildren: () => import('@features/backlog/backlog.routes'),
       },
       {
         path: 'test-cases',
+        title: 'Test cases',
         data: { breadcrumb: 'Test cases' },
         loadChildren: () => import('@features/test-cases/test-cases.routes'),
       },
       {
         path: 'regressions',
+        title: 'Regressions',
         data: { breadcrumb: 'Regressions' },
         loadChildren: () => import('@features/regressions/regressions.routes'),
       },
       {
         path: 'settings',
+        title: 'Settings',
         data: { breadcrumb: 'Settings' },
         loadChildren: () => import('@features/project-settings/project-settings.routes'),
       },

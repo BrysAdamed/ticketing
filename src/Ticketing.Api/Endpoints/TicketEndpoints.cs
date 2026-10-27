@@ -108,6 +108,18 @@ public sealed class TicketEndpoints : IEndpointModule
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status409Conflict);
 
+        ticket.MapPost("/restore", async (string keyOrId, RestoreTicket.Handler handler, HttpResponse response, CancellationToken ct) =>
+            {
+                var dto = await handler.HandleAsync(new RestoreTicket.Command(keyOrId), ct);
+                response.SetRowVersion(dto.RowVersion);
+                return TypedResults.Ok(dto);
+            })
+            .WithSummary($"Undoes a delete within {Ticket.RestoreWindowMinutes} minutes (Owner only): the ticket, its links, test cases and placement come back. "
+                + "Fails with ticket.notDeleted or ticket.restore.expired.")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
+
         ticket.MapGet("/history", async (string keyOrId, int? limit, string? cursor, GetTicketHistory.Handler handler, CancellationToken ct) =>
             TypedResults.Ok(await handler.HandleAsync(new GetTicketHistory.Query(keyOrId, new PageRequest(limit, cursor)), ct)))
             .WithSummary("Activity entries of the ticket, newest first.");

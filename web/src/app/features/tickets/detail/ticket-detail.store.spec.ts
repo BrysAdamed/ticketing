@@ -4,6 +4,7 @@ import { of, Subject } from 'rxjs';
 import { AuthService } from '@core/auth/auth.service';
 import { ToastService } from '@core/notify/toast.service';
 import { AttachmentChange, TicketAttachments } from '@core/tickets/ticket-attachments';
+import { TicketDeletion } from '@core/tickets/ticket-deletion';
 import { Comment, Ticket, TicketHistoryPage } from '@core/tickets/ticket.models';
 import { TicketsApi } from '@core/tickets/tickets.api';
 import { TicketDetailStore } from './ticket-detail.store';
@@ -47,6 +48,7 @@ describe('TicketDetailStore', () => {
         { provide: TicketAttachments, useValue: { changes: attachmentChanges } },
         { provide: ToastService, useValue: { error: vi.fn(), success: vi.fn() } },
         { provide: AuthService, useValue: { currentUser: signal(null) } },
+        { provide: TicketDeletion, useValue: { delete: vi.fn() } },
       ],
     });
     store = TestBed.inject(TicketDetailStore);

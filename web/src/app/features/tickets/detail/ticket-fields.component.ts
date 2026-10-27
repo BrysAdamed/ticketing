@@ -9,6 +9,7 @@ import {
 } from '@angular/core';
 import { MatTooltip } from '@angular/material/tooltip';
 import { FieldHints } from '@core/tickets/field-hints';
+import { MoveTarget, MoveTargets } from '@core/tickets/move-targets';
 import { ProjectPeople } from '@core/tickets/project-people';
 import { Ticket, TicketPatch, TicketRef, UserRef } from '@core/tickets/ticket.models';
 import { TicketsApi } from '@core/tickets/tickets.api';
@@ -18,8 +19,6 @@ import {
   RESOLUTION_LABELS,
   RESOLUTIONS,
   Resolution,
-  SEVERITIES,
-  SEVERITY_LABELS,
   Severity,
   TICKET_STATUS_LABELS,
   TICKET_TYPE_LABELS,
@@ -28,6 +27,7 @@ import {
 } from '@shared/domain/enums';
 import {
   PRIORITY_OPTIONS,
+  SEVERITY_OPTIONS,
   STORY_POINT_OPTIONS,
   TICKET_STATUS_OPTIONS,
   TICKET_TYPE_OPTIONS,
@@ -48,14 +48,16 @@ import { LabelToggle } from '@shared/ui/labels-picker/labels-picker-panel.compon
 import { SearchPickerDirective } from '@shared/ui/search-picker/search-picker.directive';
 import { firstValueFrom } from 'rxjs';
 
+export type FieldPicker = 'status' | 'priority' | 'type' | 'assignee' | 'labels' | 'location';
+
 export interface FieldEdit {
   patch: TicketPatch;
   optimistic: Partial<Ticket>;
 }
 
-const SEVERITY_OPTIONS: PickerOption<Severity | null>[] = [
+const SEVERITY_PICKER_OPTIONS: PickerOption<Severity | null>[] = [
   { value: null, label: 'None', keywords: ['clear'] },
-  ...SEVERITIES.map((s) => ({ value: s, label: SEVERITY_LABELS[s] })),
+  ...SEVERITY_OPTIONS,
 ];
 const RESOLUTION_OPTIONS: PickerOption<Resolution>[] = RESOLUTIONS.map((r) => ({
   value: r,
@@ -94,7 +96,7 @@ const RESOLUTION_OPTIONS: PickerOption<Resolution>[] = RESOLUTIONS.map((r) => ({
           data-testid="assign-to-me"
           (click)="assignToMe.emit()"
         >
-          <tk-icon name="tablerUser" [size]="14" />Assign to me<tk-kbd>A</tk-kbd>
+          <tk-icon name="tablerUser" [size]="14" />Assign to me<tk-kbd>I</tk-kbd>
         </button>
       </div>
     }
@@ -176,9 +178,11 @@ const RESOLUTION_OPTIONS: PickerOption<Resolution>[] = RESOLUTIONS.map((r) => ({
           class="fv"
           data-testid="field-type"
           [disabled]="!canEdit()"
+          #typePicker="tkInlinePicker"
           [tkInlinePicker]="typeOptions"
           [pickerValue]="t.type"
           pickerPlaceholder="Change type…"
+          pickerShortcut="T"
           (picked)="edit({ type: $event }, { type: $event })"
         >
           <tk-type-icon [type]="t.type" [showLabel]="true" />
@@ -196,7 +200,7 @@ const RESOLUTION_OPTIONS: PickerOption<Resolution>[] = RESOLUTIONS.map((r) => ({
           #assigneePicker="tkSearchPicker"
           [tkSearchPicker]="assigneeSearch()"
           pickerPlaceholder="Assign to…"
-          pickerShortcut="I"
+          pickerShortcut="A"
           (picked)="setAssignee($event)"
         >
           <tk-user [user]="t.assignee" />
@@ -262,6 +266,7 @@ const RESOLUTION_OPTIONS: PickerOption<Resolution>[] = RESOLUTIONS.map((r) => ({
           class="fv wrap"
           data-testid="field-labels"
           [disabled]="!canEdit()"
+          #labelsPicker="tkLabelsPicker"
           [tkLabelsPicker]="t.labels"
           [labelSuggestions]="labelSuggestions()"
           (labelToggled)="toggleLabel($event)"
@@ -301,13 +306,24 @@ const RESOLUTION_OPTIONS: PickerOption<Resolution>[] = RESOLUTIONS.map((r) => ({
       </div>
       <div class="field">
         <span class="fl">Location</span>
-        <span class="fv plain" data-testid="field-location">
+        <button
+          type="button"
+          class="fv"
+          data-testid="field-location"
+          [disabled]="!canEdit()"
+          #movePicker="tkInlinePicker"
+          [tkInlinePicker]="[]"
+          [pickerLoad]="moveOptions()"
+          pickerPlaceholder="Move to…"
+          pickerShortcut="M"
+          (picked)="moved.emit($event)"
+        >
           <tk-icon
             [name]="t.location.kind === 'Backlog' ? 'tablerList' : 'tablerLayoutKanban'"
             [size]="14"
           />
           {{ t.location.kind === 'Backlog' ? 'Backlog' : t.location.boardName }}
-        </span>
+        </button>
       </div>
     </div>
     <div class="fgroup">
@@ -339,6 +355,7 @@ export class TicketFieldsComponent {
   private readonly api = inject(TicketsApi);
   private readonly hints = inject(FieldHints);
   private readonly people = inject(ProjectPeople);
+  private readonly moveTargets = inject(MoveTargets);
 
   readonly ticket = input.required<Ticket>();
   readonly canEdit = input(false);
@@ -346,12 +363,14 @@ export class TicketFieldsComponent {
 
   readonly changed = output<FieldEdit>();
   readonly assignToMe = output<void>();
+  /// "Move to…" picked: `backlog` or a board id.
+  readonly moved = output<MoveTarget>();
 
   protected readonly statusOptions = TICKET_STATUS_OPTIONS;
   protected readonly priorityOptions = PRIORITY_OPTIONS;
   protected readonly typeOptions = TICKET_TYPE_OPTIONS;
   protected readonly pointOptions = STORY_POINT_OPTIONS;
-  protected readonly severityOptions = SEVERITY_OPTIONS;
+  protected readonly severityOptions = SEVERITY_PICKER_OPTIONS;
   protected readonly resolutionOptions = RESOLUTION_OPTIONS;
   protected readonly statusLabels: Record<TicketStatus, string> = TICKET_STATUS_LABELS;
   protected readonly priorityLabels: Record<Priority, string> = PRIORITY_LABELS;
@@ -364,6 +383,9 @@ export class TicketFieldsComponent {
     viewChild.required<InlinePickerDirective<Priority>>('priorityPicker');
   private readonly assigneePicker =
     viewChild.required<SearchPickerDirective<UserRef | null>>('assigneePicker');
+  private readonly typePicker = viewChild.required<InlinePickerDirective<TicketType>>('typePicker');
+  private readonly labelsPicker = viewChild.required<LabelsPickerDirective>('labelsPicker');
+  private readonly movePicker = viewChild.required<InlinePickerDirective<MoveTarget>>('movePicker');
 
   protected readonly assigneeSearch = computed(() => {
     const projectKey = this.ticket().projectKey;
@@ -403,12 +425,28 @@ export class TicketFieldsComponent {
     };
   });
 
-  /// Opens a field picker from the keyboard (s, p, i in the ticket view).
-  openPicker(field: 'status' | 'priority' | 'assignee'): void {
+  protected readonly moveOptions = computed(() => {
+    const t = this.ticket();
+    return () => this.moveTargets.options(t.projectKey, t.location);
+  });
+
+  /// Opens a field picker from the keyboard (s, p, t, a, l, m in the ticket view).
+  openPicker(field: FieldPicker): void {
     if (!this.canEdit()) return;
-    if (field === 'status') this.statusPicker().open();
-    else if (field === 'priority') this.priorityPicker().open();
-    else this.assigneePicker().open();
+    switch (field) {
+      case 'status':
+        return this.statusPicker().open();
+      case 'priority':
+        return this.priorityPicker().open();
+      case 'type':
+        return this.typePicker().open();
+      case 'assignee':
+        return this.assigneePicker().open();
+      case 'labels':
+        return this.labelsPicker().open();
+      case 'location':
+        return this.movePicker().open();
+    }
   }
 
   protected edit(patch: TicketPatch, optimistic: Partial<Ticket>): void {

@@ -17,6 +17,15 @@
   mat-form-field {
     width: 100%;
   }
+
+  ::ng-deep .mat-mdc-select-arrow-wrapper {
+    display: none;
+  }
+
+  .chev {
+    margin-right: 10px;
+    color: var(--tk-text-subtle);
+  }
 }
 
 .pick {
@@ -25,7 +34,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 0 10px;
+  padding: 0 10px 0 16px;
   border: 1px solid var(--tk-border-input, var(--tk-border));
   border-radius: var(--tk-radius-md);
   background: var(--tk-surface);

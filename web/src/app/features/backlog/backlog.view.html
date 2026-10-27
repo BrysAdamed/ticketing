@@ -12,12 +12,14 @@
     </mat-slide-toggle>
     @if (store.canWrite()) {
       <button
-        mat-flat-button
+        mat-stroked-button
         type="button"
         data-testid="backlog-new"
         (click)="store.openCreate(null)"
       >
-        <tk-icon name="tablerPlus" [size]="14" />New ticket<tk-kbd tone="on-solid">C</tk-kbd>
+        <tk-icon class="btn-icon" name="tablerPlus" [size]="14" />New ticket<tk-kbd class="btn-kbd"
+          >C</tk-kbd
+        >
       </button>
     }
   </div>
@@ -39,8 +41,20 @@
     </button>
     <mat-menu #groupMenu="matMenu">
       @for (option of groupOptions; track option.value) {
-        <button mat-menu-item type="button" (click)="setGroupBy(option.value)">
-          {{ option.label }}
+        <button
+          mat-menu-item
+          type="button"
+          role="menuitemradio"
+          [attr.aria-checked]="store.groupBy() === option.value"
+          [attr.data-testid]="'group-by-' + option.value"
+          (click)="setGroupBy(option.value)"
+        >
+          <span class="menu-opt"
+            >{{ option.label }}
+            @if (store.groupBy() === option.value) {
+              <tk-icon class="menu-check" name="tablerCheck" [size]="14" />
+            }
+          </span>
         </button>
       }
     </mat-menu>
@@ -49,8 +63,20 @@
     </button>
     <mat-menu #sortMenu="matMenu">
       @for (option of sortOptions; track option.value) {
-        <button mat-menu-item type="button" (click)="setSortBy(option.value)">
-          {{ option.label }}
+        <button
+          mat-menu-item
+          type="button"
+          role="menuitemradio"
+          [attr.aria-checked]="store.sortBy() === option.value"
+          [attr.data-testid]="'sort-by-' + option.value"
+          (click)="setSortBy(option.value)"
+        >
+          <span class="menu-opt"
+            >{{ option.label }}
+            @if (store.sortBy() === option.value) {
+              <tk-icon class="menu-check" name="tablerCheck" [size]="14" />
+            }
+          </span>
         </button>
       }
     </mat-menu>
@@ -107,7 +133,7 @@
     #listWrap
     class="list-wrap"
     [class.selecting]="selectionCount() > 0"
-    [style.height.px]="listHeight()"
+    [style.height.px]="viewportHeight()"
   >
     <cdk-virtual-scroll-viewport
       class="list"
@@ -130,7 +156,6 @@
           }
           @case ('create') {
             <tk-quick-create-row
-              [busy]="creating()"
               (submitted)="submitCreate($any(row), $event)"
               (closed)="store.closeCreate()"
             />
@@ -139,7 +164,9 @@
             <tk-backlog-row
               cdkDrag
               cdkDragLockAxis="y"
-              [cdkDragDisabled]="!store.canDrag()"
+              [cdkDragDisabled]="!store.canDrag() || isPending(row.id)"
+              [pending]="isPending(row.id)"
+              [showParent]="store.groupBy() !== 'epic'"
               [item]="$any(row).item"
               [assignee]="userOf($any(row).item.assigneeId)"
               [parent]="
@@ -150,13 +177,13 @@
               [selected]="store.selection().selected.has(row.id)"
               [focused]="store.focusId() === row.id"
               [flash]="store.lastCreatedId() === row.id"
-              [canWrite]="store.canWrite()"
+              [canWrite]="store.canWrite() && !isPending(row.id)"
               [assigneeSearch]="assigneeSearch"
               [labelSuggestions]="labelSuggestions"
               (click)="onRowClick($event, row.id, $any(row).item.key)"
               (mouseenter)="onRowHover($any(row).item.key)"
               (mouseleave)="onRowHover(null)"
-              (toggleSelect)="store.click(row.id, 'toggle')"
+              (toggleSelect)="store.click(row.id, $event ? 'range' : 'toggle')"
               (edit)="onEdit(row.id, $event)"
               (cdkDragStarted)="dragStarted($event, row.id)"
               (cdkDragMoved)="dragMoved($event)"
@@ -189,6 +216,14 @@
     @if (dropIndex() !== null) {
       <div class="drop-line" [style.top.px]="dropLineTop()" data-testid="drop-indicator"></div>
     }
+  </div>
+}
+
+@if (store.hasData() && store.onBoardsCount() > 0) {
+  <div class="on-boards" data-testid="backlog-on-boards">
+    <tk-icon name="tablerLayoutKanban" [size]="14" />
+    {{ store.onBoardsCount() }} more {{ store.onBoardsCount() === 1 ? 'ticket' : 'tickets' }} on
+    boards
   </div>
 }
 
@@ -231,7 +266,7 @@
         #bulkAssigneePicker="tkSearchPicker"
         [tkSearchPicker]="assigneeSearch"
         pickerPlaceholder="Assign to…"
-        pickerShortcut="I"
+        pickerShortcut="A"
         (picked)="bulkAssignee($event)"
       >
         <tk-icon name="tablerUser" [size]="14" />Assignee
@@ -239,11 +274,34 @@
       <button
         type="button"
         class="bbtn"
+        data-testid="bulk-type"
+        #bulkTypePicker="tkInlinePicker"
+        [tkInlinePicker]="typeOptions"
+        pickerPlaceholder="Change type…"
+        pickerShortcut="T"
+        (picked)="bulkType($event)"
+      >
+        <tk-icon name="tablerCategory" [size]="14" />Type
+      </button>
+      <button
+        type="button"
+        class="bbtn"
+        data-testid="bulk-labels"
+        #bulkLabelsPicker="tkLabelsPicker"
         [tkLabelsPicker]="[]"
         [labelSuggestions]="labelSuggestions"
         (labelToggled)="bulkLabel($event)"
       >
         <tk-icon name="tablerTag" [size]="14" />Labels
+      </button>
+      <button
+        #bulkMove
+        type="button"
+        class="bbtn"
+        data-testid="bulk-move"
+        (click)="openMove(bulkMove)"
+      >
+        <tk-icon name="tablerLayoutKanban" [size]="14" />Move to board
       </button>
       <button
         type="button"
@@ -262,7 +320,13 @@
         <tk-icon name="tablerArrowBarToDown" [size]="14" />Bottom
       </button>
       @if (project.isOwner()) {
-        <button type="button" class="bbtn danger" data-testid="bulk-delete" (click)="bulkDelete()">
+        <button
+          type="button"
+          class="bbtn danger"
+          data-testid="bulk-delete"
+          matTooltip="Delete  Del"
+          (click)="bulkDelete()"
+        >
           <tk-icon name="tablerTrash" [size]="14" />Delete
         </button>
       }
@@ -279,6 +343,18 @@
     </button>
   </div>
 }
+
+<button
+  type="button"
+  class="move-anchor"
+  tabindex="-1"
+  aria-hidden="true"
+  #movePicker="tkInlinePicker"
+  [tkInlinePicker]="[]"
+  pickerPlaceholder="Move to…"
+  pickerShortcut="M"
+  (picked)="moveTo($event)"
+></button>
 
 <ng-template #groupHead let-row>
   <button

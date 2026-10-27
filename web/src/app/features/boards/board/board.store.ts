@@ -103,7 +103,10 @@ export class BoardStore {
     this.events.events.pipe(takeUntilDestroyed(inject(DestroyRef))).subscribe((event) => {
       if (event.kind === 'updated') this.applyTicket(event.ticket);
       else if (event.kind === 'deleted') this.removeCards((card) => card.key === event.key);
-      else if (event.kind === 'created' && event.ticket.location.boardId === this.boardId())
+      else if (
+        (event.kind === 'created' || event.kind === 'restored') &&
+        event.ticket.location.boardId === this.boardId()
+      )
         void this.reload(true);
     });
   }

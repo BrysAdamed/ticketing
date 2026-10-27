@@ -35,8 +35,9 @@ public static class ChangeProjectMemberRole
                 ProjectMembership.EnsureIsMember(project, command.UserId);
                 var activeIds = await ProjectMembership.ActiveMemberIdsAsync(db, project, ct);
                 var previous = project.ChangeMemberRole(command.UserId, command.Role, activeIds);
+                var email = await ProjectMembership.EmailOfAsync(db, command.UserId, ct);
                 activity.RecordChange(ActivityEntityType.Project, project.Id, project.Id, "project.member.roleChanged", "role",
-                    new { userId = command.UserId, role = previous }, new { userId = command.UserId, role = command.Role });
+                    new { userId = command.UserId, email, role = previous }, new { userId = command.UserId, email, role = command.Role });
                 await db.SaveChangesAsync(ct);
 
                 var members = await ProjectMembership.LoadMembersAsync(db, project.Id, project.Visibility, ct);

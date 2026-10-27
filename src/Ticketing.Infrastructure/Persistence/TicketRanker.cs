@@ -50,6 +50,15 @@ internal sealed class TicketRanker(TicketingDbContext db) : ITicketRanker
             : await RebalanceAsync(container, before, count, movingTicketIds, cancellationToken);
     }
 
+    public async Task<string> ReuseOrPlaceAsync(
+        RankContainer container, string rank, RankAnchor fallback, IReadOnlyCollection<Guid> movingTicketIds, CancellationToken cancellationToken)
+    {
+        await AdvisoryLocks.AcquireAsync(db, container.LockKey, cancellationToken);
+        if (!Ranks.NeedsRebalance(rank) && !await Others(container, movingTicketIds).AnyAsync(t => t.Rank == rank, cancellationToken))
+            return rank;
+        return (await PlaceManyAsync(container, fallback, 1, movingTicketIds, cancellationToken))[0];
+    }
+
     private static async Task<string> AnchorRankAsync(IQueryable<Ticket> others, Guid anchorId, CancellationToken cancellationToken) =>
         await others.Where(t => t.Id == anchorId).Select(t => t.Rank).FirstOrDefaultAsync(cancellationToken)
         ?? throw DomainException.Conflict(

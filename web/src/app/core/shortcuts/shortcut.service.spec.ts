@@ -77,6 +77,38 @@ describe('ShortcutService', () => {
     expect(calls).toEqual(['page', 'global']);
   });
 
+  it('ignores every shortcut while a dialog or other backdrop overlay is open', () => {
+    // Arrange
+    const calls: string[] = [];
+    service.register({ keys: 'enter', description: 'open', handler: () => calls.push('enter') });
+    service.register({ keys: 'escape', description: 'close', handler: () => calls.push('esc') });
+    const backdrop = document.createElement('div');
+    backdrop.className = 'cdk-overlay-backdrop cdk-overlay-backdrop-showing';
+    document.body.appendChild(backdrop);
+
+    // Act
+    press('Enter');
+    press('Escape');
+    backdrop.remove();
+    press('Enter');
+
+    // Assert
+    expect(calls).toEqual(['enter']);
+  });
+
+  it('tells whether keys are registered in the current scope', () => {
+    // Arrange
+    const remove = service.register({ keys: 'S', description: 'status', handler: () => 0 });
+
+    // Act
+    const whileRegistered = service.isRegistered('s');
+    remove();
+
+    // Assert
+    expect(whileRegistered).toBe(true);
+    expect(service.isRegistered('s')).toBe(false);
+  });
+
   it('normalizes key notation', () => {
     expect(normalizeKeys('Shift+Mod+K')).toBe('mod+shift+k');
     expect(normalizeKeys('G  B')).toBe('g b');

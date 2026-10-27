@@ -56,6 +56,11 @@ export class TicketsApi {
     return this.api.delete(`/tickets/${encodeURIComponent(key)}`);
   }
 
+  /// Undoes a delete within 10 minutes (Owner only, D-82): links, test cases and placement come back.
+  restore(key: string): Observable<Ticket> {
+    return this.api.post<Ticket>(`/tickets/${encodeURIComponent(key)}/restore`);
+  }
+
   backlog(projectKey: string, query: BacklogQuery = {}): Observable<Backlog> {
     return this.api.get<Backlog>(`/projects/${projectKey}/backlog`, { ...query });
   }

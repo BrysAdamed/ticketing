@@ -94,6 +94,7 @@
             [canEdit]="store.canEdit()"
             (changed)="onFieldChange($event)"
             (assignToMe)="assignToMe()"
+            (moved)="onMoved($event)"
           />
         }
 
@@ -175,6 +176,7 @@
           [canEdit]="store.canEdit()"
           (changed)="onFieldChange($event)"
           (assignToMe)="assignToMe()"
+          (moved)="onMoved($event)"
         />
       </aside>
     }

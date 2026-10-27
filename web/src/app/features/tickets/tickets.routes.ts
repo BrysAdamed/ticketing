@@ -14,7 +14,7 @@ export default [
   { path: '', pathMatch: 'full', redirectTo: '/search' },
   viewRoute(TICKET_DETAIL_VIEW, {
     path: ':ticketKey',
-    title: (route) => `${(route.paramMap.get('ticketKey') ?? '').toUpperCase()} · Ticketing`,
+    title: (route) => (route.paramMap.get('ticketKey') ?? '').toUpperCase(),
     data: { breadcrumb: ticketCrumb, presentation: 'page' },
   }),
 ] satisfies Routes;

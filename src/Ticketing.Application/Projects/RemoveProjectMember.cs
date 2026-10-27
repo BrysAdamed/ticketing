@@ -21,7 +21,8 @@ public static class RemoveProjectMember
                 ProjectMembership.EnsureIsMember(project, command.UserId);
                 var activeIds = await ProjectMembership.ActiveMemberIdsAsync(db, project, ct);
                 var removed = project.RemoveMember(command.UserId, activeIds);
-                activity.Record(ActivityEntityType.Project, project.Id, project.Id, "project.member.removed", new { userId = removed.UserId, role = removed.Role });
+                var email = await ProjectMembership.EmailOfAsync(db, removed.UserId, ct);
+                activity.Record(ActivityEntityType.Project, project.Id, project.Id, "project.member.removed", new { userId = removed.UserId, email, role = removed.Role });
                 await db.SaveChangesAsync(ct);
                 return true;
             }, cancellationToken);

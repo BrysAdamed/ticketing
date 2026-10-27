@@ -6,9 +6,14 @@ export default [
   viewRoute(TEST_CASES_VIEW, {
     path: '',
     children: [
-      viewRoute(TEST_CASE_EDITOR_VIEW, { path: 'new', data: { breadcrumb: 'New' } }),
+      viewRoute(TEST_CASE_EDITOR_VIEW, {
+        path: 'new',
+        title: 'New test case',
+        data: { breadcrumb: 'New' },
+      }),
       viewRoute(TEST_CASE_EDITOR_VIEW, {
         path: ':testCaseKey',
+        title: (route) => (route.paramMap.get('testCaseKey') ?? '').toUpperCase(),
         data: {
           breadcrumb: (route: ActivatedRouteSnapshot) =>
             (route.paramMap.get('testCaseKey') ?? '').toUpperCase(),

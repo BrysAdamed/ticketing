@@ -13,6 +13,8 @@ public static class TicketErrors
     public const string StoryPointsOutOfRange = "ticket.storyPoints.range";
     public const string ResolutionWithoutDone = "ticket.resolution.notDone";
     public const string Deleted = "ticket.deleted";
+    public const string NotDeleted = "ticket.notDeleted";
+    public const string RestoreExpired = "ticket.restore.expired";
     public const string LinkSelf = "ticket.link.self";
     public const string LinkExists = "ticket.link.exists";
     public const string LinkNotFound = "ticket.link.notFound";

@@ -1,9 +1,8 @@
 import { Locator, Page } from '@playwright/test';
 
-/// A project's frame (header, archived banner, tabs) and its Settings tab.
+/// A project's frame (breadcrumb, archived banner, sidebar sections) and its Settings section.
 export class ProjectPage {
-    readonly headerName: Locator;
-    readonly headerVisibility: Locator;
+    readonly breadcrumbProject: Locator;
     readonly archivedBanner: Locator;
     readonly unarchiveButton: Locator;
     readonly settings: Locator;
@@ -19,8 +18,7 @@ export class ProjectPage {
     readonly confirmOk: Locator;
 
     constructor(private readonly page: Page) {
-        this.headerName = page.getByTestId('project-header-name');
-        this.headerVisibility = page.getByTestId('project-header-visibility');
+        this.breadcrumbProject = page.getByTestId('breadcrumb-project');
         this.archivedBanner = page.getByTestId('project-archived-banner');
         this.unarchiveButton = page.getByTestId('project-unarchive');
         this.settings = page.getByTestId('view-project.settings');
@@ -42,8 +40,8 @@ export class ProjectPage {
         await this.nameInput.waitFor();
     }
 
-    tab(path: string): Locator {
-        return this.page.getByTestId(`project-tab-${path}`);
+    section(path: string): Locator {
+        return this.page.getByTestId('sidebar').getByTestId(`nav-project-${path}`);
     }
 
     memberRow(email: string): Locator {

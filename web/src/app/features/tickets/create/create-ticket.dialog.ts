@@ -16,6 +16,7 @@ import { provideIcons } from '@ng-icons/core';
 import { firstValueFrom } from 'rxjs';
 import { toApiError } from '@core/api/api-error';
 import { PeekService } from '@core/layout/peek/peek';
+import { ToastService } from '@core/notify/toast.service';
 import { ProjectDirectory } from '@core/projects/project-directory';
 import { CreateTicketPrefill } from '@core/tickets/create-ticket';
 import { FieldHints } from '@core/tickets/field-hints';
@@ -86,6 +87,7 @@ export class CreateTicketDialog {
   private readonly hints = inject(FieldHints);
   private readonly events = inject(TicketEvents);
   private readonly peek = inject(PeekService);
+  private readonly toast = inject(ToastService);
   private readonly ref =
     inject<MatDialogRef<CreateTicketDialog, TicketSummary | null>>(MatDialogRef);
   protected readonly data = inject<CreateTicketPrefill>(MAT_DIALOG_DATA, { optional: true }) ?? {};
@@ -214,6 +216,10 @@ export class CreateTicketDialog {
       this.events.emit({ kind: 'created', ticket: created });
       this.ref.close(created);
       if (open) this.peek.open(created.key);
+      else if (!this.data.submit)
+        this.toast.success(`${created.key} created`, {
+          action: { label: 'Open', run: () => this.peek.open(created.key) },
+        });
     } catch (error) {
       const apiError = toApiError(error);
       this.error.set(apiError.title);

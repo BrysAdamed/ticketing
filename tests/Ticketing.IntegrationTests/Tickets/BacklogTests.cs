@@ -71,6 +71,39 @@ public sealed class BacklogTests(TicketingApiFactory api)
     }
 
     [Fact]
+    public async Task Backlog_counts_matching_tickets_on_boards_with_the_same_filters()
+    {
+        // Arrange
+        var owner = await api.CreateUserAsync();
+        var client = await api.LoginAsync(owner);
+        var project = await client.CreateProjectAsync("WEB");
+        var other = await client.CreateProjectAsync("APP");
+        var boardId = await api.CreateBoardAsync(owner.Id, project.Id, other.Id);
+        await client.CreateTicketAsync("WEB", "Backlog bug", "Bug");
+        var bug = await client.CreateTicketAsync("WEB", "Login bug", "Bug", new { assignee = "me" });
+        var story = await client.CreateTicketAsync("WEB", "Signup story");
+        var done = await client.CreateTicketAsync("WEB", "Finished bug", "Bug", new { status = "Done" });
+        var deleted = await client.CreateTicketAsync("WEB", "Deleted bug", "Bug");
+        var otherProject = await client.CreateTicketAsync("APP", "Other project bug", "Bug");
+        foreach (var id in new[] { bug.Id, story.Id, done.Id, deleted.Id, otherProject.Id })
+            await api.PlaceOnBoardAsync(id, boardId);
+        await (await client.DeleteAsync($"/api/v1/tickets/{deleted.Key}", _ct)).ShouldHaveStatusAsync(HttpStatusCode.NoContent);
+
+        async Task<int> OnBoards(string query) =>
+            (await (await client.GetAsync($"/api/v1/projects/WEB/backlog?{query}", _ct)).ReadAsync<BacklogDto>()).OnBoardsCount;
+
+        // Act / Assert
+        Assert.Equal(2, await OnBoards(""));
+        Assert.Equal(3, await OnBoards("showDone=true"));
+        Assert.Equal(1, await OnBoards("type=Bug"));
+        Assert.Equal(2, await OnBoards("type=Bug&showDone=true"));
+        Assert.Equal(1, await OnBoards("status=Done"));
+        Assert.Equal(1, await OnBoards("assignee=me"));
+        Assert.Equal(1, await OnBoards("text=signup"));
+        Assert.Equal(0, await OnBoards("priority=Highest"));
+    }
+
+    [Fact]
     public async Task Backlog_of_a_private_project_is_404_for_outsiders()
     {
         // Arrange

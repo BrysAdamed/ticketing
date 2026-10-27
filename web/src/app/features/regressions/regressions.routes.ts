@@ -6,6 +6,7 @@ export default [
   viewRoute(REGRESSIONS_LIST_VIEW, { path: '' }),
   viewRoute(REGRESSION_SESSION_VIEW, {
     path: ':sessionKey',
+    title: (route) => route.paramMap.get('sessionKey') ?? '',
     data: { breadcrumb: (route: ActivatedRouteSnapshot) => route.paramMap.get('sessionKey') ?? '' },
   }),
 ] satisfies Routes;

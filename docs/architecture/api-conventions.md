@@ -7,7 +7,7 @@ Normative for backend and frontend. The product rules behind them are in [the sp
 * Base path `/api/v1`. JSON with camelCase property names. Enums travel as their PascalCase names (`ReadyForTesting`).
 * Timestamps are ISO 8601 UTC strings (`2026-10-26T12:00:00Z`).
 * Ids are UUID strings. Every route that names a project, ticket, test case or regression session accepts either the id or the human key (`/api/v1/projects/WEB`, `/api/v1/tickets/WEB-42`).
-* OpenAPI document: `/api/v1/openapi.json`; Scalar UI at `/scalar` (non-production or Admin only).
+* OpenAPI document: `/api/v1/openapi.json` (signed-in callers only in Production, D-76); Scalar UI at `/scalar` (non-production only).
 
 ## Authentication
 
@@ -25,8 +25,8 @@ Cookie-authenticated unsafe requests (`POST`, `PUT`, `PATCH`, `DELETE`) must sen
 | Method & path | Body | Success | Errors |
 | --- | --- | --- | --- |
 | `GET /api/v1/auth/csrf` | – | `204`, sets `XSRF-TOKEN` cookie | – |
-| `POST /api/v1/auth/login` | `{ email, password }` | `200 CurrentUser`, sets session + new XSRF cookie | `401 auth.invalidCredentials`, `423 auth.lockedOut` |
-| `POST /api/v1/auth/logout` | – | `204` | – |
+| `POST /api/v1/auth/login` | `{ email, password }` | `200 CurrentUser`, sets session + new XSRF cookie | `401 auth.invalidCredentials` (also for unknown or locked accounts), `429 rateLimited` |
+| `POST /api/v1/auth/logout` | – | `204`, deletes the server-side session | – |
 | `GET /api/v1/me` | – | `200 CurrentUser` | `401` |
 | `GET /api/v1/me/flags` | – | `200 { "flags": { "<key>": "on" \| "off" } }` | `401` |
 | `POST /api/v1/auth/set-password/inspect` | `{ token }` | `200 { email, displayName, isNewUser, expiresAt }` | `404 user.setPasswordToken.invalid` |
@@ -65,8 +65,7 @@ RFC 9457 problem details, always with a stable machine `code`:
 | 403 | Authenticated, can read the resource but may not perform the action. |
 | 404 | Not found **or** not readable (private projects never leak existence). |
 | 409 | Business-rule conflict or stale `If-Match` (`code: "concurrency.conflict"`). |
-| 423 | Account locked. |
-| 429 | Rate limited (PATs), with `Retry-After`. |
+| 429 | Rate limited (PATs; sign-in per client address), with `Retry-After`. |
 
 ## Concurrency
 

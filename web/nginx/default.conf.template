@@ -3,12 +3,39 @@ map $http_upgrade $connection_upgrade {
   ''      '';
 }
 
+# TLS terminates in front of nginx (a company reverse proxy); keep the scheme it reports, else our own.
+map $http_x_forwarded_proto $forwarded_proto {
+  ''      $scheme;
+  default $http_x_forwarded_proto;
+}
+
+# HSTS only when the browser reached us over HTTPS (an empty value sends no header).
+map $forwarded_proto $hsts {
+  https   "max-age=31536000";
+  default '';
+}
+
+# Access logs never record set-password tokens or other query strings carried in a Referer.
+map $request_uri $loggable_request_uri {
+  ~^/set-password /set-password;
+  default         $request_uri;
+}
+
+map $http_referer $loggable_referer {
+  "~^(?<referer_without_query>[^?]*)[?]" $referer_without_query;
+  default                                $http_referer;
+}
+
+log_format ticketing '$remote_addr - $remote_user [$time_local] "$request_method $loggable_request_uri $server_protocol" '
+                     '$status $body_bytes_sent "$loggable_referer" "$http_user_agent"';
+
 server {
   listen 8080;
   server_name _;
   root /usr/share/nginx/html;
   server_tokens off;
-  client_max_body_size 25m;
+  client_max_body_size 11m;
+  access_log /var/log/nginx/access.log ticketing;
 
   resolver ${NGINX_LOCAL_RESOLVERS} valid=30s ipv6=off;
   set $api_upstream http://${API_UPSTREAM};
@@ -24,7 +51,7 @@ server {
   proxy_set_header Host $host;
   proxy_set_header X-Real-IP $remote_addr;
   proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-  proxy_set_header X-Forwarded-Proto $scheme;
+  proxy_set_header X-Forwarded-Proto $forwarded_proto;
   proxy_set_header X-Forwarded-Host $host;
 
   location /api/ {
@@ -41,10 +68,6 @@ server {
     proxy_request_buffering off;
     proxy_read_timeout 3600s;
     proxy_send_timeout 3600s;
-  }
-
-  location /openapi {
-    proxy_pass $api_upstream;
   }
 
   location /scalar {

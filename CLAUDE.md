@@ -2,6 +2,17 @@
 
 In-house Jira replacement: .NET 10 API (+ in-process MCP server) · Angular 22 SPA · PostgreSQL 18 · docker compose.
 
+## Every change has a ticket
+
+We track this project in Ticketing itself: project `TKT` on the team's own instance (http://localhost:8090), reachable through the `ticketing` MCP server.
+
+1. Before starting, find the ticket (`search_tickets` / `get_ticket`) or create one (`create_ticket`, type and description stating the why). Small fixes get a `Technical` or `Bug` ticket too.
+2. Name the branch `<type>/TKT-<n>-<slug>` and start every commit message with the key (`TKT-12: …`).
+3. Keep the status current over MCP: `InProgress` when you start, `Review` when the branch is pushed, `Done` when it is merged to `main`. Add test cases (`create_test_case`) for behaviour worth regression-testing.
+4. On merge, add a short comment to the ticket: what changed, the merge commit, anything deferred (deferred work = a new ticket, not a TODO).
+
+The instance runs as compose project `ticketing-dogfood` (`WEB_HOST_PORT=8090 docker compose -p ticketing-dogfood -f docker-compose.yml up -d --build` to upgrade). It holds real data: **never** run `down -v`, demo seeding or e2e suites against it — tests use their own compose project and ports.
+
 ## Before you change anything
 
 - The product spec is normative: `docs/product/01-refined-spec.md`. Decisions that override or refine it: `docs/decisions.md` (D-xx). Check both before changing behaviour.

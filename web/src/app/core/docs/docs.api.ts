@@ -87,15 +87,19 @@ export class DocsApi {
     return this.api.put<DocDraft>(`/docs/${encodeURIComponent(key)}/draft`, draft);
   }
 
-  /// Saves the draft from `beforeunload`/`pagehide`: a keepalive request that outlives the page.
-  saveDraftOnUnload(key: string, draft: SaveDocDraft): void {
+  /// Saves the draft from `beforeunload`/`pagehide` with a keepalive request that outlives the page.
+  /// Browsers drop keepalive bodies over 64 KB, so a larger draft is not sent: returns false.
+  saveDraftOnUnload(key: string, draft: SaveDocDraft): boolean {
+    const body = JSON.stringify(draft);
+    if (!fitsKeepalive(body)) return false;
     void fetch(this.api.url(`/docs/${encodeURIComponent(key)}/draft`), {
       method: 'PUT',
       keepalive: true,
       credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json', 'X-XSRF-TOKEN': xsrfToken() },
-      body: JSON.stringify(draft),
+      body,
     }).catch(() => undefined);
+    return true;
   }
 
   discardDraft(key: string): Observable<void> {
@@ -111,4 +115,14 @@ export class DocsApi {
 function xsrfToken(): string {
   const match = /(?:^|;\s*)XSRF-TOKEN=([^;]*)/.exec(globalThis.document?.cookie ?? '');
   return match ? decodeURIComponent(match[1]) : '';
+}
+
+/// Keepalive requests may carry at most 64 KB; the rest of the request needs a little room too.
+export const KEEPALIVE_MAX_BODY_BYTES = 60_000;
+
+export function fitsKeepalive(body: string): boolean {
+  return (
+    body.length <= KEEPALIVE_MAX_BODY_BYTES &&
+    new TextEncoder().encode(body).length <= KEEPALIVE_MAX_BODY_BYTES
+  );
 }

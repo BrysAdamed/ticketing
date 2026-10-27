@@ -61,7 +61,7 @@ export const MERMAID_SYNTAX_URL = 'https://mermaid.js.org/intro/syntax-reference
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     'data-testid': 'view-docs.diagram.mermaid.edit',
-    '(window:beforeunload)': 'session.saveOnUnload()',
+    '(window:beforeunload)': 'session.saveOnUnload($event)',
     '(document:visibilitychange)': 'onVisibilityChange()',
   },
   templateUrl: './mermaid-editor.view.html',

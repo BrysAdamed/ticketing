@@ -33,7 +33,7 @@ A `ReadOnly` token only lists and accepts the read tools. Tokens cannot manage u
 | --- | --- |
 | Context | `whoami`, `find_users` |
 | Projects | `list_projects`, `get_project`, `create_project`, `update_project`, `get_field_hints`, `get_project_stats` |
-| Tickets | `search_tickets`, `get_ticket`, `create_ticket`, `create_tickets` (batch, all-or-nothing), `update_ticket`, `move_ticket`, `delete_ticket`, `get_ticket_history`, `link_tickets`, `unlink_tickets` |
+| Tickets | `search_tickets`, `get_ticket`, `get_children_graph` (children, the links among them and to outside tickets, with `blocked`; D-94), `create_ticket`, `create_tickets` (batch, all-or-nothing), `update_ticket`, `move_ticket`, `delete_ticket`, `get_ticket_history`, `link_tickets`, `unlink_tickets` |
 | Comments | `list_comments`, `add_comment`, `update_comment`, `delete_comment` |
 | Watchers | `watch_ticket`, `unwatch_ticket` (the watcher list comes with `get_ticket`; `search_tickets` takes `watching: true`) |
 | Attachments | `list_attachments`, `get_attachment_text` |

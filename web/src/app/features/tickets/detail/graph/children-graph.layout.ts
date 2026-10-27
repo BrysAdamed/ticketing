@@ -1,13 +1,15 @@
 import dagre from '@dagrejs/dagre';
 import { ChildrenGraphModel } from './children-graph.model';
 
-export const NODE_WIDTH = 196;
-export const NODE_HEIGHT = 58;
+export const NODE_WIDTH = 204;
+export const NODE_HEIGHT = 68;
 const NODE_GAP = 24;
-const RANK_GAP = 44;
+const RANK_GAP = 40;
 const MARGIN = 12;
 const UNLINKED_LABEL = 28;
 const MIN_GRID_COLUMNS = 3;
+const ROOT = '\u0000root';
+const ROOT_WEIGHT = 8;
 
 export interface Point {
   x: number;
@@ -28,36 +30,9 @@ export interface GraphLayout {
 /// Lays out the `Blocks` edges top to bottom with dagre (D-94); tickets without blocking links go
 /// in a grid below. `RelatesTo` / `Duplicates` edges are drawn between the placed cards.
 export function layoutGraph(model: ChildrenGraphModel): GraphLayout {
-  const g = new dagre.graphlib.Graph<
-    object,
-    { width: number; height: number; x?: number; y?: number }
-  >();
-  g.setGraph({
-    rankdir: 'TB',
-    nodesep: NODE_GAP,
-    ranksep: RANK_GAP,
-    marginx: MARGIN,
-    marginy: MARGIN,
-  });
-  g.setDefaultEdgeLabel(() => ({}));
-  for (const key of model.linked) g.setNode(key, { width: NODE_WIDTH, height: NODE_HEIGHT });
-  for (const edge of model.blocks) g.setEdge(edge.from, edge.to);
-  if (model.linked.length > 0) dagre.layout(g);
-
-  const nodes = new Map<string, Point>();
-  for (const key of model.linked) {
-    const { x = 0, y = 0 } = g.node(key);
-    nodes.set(key, { x: x - NODE_WIDTH / 2, y: y - NODE_HEIGHT / 2 });
-  }
-  const edges = new Map<string, string>();
-  for (const edge of model.blocks) {
-    const label = g.edge(edge.from, edge.to) as { points?: Point[] } | undefined;
-    if (label?.points) edges.set(edge.linkId, smoothPath(label.points));
-  }
-
-  const graphLabel = g.graph() as { width?: number; height?: number };
-  let width = model.linked.length > 0 ? (graphLabel.width ?? 0) : 0;
-  let height = model.linked.length > 0 ? (graphLabel.height ?? 0) : 0;
+  const { nodes, edges, width: layeredWidth, height: layeredHeight } = layers(model);
+  let width = layeredWidth;
+  let height = layeredHeight;
 
   let unlinkedLabel: Point | null = null;
   if (model.unlinked.length > 0) {
@@ -89,21 +64,87 @@ export function layoutGraph(model: ChildrenGraphModel): GraphLayout {
   return { width, height, nodes, edges, unlinkedLabel };
 }
 
-/// A Catmull-Rom spline through dagre's bend points, as cubic Béziers.
+/// dagre places sources near what they block; a hidden root with heavy edges to every source puts
+/// all of them in the top layer, so "what can start" reads first. dagre may route long edges
+/// outside its own bounds, so the box is measured from the cards and every bend point.
+function layers(model: ChildrenGraphModel): {
+  nodes: Map<string, Point>;
+  edges: Map<string, string>;
+  width: number;
+  height: number;
+} {
+  const nodes = new Map<string, Point>();
+  const edges = new Map<string, string>();
+  if (model.linked.length === 0) return { nodes, edges, width: 0, height: 0 };
+
+  const g = new dagre.graphlib.Graph<
+    object,
+    { width: number; height: number; x?: number; y?: number }
+  >();
+  g.setGraph({ rankdir: 'TB', nodesep: NODE_GAP, ranksep: RANK_GAP });
+  g.setDefaultEdgeLabel(() => ({}));
+  for (const key of model.linked) g.setNode(key, { width: NODE_WIDTH, height: NODE_HEIGHT });
+  for (const edge of model.blocks) g.setEdge(edge.from, edge.to);
+  const blocked = new Set(model.blocks.map((e) => e.to));
+  const sources = model.linked.filter((key) => !blocked.has(key));
+  if (sources.length > 1) {
+    g.setNode(ROOT, { width: 1, height: 1 });
+    for (const key of sources) g.setEdge(ROOT, key, { weight: ROOT_WEIGHT, minlen: 1 });
+  }
+  dagre.layout(g);
+
+  const routes = new Map<string, Point[]>();
+  for (const edge of model.blocks) {
+    const label = g.edge(edge.from, edge.to) as { points?: Point[] } | undefined;
+    if (label?.points) routes.set(edge.linkId, label.points);
+  }
+  const corners = model.linked.map((key) => {
+    const { x = 0, y = 0 } = g.node(key);
+    return [key, { x: x - NODE_WIDTH / 2, y: y - NODE_HEIGHT / 2 }] as const;
+  });
+  const xs = [
+    ...corners.flatMap(([, p]) => [p.x, p.x + NODE_WIDTH]),
+    ...[...routes.values()].flat().map((p) => p.x),
+  ];
+  const ys = [
+    ...corners.flatMap(([, p]) => [p.y, p.y + NODE_HEIGHT]),
+    ...[...routes.values()].flat().map((p) => p.y),
+  ];
+  const dx = MARGIN - Math.min(...xs);
+  const dy = MARGIN - Math.min(...ys);
+
+  for (const [key, p] of corners) nodes.set(key, { x: p.x + dx, y: p.y + dy });
+  for (const [id, points] of routes)
+    edges.set(id, smoothPath(points.map((p) => ({ x: p.x + dx, y: p.y + dy }))));
+  return {
+    nodes,
+    edges,
+    width: Math.max(...xs) + dx + MARGIN,
+    height: Math.max(...ys) + dy + MARGIN,
+  };
+}
+
+/// A uniform cubic B-spline over dagre's bend points (as d3's `curveBasis`): it starts and ends on
+/// the first and last point and never overshoots the bends.
 export function smoothPath(points: readonly Point[]): string {
   if (points.length === 0) return '';
-  const p = points.map((pt) => ({ x: round(pt.x), y: round(pt.y) }));
-  let d = `M${p[0].x},${p[0].y}`;
-  for (let i = 0; i < p.length - 1; i++) {
-    const p0 = p[i - 1] ?? p[i];
-    const p1 = p[i];
-    const p2 = p[i + 1];
-    const p3 = p[i + 2] ?? p2;
-    const c1 = { x: round(p1.x + (p2.x - p0.x) / 6), y: round(p1.y + (p2.y - p0.y) / 6) };
-    const c2 = { x: round(p2.x - (p3.x - p1.x) / 6), y: round(p2.y - (p3.y - p1.y) / 6) };
-    d += ` C${c1.x},${c1.y} ${c2.x},${c2.y} ${p2.x},${p2.y}`;
+  const p = points;
+  const at = (x: number, y: number) => `${round(x)},${round(y)}`;
+  let d = `M${at(p[0].x, p[0].y)}`;
+  if (p.length === 1) return d;
+  if (p.length === 2) return `${d} L${at(p[1].x, p[1].y)}`;
+  d += ` L${at((5 * p[0].x + p[1].x) / 6, (5 * p[0].y + p[1].y) / 6)}`;
+  for (let i = 2; i <= p.length; i++) {
+    const a = p[i - 2];
+    const b = p[i - 1];
+    const c = p[Math.min(i, p.length - 1)];
+    d +=
+      ` C${at((2 * a.x + b.x) / 3, (2 * a.y + b.y) / 3)}` +
+      ` ${at((a.x + 2 * b.x) / 3, (a.y + 2 * b.y) / 3)}` +
+      ` ${at((a.x + 4 * b.x + c.x) / 6, (a.y + 4 * b.y + c.y) / 6)}`;
   }
-  return d;
+  const last = p[p.length - 1];
+  return `${d} L${at(last.x, last.y)}`;
 }
 
 function arc(from: Point, to: Point): string {

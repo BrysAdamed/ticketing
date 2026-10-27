@@ -304,9 +304,12 @@
 }
 
 .t {
+  display: -webkit-box;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   font-size: var(--tk-text-sm);
   line-height: 16px;
+  overflow-wrap: anywhere;
 }

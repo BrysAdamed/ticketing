@@ -200,6 +200,28 @@ describe('children graph layout', () => {
     expect(layout.unlinkedLabel).toBeNull();
   });
 
+  it('starts every chain in the top layer and keeps every bend inside the box', () => {
+    // Arrange
+    const model = buildGraphModel(docsEpic);
+
+    // Act
+    const layout = layoutGraph(model);
+
+    // Assert
+    const top = Math.min(...[...layout.nodes.values()].map((p) => p.y));
+    expect(layout.nodes.get('TKT-11')!.y).toBe(top);
+    expect(layout.nodes.get('TKT-12')!.y).toBe(top);
+    for (const d of layout.edges.values()) {
+      const numbers = d.match(/-?\d+(\.\d+)?/g)!.map(Number);
+      const xs = numbers.filter((_, i) => i % 2 === 0);
+      const ys = numbers.filter((_, i) => i % 2 === 1);
+      expect(Math.min(...xs)).toBeGreaterThanOrEqual(0);
+      expect(Math.max(...xs)).toBeLessThanOrEqual(layout.width);
+      expect(Math.min(...ys)).toBeGreaterThanOrEqual(0);
+      expect(Math.max(...ys)).toBeLessThanOrEqual(layout.height);
+    }
+  });
+
   it('puts tickets without blocking links in a grid below the layers', () => {
     // Arrange
     const graph: TicketGraph = {

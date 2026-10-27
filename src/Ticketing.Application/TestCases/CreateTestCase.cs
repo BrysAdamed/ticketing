@@ -12,6 +12,8 @@ namespace Ticketing.Application.TestCases;
 /// <summary>Creates a test case (spec 4.9, 6.10) with the next <c>KEY-TC-n</c> number, optionally linked to a ticket of the same project.</summary>
 public static class CreateTestCase
 {
+    public const string Action = "testCase.created";
+
     public sealed record Command(
         string Title,
         string? Preconditions = null,
@@ -68,7 +70,7 @@ public static class CreateTestCase
                     created.LinkTicket(ticketId);
 
                     db.TestCases.Add(created);
-                    activity.Record(ActivityEntityType.TestCase, created.Id, grant.ProjectId, "testCase.created", new
+                    activity.Record(ActivityEntityType.TestCase, created.Id, grant.ProjectId, Action, new
                     {
                         key = HumanKeys.TestCase(grant.ProjectKey, number),
                         created.Title,

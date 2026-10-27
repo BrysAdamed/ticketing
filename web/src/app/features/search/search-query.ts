@@ -182,6 +182,28 @@ export function toggleValue(
   };
 }
 
+/// A quick choice in a date-range filter menu: `from`/`to` are days before today (UTC).
+export interface DatePreset {
+  label: string;
+  from?: number;
+  to?: number;
+}
+
+export const DATE_PRESETS: readonly DatePreset[] = [
+  { label: 'Today', from: 0 },
+  { label: 'Last 7 days', from: 7 },
+  { label: 'Last 30 days', from: 30 },
+  { label: 'Last 90 days', from: 90 },
+  { label: 'Older than 30 days', to: 31 },
+];
+
+/// The chip summary of a date range (`2026-10-01 – 2026-10-27`, `since …`, `until …`).
+export function rangeLabel(from: string, to: string): string {
+  if (from && to) return from === to ? from : `${from} – ${to}`;
+  if (from) return `since ${from}`;
+  return `until ${to}`;
+}
+
 /// `YYYY-MM-DD` of `daysAgo` days before `now` in UTC (plain dates cover whole UTC days in the API).
 export function utcDate(now: Date, daysAgo: number): string {
   const date = new Date(

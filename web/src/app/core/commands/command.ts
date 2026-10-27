@@ -13,7 +13,14 @@ export interface Command {
   available?: () => boolean;
 }
 
-/// One row in the command palette results.
+/// A part of a palette text to emphasise (UTF-16 `start` and `length`).
+export interface PaletteRange {
+  start: number;
+  length: number;
+}
+
+/// One row in the command palette results. A row with `detail` or `snippet` is drawn on two lines:
+/// the label with `detail` muted beside it, then the snippet with its matches emphasised.
 export interface PaletteItem {
   id: string;
   label: string;
@@ -21,6 +28,9 @@ export interface PaletteItem {
   icon?: string;
   hint?: string;
   shortcut?: string;
+  labelHighlights?: readonly PaletteRange[];
+  detail?: string;
+  snippet?: { text: string; highlights: readonly PaletteRange[] };
   run: () => void;
 }
 

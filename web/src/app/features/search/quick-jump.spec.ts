@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { keyJumpItem, toPaletteItem } from './quick-jump';
+import { docLocation, keyJumpItem, recentDocItem, toPaletteItem } from './quick-jump';
 
 describe('quick jump', () => {
   it('jumps to ticket, test case and session keys in any case', () => {
@@ -10,12 +10,14 @@ describe('quick jump', () => {
     keyJumpItem(' web-42 ', navigate)?.run();
     keyJumpItem('web-tc-7', navigate)?.run();
     keyJumpItem('WEB-r-3', navigate)?.run();
+    keyJumpItem('web-d-12', navigate)?.run();
 
     // Assert
     expect(navigate.mock.calls).toEqual([
       ['/tickets/WEB-42'],
       ['/projects/WEB/test-cases/WEB-TC-7'],
       ['/projects/WEB/regressions/WEB-R-3'],
+      ['/docs/WEB-D-12'],
     ]);
   });
 
@@ -56,5 +58,70 @@ describe('quick jump', () => {
     });
     expect(item.label).toContain('Login fails');
     expect(navigate).toHaveBeenCalledWith('/tickets/WEB-1');
+  });
+
+  it('maps docs to two-line rows with location, snippet and the title match', () => {
+    // Arrange
+    const navigate = vi.fn();
+    const snippet = { text: 'the idempotency key', highlights: [{ start: 4, length: 11 }] };
+
+    // Act
+    const item = toPaletteItem(
+      {
+        kind: 'Doc',
+        id: '2',
+        key: 'PAY-D-7',
+        title: 'Idempotency rules',
+        projectKey: 'PAY',
+        url: '/p/PAY/docs/PAY-D-7/idempotency-rules',
+        ticketType: null,
+        status: null,
+        docKind: 'Diagram',
+        diagramFormat: 'Canvas',
+        folderPath: 'Architecture/ADRs',
+        snippet,
+      },
+      navigate,
+      'idempotency',
+    );
+    item.run();
+
+    // Assert
+    expect(item).toMatchObject({
+      id: 'Doc:PAY-D-7',
+      group: 'Docs',
+      label: 'Idempotency rules',
+      labelHighlights: [{ start: 0, length: 11 }],
+      detail: 'PAY · Architecture / ADRs',
+      icon: 'tablerChalkboard',
+      hint: 'PAY-D-7',
+      snippet,
+    });
+    expect(navigate).toHaveBeenCalledWith('/p/PAY/docs/PAY-D-7/idempotency-rules');
+  });
+
+  it('lists recently viewed docs under their own group', () => {
+    // Arrange
+    const navigate = vi.fn();
+
+    // Act
+    const item = recentDocItem(
+      {
+        key: 'PAY-D-3',
+        title: 'Architecture',
+        projectKey: 'PAY',
+        kind: 'Folder',
+        diagramFormat: null,
+        folderPath: '',
+        url: '/projects/PAY/docs/PAY-D-3/architecture',
+      },
+      navigate,
+    );
+    item.run();
+
+    // Assert
+    expect(item).toMatchObject({ group: 'Recent docs', icon: 'tablerFolder', detail: 'PAY' });
+    expect(navigate).toHaveBeenCalledWith('/projects/PAY/docs/PAY-D-3/architecture');
+    expect(docLocation('PAY', 'A/B\\/C')).toBe('PAY · A / B/C');
   });
 });

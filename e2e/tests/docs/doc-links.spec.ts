@@ -146,4 +146,47 @@ test.describe('doc links', () => {
         await expect(page.getByTestId('doc-tickets')).toBeHidden();
         await page.context().close();
     });
+
+    test('a ticket row opens the doc at the first mention; Write doc starts a related page', async ({
+        page,
+        api,
+    }) => {
+        // Arrange
+        const projectKey = (await api.createProject()).key;
+        const ticket = await createTicket(api, projectKey, 'Retry failed payments');
+        const filler = Array.from({ length: 60 }, (_, i) => `Paragraph ${i + 1}.`).join('\n\n');
+        const notes = await createDoc(api, projectKey, {
+            kind: 'Page',
+            title: 'Payment notes',
+            content: `# Payment notes\n\n${filler}\n\nRetries are tracked in ${ticket.key}.`,
+        });
+        const view = new DocPagePage(page);
+
+        // Act: open the doc from the ticket's section
+        await page.goto(`/tickets/${ticket.key}`);
+        await page.getByTestId(`ticket-doc-${notes.key}`).click();
+
+        // Assert: the reader lands on the mention and flashes it
+        await expect(view.title).toHaveText('Payment notes');
+        await expect(page).toHaveURL(new RegExp(`#mention-${ticket.key}$`));
+        const chip = view.content.getByTestId(`ticket-chip-${ticket.key}`);
+        await expect(chip).toBeInViewport();
+        await expect(chip).toHaveClass(/tk-flash/);
+        await expect(chip).not.toHaveClass(/tk-flash/);
+
+        // Act: Write doc from the ticket
+        await page.goto(`/tickets/${ticket.key}`);
+        await page.getByTestId('ticket-docs-write').click();
+
+        // Assert: the editor opens on a new top-level page that names the ticket
+        await expect(view.source).toContainText(`Related: ${ticket.key}`);
+        await expect(page).toHaveURL(/\?mode=edit$/);
+        const created = await api.get<{ items: { title: string; parentKey: string | null }[] }>(
+            `/projects/${projectKey}/docs/tree`,
+        );
+        expect(created.items.map((i) => [i.title, i.parentKey])).toContainEqual([
+            `${ticket.key} Retry failed payments`,
+            null,
+        ]);
+    });
 });

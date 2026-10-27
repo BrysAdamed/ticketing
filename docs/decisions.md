@@ -689,6 +689,15 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
   - No backfill: docs have not shipped, so no version predates the columns outside test stacks; such versions show no counts.
 - Rationale: counting once at publish costs one diff of the content the publisher already holds (typical edits skip most lines as common head and tail; a fully rewritten 100 KB page is unit-tested to stay under 500 ms) and makes the history a plain read, for the panel and for LLMs. A browser-side count would download every visible version's content.
 
+### D-113 "Write doc" from a ticket creates a top-level page named after the ticket; a `#mention-KEY` fragment opens a doc at the first mention (TKT-49)
+
+- Question: screens.md 9 wants "+ Write doc" in the ticket's "Docs mentioning this ticket" section, creating a page "in the project's default folder" prefilled with `Related: KEY`, and rows that scroll to the first mention. Projects have no default folder, and a new page needs a title that is free among its siblings.
+- Decision:
+  - The page goes to the top level of the ticket's project, titled `KEY Ticket title` (cut to fit 200 characters); when a sibling has that title the client retries with " (2)" up to " (5)". Its content is `Related: KEY`, so the index lists it under the ticket at once, and the editor opens (`?mode=edit`). The button shows to writers of the ticket's project (`ticket.permissions.canEdit`), in the section header, which stays hidden while no doc mentions the ticket (as the design says).
+  - Rows link to `docUrl(...)#mention-KEY` (`mentionFragment`). The page reader resolves that fragment to the first ticket chip with `data-ticket-key="KEY"` (set by `renderMarkdown`), scrolls it to the middle and plays `tk-mention-flash` (600 ms, `--tk-accent-subtle`); other fragments still go to heading ids.
+  - Rows keep showing the last editor: the index does not record who added a mention (D-108).
+- Rationale: the top level is the only folder every project has; naming the page after the ticket makes it findable in the tree and in search without asking for a title first.
+
 ## Product owner answers (v1 review, 2026-10-27)
 
 These were open questions (Q-01..Q-05); the product owner resolved them as follows.

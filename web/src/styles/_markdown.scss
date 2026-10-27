@@ -180,6 +180,10 @@ $icon-octagon: tabler-icon(
     svg {
       flex: none;
     }
+
+    &.tk-flash {
+      animation: tk-mention-flash 600ms ease-out;
+    }
   }
 
   @each $status in todo, inprogress, onhold, review, readyfortesting, testing, readyfordeploy, done
@@ -671,5 +675,12 @@ $icon-octagon: tabler-icon(
   }
   to {
     background-position: -200% 0;
+  }
+}
+
+@keyframes tk-mention-flash {
+  from {
+    background: var(--tk-accent-subtle);
+    box-shadow: 0 0 0 4px var(--tk-accent-subtle);
   }
 }

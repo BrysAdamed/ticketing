@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Ticketing.Application.Abstractions;
 using Ticketing.Application.Access;
@@ -15,6 +16,10 @@ public static class DocQueries
     public static readonly TimeSpan PresenceWindow = TimeSpan.FromMinutes(10);
 
     public static string Url(string projectKey, string key, string title) => $"/p/{projectKey}/docs/{key}/{DocPaths.Slug(title)}";
+
+    /// <summary>Where the Canvas picture of version <paramref name="number"/> is served (<c>GET</c>, readers).</summary>
+    public static string SnapshotUrl(string key, int number) =>
+        string.Create(CultureInfo.InvariantCulture, $"/api/v1/docs/{key}/versions/{number}/snapshot.svg");
 
     public static bool CanWrite(ProjectAccessGrant grant, ICurrentUser currentUser) =>
         grant.CanWrite && !grant.IsArchived && currentUser.PatScope != PatScope.ReadOnly;
@@ -54,7 +59,9 @@ public static class DocQueries
                     n.ParentId,
                     n.Title,
                     n.Content,
+                    n.Outline,
                     n.CurrentVersion,
+                    HasSnapshot = db.DocVersions.Any(v => v.NodeId == n.Id && v.Number == n.CurrentVersion && v.SnapshotSvg != null),
                     n.CreatedAt,
                     n.CreatedById,
                     n.UpdatedAt,
@@ -101,7 +108,11 @@ public static class DocQueries
             row.CommentCount,
             references,
             embeds,
-            backlinks);
+            backlinks)
+        {
+            Outline = row.DiagramFormat == DiagramFormat.Canvas ? row.Outline ?? string.Empty : null,
+            SnapshotUrl = row.HasSnapshot ? SnapshotUrl(key, row.CurrentVersion) : null,
+        };
     }
 
     /// <summary>The non-deleted children of a folder in their manual order.</summary>

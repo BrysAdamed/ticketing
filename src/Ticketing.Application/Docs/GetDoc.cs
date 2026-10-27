@@ -1,6 +1,7 @@
 using Ticketing.Application.Abstractions;
 using Ticketing.Application.Access;
 using Ticketing.Application.Common;
+using Ticketing.Domain.Docs;
 
 namespace Ticketing.Application.Docs;
 
@@ -35,9 +36,23 @@ public static class GetDoc
             return doc with
             {
                 Content = version.Content,
+                Outline = doc.Outline is null ? null : OutlineOf(version.Content),
+                SnapshotUrl = version.SnapshotUrl,
                 AtVersion = new DocVersionInfoDto(
                     version.Number, version.Title, version.ChangeNote, version.Author, version.Channel, version.CreatedAt, version.RestoredFrom),
             };
+        }
+
+        private static string OutlineOf(string? source)
+        {
+            try
+            {
+                return CanvasOutline.Extract(source ?? string.Empty).ToText();
+            }
+            catch (FormatException)
+            {
+                return string.Empty;
+            }
         }
     }
 }

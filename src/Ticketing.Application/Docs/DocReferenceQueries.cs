@@ -70,12 +70,24 @@ public static class DocReferenceQueries
                 .Where(n => mermaidIds.Contains(n.Id))
                 .Select(n => new { n.Id, n.Content })
                 .ToDictionaryAsync(n => n.Id, n => n.Content, cancellationToken);
+        var canvasIds = embedded.Where(d => d.DiagramFormat == DiagramFormat.Canvas).Select(d => d.Id).Distinct().ToList();
+        var pictured = canvasIds.Count == 0
+            ? []
+            : await (
+                    from v in db.DocVersions.AsNoTracking()
+                    join n in db.DocNodes on v.NodeId equals n.Id
+                    where canvasIds.Contains(n.Id) && v.Number == n.CurrentVersion && v.SnapshotSvg != null
+                    select n.Id)
+                .ToHashSetAsync(cancellationToken);
         return (references, [.. embedded.Select(d =>
         {
             var key = HumanKeys.Doc(d.ProjectKey, d.Number);
             return new DocEmbedDto(
                 d.Id, key, d.ProjectKey, d.Title, d.DiagramFormat!.Value, d.CurrentVersion, sources.GetValueOrDefault(d.Id),
-                DocQueries.Url(d.ProjectKey, key, d.Title));
+                DocQueries.Url(d.ProjectKey, key, d.Title))
+            {
+                SnapshotUrl = pictured.Contains(d.Id) ? DocQueries.SnapshotUrl(key, d.CurrentVersion) : null,
+            };
         })]);
     }
 

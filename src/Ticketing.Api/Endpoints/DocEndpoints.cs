@@ -1,3 +1,4 @@
+using System.Text;
 using Microsoft.Net.Http.Headers;
 using Ticketing.Api.Http;
 using Ticketing.Application.Common;
@@ -9,6 +10,9 @@ namespace Ticketing.Api.Endpoints;
 /// <summary>Project docs (spec 1.14): tree, recent, trash and create per project; one doc by key (<c>WEB-D-12</c>) or id; versions, history and restore; markdown export; my draft.</summary>
 public sealed class DocEndpoints : IEndpointModule
 {
+    /// <summary>Canvas pictures run nothing and load nothing but their own inline styles and data: fonts (ADR 0013).</summary>
+    public const string SnapshotSecurityPolicy = "sandbox; default-src 'none'; style-src 'unsafe-inline'; font-src data:; img-src data:";
+
     public void MapEndpoints(RouteGroupBuilder api)
     {
         MapProjectScoped(api.MapGroup("/projects/{projectKeyOrId}/docs").WithTags("Docs"));
@@ -141,6 +145,30 @@ public sealed class DocEndpoints : IEndpointModule
             TypedResults.Ok(await handler.HandleAsync(new GetDocVersion.Query(keyOrId, number), ct)))
             .WithSummary("One published version with its full content; 404 doc.version.notFound when the doc has no such version.")
             .ProducesProblem(StatusCodes.Status404NotFound);
+
+        doc.MapGet("/versions/{number:int}/snapshot.svg", async (string keyOrId, int number, GetDocSnapshot.Handler handler, HttpResponse response, CancellationToken ct) =>
+            {
+                var snapshot = await handler.HandleAsync(new GetDocSnapshot.Query(keyOrId, number), ct);
+                var headers = response.Headers;
+                headers.XContentTypeOptions = "nosniff";
+                headers.ContentSecurityPolicy = SnapshotSecurityPolicy;
+                headers.CacheControl = "private, max-age=86400";
+                return TypedResults.Text(snapshot.Svg, CanvasSnapshot.ContentType, Encoding.UTF8);
+            })
+            .WithSummary("The SVG picture of a Canvas version (light theme, fonts inlined), served with a sandbox CSP. "
+                + "404 doc.snapshot.notFound while the version has none (written over MCP and not yet opened by a writer).")
+            .Produces<string>(StatusCodes.Status200OK, CanvasSnapshot.ContentType)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        doc.MapPut("/versions/{number:int}/snapshot", async (
+                string keyOrId, int number, StoreDocSnapshot.Command command, StoreDocSnapshot.Handler handler, CancellationToken ct) =>
+            TypedResults.Ok(await handler.HandleAsync(command with { KeyOrId = keyOrId, Number = number }, ct)))
+            .WithSummary("Stores the SVG picture ({ svg }) of a Canvas version that has none yet, without creating a version (writers). "
+                + "The first picture wins: stored is false when the version already had one.")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
 
         doc.MapPost("/versions/{number:int}/restore", async (
                 string keyOrId, int number, RestoreDocVersion.Command? command, RestoreDocVersion.Handler handler, HttpResponse response, CancellationToken ct) =>

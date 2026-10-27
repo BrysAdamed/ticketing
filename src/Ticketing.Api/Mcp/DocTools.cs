@@ -39,8 +39,9 @@ public sealed class DocTools
 
     [McpServerTool(Name = "get_doc", ReadOnly = true, Idempotent = true, Title = "Get doc")]
     [Description("Gets a doc by docKey, or by projectKey and path. Pages return their markdown in content; diagrams their source in content "
-        + "(diagramFormat Mermaid: Mermaid text; Canvas: Excalidraw JSON); folders "
-        + "list their children. Also: breadcrumb, editors (others with an unpublished draft changed in the last 10 minutes), permissions, "
+        + "(diagramFormat Mermaid: Mermaid text; Canvas: Excalidraw JSON, plus outline: the drawing's labels and arrows one per line, "
+        + "for example 'API → DB (SQL)', which is usually all you need to read; and snapshotUrl, its SVG picture, null until a person opened "
+        + "it in the web app); folders list their children. Also: breadcrumb, editors (others with an unpublished draft changed in the last 10 minutes), permissions, "
         + "references (tickets with key, title, type and status, and docs, that the content mentions), embeds (diagrams embedded with "
         + "![caption](KEY), Mermaid with its source) and backlinks (docs whose content links here: { total, items }). Tickets and docs you "
         + "cannot read are left out. Use version as baseVersion for update_doc. With version (a number from get_doc_history), content is that older version's "
@@ -123,7 +124,9 @@ public sealed class DocTools
     [McpServerTool(Name = "create_diagram", Destructive = false, Title = "Create docs diagram")]
     [Description("Creates a diagram doc (version 1) in a project's docs. Prefer format Mermaid for diagrams you write: the source is Mermaid "
         + "text (" + MermaidTypes + "), rendered in the browser with strict security (no click handlers, no HTML labels). Canvas source is the "
-        + "visual editor's native Excalidraw JSON, meant for people drawing in the web app. Mermaid source is not validated on the server: check "
+        + "visual editor's native Excalidraw JSON, meant for people drawing in the web app: { type: 'excalidraw', elements: [...] }, at most "
+        + "10000 elements, no images or files (doc.diagram.embeddedFiles), element links only http(s):// or app-relative "
+        + "(doc.diagram.invalidSource); its picture is rendered when a person opens it. Mermaid source is not validated on the server: check "
         + "the syntax before sending. Pages embed a diagram with ![caption](WEB-D-12). " + DocOutput)]
     public static Task<DocDto> CreateDiagram(
         CreateDoc.Handler handler,
@@ -149,7 +152,7 @@ public sealed class DocTools
     [Description("Renames a doc and/or replaces its whole content (page markdown, or a diagram's source: Mermaid text for " + MermaidTypes
         + ") as a new version. Replacing content needs baseVersion = the version you read; if someone published since, it fails with "
         + "doc.version.conflict (currentVersion, updatedBy, updatedAt): re-read with get_doc and merge. For small changes to long pages or "
-        + "Mermaid diagrams prefer edit_doc. A rename alone creates no version. " + DocOutput)]
+        + "Mermaid diagrams prefer edit_doc. A Canvas source is checked like in create_diagram. A rename alone creates no version. " + DocOutput)]
     public static Task<DocDto> UpdateDoc(
         UpdateDoc.Handler handler,
         [Description(DocKey)] string docKey,

@@ -33,8 +33,15 @@ public sealed class DocVersion
     /// <summary>Set when the version was created by restoring an older one.</summary>
     public int? RestoredFrom { get; private set; }
 
-    /// <summary>Snapshots <paramref name="node"/>'s current version, title and content.</summary>
-    public static DocVersion Snapshot(DocNode node, string? changeNote, Guid authorId, WriteChannel channel, DateTimeOffset now, int? restoredFrom = null)
+    /// <summary>
+    /// Canvas only: the light SVG picture of this version (<see cref="CanvasSnapshot"/>). Null until a client exported it, for
+    /// example for versions written over MCP; it is filled once and never replaced.
+    /// </summary>
+    public string? SnapshotSvg { get; private set; }
+
+    /// <summary>Snapshots <paramref name="node"/>'s current version, title and content (and the Canvas picture, if any).</summary>
+    public static DocVersion Snapshot(
+        DocNode node, string? changeNote, Guid authorId, WriteChannel channel, DateTimeOffset now, int? restoredFrom = null, string? snapshotSvg = null)
     {
         node.EnsureHasContent();
         return new DocVersion
@@ -49,6 +56,7 @@ public sealed class DocVersion
             Channel = channel,
             CreatedAt = now,
             RestoredFrom = restoredFrom,
+            SnapshotSvg = snapshotSvg,
         };
     }
 }

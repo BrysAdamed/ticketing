@@ -50,7 +50,7 @@ public sealed class CanvasOutlineTests
 
         // Assert
         Assert.Equal(
-            string.Join(Environment.NewLine, "API", "DB", "Gotenberg", "Free note: renderer has no egress", "API → DB (SQL)", "API → Gotenberg"),
+            string.Join('\n', "API", "DB", "Gotenberg", "Free note: renderer has no egress", "API → DB (SQL)", "API → Gotenberg"),
             text);
     }
 

@@ -706,6 +706,11 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("restored_from");
 
+                    b.Property<string>("SnapshotSvg")
+                        .HasColumnType("text")
+                        .HasColumnName("snapshot_svg")
+                        .HasAnnotation("Npgsql:Compression:", "lz4");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(200)

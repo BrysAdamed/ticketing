@@ -167,7 +167,8 @@ public enum DocHistoryItemType
 }
 
 /// <summary>
-/// One entry of a doc's history: a published version (number, title, change note, restored from) or an activity entry that no
+/// One entry of a doc's history: a published version (number, title, change note, restored from, lines added and removed
+/// compared with the version before it, null for Canvas diagrams) or an activity entry that no
 /// version represents (rename, move, delete, restore, attachments, comments) with its action and JSON values.
 /// </summary>
 public sealed record DocHistoryItemDto(
@@ -180,6 +181,8 @@ public sealed record DocHistoryItemDto(
     string? Title,
     string? ChangeNote,
     int? RestoredFrom,
+    int? LinesAdded,
+    int? LinesRemoved,
     string? Action,
     string? Field,
     JsonElement? OldValue,

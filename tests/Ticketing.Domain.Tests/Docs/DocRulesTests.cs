@@ -113,7 +113,7 @@ public sealed class DocRulesTests
 
         // Act
         page.Publish("two", actor, now.AddMinutes(1));
-        var version = DocVersion.Snapshot(page, "  ", actor, WriteChannel.Mcp, now);
+        var version = DocVersion.Snapshot(page, null, "  ", actor, WriteChannel.Mcp, now);
         var draft = DocDraft.Create(page, actor, 2, null, "draft", now);
 
         // Assert

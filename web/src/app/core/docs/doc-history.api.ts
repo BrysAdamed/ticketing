@@ -18,6 +18,9 @@ export interface DocHistoryItem {
   title: string | null;
   changeNote: string | null;
   restoredFrom: number | null;
+  /// Lines added / removed against the version before it; null for Canvas diagrams.
+  linesAdded: number | null;
+  linesRemoved: number | null;
   action: string | null;
   field: string | null;
   oldValue: unknown;

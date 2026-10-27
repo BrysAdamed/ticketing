@@ -56,7 +56,7 @@ public sealed class DocTools
 
     [McpServerTool(Name = "get_doc_history", ReadOnly = true, Idempotent = true, Title = "Get doc history")]
     [Description("A doc's history, newest first: { docKey, currentVersion, items, nextCursor }. type Version items are published versions "
-        + "(version, title, changeNote, restoredFrom, actor, channel Web/Api/Mcp, at); type Activity items are other changes (action such as "
+        + "(version, title, changeNote, restoredFrom, linesAdded/linesRemoved compared with the version before, actor, channel Web/Api/Mcp, at); type Activity items are other changes (action such as "
         + "doc.renamed, doc.moved, doc.deleted, doc.restored, doc.attachment.added, with field, oldValue and newValue). Read an old version "
         + "with get_doc and version; bring it back with restore_doc_version.")]
     public static Task<DocHistoryPage> GetDocHistory(

@@ -51,6 +51,7 @@ import {
   comparison,
   describeActivity,
   groupByDay,
+  linesTitle,
   versionParam,
 } from './history-items';
 
@@ -174,6 +175,7 @@ export class DocHistoryView {
   protected readonly days = computed(() => groupByDay(this.store.items()));
   protected readonly describe = describeActivity;
   protected readonly via = channelLabel;
+  protected readonly linesTitle = linesTitle;
 
   constructor() {
     inject(ShortcutService).registerScoped([

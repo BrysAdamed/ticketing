@@ -20,8 +20,9 @@ public sealed class DocPublisher(ITicketingDbContext db, ICurrentUser currentUse
     /// <summary>Publishes <paramref name="content"/> as the next version of a tracked, row-locked node.</summary>
     public async Task PublishAsync(DocNode node, string? content, string? changeNote, int? restoredFrom, CancellationToken cancellationToken)
     {
+        var previousContent = node.Content;
         node.Publish(content, currentUser.Id, clock.Now);
-        db.DocVersions.Add(DocVersion.Snapshot(node, changeNote, currentUser.Id, currentUser.Channel, clock.Now, restoredFrom));
+        db.DocVersions.Add(DocVersion.Snapshot(node, previousContent, changeNote, currentUser.Id, currentUser.Channel, clock.Now, restoredFrom));
         await IndexReferencesAsync(node, isNew: false, cancellationToken);
         if (restoredFrom is null)
         {
@@ -37,7 +38,7 @@ public sealed class DocPublisher(ITicketingDbContext db, ICurrentUser currentUse
     /// <summary>Snapshots version 1 of a node just created with its content and indexes its references.</summary>
     public async Task AddInitialVersionAsync(DocNode node, string? changeNote, CancellationToken cancellationToken)
     {
-        db.DocVersions.Add(DocVersion.Snapshot(node, changeNote, currentUser.Id, currentUser.Channel, clock.Now));
+        db.DocVersions.Add(DocVersion.Snapshot(node, null, changeNote, currentUser.Id, currentUser.Channel, clock.Now));
         await IndexReferencesAsync(node, isNew: true, cancellationToken);
     }
 

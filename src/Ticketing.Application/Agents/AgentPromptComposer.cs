@@ -71,6 +71,10 @@ public sealed class AgentPromptComposer(IBuiltInAgentPrompts builtIns, IOptions<
         return new AgentPromptRendering(prompt, errors, guardrailsStart);
     }
 
+    /// <summary>The first error of a stored body against today's placeholders; null when it parses or is empty.</summary>
+    public static PromptTemplateError? FirstError(string? body) =>
+        string.IsNullOrWhiteSpace(body) ? null : PromptTemplate.Parse(body, AgentPromptPlaceholders.Names).Errors.FirstOrDefault();
+
     private static string Render(string body, AgentPromptContext context) =>
         PromptTemplate.Parse(body, AgentPromptPlaceholders.Names).EnsureValid("body").Render(context.Values());
 

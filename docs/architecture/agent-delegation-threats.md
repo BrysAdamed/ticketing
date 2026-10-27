@@ -223,7 +223,7 @@ Code review (TKT-33) together with `AgentSecretHygieneTests` confirm:
 | API logs | `ApiExceptionHandler` logs `{Status} {Code}`. EF command logging stays at Warning without sensitive data, and `Microsoft.AspNetCore` is at Warning. Unhandled exceptions log the exception: Npgsql redacts details and the agent code puts no body into exception messages. |
 | Activity values | `agent.prompt.updated` stores `{version, mode}`. `ticket.agent.delegated` stores `{templateSource, templateVersion, guardrailsVersion, app}`. Assignee and status changes are ordinary field changes. |
 | Notifications | Built from activity actions and fields, never from values of agent entries. |
-| Error bodies | Template errors name the code, position and at most 40 characters of an unknown placeholder name (TKT-33). The length error states only the length. A branch error no longer echoes the input (TKT-33). Repository URL errors never echo the input. |
+| Error bodies | Template errors name the code, position and at most 40 characters of an unknown placeholder name (TKT-33). The length error states only the length. A stored template that no longer parses (`agent.template.invalid`) names the slot, the position and the error code only (TKT-44). A branch error no longer echoes the input (TKT-33). Repository URL errors never echo the input. |
 | Browser | The folder lives only in `localStorage`. The prompt is not logged to the console (no `console.log` in `web/src/app`). |
 
 Out of scope: once launched, the prompt sits in Claude's session files and on the process command line of the protocol handler. It contains no secrets by design.
@@ -255,7 +255,7 @@ Deferred:
 
 - **TKT-42:** record the prompt versions actually launched. The record is resolved at POST time, which can differ from the prompt the page loaded.
 - **TKT-43:** cover linked and child tickets, test cases and content written before a project turned private in the outsider warning.
-- **TKT-44:** a stored template that no longer parses should give a 409, not a 400.
+- **TKT-44 (done):** a stored template that no longer parses now gives 409 `agent.template.invalid` with the position and where to fix it, never the body (`GetAgentPromptTests` › `A_stored_template_that_no_longer_parses_is_agent_template_invalid_over_rest_and_mcp`).
 
 Accepted, by design:
 

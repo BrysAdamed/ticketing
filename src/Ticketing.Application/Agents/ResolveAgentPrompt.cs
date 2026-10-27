@@ -6,6 +6,7 @@ using Ticketing.Application.Tickets;
 using Ticketing.Domain.Activity;
 using Ticketing.Domain.Agents;
 using Ticketing.Domain.Projects;
+using Ticketing.Domain.Tickets;
 using Ticketing.Domain.Users;
 
 namespace Ticketing.Application.Agents;
@@ -14,8 +15,9 @@ namespace Ticketing.Application.Agents;
 /// The prompt for a ticket (spec 13.5), in this order: the flag is on for the caller (404 <c>agent.disabled</c>); the ticket
 /// is readable (404, or <c>ticket.deleted</c>) and its project not archived (<c>agent.unavailable</c>); the project has
 /// delegation enabled (<c>agent.project.disabled</c>); the project's row for the ticket type is not Off
-/// (<c>agent.type.off</c>), Custom uses its own body and Inherit or no row the instance default; then the guardrails are
-/// appended when non-empty, and the result must stay below the deep-link limit (<c>agent.prompt.tooLong</c>).
+/// (<c>agent.type.off</c>), Custom uses its own body and Inherit or no row the instance default; both it and the guardrails
+/// must still parse (<c>agent.template.invalid</c>); then the guardrails are appended when non-empty, and the result must
+/// stay below the deep-link limit (<c>agent.prompt.tooLong</c>).
 /// Readers (Viewers and read-only tokens included) may resolve; nothing is written.
 /// </summary>
 public static class ResolveAgentPrompt
@@ -59,6 +61,7 @@ public static class ResolveAgentPrompt
 
             var (template, source) = row?.Mode == AgentPromptMode.Custom ? (row, AgentPromptSource.Custom) : (instance[new AgentPromptSlot(type)], AgentPromptSource.Default);
             var guardrails = instance[AgentPromptSlot.Guardrails];
+            EnsureStoredTemplatesParse(template, source, guardrails, ticket.Grant.ProjectKey, type);
             var context = composer.Context(project.Facts, ticket.Number, type, template.CurrentVersion, source);
             var prompt = composer.Compose(template.Body ?? string.Empty, guardrails.Body, context);
             if (!AgentPrompt.FitsLimit(prompt))
@@ -74,6 +77,26 @@ public static class ResolveAgentPrompt
                 guardrails.CurrentVersion,
                 outsider is null ? null : new AgentPromptOutsiderContentDto(outsider.Source, AgentPromptQueries.User(users, outsider.AuthorId), outsider.At));
         }
+
+        /// <summary>
+        /// A stored template was valid when saved but may stop parsing later, for example when a release removes a
+        /// placeholder. That is a state problem, not a bad request: 409 <c>agent.template.invalid</c> naming where to fix it,
+        /// with the position of the first error but never the body.
+        /// </summary>
+        private static void EnsureStoredTemplatesParse(
+            AgentPromptTemplate template, AgentPromptSource source, AgentPromptTemplate guardrails, string projectKey, TicketType type)
+        {
+            if (AgentPromptComposer.FirstError(template.Body) is { } typeError)
+                throw source == AgentPromptSource.Custom
+                    ? InvalidTemplate($"Project {projectKey}'s {type} agent prompt template", typeError, "A project Owner can fix it in the project's Agent settings.")
+                    : InvalidTemplate($"The default {type} agent prompt template", typeError, "An Admin can fix it in Admin → Agent prompts.");
+            if (AgentPromptComposer.FirstError(guardrails.Body) is { } guardrailsError)
+                throw InvalidTemplate("The agent guardrails", guardrailsError, "An Admin can fix them in Admin → Agent prompts.");
+        }
+
+        private static AppException InvalidTemplate(string what, PromptTemplateError error, string hint) =>
+            AppException.Conflict(
+                AgentErrors.TemplateInvalid, $"{what} no longer parses (line {error.Line}, column {error.Column}: {error.Code}).", hint);
 
         /// <summary>
         /// On a public project, the newest text the agent reads over MCP that someone who is neither a member of the project

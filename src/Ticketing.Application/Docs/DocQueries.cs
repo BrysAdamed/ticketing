@@ -127,11 +127,12 @@ public static class DocQueries
                 n.CreatedById,
                 ChildCount = db.DocNodes.Count(x => x.ParentId == n.Id && x.DeletedAt == null),
                 HasMyDraft = db.DocDrafts.Any(d => d.NodeId == n.Id && d.UserId == me),
+                CommentCount = db.Comments.Count(c => c.DocNodeId == n.Id && c.DeletedAt == null),
             })
             .ToListAsync(cancellationToken);
         return [.. rows.Select(r => new DocTreeItemDto(
             r.Id, HumanKeys.Doc(projectKey, r.Number), r.Kind, r.DiagramFormat, r.Title, parentKey, depth, r.CurrentVersion, r.ChildCount, r.UpdatedAt,
-            r.HasMyDraft, CanDelete(folder.Grant, currentUser, r.CreatedById, r.Kind, r.ChildCount)))];
+            r.HasMyDraft, CanDelete(folder.Grant, currentUser, r.CreatedById, r.Kind, r.ChildCount), r.CommentCount))];
     }
 }
 

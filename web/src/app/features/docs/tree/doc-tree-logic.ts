@@ -403,3 +403,10 @@ function withCreateRow(rows: TreeRow[], creating: CreateDraft): TreeRow[] {
   while (end < rows.length && rows[end].depth > parentDepth) end++;
   return [...rows.slice(0, end), create(parentDepth + 1), ...rows.slice(end)];
 }
+
+/// The row's tooltip: the title, plus "3 comments" on pages and diagrams that have comments.
+export function rowTooltip(item: DocTreeItem): string {
+  const count = item.kind === 'Folder' ? 0 : item.commentCount;
+  if (count === 0) return item.title;
+  return `${item.title}\n${count} ${count === 1 ? 'comment' : 'comments'}`;
+}

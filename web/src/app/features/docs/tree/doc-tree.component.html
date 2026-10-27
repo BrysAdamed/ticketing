@@ -138,7 +138,7 @@
                   [tkAutofocusSelect]="true"
                 />
               } @else {
-                <span class="nm" [attr.title]="row.item.title">{{ row.item.title }}</span>
+                <span class="nm" [attr.title]="rowTooltip(row.item)">{{ row.item.title }}</span>
                 @if (row.item.hasMyDraft) {
                   <span
                     class="draft-dot"

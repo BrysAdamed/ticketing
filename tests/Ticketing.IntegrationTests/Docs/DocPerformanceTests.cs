@@ -14,7 +14,7 @@ namespace Ticketing.IntegrationTests.Docs;
 public sealed class DocPerformanceCollection : ICollectionFixture<TicketingApiFactory>;
 
 /// <summary>
-/// TKT-12 targets: with 5 000 nodes in a project, the whole tree answers in under 150 ms (p95) and publishing a 100 KB page
+/// TKT-12 targets: with 5 000 nodes in a project (two comments on every page, TKT-46), the whole tree answers in under 150 ms (p95) and publishing a 100 KB page
 /// in under 250 ms (p95). Writes the timings to docs-performance.txt next to the test binaries.
 /// </summary>
 [Collection(nameof(DocPerformanceCollection))]
@@ -24,6 +24,7 @@ public sealed class DocPerformanceTests(TicketingApiFactory api)
     private const int Folders = 50;
     private const int PagesPerFolder = 99;
     private const int Nodes = Folders + (Folders * PagesPerFolder);
+    private const int CommentsPerPage = 2;
     private const int PageSize = 100_000;
     private const int Runs = 30;
     private readonly CancellationToken _ct = TestContext.Current.CancellationToken;
@@ -42,6 +43,7 @@ public sealed class DocPerformanceTests(TicketingApiFactory api)
             await api.PagesAsync(project.Id, folder.Id, owner.Id, f == 0 ? PagesPerFolder - 1 : PagesPerFolder, firstNumber: 100_000 + (f * 1_000), contentLength: 2_000);
         }
         var page = await client.CreatePageAsync("PERF", "Large page", "Folder 0", Content(0));
+        await ExecuteAsync($"INSERT INTO comments (id, doc_node_id, author_id, body, created_at) SELECT gen_random_uuid(), n.id, '{owner.Id}', 'Comment', now() FROM doc_nodes n CROSS JOIN generate_series(1, {CommentsPerPage}) WHERE n.project_id = '{project.Id}' AND n.kind = 2");
         await ExecuteAsync("VACUUM ANALYZE");
         seedTime.Stop();
         await client.GetTreeAsync("PERF");

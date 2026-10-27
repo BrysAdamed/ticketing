@@ -27,7 +27,7 @@ public static class GetDoc
             var target = string.IsNullOrWhiteSpace(request.KeyOrId)
                 ? await DocLookup.ReadByPathAsync(db, access, request.ProjectKeyOrId!, request.Path!, cancellationToken)
                 : await DocLookup.ReadAsync(db, access, request.KeyOrId, cancellationToken);
-            return await DocQueries.LoadAsync(db, currentUser, clock, target, cancellationToken);
+            return await DocQueries.LoadAsync(db, access, currentUser, clock, target, cancellationToken);
         }
     }
 }

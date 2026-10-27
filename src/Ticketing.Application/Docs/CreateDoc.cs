@@ -67,7 +67,7 @@ public static class CreateDoc
                     async inner =>
                     {
                         var node = await CreateAsync(grant, command, inner);
-                        return await DocQueries.LoadAsync(db, currentUser, clock, new DocTarget(node.Id, node.ProjectId, node.Number, node.Kind, grant), inner);
+                        return await DocQueries.LoadAsync(db, access, currentUser, clock, new DocTarget(node.Id, node.ProjectId, node.Number, node.Kind, grant), inner);
                     },
                     ct),
                 cancellationToken);
@@ -90,7 +90,7 @@ public static class CreateDoc
                 : DocNode.CreateDocument(grant.ProjectId, number, kind, command.DiagramFormat, parentId, rank, title, command.Content, currentUser.Id, now);
             db.DocNodes.Add(node);
             if (!node.IsFolder)
-                publisher.AddInitialVersion(node, command.ChangeNote);
+                await publisher.AddInitialVersionAsync(node, command.ChangeNote, cancellationToken);
             activity.Record(ActivityEntityType.Doc, node.Id, grant.ProjectId, Action, new
             {
                 key = node.KeyIn(grant.ProjectKey),

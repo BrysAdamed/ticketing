@@ -24,15 +24,17 @@ public sealed class TicketTools
 
     [McpServerTool(Name = "get_ticket", ReadOnly = true, Idempotent = true, Title = "Get ticket")]
     [Description("Gets a ticket by key (for example WEB-42) or id: all fields incl. description, resolution, reporter, timestamps and rowVersion, "
-        + "plus the included collections: children (with progress by status category), links, the latest 50 comments, test cases and "
-        + "watchers ({ count, watching, users }). mentions lists the users mentioned in the description who are active and can read the project "
+        + "plus the included collections: children (with progress by status category), links, the latest 50 comments, test cases, "
+        + "watchers ({ count, watching, users }) and docs (docs whose content mentions the ticket: { total, items } with the 20 most recently "
+        + "updated; read one with get_doc). mentions lists the users mentioned in the description who are active and can read the project "
         + "(each comment has its own mentions).")]
     public static Task<TicketDto> GetTicket(
         GetTicket.Handler handler,
         [Description("Ticket key (for example WEB-42) or id.")] string key,
-        [Description("Collections to include: any of comments, children, links, testCases, watchers. Default: all.")] string[]? include = null,
+        [Description("Collections to include: any of comments, children, links, testCases, watchers, docs. Default: all.")] string[]? include = null,
         CancellationToken cancellationToken = default) =>
-        handler.HandleAsync(new GetTicket.Query(key, Application.Tickets.GetTicket.Handler.ParseIncludes(include)), cancellationToken);
+        handler.HandleAsync(
+            new GetTicket.Query(key, Application.Tickets.GetTicket.Handler.ParseIncludes(include, TicketIncludes.Everything)), cancellationToken);
 
     [Authorize(Policy = AuthPolicies.CanWrite)]
     [McpServerTool(Name = "create_ticket", Destructive = false, Title = "Create ticket")]

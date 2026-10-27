@@ -48,7 +48,7 @@ public static class EditDoc
                     return true;
                 },
                 cancellationToken);
-            return await DocQueries.LoadAsync(db, currentUser, clock, target, cancellationToken);
+            return await DocQueries.LoadAsync(db, access, currentUser, clock, target, cancellationToken);
         }
     }
 }

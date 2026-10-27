@@ -33,8 +33,9 @@ public static class DocQueries
         return new DocFolderIndex(folders);
     }
 
+    /// <summary>The doc with everything <see cref="DocDto"/> carries, references and backlinks filtered for the reader.</summary>
     public static async Task<DocDto> LoadAsync(
-        ITicketingDbContext db, ICurrentUser currentUser, IClock clock, DocTarget target, CancellationToken cancellationToken)
+        ITicketingDbContext db, IProjectAccess access, ICurrentUser currentUser, IClock clock, DocTarget target, CancellationToken cancellationToken)
     {
         var id = target.Id;
         var me = currentUser.Id;
@@ -78,6 +79,8 @@ public static class DocQueries
             .FirstOrDefaultAsync(cancellationToken);
         var folders = await FoldersAsync(db, row.ProjectId, includeDeleted: false, cancellationToken);
         var children = row.Kind == DocKind.Folder ? await ChildrenAsync(db, currentUser, target, folders.DepthUnder(row.Id), cancellationToken) : null;
+        var (references, embeds) = await DocReferenceQueries.ReferencesAsync(db, access, id, row.Content, row.Kind, row.DiagramFormat, cancellationToken);
+        var backlinks = await DocReferenceQueries.MentioningAsync(db, access, DocReferenceTarget.Doc, id, DocReferenceQueries.DocBacklinksLimit, cancellationToken);
 
         var projectKey = target.Grant.ProjectKey;
         var key = HumanKeys.Doc(projectKey, row.Number);
@@ -93,7 +96,10 @@ public static class DocQueries
             myDraft,
             children,
             Url(projectKey, key, row.Title),
-            row.RowVersion);
+            row.RowVersion,
+            references,
+            embeds,
+            backlinks);
     }
 
     /// <summary>The non-deleted children of a folder in their manual order.</summary>

@@ -2,6 +2,7 @@ using Ticketing.Application.Tickets;
 using Ticketing.Domain.Activity;
 using Ticketing.Domain.Docs;
 using Ticketing.Domain.Projects;
+using Ticketing.Domain.Tickets;
 
 namespace Ticketing.Application.Docs;
 
@@ -52,7 +53,35 @@ public sealed record DocDto(
     DocMyDraftDto? MyDraft,
     IReadOnlyList<DocTreeItemDto>? Children,
     string Url,
-    uint RowVersion);
+    uint RowVersion,
+    DocReferencesDto References,
+    IReadOnlyList<DocEmbedDto> Embeds,
+    DocMentionsDto Backlinks);
+
+/// <summary>What the latest content mentions, resolved for the reader: tickets and docs the reader cannot read are left out.</summary>
+public sealed record DocReferencesDto(IReadOnlyList<DocTicketReferenceDto> Tickets, IReadOnlyList<DocLinkReferenceDto> Docs)
+{
+    public static readonly DocReferencesDto Empty = new([], []);
+}
+
+/// <summary>A mentioned ticket (not deleted, readable) with what a ticket chip shows.</summary>
+public sealed record DocTicketReferenceDto(Guid Id, string Key, string Title, TicketType Type, TicketStatus Status, string Url);
+
+/// <summary>A mentioned or linked doc; a deleted one carries only its key (rendered "KEY (deleted)"), no title or url.</summary>
+public sealed record DocLinkReferenceDto(
+    Guid Id, string Key, string ProjectKey, DocKind Kind, DiagramFormat? DiagramFormat, string? Title, bool Deleted, string? Url);
+
+/// <summary>
+/// A diagram embedded with <c>![caption](KEY)</c> that the reader can read: <see cref="Content"/> is the Mermaid source
+/// (null for Canvas, whose snapshot is fetched by key and version).
+/// </summary>
+public sealed record DocEmbedDto(Guid Id, string Key, string ProjectKey, string Title, DiagramFormat DiagramFormat, int Version, string? Content, string Url);
+
+/// <summary>Docs that mention a ticket or link to a doc, newest first; <see cref="Total"/> counts all of them, beyond the page.</summary>
+public sealed record DocMentionsDto(int Total, IReadOnlyList<DocSummaryDto> Items)
+{
+    public static readonly DocMentionsDto Empty = new(0, []);
+}
 
 /// <summary>One node of the flat, depth-first tree (root children have depth 1), in the manual order of each folder.</summary>
 public sealed record DocTreeItemDto(

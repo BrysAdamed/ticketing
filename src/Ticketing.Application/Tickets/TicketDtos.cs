@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Ticketing.Application.Docs;
 using Ticketing.Application.Watchers;
 using Ticketing.Domain.Activity;
 using Ticketing.Domain.Projects;
@@ -92,7 +93,8 @@ public sealed record TicketDto(
     int? CommentCount,
     IReadOnlyList<TestCaseRefDto>? TestCases,
     WatchersDto? Watchers,
-    IReadOnlyList<UserRefDto> Mentions);
+    IReadOnlyList<UserRefDto> Mentions,
+    DocMentionsDto? Docs);
 
 public sealed record CommentDto(
     Guid Id,

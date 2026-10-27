@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Net;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -61,7 +60,7 @@ public static partial class DocPrint
                 throw TooLarge(string.Create(CultureInfo.InvariantCulture,
                     $"{target.Key} holds {documents} documents; a PDF export takes at most {MaxDocuments}. Export a subfolder instead."));
             var entries = await builder.FolderEntriesAsync(subtree, folders, cancellationToken);
-            var path = folders.PathOf(self.ParentId, self.Title);
+            var path = DisplayPath(folders, self.ParentId, self.Title);
             var data = builder.Data("folder", projectName, new PrintFolder(target.Key, self.Title, path, documents), entries);
             return builder.Job(data, self.Title, $"{target.Grant.ProjectKey} · {self.Title}", path,
                 string.Create(CultureInfo.InvariantCulture, $"{target.Key} · {documents} {(documents == 1 ? "document" : "documents")}"),
@@ -70,7 +69,7 @@ public static partial class DocPrint
 
         var entry = await builder.SingleEntryAsync(self, target, version, folders, cancellationToken);
         var single = builder.Data("single", projectName, null, [entry]);
-        return builder.Job(single, entry.Title, $"{target.Grant.ProjectKey} · {entry.Title}", folders.FolderPath(self.ParentId),
+        return builder.Job(single, entry.Title, $"{target.Grant.ProjectKey} · {entry.Title}", DisplayPath(folders, self.ParentId, null),
             string.Create(CultureInfo.InvariantCulture, $"{entry.Key} v{entry.Version}"), target.Grant.Visibility, 1);
     }
 
@@ -91,6 +90,10 @@ public static partial class DocPrint
         Walk(rootId, 1);
         return result;
     }
+
+    /// <summary>A path for people: the titles from the root joined by " / ", unescaped.</summary>
+    private static string DisplayPath(DocFolderIndex folders, Guid? parentId, string? title) =>
+        string.Join(" / ", folders.Breadcrumb(parentId, string.Empty).Select(c => c.Title).Concat(title is null ? [] : [title]));
 
     public static AppException TooLarge(string message) =>
         new(ErrorKind.Validation, DocErrors.ExportTooLarge, message, "Export a smaller folder, or single pages.");
@@ -128,7 +131,7 @@ public static partial class DocPrint
                     .SingleAsync(cancellationToken);
                 (title, author, content, number, at) = (node.Title, row.Author, row.Content ?? string.Empty, node.CurrentVersion, node.UpdatedAt);
             }
-            return await EntryAsync(node with { Title = title }, 0, number, author, at, content, folders.PathOf(node.ParentId, title), cancellationToken);
+            return await EntryAsync(node with { Title = title }, 0, number, author, at, content, DisplayPath(folders, node.ParentId, title), cancellationToken);
         }
 
         public async Task<List<PrintEntry>> FolderEntriesAsync(List<(Node Node, int Depth)> subtree, DocFolderIndex folders, CancellationToken cancellationToken)
@@ -142,7 +145,7 @@ public static partial class DocPrint
             var entries = new List<PrintEntry>(subtree.Count);
             foreach (var (node, depth) in subtree)
             {
-                var path = folders.PathOf(node.ParentId, node.Title);
+                var path = DisplayPath(folders, node.ParentId, node.Title);
                 if (node.Kind == DocKind.Folder)
                 {
                     entries.Add(new PrintEntry(
@@ -294,7 +297,9 @@ public static partial class DocPrint
             _ => null,
         };
 
-        private static string Html(string text) => WebUtility.HtmlEncode(text);
+        private static string Html(string text) =>
+            text.Replace("&", "&amp;", StringComparison.Ordinal).Replace("<", "&lt;", StringComparison.Ordinal)
+                .Replace(">", "&gt;", StringComparison.Ordinal).Replace("\"", "&quot;", StringComparison.Ordinal);
 
         private static string Truncate(string text, int max, bool fromStart = false) =>
             text.Length <= max ? text : fromStart ? "…" + text[^(max - 1)..] : text[..(max - 1)] + "…";

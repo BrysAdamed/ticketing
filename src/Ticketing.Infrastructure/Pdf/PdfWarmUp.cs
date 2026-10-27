@@ -25,13 +25,16 @@ internal sealed partial class PdfWarmUp(IServiceScopeFactory scopes, IOptions<Pd
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        if (!options.Value.IsConfigured)
-        {
-            LogDisabled(logger);
-            return;
-        }
         if (!options.Value.WarmUp)
             return;
+        using (var probe = scopes.CreateScope())
+        {
+            if (!probe.ServiceProvider.GetRequiredService<IPdfRenderer>().IsAvailable)
+            {
+                LogDisabled(logger);
+                return;
+            }
+        }
         var request = new PdfRenderRequest(
             $"<!doctype html><html><head><meta charset=\"utf-8\"><link rel=\"stylesheet\" href=\"print.css\"></head><body><main></main>"
             + $"<script type=\"application/json\" id=\"tk-print-data\">{Sample}</script><script src=\"print.js\"></script></body></html>",

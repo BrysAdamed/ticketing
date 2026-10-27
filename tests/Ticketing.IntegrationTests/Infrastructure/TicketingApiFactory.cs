@@ -2,10 +2,12 @@ using System.Net;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Npgsql;
 using Respawn;
 using Ticketing.Application.Abstractions;
 using Ticketing.Infrastructure.Persistence;
+using Ticketing.IntegrationTests.Docs;
 using Xunit.v3;
 
 namespace Ticketing.IntegrationTests.Infrastructure;
@@ -46,7 +48,11 @@ public sealed class TicketingApiFactory : WebApplicationFactory<Program>, IAsync
         await connection.OpenAsync();
         await _respawner.ResetAsync(connection);
         Services.GetRequiredService<IFeatureFlagStore>().Invalidate();
+        (Services.GetRequiredService<IPdfRenderer>() as FakePdfRenderer)?.Reset();
     }
+
+    /// <summary>The recording PDF renderer of this host (no Gotenberg in tests).</summary>
+    public FakePdfRenderer Pdf => (FakePdfRenderer)Services.GetRequiredService<IPdfRenderer>();
 
     public ValueTask OnTestFinishedAsync(IXunitTest test) => ValueTask.CompletedTask;
 
@@ -58,10 +64,12 @@ public sealed class TicketingApiFactory : WebApplicationFactory<Program>, IAsync
         builder.UseSetting(DatabaseInitializer.AdminPasswordVariable, BootstrapAdminPassword);
         builder.UseSetting("Auth:CookieSecurePolicy", "Always");
         builder.UseSetting("RateLimiting:LoginPermitsPerMinute", "100000");
+        builder.UseSetting("Pdf:WarmUp", "false");
         builder.UseSetting("Logging:Console:FormatterName", "simple");
         builder.UseSetting("Logging:LogLevel:Default", "Warning");
         builder.UseSetting("Logging:LogLevel:Microsoft.AspNetCore", "Error");
         builder.ConfigureServices(services => services.AddSingleton<IStartupFilter, RemoteAddressStartupFilter>());
+        builder.ConfigureTestServices(services => services.AddSingleton<IPdfRenderer, FakePdfRenderer>());
     }
 
     /// <summary>

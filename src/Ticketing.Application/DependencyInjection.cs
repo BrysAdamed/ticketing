@@ -17,6 +17,7 @@ public static class DependencyInjection
         services.AddScoped<IActivityObserver, CollaborationProjector>();
         services.AddScoped<MentionNormalizer>();
         services.AddScoped<DocPublisher>();
+        services.AddSingleton<DocExportQueue>();
         services.AddHandlers(typeof(DependencyInjection).Assembly);
         return services;
     }

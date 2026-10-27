@@ -30,6 +30,9 @@ public interface IAuthenticationStore
 
     /// <summary>Validates a bearer token (active, unexpired, owner active) and records its use at most every 5 minutes.</summary>
     Task<PatAuthentication?> AuthenticatePatAsync(string token, CancellationToken cancellationToken);
+
+    /// <summary>The user's identity and security stamp while the user is active, otherwise null (signed export links).</summary>
+    Task<ActiveUser?> FindActiveUserAsync(Guid userId, CancellationToken cancellationToken);
 }
 
 internal sealed class AuthenticationStore(TicketingDbContext db, IPatTokenGenerator tokens, TimeProvider time) : IAuthenticationStore
@@ -100,4 +103,10 @@ internal sealed class AuthenticationStore(TicketingDbContext db, IPatTokenGenera
 
         return new PatAuthentication(match.User, match.Id, match.Scope, match.ExpiresAt);
     }
+
+    public Task<ActiveUser?> FindActiveUserAsync(Guid userId, CancellationToken cancellationToken) =>
+        db.Users.AsNoTracking()
+            .Where(u => u.Id == userId && u.IsActive)
+            .Select(u => new ActiveUser(new AuthenticatedUser(u.Id, u.Email, u.DisplayName, u.GlobalRole), u.SecurityStamp))
+            .SingleOrDefaultAsync(cancellationToken);
 }

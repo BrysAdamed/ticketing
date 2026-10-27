@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -18,6 +19,7 @@ public static class Problems
         ErrorKind.NotFound => StatusCodes.Status404NotFound,
         ErrorKind.Conflict => StatusCodes.Status409Conflict,
         ErrorKind.TooManyRequests => StatusCodes.Status429TooManyRequests,
+        ErrorKind.Unavailable => StatusCodes.Status503ServiceUnavailable,
         _ => StatusCodes.Status500InternalServerError,
     };
 
@@ -79,6 +81,8 @@ internal sealed partial class ApiExceptionHandler(IProblemDetailsService problem
         var status = Problems.StatusFor(error.Kind);
         LogHandled(logger, status, error.Code);
         httpContext.Response.StatusCode = status;
+        if (error.RetryAfter is { } retryAfter)
+            httpContext.Response.Headers.RetryAfter = ((int)Math.Ceiling(retryAfter.TotalSeconds)).ToString(CultureInfo.InvariantCulture);
         var problem = new ProblemDetails { Status = status, Title = error.Message, Type = Problems.TypeFor(error.Code) };
         problem.Extensions["code"] = error.Code;
         if (error.Hint is not null)

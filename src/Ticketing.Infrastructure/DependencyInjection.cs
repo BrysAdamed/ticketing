@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 using Ticketing.Application.Abstractions;
 using Ticketing.Infrastructure.Activity;
 using Ticketing.Infrastructure.Attachments;
@@ -9,6 +10,7 @@ using Ticketing.Infrastructure.Auth;
 using Ticketing.Infrastructure.FeatureFlags;
 using Ticketing.Infrastructure.Idempotency;
 using Ticketing.Infrastructure.Maintenance;
+using Ticketing.Infrastructure.Pdf;
 using Ticketing.Infrastructure.Persistence;
 using Ticketing.Infrastructure.Time;
 
@@ -43,6 +45,16 @@ public static class DependencyInjection
         services.AddScoped<IAttachmentStore, PostgresAttachmentStore>();
         services.AddScoped<IIdempotency, IdempotencyService>();
         services.AddSingleton<IFeatureFlagStore, FeatureFlagStore>();
+
+        services.AddOptions<PdfOptions>().Bind(configuration.GetSection(PdfOptions.Section));
+        services.AddSingleton<PrintBundle>();
+        services.AddSingleton<IDocExportLinks, DocExportLinks>();
+        services.AddHttpClient<IPdfRenderer, GotenbergPdfRenderer>((sp, client) =>
+        {
+            client.BaseAddress = new Uri(sp.GetRequiredService<IOptions<PdfOptions>>().Value.Url.TrimEnd('/') + "/");
+            client.Timeout = TimeSpan.FromMinutes(3);
+        });
+        services.AddHostedService<PdfWarmUp>();
 
         services.AddOptions<MaintenanceOptions>().Bind(configuration.GetSection(MaintenanceOptions.Section));
         services.AddScoped<DataRetention>();

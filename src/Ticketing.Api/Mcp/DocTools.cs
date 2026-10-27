@@ -68,6 +68,18 @@ public sealed class DocTools
         CancellationToken cancellationToken = default) =>
         handler.HandleAsync(new GetDocHistory.Query(docKey, new PageRequest(limit, cursor)), cancellationToken);
 
+    [McpServerTool(Name = "get_doc_export_link", ReadOnly = true, Idempotent = false, Title = "Get doc PDF export link")]
+    [Description("A signed link to download a page, a diagram or a whole folder as an A4 PDF: { docKey, version, url, expiresAt }. "
+        + "url is relative to the server and needs no token: GET it within 15 minutes (it is bound to you and this doc, and your access is "
+        + "checked again when it is used; afterwards it answers 404). The PDF shows only what you can read; dates are in UTC. "
+        + "Folders export recursively in tree order (at most 300 documents).")]
+    public static Task<DocExportLinkDto> GetDocExportLink(
+        CreateDocExportLink.Handler handler,
+        [Description(DocKey)] string docKey,
+        [Description("Optional older version of a page or diagram (from get_doc_history). Default: the latest.")] int? version = null,
+        CancellationToken cancellationToken = default) =>
+        handler.HandleAsync(new CreateDocExportLink.Command(docKey, version), cancellationToken);
+
     [McpServerTool(Name = "list_doc_attachments", ReadOnly = true, Idempotent = true, Title = "List doc attachments")]
     [Description("Lists a page's attachments (images and files embedded in its markdown as ![name](url)), oldest first: id, fileName, "
         + "contentType, sizeBytes, uploadedBy, uploadedAt and the download url (relative to the server, needs the same bearer token). "

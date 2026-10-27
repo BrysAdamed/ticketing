@@ -31,6 +31,9 @@ public sealed class AppException : Exception
     /// <summary>Extra machine-readable members (camelCase) added to the problem details and the MCP error, for example the current version on a conflict.</summary>
     public IReadOnlyDictionary<string, object?>? Details { get; init; }
 
+    /// <summary>When a retry may succeed (<c>Retry-After</c>), for <see cref="ErrorKind.TooManyRequests"/> and <see cref="ErrorKind.Unavailable"/>.</summary>
+    public TimeSpan? RetryAfter { get; init; }
+
     public static AppException NotFound(string code, string message) => new(ErrorKind.NotFound, code, message);
 
     public static AppException Forbidden(string code, string message, string? hint = null) => new(ErrorKind.Forbidden, code, message, hint);
@@ -66,6 +69,7 @@ public enum ErrorKind
     NotFound,
     Conflict,
     TooManyRequests,
+    Unavailable,
 }
 
 /// <summary>Cross-cutting error codes. Feature-specific codes live next to their aggregate (for example <c>TicketErrors</c>).</summary>

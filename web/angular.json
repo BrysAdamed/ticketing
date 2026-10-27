@@ -30,7 +30,40 @@
               {
                 "glob": "**/*",
                 "input": "public"
+              },
+              {
+                "glob": "index.css",
+                "input": "node_modules/@excalidraw/excalidraw/dist/prod",
+                "output": "excalidraw"
+              },
+              {
+                "glob": "**/*",
+                "input": "node_modules/@excalidraw/excalidraw/dist/prod/fonts",
+                "output": "excalidraw/fonts"
               }
+            ],
+            "allowedCommonJsDependencies": [
+              "react",
+              "react-dom",
+              "react-dom/client",
+              "scheduler",
+              "use-sync-external-store",
+              "@braintree/sanitize-url",
+              "@excalidraw/markdown-to-text",
+              "canvas-roundrect-polyfill",
+              "es6-promise-pool",
+              "fuzzy",
+              "lodash.debounce",
+              "lodash.throttle",
+              "pica",
+              "png-chunk-text",
+              "png-chunks-encode",
+              "png-chunks-extract",
+              "cytoscape-cose-bilkent",
+              "cytoscape-fcose",
+              "dayjs",
+              "elkjs",
+              "fastdom"
             ],
             "styles": ["src/styles.scss"],
             "stylePreprocessorOptions": {

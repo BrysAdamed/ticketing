@@ -38,6 +38,10 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Bug draft**: The pre-filled bug the server builds from a failed regression item's snapshot (title, templated repro steps, Severity Major, Priority High, session version, label `regression`). The create-bug dialog, REST and MCP all start from it (D-70). [§6.11](product/01-refined-spec.md#611-regression-session-lifecycle)
 
+**Canvas outline**: The text of a Canvas diagram that the server extracts from its Excalidraw JSON: labels in reading order plus connector relations such as `API → DB (SQL)`. It feeds search and MCP (D-99). [ADR 0013](adr/0013-diagram-editor-and-pdf-pipeline.md)
+
+**Canvas snapshot**: The light SVG image of one Canvas diagram version (fonts inlined), made by the editor on publish. Pages embed it, dark mode inverts it with CSS, and the PDF prints it (D-99).
+
 **Carry-over**: Moving a board's unfinished tickets elsewhere when it is archived: to their project backlogs (top) or to another non-archived board. [§6.4](product/01-refined-spec.md#64-backlog-and-boards)
 
 **Channel**: See Write channel.
@@ -109,6 +113,8 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 **Parent / child**: Hierarchy between tickets of the same project via `ParentId`: at most 3 levels, no cycles, epics have no parent. Children are independent of their parent's status and placement. [§6.3](product/01-refined-spec.md#63-parent-and-child)
 
 **PAT (personal access token)**: A secret (`tkt_` + 40 base62 characters) a user creates to call REST or MCP as themselves. It has a scope and a mandatory expiry; only its SHA-256 hash is stored and it is shown once. [§4.2](product/01-refined-spec.md#42-personalaccesstoken), [§6.12](product/01-refined-spec.md#612-pat-lifecycle), [ADR 0003](adr/0003-authentication-cookie-and-pat.md)
+
+**Print bundle**: The offline page the PDF renderer prints: the SPA's markdown and Mermaid renderer built into one script, print styles from the design tokens, and a JSON block with the documents the exporting user may read. It needs no network and calls nothing back (D-100). [ADR 0013](adr/0013-diagram-editor-and-pdf-pipeline.md)
 
 **Priority**: How soon a ticket should be worked on: `Highest`, `High`, `Medium` (default), `Low`, `Lowest`. Required on every ticket. [§3](product/01-refined-spec.md#3-enumerations)
 

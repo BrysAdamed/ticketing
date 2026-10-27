@@ -18,19 +18,24 @@ public static class GetDocVersion
         public async Task<DocVersionDto> HandleAsync(Query request, CancellationToken cancellationToken)
         {
             var target = await DocLookup.ReadAsync(db, access, request.KeyOrId, cancellationToken);
-            var nodeId = target.Id;
-            var number = request.Number;
-            var key = target.Key;
-            return await (
-                    from v in db.DocVersions.AsNoTracking()
-                    where v.NodeId == nodeId && v.Number == number
-                    join u in db.Users on v.AuthorId equals u.Id
-                    select new DocVersionDto(
-                        key, v.Number, v.Title, v.Content, v.ChangeNote, new UserRefDto(u.Id, u.Email, u.DisplayName, u.IsActive), v.Channel,
-                        v.CreatedAt, v.RestoredFrom))
-                .SingleOrDefaultAsync(cancellationToken)
-                ?? throw AppException.NotFound(
-                    DocErrors.VersionNotFound, string.Create(CultureInfo.InvariantCulture, $"{key} has no version {number}."));
+            return await LoadAsync(db, target, request.Number, cancellationToken);
         }
+    }
+
+    /// <summary>Version <paramref name="number"/> of a resolved doc, or <c>doc.version.notFound</c>.</summary>
+    internal static async Task<DocVersionDto> LoadAsync(ITicketingDbContext db, DocTarget target, int number, CancellationToken cancellationToken)
+    {
+        var nodeId = target.Id;
+        var key = target.Key;
+        return await (
+                from v in db.DocVersions.AsNoTracking()
+                where v.NodeId == nodeId && v.Number == number
+                join u in db.Users on v.AuthorId equals u.Id
+                select new DocVersionDto(
+                    key, v.Number, v.Title, v.Content, v.ChangeNote, new UserRefDto(u.Id, u.Email, u.DisplayName, u.IsActive), v.Channel,
+                    v.CreatedAt, v.RestoredFrom))
+            .SingleOrDefaultAsync(cancellationToken)
+            ?? throw AppException.NotFound(
+                DocErrors.VersionNotFound, string.Create(CultureInfo.InvariantCulture, $"{key} has no version {number}."));
     }
 }

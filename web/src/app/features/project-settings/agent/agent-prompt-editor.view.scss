@@ -1,0 +1,152 @@
+:host {
+  display: block;
+  padding: 12px 24px 64px;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  min-height: 40px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--tk-border);
+}
+
+.back {
+  margin-left: -8px;
+}
+
+.title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  h2 {
+    margin: 0;
+    font-size: var(--tk-text-lg);
+    line-height: var(--tk-leading-lg);
+    font-weight: var(--tk-weight-semibold);
+  }
+}
+
+.changed {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--tk-text-sm);
+}
+
+.spacer,
+.grow {
+  flex: 1;
+}
+
+.kbd {
+  margin-left: 6px;
+}
+
+.notices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+
+  .tk-callout {
+    align-items: center;
+  }
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 24px;
+  margin-top: 16px;
+  align-items: start;
+}
+
+@media (max-width: 1100px) {
+  .columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.left,
+.right {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.right {
+  position: sticky;
+  top: 12px;
+}
+
+.mode {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: space-between;
+  min-height: 28px;
+
+  .tk-field-label {
+    margin: 0;
+  }
+}
+
+.help {
+  margin: 0;
+  font-size: var(--tk-text-sm);
+
+  code {
+    font-family: var(--tk-font-mono);
+  }
+}
+
+.readonly-text {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--tk-border);
+  border-radius: var(--tk-radius-md);
+  background: var(--tk-bg-subtle);
+  color: var(--tk-text-muted);
+  font-family: var(--tk-font-mono);
+  font-size: var(--tk-text-sm);
+  line-height: 20px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.note mat-form-field {
+  width: 100%;
+}
+
+.panel {
+  padding: 12px;
+  border: 1px solid var(--tk-border);
+  border-radius: var(--tk-radius-lg);
+  background: var(--tk-surface);
+  max-height: calc(100vh - 220px);
+  overflow: auto;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.sample {
+  height: 28px;
+}
+
+.issue {
+  margin-bottom: 12px;
+}
+
+.loading {
+  padding-top: 24px;
+}

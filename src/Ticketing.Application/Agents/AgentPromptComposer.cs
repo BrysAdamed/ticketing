@@ -8,8 +8,11 @@ namespace Ticketing.Application.Agents;
 /// <summary>The project facts a prompt is rendered with.</summary>
 public sealed record AgentPromptProject(string Key, string? RepositoryUrl, string DefaultBranch, AgentMergePolicy MergePolicy);
 
-/// <summary>A rendered prompt, or the template and length errors that prevented it.</summary>
-public sealed record AgentPromptRendering(string? Prompt, IReadOnlyList<AgentPromptIssueDto> Errors)
+/// <summary>
+/// A rendered prompt, or the template and length errors that prevented it. <see cref="GuardrailsStart"/> is where the
+/// guardrails begin in <see cref="Prompt"/>, null without guardrails.
+/// </summary>
+public sealed record AgentPromptRendering(string? Prompt, IReadOnlyList<AgentPromptIssueDto> Errors, int? GuardrailsStart = null)
 {
     public bool Succeeded => Prompt is not null && Errors.Count == 0;
 }
@@ -62,7 +65,9 @@ public sealed class AgentPromptComposer(IBuiltInAgentPrompts builtIns, IOptions<
         var prompt = AgentPrompt.Compose(type ?? string.Empty, rules);
         if (!AgentPrompt.FitsLimit(prompt))
             errors.Add(new AgentPromptIssueDto(AgentErrors.PromptTooLong, AgentPrompt.TooLongMessage(prompt.Length), null, null));
-        return new AgentPromptRendering(prompt, errors);
+        var trimmedRules = rules?.Trim();
+        int? guardrailsStart = string.IsNullOrEmpty(trimmedRules) ? null : prompt.Length - trimmedRules.Length;
+        return new AgentPromptRendering(prompt, errors, guardrailsStart);
     }
 
     private static string Render(string body, AgentPromptContext context) =>

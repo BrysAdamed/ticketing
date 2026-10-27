@@ -58,7 +58,8 @@ ESLint enforces the boundaries: `core` and `shared` may not import `@features/*`
 | `/projects/:projectKey/backlog` | `backlog` | `backlog.list` |
 | `/projects/:projectKey/test-cases`, `…/test-cases/:testCaseKey`, `…/test-cases/new?forTicket=KEY` (filters `?status=&q=&ticket=&archived=`) | `test-cases` | `testcases.list`, `testcases.editor` (side pane) |
 | `/projects/:projectKey/regressions[/:sessionKey]` (`?status=`; session `?item=KEY&show=mine`, `waiting` or `failed`) | `regressions` | `regressions.list`, `regressions.session` |
-| `/projects/:projectKey/settings` | `project-settings` | `project.settings` |
+| `/projects/:projectKey/settings` (tabs: General; Agent while `project.agent` is non-null) | `project-settings` | `project.settings.layout`, `project.settings` |
+| `/projects/:projectKey/settings/agent`, `…/settings/agent/:ticketType` (`bug`, `user-story`, …; flag `agent.delegate`) | `project-settings` | `project.settings.agent`, `project.settings.agent-prompt` |
 | `/tickets/:ticketKey` | `tickets` | `ticket.detail` (presentation `page`) |
 | `?peek=KEY` on any shell URL | `tickets` | `ticket.detail` (presentation `peek`) |
 | `/boards`, `/boards/:boardId` | `boards` | `boards.list`, `board.kanban` |
@@ -158,6 +159,17 @@ provideTicketDetailSection({
 ```
 
 The component is lazily loaded, receives the inputs `ticketKey`, `ticketId` and `projectKey` (declare all three, for example `input.required<string>()`, because unknown inputs are reported as errors), and renders its own heading. Reuse the look of the built-in sections (`sec-h` header with an `h2`, a bordered `box` of 34 px rows). While no section with id `test-cases` is registered, the ticket view shows a read-only test case list from `GET /tickets/{key}` itself.
+
+## Agent prompts: shared editor
+
+The project Agent tab and the Admin prompts page edit the same kind of thing, so the pieces live outside both features (D-101):
+
+| Need | Use |
+| --- | --- |
+| Wire types, clients | `core/agent/agent-prompt.models.ts`; `AgentPromptsClient` (`listProject`, `listInstance`, `getProject`, `getInstance`, `save(scope, slot, …)`, `resetProject`, `resetInstanceToBuiltIn`, `versions`, `version`, `restore`, `preview`, `placeholders`); `ProjectAgentSettingsClient` (`get`, `update(pk, patch, rowVersion)`). A scope is `{ kind: 'project', projectKey }` or `{ kind: 'instance' }`; a slot is a ticket type or `Guardrails`. |
+| Editor state | `AgentPromptEditorStore` (`core/agent/`, provide it in the view): `open(scope, slot, sampleTicket?)`, `setEditable`, `setMode`, `edit(body)`, `setPreviewTicket`, `save`, `reset` (default or built-in), `markReviewed`, `restore(n)`, `loadVersions`, `version(n)`, `discard`, `reapplyLostEdit`. Signals: `document` (with `reference` = what "Compare" diffs against, `referenceChanged`, `raw` DTO), `mode`, `body`, `changeNote`, `dirty`, `canSave`, `preview`, `previewPending`, `issues`, `length`, `lengthEstimated`, `limit`, `lostEdit`, `versions`. |
+| UI | `shared/agent-prompts/`: `tk-template-editor [(value)] [placeholders] [issues] [readonly] testId` (`{{` completion, issues underlined and listed), `tk-prompt-preview [prompt] [splitAt] [muted]="'after' \| 'before'" [mutedLabel]`, `tk-prompt-diff [left] [right] [leftLabel] [rightLabel]`, `tk-prompt-history [versions] [currentVersion] [canRestore] (view) (compare) (restore)`, `tk-length-meter [length] [limit] [estimated]`. Pure helpers: `line-diff.ts`, `template-text.ts`. |
+| Leave guard | `unsavedChangesGuard` (`core/layout/`) on the route; the view implements `LeaveGuarded.confirmLeave()`. |
 
 ## UI kit (`shared/`)
 

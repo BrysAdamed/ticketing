@@ -17,13 +17,14 @@ This file is the pool of unscheduled ideas. Once an idea is scheduled it becomes
 
 | ID | Idea | Why | Size |
 | --- | --- | --- | --- |
-| I-30 | In-app notifications (assigned, mentioned, watched-ticket changes) | Biggest gap for teams coming from Jira. First thing to build after v1. | M |
+| I-30 | In-app notifications (TKT-7, D-94) | Biggest gap for teams coming from Jira. First thing to build after v1. | M |
 | I-32 | Watchers (TKT-6, D-93) | Feeds notifications; reporter and assignee watch automatically. | S |
 | I-33 | @mentions in markdown | Only useful once notifications exist. | S |
 | I-31 | Email notifications | Reaches people who live in Outlook. Needs SMTP from the VM. | M |
 | I-37 | Real-time board and ticket updates | Boards in standups stay current without refresh. | M |
 | I-67 | Teams or Slack integration | Link unfurling and channel posts. Pick after confirming the company chat tool. | M |
 | I-68 | Comment reactions | Lightweight acknowledgement. Low value. | S |
+| – | Notification preferences: mute a kind or a project (TKT-7 notifies on every trigger in D-94) | Busy watchers may want only assignments and mentions. | S |
 
 ## Identity and access
 

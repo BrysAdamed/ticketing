@@ -19,7 +19,7 @@ In v1:
 - REST API (OpenAPI) and an MCP server over HTTP that exposes the same use cases.
 - Admin audit trail.
 
-Explicitly not in v1 (see [ideas.md](../ideas.md)): SSO/OIDC, notifications and email, sprints as a concept, custom fields, configurable workflows, real-time board updates, Jira importer, time tracking, i18n, mobile layout. Dark mode is in v1 because the design tokens make it nearly free (light default, dark via user toggle / OS preference).
+Explicitly not in v1 (see [ideas.md](../ideas.md)): SSO/OIDC, email (in-app notifications followed v1 with TKT-5, section 6.16), sprints as a concept, custom fields, configurable workflows, real-time board updates, Jira importer, time tracking, i18n, mobile layout. Dark mode is in v1 because the design tokens make it nearly free (light default, dark via user toggle / OS preference).
 
 Deployment target: Docker Compose on an internal VM (API + Angular static files + PostgreSQL) (D-03).
 
@@ -59,6 +59,7 @@ Deployment target: Docker Compose on an internal VM (API + Angular static files 
 | `WriteChannel` | `Web`, `Api`, `Mcp` | |
 | `PatScope` | `ReadOnly`, `ReadWrite` | (I-10) |
 | `ActivityEntityType` | `Ticket`, `TestCase`, `RegressionSession`, `Project`, `Board`, `User`, `PersonalAccessToken`, `FeatureFlag` | |
+| `NotificationKind` | `Assigned`, `Mentioned`, `Commented`, `StatusChanged`, `PriorityRaised`, `Moved`, `Deleted`, `RegressionItemAssigned` | Headline rank when merged (6.16): Mentioned > Assigned > RegressionItemAssigned > Deleted > StatusChanged > PriorityRaised > Commented > Moved. |
 
 There is no `Role` table. Global and project roles are fixed enums and the permission rules are code (section 5). Custom roles are out of scope (D-08).
 
@@ -333,6 +334,25 @@ Evaluation in 6.13.
 
 Primary key (TicketId, UserId), index (UserId, TicketId). Rows stay when the user loses access or is deactivated; readers filter them (6.15).
 
+### 4.17 Notification (I-30)
+
+| Field | Type | Constraints |
+| --- | --- | --- |
+| RecipientId | uuid | FK User. |
+| ProjectId | uuid | FK Project. |
+| TicketId | uuid? | FK Ticket, cascade. Set for ticket notifications. |
+| RegressionSessionId | uuid? | FK RegressionSession, cascade. Set for regression item assignments. |
+| TestCaseKey | text(20)? | The assigned item, for regression item assignments. |
+| ActorId | uuid? | FK User. Null for system changes. |
+| Kind | NotificationKind | The headline of the merged events. |
+| Summary | text(300) | Server-rendered English sentence after the actor's name ("changed the status from To Do to Review"). Never contains user-written text (comment bodies, descriptions). |
+| EventCount | int | ≥ 1; how many events were merged into this row. |
+| CreatedAt | timestamptz | When the first merged event happened; list order. |
+| UpdatedAt | timestamptz | When the last merged event happened. |
+| ReadAt | timestamptz? | Null while unread. |
+
+Indexes: (RecipientId, ReadAt, CreatedAt, Id) (unread list and count), (RecipientId, CreatedAt, Id) (full list), (CreatedAt) (retention). Ticket title and key are not stored; they are joined in when listing. Rows older than 90 days are purged (6.16).
+
 ## 5. Permissions
 
 ### 5.1 Effective project access
@@ -354,6 +374,7 @@ On a public project, a `Viewer` membership has no effect beyond rule 4: the user
 | Create, edit, deactivate, reactivate users; change global role; issue set-password links | Yes | No |
 | Change own display name and password | Yes | Yes |
 | Create, list, revoke own PATs | Yes | Yes |
+| List own notifications (only those about projects still readable); mark them read (write-scoped credentials) | Yes | Yes |
 | List and revoke any user's PATs (never see secrets) | Yes | No |
 | Manage feature flags | Yes | No |
 | View admin audit trail | Yes | No |
@@ -592,6 +613,21 @@ Flag changes write ActivityEntries. Admin UI: list, create, edit, delete; shows 
 - Watcher lists show only active users who can currently read the project, by display name. A watcher who loses access or is deactivated is hidden (and will get no notifications) but is shown again if access returns. Watcher data is never visible for an unreadable ticket (404).
 - REST: `GET /tickets/{key}/watchers`, `PUT /tickets/{key}/watchers/me`, `DELETE /tickets/{key}/watchers/me`, each returning `{ count, watching, users }`. The ticket (`GET /tickets/{key}`, `include=watchers`, part of the default) carries the same object as `watchers`.
 
+### 6.16 In-app notifications (I-30, D-94)
+
+- Triggers, created in the same transaction as the change whatever the channel (REST, MCP, bulk create, moves, board archive or delete, regressions):
+  - Assigned: a ticket created with you as assignee, or reassigned to you.
+  - RegressionItemAssigned: a regression item assigned to you by someone else (taking an item or recording a result assigns it to yourself and notifies nobody).
+  - Mentioned: you are @mentioned (I-33, TKT-8).
+  - On a ticket you watch (6.15): a new comment (Commented), a status change by PATCH or by moving to a board column (StatusChanged), a priority change to High or Highest from a lower priority (PriorityRaised; lowering or reaching Medium or below notifies nobody), a move between backlog and boards or between boards, including board archive carry-over and board deletion (Moved), and deletion (Deleted).
+- The actor is never notified about their own action. Recipients must be active and able to read the project (5.1) at the time of the change; others get nothing.
+- Collapsing: a change by the same actor on the same ticket (or regression session) within 5 minutes of the first change of an unread notification is merged into it: `eventCount` grows, `updatedAt` moves, and the headline (kind and summary) is replaced only by a higher-ranked kind (section 3). Several changes in one save collapse the same way. A read notification is never reopened; the next change starts a new one.
+- Listing re-checks read access: notifications about projects the user can no longer read (removed membership, project made private, project deleted) are left out of the list and the unread count, and come back if access returns. Deleted tickets stay listed, flagged `deleted`.
+- Mark read: some (1 to 100 ids) or all of the caller's notifications; ids of other users' notifications are ignored. Read time is kept on repeat. Needs write-scoped credentials.
+- Retention: notifications older than 90 days are deleted by the hourly retention job.
+- REST (`/api/v1/me/notifications`): `GET ?unread=true&cursor=&limit=` returns `{ items, nextCursor }`, newest first by `createdAt`; `GET /unread-count` returns `{ count }`; `POST /read` with `{ "ids": [...] }` or `{ "all": true }` returns `{ unreadCount }`. An item is `{ id, kind, summary, eventCount, actor, projectKey, ticket: { key, title, deleted } | null, regression: { sessionKey, sessionName, testCaseKey } | null, url, createdAt, updatedAt, readAt }`; `url` is the SPA path of the ticket or regression item.
+- Performance: list (all or unread, first page) and unread count p95 under 50 ms with 100 000 notifications for one user.
+
 ## 7. Project dashboard
 
 Shown on the project's home page. All numbers exclude deleted tickets. A single optional version filter applies to ticket-based widgets (I-23).
@@ -717,6 +753,13 @@ Boards
 | `create_board` | `name`, optional `description`, `projectKeys` | Created board. |
 | `update_board` | `boardId`, any of `name`, `description`, `addProjectKeys`, `removeProjectKeys`, `ownerEmail` | Updated board. |
 | `archive_board` | `boardId`, `carryOverTo` (`backlog` or a board id) | Archived board and where tickets went. |
+
+Notifications (6.16)
+
+| Tool | Inputs | Output |
+| --- | --- | --- |
+| `list_notifications` | optional `unreadOnly`, `cursor`, `limit` | `{ items, nextCursor }` of notifications, newest first, in the REST shape (6.16). |
+| `mark_notifications_read` | `ids` (1..100) or `all` (true) | `{ unreadCount }`. Write-scoped tokens only. |
 
 Out of MCP in v1: user administration, PAT management, feature flags, project deletion, board deletion. These stay in the web UI.
 

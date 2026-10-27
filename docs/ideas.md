@@ -57,6 +57,7 @@ This file is the pool of unscheduled ideas. Once an idea is scheduled it becomes
 | --- | --- | --- | --- |
 | I-38 | Saved and shared filters | Named searches beyond bookmarks. | S |
 | I-65 | Search in comments | Finds discussions, not just descriptions. | S |
+| I-106 | Sub-tickets graph: server-side view preference, grandchildren as collapsible groups, story-point-weighted critical path, "ready" filter in the backlog | Follow-ups to the graph view (D-95); v1 keeps the choice per browser and counts tickets, not points. | M |
 | - | Relevance sort for text search | `ts_rank` ordering needs a cursor on a float; v1 sorts by updated. | S |
 | - | Custom date ranges in the search UI | v1 offers presets; any range works through the URL. | S |
 | - | Server-side image thumbnails | The attachments list scales full images down in the browser. | S |

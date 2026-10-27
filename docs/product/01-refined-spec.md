@@ -707,6 +707,7 @@ Tickets
 | `update_ticket` | `key`, any of `title`, `description`, `type`, `status`, `resolution`, `priority`, `severity`, `storyPoints`, `version`, `labels` (replace), `addLabels`, `removeLabels`, `parentKey` (null to clear), `assignee` (null to clear), `reporter`, optional `expectedVersion` | Updated ticket. Null clears an optional field; omitted leaves it. |
 | `move_ticket` | `keys` (1..100), `target` (`backlog` or a board id), optional `status` (target column), optional `beforeKey`, `afterKey` or `position` (`Top`/`Bottom`) | Moved ticket summaries. |
 | `delete_ticket` | `key` | Confirmation. Owner only. |
+| `get_children_graph` | `key` | `{ key, nodes, edges }`: the children plus readable linked tickets outside the parent (`external`), each with `blocked`; edges `{ linkId, type, from, to }`. Unreadable and deleted tickets are left out (D-95). |
 | `get_ticket_history` | `key`, `limit`, `cursor` | Activity entries: when, actor, channel, action, field, old, new. |
 | `link_tickets` | `sourceKey`, `targetKey`, `type` | Created link. |
 | `unlink_tickets` | `sourceKey`, `targetKey`, `type` | Confirmation. |

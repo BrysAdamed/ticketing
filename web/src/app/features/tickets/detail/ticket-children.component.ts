@@ -21,6 +21,13 @@ import { TypeIconComponent } from '@shared/ui/domain/type-icon.component';
 import { IconComponent } from '@shared/ui/icon/icon.component';
 import { PickerOption } from '@shared/ui/inline-picker/picker-option';
 import { SearchPickerDirective } from '@shared/ui/search-picker/search-picker.directive';
+import {
+  SegmentedControlComponent,
+  SegmentOption,
+} from '@shared/ui/segmented/segmented-control.component';
+import { SkeletonRowsComponent } from '@shared/ui/skeleton/skeleton-rows.component';
+import { ChildrenGraphComponent } from './graph/children-graph.component';
+import { SubticketsView, SubticketsViewPreference } from './subtickets-view';
 
 export interface NewChild {
   title: string;
@@ -38,6 +45,9 @@ export interface NewChild {
     TypeIconComponent,
     IconComponent,
     SearchPickerDirective,
+    SegmentedControlComponent,
+    SkeletonRowsComponent,
+    ChildrenGraphComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'sec', 'data-testid': 'ticket-children' },
@@ -53,60 +63,80 @@ export interface NewChild {
           </span>
         }
       }
-      @if (canEdit()) {
+      @if (canEdit() || graphToggle()) {
         <span class="right">
-          <button type="button" class="add" data-testid="children-add" (click)="startAdding()">
-            <tk-icon name="tablerPlus" [size]="14" />New
-          </button>
-          <button
-            type="button"
-            class="add"
-            data-testid="children-adopt"
-            [tkSearchPicker]="search()"
-            pickerPlaceholder="Find a ticket to add…"
-            (picked)="adopt.emit($event)"
-          >
-            <tk-icon name="tablerSubtask" [size]="14" />Add existing
-          </button>
+          @if (graphToggle()) {
+            <tk-segmented
+              class="views"
+              ariaLabel="Show sub-tickets as"
+              testId="children-view"
+              [options]="viewOptions"
+              [value]="view()"
+              (valueChange)="preference.set($event)"
+            />
+          }
+          @if (canEdit()) {
+            <button type="button" class="add" data-testid="children-add" (click)="startAdding()">
+              <tk-icon name="tablerPlus" [size]="14" />New
+            </button>
+            <button
+              type="button"
+              class="add"
+              data-testid="children-adopt"
+              [tkSearchPicker]="search()"
+              pickerPlaceholder="Find a ticket to add…"
+              (picked)="adopt.emit($event)"
+            >
+              <tk-icon name="tablerSubtask" [size]="14" />Add existing
+            </button>
+          }
         </span>
       }
     </div>
-    <div class="box">
-      @for (child of children(); track child.id) {
-        <a
-          class="lrow"
-          [class.done]="child.status === 'Done'"
-          [routerLink]="[]"
-          [queryParams]="{ peek: child.key }"
-          queryParamsHandling="merge"
-          [attr.data-testid]="'child-' + child.key"
-        >
-          <tk-status-icon [status]="child.status" />
-          <span class="key tnum">{{ child.key }}</span>
-          <tk-type-icon [type]="child.type" [size]="14" />
-          <span class="t">{{ child.title }}</span>
-          <tk-avatar [userId]="child.assignee?.id" [name]="child.assignee?.displayName" />
-        </a>
+    @if (graphToggle() && view() === 'graph' && !adding()) {
+      @defer (on immediate) {
+        <tk-children-graph [ticketKey]="ticket().key" [revision]="revision()" />
+      } @placeholder {
+        <div class="box"><tk-skeleton-rows [count]="4" /></div>
       }
-      @if (adding()) {
-        <div class="lrow new">
-          <tk-type-icon [type]="childType()" [size]="14" />
-          <input
-            #title
-            class="new-input"
-            placeholder="Sub-ticket title — Enter to create, Esc to cancel"
-            aria-label="Sub-ticket title"
-            data-testid="child-new-input"
-            (keydown.enter)="create(title.value); title.value = ''"
-            (keydown.escape)="$event.stopPropagation(); adding.set(false)"
-            (blur)="!title.value && adding.set(false)"
-          />
-        </div>
-      }
-      @if (children().length === 0 && !adding()) {
-        <div class="empty">No sub-tickets.</div>
-      }
-    </div>
+    } @else {
+      <div class="box">
+        @for (child of children(); track child.id) {
+          <a
+            class="lrow"
+            [class.done]="child.status === 'Done'"
+            [routerLink]="[]"
+            [queryParams]="{ peek: child.key }"
+            queryParamsHandling="merge"
+            [attr.data-testid]="'child-' + child.key"
+          >
+            <tk-status-icon [status]="child.status" />
+            <span class="key tnum">{{ child.key }}</span>
+            <tk-type-icon [type]="child.type" [size]="14" />
+            <span class="t">{{ child.title }}</span>
+            <tk-avatar [userId]="child.assignee?.id" [name]="child.assignee?.displayName" />
+          </a>
+        }
+        @if (adding()) {
+          <div class="lrow new">
+            <tk-type-icon [type]="childType()" [size]="14" />
+            <input
+              #title
+              class="new-input"
+              placeholder="Sub-ticket title — Enter to create, Esc to cancel"
+              aria-label="Sub-ticket title"
+              data-testid="child-new-input"
+              (keydown.enter)="create(title.value); title.value = ''"
+              (keydown.escape)="$event.stopPropagation(); adding.set(false)"
+              (blur)="!title.value && adding.set(false)"
+            />
+          </div>
+        }
+        @if (children().length === 0 && !adding()) {
+          <div class="empty">No sub-tickets.</div>
+        }
+      </div>
+    }
   `,
   styleUrl: './ticket-section.scss',
 })
@@ -122,7 +152,21 @@ export class TicketChildrenComponent {
 
   protected readonly adding = signal(false);
   private readonly newInput = viewChild<ElementRef<HTMLInputElement>>('title');
+  protected readonly preference = inject(SubticketsViewPreference);
+  protected readonly view = this.preference.view;
+  protected readonly viewOptions: readonly SegmentOption<SubticketsView>[] = [
+    { value: 'list', icon: 'tablerLayoutList', ariaLabel: 'List' },
+    { value: 'graph', icon: 'tablerHierarchy2', ariaLabel: 'Graph' },
+  ];
   protected readonly children = computed(() => this.ticket().children ?? []);
+  protected readonly graphToggle = computed(
+    () => this.preference.graphAvailable() && this.children().length > 0,
+  );
+  protected readonly revision = computed(() =>
+    this.children()
+      .map((c) => `${c.key}:${c.status}`)
+      .join(','),
+  );
   protected readonly progress = computed<Progress | null>(() => this.ticket().childProgress);
   protected readonly childType = computed<TicketType>(() =>
     this.ticket().type === 'Epic' ? 'UserStory' : 'Technical',

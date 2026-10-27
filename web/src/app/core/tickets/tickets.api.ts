@@ -10,6 +10,7 @@ import {
   NewTicket,
   MoveTicketsRequest,
   Ticket,
+  TicketGraph,
   TicketHistoryPage,
   TicketLink,
   TicketPatch,
@@ -77,6 +78,10 @@ export class TicketsApi {
 
   hints(projectKey: string, field: HintField, prefix = ''): Observable<string[]> {
     return this.api.get<string[]>(`/projects/${projectKey}/hints/${field}`, { prefix });
+  }
+
+  childrenGraph(key: string): Observable<TicketGraph> {
+    return this.api.get<TicketGraph>(`/tickets/${encodeURIComponent(key)}/children/graph`);
   }
 
   history(key: string, page?: PageRequest): Observable<TicketHistoryPage> {

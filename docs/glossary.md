@@ -24,6 +24,8 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Backlog**: The ordered list of a project's tickets that are not on any board (`BoardId = null`). Every project has exactly one. [§6.4](product/01-refined-spec.md#64-backlog-and-boards)
 
+**Blocked ticket**: An open ticket that at least one open, readable ticket blocks (a `Blocks` link). Shown red in the sub-tickets graph; the opposite is a ready ticket. [D-95](decisions.md)
+
 **Board**: A named, ordered container that can hold tickets from up to 20 linked projects. Every signed-in user can see every board, but only cards from projects they can read. Boards replace sprints (D-09). [§4.12](product/01-refined-spec.md#412-board), [§5.4](product/01-refined-spec.md#54-board-actions)
 
 **Board column**: One column per ticket status, always all 8, in status order. A column shows the board's cards with that status in rank order. The brief calls these "swimlanes" (D-29). [§6.4](product/01-refined-spec.md#64-backlog-and-boards)
@@ -47,6 +49,8 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 **Comment**: Markdown text on a ticket, listed oldest first. Authors edit or delete their own; Owners delete any; a deleted comment leaves a placeholder. [§4.7](product/01-refined-spec.md#47-comment), [§6.9](product/01-refined-spec.md#69-comments)
 
 **Container**: Where a ticket sits: its project backlog or exactly one board. Rank orders tickets within a container. [§6.4](product/01-refined-spec.md#64-backlog-and-boards), [§6.6](product/01-refined-spec.md#66-ranking)
+
+**Critical path**: In the sub-tickets graph, the longest chain of open tickets connected by `Blocks` links, counted in tickets. Links that close a cycle are ignored. [D-95](decisions.md)
 
 **Deactivation**: The only way to remove a user. It blocks login, revokes all their PATs and hides them from pickers, while their name stays on history as "Name (deactivated)" (D-12). [§4.1](product/01-refined-spec.md#41-user)
 
@@ -107,6 +111,8 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 **Quick jump**: `Ctrl+K` or `/`: type a ticket, test case or regression session key to open it, or text to list the 10 best ticket title matches across readable projects. [§6.8](product/01-refined-spec.md#68-search-lists-and-export)
 
 **Rank**: Hidden fractional-index string that orders tickets within their container; compared byte-wise (`COLLATE "C"`). [§6.6](product/01-refined-spec.md#66-ranking), [ADR 0010](adr/0010-fractional-index-ranking.md)
+
+**Ready ticket**: An open ticket that no open ticket blocks, so work on it can start. Shown green in the sub-tickets graph. [D-95](decisions.md)
 
 **Regression bug**: A ticket created from a failed regression session item (the item's `BugTicketId`). The dashboard counts the open ones. [§6.11](product/01-refined-spec.md#611-regression-session-lifecycle)
 

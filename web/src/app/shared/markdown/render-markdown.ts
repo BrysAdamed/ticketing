@@ -185,7 +185,9 @@ function anchorHeadings(root: DocumentFragment): void {
     const anchor = doc.createElement('a');
     anchor.className = 'tk-anchor';
     anchor.href = `#${id}`;
-    anchor.setAttribute('aria-label', 'Copy link to this section');
+    anchor.setAttribute('aria-hidden', 'true');
+    anchor.tabIndex = -1;
+    anchor.title = 'Copy link to this section';
     heading.appendChild(anchor);
   }
 }
@@ -209,10 +211,10 @@ function renderCallouts(root: DocumentFragment): void {
     if (!first!.hasChildNodes()) first!.remove();
 
     const callout = doc.createElement('div');
-    callout.className = `tk-callout tk-callout-${kind}`;
+    callout.className = `tk-md-callout tk-md-callout-${kind}`;
     callout.setAttribute('role', 'note');
     const title = doc.createElement('p');
-    title.className = 'tk-callout-title';
+    title.className = 'tk-md-callout-title';
     title.textContent = CALLOUT_TITLES[kind];
     callout.appendChild(title);
     while (quote.firstChild) callout.appendChild(quote.firstChild);

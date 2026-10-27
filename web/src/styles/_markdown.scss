@@ -195,7 +195,7 @@ $icon-octagon: tabler-icon(
     }
   }
 
-  .tk-callout {
+  .tk-md-callout {
     --tk-callout-fg: var(--tk-info-fg);
     --tk-callout-bg: var(--tk-info-bg);
     --tk-callout-border: var(--tk-info-border);
@@ -217,35 +217,35 @@ $icon-octagon: tabler-icon(
     }
   }
 
-  .tk-callout-tip {
+  .tk-md-callout-tip {
     --tk-callout-fg: var(--tk-success-fg);
     --tk-callout-bg: var(--tk-success-bg);
     --tk-callout-border: var(--tk-success-border);
     --tk-callout-icon: #{$icon-bulb};
   }
 
-  .tk-callout-important {
+  .tk-md-callout-important {
     --tk-callout-fg: var(--tk-violet-fg);
     --tk-callout-bg: var(--tk-accent-subtle);
     --tk-callout-border: var(--tk-accent-border);
     --tk-callout-icon: #{$icon-message};
   }
 
-  .tk-callout-warning {
+  .tk-md-callout-warning {
     --tk-callout-fg: var(--tk-warning-fg);
     --tk-callout-bg: var(--tk-warning-bg);
     --tk-callout-border: var(--tk-warning-border);
     --tk-callout-icon: #{$icon-triangle};
   }
 
-  .tk-callout-caution {
+  .tk-md-callout-caution {
     --tk-callout-fg: var(--tk-danger-fg);
     --tk-callout-bg: var(--tk-danger-bg);
     --tk-callout-border: var(--tk-danger-border);
     --tk-callout-icon: #{$icon-octagon};
   }
 
-  .tk-callout-title {
+  .tk-md-callout-title {
     display: flex;
     align-items: center;
     gap: 6px;

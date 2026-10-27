@@ -17,6 +17,7 @@
   padding: 0 12px 0 16px;
   border-bottom: 1px solid var(--tk-border-subtle);
   background: var(--tk-bg);
+  contain: strict;
 }
 
 .l {
@@ -226,6 +227,7 @@
 .src {
   min-height: 0;
   overflow: hidden;
+  contain: strict;
   border-right: 1px solid var(--tk-border);
   background: var(--tk-bg);
 }
@@ -234,6 +236,8 @@
   position: relative;
   min-height: 0;
   overflow: auto;
+  contain: strict;
+  will-change: transform;
   background: var(--tk-bg);
 
   .pbody {

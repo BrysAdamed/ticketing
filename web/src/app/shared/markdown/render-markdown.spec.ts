@@ -183,17 +183,17 @@ describe('renderMarkdown', () => {
       const dom = parse(
         renderMarkdown('> [!WARNING]\n> Rotate the key\n> before Friday.\n\n> [!tip] Inline tip'),
       );
-      const callouts = [...dom.querySelectorAll('.tk-callout')];
+      const callouts = [...dom.querySelectorAll('.tk-md-callout')];
 
       // Assert
       expect(dom.querySelector('blockquote')).toBeNull();
       expect(callouts.map((c) => c.className)).toEqual([
-        'tk-callout tk-callout-warning',
-        'tk-callout tk-callout-tip',
+        'tk-md-callout tk-md-callout-warning',
+        'tk-md-callout tk-md-callout-tip',
       ]);
-      expect(callouts[0].querySelector('.tk-callout-title')?.textContent).toBe('Warning');
+      expect(callouts[0].querySelector('.tk-md-callout-title')?.textContent).toBe('Warning');
       expect(callouts[0].textContent).not.toContain('[!WARNING]');
-      expect(callouts[0].querySelector('p:not(.tk-callout-title)')?.textContent).toContain(
+      expect(callouts[0].querySelector('p:not(.tk-md-callout-title)')?.textContent).toContain(
         'Rotate the key',
       );
       expect(callouts[1].textContent).toContain('Inline tip');
@@ -205,7 +205,7 @@ describe('renderMarkdown', () => {
 
       // Assert
       expect(dom.querySelectorAll('blockquote').length).toBe(2);
-      expect(dom.querySelector('.tk-callout')).toBeNull();
+      expect(dom.querySelector('.tk-md-callout')).toBeNull();
     });
   });
 

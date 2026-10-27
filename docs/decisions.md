@@ -730,6 +730,17 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
   - **Upgrade safety.** Compose passes `PDF_RENDERER_PASSWORD` with an empty default. Without it the `pdf` container idles (`sleep infinity`, healthy) instead of crash-looping on Gotenberg's "password is empty", the API logs "PDF export is off" and answers 503 `doc.export.unavailable`. So `docker compose up` of an existing `.env` still starts; adding the variable turns export on.
 - Rejected: a server-side export job table with polling (state and cleanup for no benefit within 2 minutes); reusing the DB password as the renderer secret (secret sprawl into the Chromium container); signed links as bearer JWTs (a second key system next to Data Protection).
 - Rationale: the API decides everything the PDF may show and how many renders run; the renderer stays a dumb, isolated printer; existing installations upgrade without a mandatory new variable.
+
+### D-117 Recent docs are part of the dashboard response; demo docs carry their Canvas pictures (TKT-22)
+
+- Context: the dashboard gains widget 13 "Recent docs" and `get_project_stats.recentDocs`; the demo seeder gains docs. The dashboard has no widget plug-in mechanism, its features may not import the Docs feature, and Canvas pictures are normally exported by the browser.
+- Decision:
+  - `ProjectDashboardDto.RecentDocs` (`{ total, items }`) is filled by `GetProjectDashboard` with the same query as `GET …/docs/recent` (`DocQueries.RecentAsync`, 5 items) plus a count of non-deleted pages and diagrams (skipped when fewer than 5 exist). Docs belong to the dashboard's project, so the read check of the dashboard is the readability filter; the version filter does not apply.
+  - The web card is rendered by the dashboard feature from that response with core helpers (`docUrl`, `docsHomeUrl`, `docKindIcon`), inside the grid's `@defer (on viewport)` block, so it is lazy and covered by the grid's skeletons. A project with only docs is not "Nothing to chart yet".
+  - Demo docs (`DemoData/DemoDocs.cs`) are planned after the ticket history and replayed through `CreateDoc`, `UpdateDoc` and `AddDocComment`. Each doc, version and comment is scheduled after every ticket and doc it mentions exists, so all keys in the content are real and indexed. Canvas diagrams are built by `DemoCanvas`, which writes the Excalidraw scene and a matching SVG picture, sent as `snapshot` on create.
+- Rejected: a second request from the card to `GET …/docs/recent` (one more round trip, and MCP clients would not get it from `get_project_stats`); a dashboard widget registry for one widget; demo Canvas diagrams without pictures (embeds and PDFs would say "Preview not rendered yet" until a writer opened each one).
+- Rationale: one request still feeds the whole dashboard (spec 7), and the demo shows every Docs feature, PDF included, right after seeding.
+
 ## Product owner answers (v1 review, 2026-10-27)
 
 These were open questions (Q-01..Q-05); the product owner resolved them as follows.

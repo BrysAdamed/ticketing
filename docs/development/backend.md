@@ -79,6 +79,7 @@ For development, screenshots and demos only, never on a real installation. The s
 - Boards `Sprint 42` (PAY + WEB) and `Ops Kanban` (OPS).
 - 26 test cases (Manual, Automatic and New) and two PAY regression sessions: `Release 1.4.0` (completed, one failed item with its bug) and `Release 1.5.0` (in progress).
 - 3 feature flags.
+- A docs tree per project (24 docs): two folders, four pages with callouts, tables, code, ticket mentions and doc links, a Mermaid and a Canvas diagram embedded in a page (the Canvas with its picture, so PDF export prints it), later versions with change notes and 8 page comments (D-117).
 
 Trigger it explicitly, in either way:
 
@@ -94,10 +95,10 @@ docker compose run --rm api seed-demo                  # in compose
 Rules:
 
 - It runs only while the database has **no project** (deleted ones included), so it never touches real data and a second run is a no-op. It takes a PostgreSQL advisory lock, so several instances starting together seed once.
-- It needs an active Admin (the bootstrap admin) and acts as the demo users through the real use cases (`DemoData/DemoWorkspace.cs`): ticket keys, ranks, hierarchy rules, activity history, board moves and regression snapshots are all genuine.
+- It needs an active Admin (the bootstrap admin) and acts as the demo users through the real use cases (`DemoData/DemoWorkspace.cs`): ticket keys, ranks, hierarchy rules, activity history, board moves, regression snapshots, doc versions and the doc reference index are all genuine.
 - Timestamps are backdated over the last 12 weeks (working hours, weekdays) by a controllable clock. The seeder builds its own service provider with the application and infrastructure registrations, a `TimeProvider` it sets before each call and an `ICurrentUser` for the acting user. The plan uses a fixed random seed (`DemoScript.RandomSeed`); dates are relative to the moment of seeding, so dashboards always show recent activity.
 - Without `TICKETING_DEMO_PASSWORD` each demo user gets a set-password link (valid 24 hours) written to the log as a warning; open `<web origin>/set-password?token=...`.
-- Content lives in `src/Ticketing.Api/DemoData/DemoContent.cs` (titles, hand-written descriptions, test cases, cross links) and `DemoTexts.cs` (generated descriptions and comments). `tests/Ticketing.IntegrationTests/DemoData` checks the counts, idempotency and the PAY dashboard.
+- Content lives in `src/Ticketing.Api/DemoData/DemoContent.cs` (titles, hand-written descriptions, test cases, cross links) and `DemoTexts.cs` (generated descriptions and comments); docs in `DemoDocs.cs` (content written with `IDemoDocRefs`, so ticket and doc keys are real; each doc, version and comment is scheduled after what it mentions) and `DemoCanvas.cs` (boxes and arrows as an Excalidraw scene plus its SVG picture). `tests/Ticketing.IntegrationTests/DemoData` checks the counts, idempotency and the PAY dashboard.
 
 ## Where things live
 

@@ -61,6 +61,33 @@ Each project has a docs tree of folders, markdown pages and diagrams, up to 6 le
 - Unpublished drafts are a web feature: MCP writes publish directly, and the publisher's own draft of that doc is discarded.
 - Images and files on a page are attachments, embedded in the markdown as `![name](/api/v1/attachments/{id})`. `list_doc_attachments` lists them with their download URLs; `get_attachment_text` reads text, CSV and JSON ones, as for tickets. Uploading is web and REST only.
 - Pages and diagrams have a comment thread: `list_doc_comments` (oldest first, paged), `add_doc_comment`, `update_doc_comment` (your own) and `delete_doc_comment` (your own; Owners any) with the ticket comment rules. Comments create no version. A new comment notifies the doc's author and earlier commenters (`list_notifications` items then carry `doc` instead of `ticket`). Doc comment ids and ticket comment ids are not interchangeable.
+- `get_project_stats` includes `recentDocs`: the project's number of pages and diagrams and the 5 most recently updated, so "what changed in the docs lately?" needs one call.
+
+### Docs from Claude Code
+
+Prompts that work well with the tools above (replace the keys with yours):
+
+- "Read the docs of project WEB and summarise how checkout works. Start with `list_docs`, then read the pages under Checkout." Claude lists the tree, reads pages with `get_doc` and follows `references` and `embeds`.
+- "Write a page 'Release 1.6 notes' in WEB under Releases from the done tickets with version 1.6.0, grouped by epic, each line with the ticket key." `search_tickets` collects them, `create_folder` and `create_page` write the page; the keys become ticket chips and the page shows up under "Docs mentioning this ticket" on every ticket.
+- "Add a Mermaid sequence diagram of the refund flow to WEB-D-12, as a diagram doc embedded under the heading 'Refunds'." `create_diagram` (Mermaid), then `edit_doc` inserts `![Refund flow](WEB-D-31)` below the heading without touching the rest.
+- "Which docs mention PAY-42? Update them: the endpoint moved from /v1/refunds to /v2/refunds." `search_docs` with `mentions: "PAY-42"`, then one `edit_doc` per page with a find/replace edit.
+- "What changed in WEB-D-12 since last week, and who changed it?" `get_doc_history`, then `get_doc` with `version` to compare.
+- "Export the Runbooks folder of OPS as a PDF." `get_doc_export_link` returns a link valid for 15 minutes.
+
+Tips: ask Claude to read before it writes (`baseVersion` comes from the read), prefer `edit_doc` for changes to long pages, and keep diagrams in Mermaid: Canvas drawings are for people in the web app.
+
+#### Copying pages from Confluence
+
+There is no importer (Q-09). To bring over the pages worth keeping, connect both the Atlassian MCP server and this one to Claude Code and copy them page by page, with a person checking the result:
+
+1. **Pick the pages.** Ask Claude to list the Confluence space's page tree and mark what is still current; leave archives and meeting notes behind.
+2. **Recreate the tree.** "Create the folders Architecture, Runbooks and Onboarding in project WEB" (`create_folder`). Keep titles unique per folder; that is what makes paths like `Runbooks/Restore the database` work.
+3. **Copy each page.** "Read the Confluence page 'Restore the database' and create it as a page in WEB under Runbooks. Convert it to GitHub-flavoured markdown: info, note and warning panels become `> [!NOTE]`, `> [!TIP]` and `> [!WARNING]` callouts, code macros fenced code with the language, Jira issue macros the ticket key, and links to other copied pages `[Title](WEB-D-n)`. Use 'Copied from Confluence' as the change note."
+4. **Diagrams.** Draw.io and Gliffy diagrams cannot be copied as drawings. Ask Claude to describe the diagram as a Mermaid flowchart or sequence diagram (`create_diagram`) and embed it; redraw anything Mermaid cannot express as a Canvas in the web app.
+5. **Images and attachments** are uploaded in the web app (drag them into the editor); MCP cannot upload files.
+6. **Check and link.** Read the copied page in the web app, fix what the conversion missed, and put a link to the new page at the top of the Confluence page before archiving it.
+
+History and comments stay in Confluence; the copy starts at version 1.
 
 ### Mentioning people
 

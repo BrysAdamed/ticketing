@@ -6,7 +6,7 @@ Owner's idea (verbatim):
 
 > Each project requires some documentation so something that replaces the confluence would be beneficial. A new tab on the project named Docs, with folders, and pages written in markdown will be sufficient. We will need to however add the ability to make some diagrams and insert some shapes and arrows or a whiteboard that allows to draw freely, as they are really helpful usually. There should be a way to export each one of them to pdf.
 
-Proposed numbering: spec §12 "Docs", decisions D-93 onwards, ideas I-82 onwards.
+Numbering: spec §12 "Docs", decisions D-97 to D-117 (D-93 to D-96 went to watchers, notifications, the sub-tickets graph and mentions while this was refined), ideas I-82 onwards.
 
 ---
 
@@ -422,7 +422,7 @@ Loading uses skeletons for the tree rows and page anatomy, and stale-while-reval
 
 ## 3. Open questions
 
-### Decided by me (record as D-93…)
+### Decided by me (recorded in D-97 onwards)
 1. **Placement.** A sidebar sub-item "Docs" per D-83, not a header tab.
 2. **Node model.** Three kinds in one tree (Folder, Page, Diagram). Pages have no children, which keeps folder semantics and folder export unambiguous.
 3. **Keys.** `{PK}-D-{n}` for every node from one per-project counter. The key is the canonical URL part and the slug is cosmetic, which is rename-safe with no slug table. The format can't collide with the ticket regex.
@@ -495,7 +495,7 @@ Loading uses skeletons for the tree rows and page anatomy, and stale-while-reval
 **Out of scope:** comments, watchers and mentions on docs; spaces; real-time; importers; Word export (ideas I-82..I-105).
 
 **Definition of done for every child:**
-- Spec §12, glossary, decisions D-93+ and `docs/mcp.md` updated.
+- Spec §12, glossary, decisions D-97+ and `docs/mcp.md` updated.
 - Additive migrations only (ADR 0006).
 - Integration tests including permission and leak paths, copying the leak-guard test.
 - Light and dark theme checked, with screenshots on the ticket.
@@ -653,7 +653,7 @@ AC:
 - [ ] Dashboard widget "Recent docs" (5 latest plus total, linking to the Docs home), with an empty state. `get_project_stats.recentDocs` uses the readability filter.
 - [ ] The demo seeder (through use cases, D-85) creates a small docs tree per demo project: folders, 4 pages with callouts, a table, ticket mentions, one Mermaid diagram and one Canvas diagram embedded in a page.
 - [ ] `docs/mcp.md` gains a "Docs from Claude Code" section with example prompts and the Confluence copy playbook (Q-09 A). README screenshots of Docs in light and dark.
-- [ ] Spec §12, glossary terms (Doc, Folder, Page, Diagram, Canvas, Draft, Publish, Doc key, Backlink) and the decisions D-93+ are merged.
+- [ ] Spec §12, glossary terms (Doc, Folder, Page, Diagram, Canvas, Draft, Publish, Doc key, Backlink) and the decisions D-97+ are merged.
 
 #### D12 · Page comments · User story · 5 pts · deps: D4 (notifications part: TKT-7)
 *As a reader I want to discuss a page in comments below it, so that review feedback stays next to the document instead of in chat.*

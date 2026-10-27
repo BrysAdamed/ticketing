@@ -13,7 +13,10 @@ public sealed class Comment
 
     public Guid Id { get; private set; }
 
-    public Guid TicketId { get; private set; }
+    /// <summary>The ticket the comment is on; null for a doc comment (exactly one of this and <see cref="DocNodeId"/> is set).</summary>
+    public Guid? TicketId { get; private set; }
+
+    public Guid? DocNodeId { get; private set; }
 
     public Guid AuthorId { get; private set; }
 
@@ -32,10 +35,15 @@ public sealed class Comment
 
     public bool IsDeleted => DeletedAt is not null;
 
-    public static Comment Create(Guid ticketId, Guid authorId, string body, DateTimeOffset now) => new()
+    public static Comment Create(Guid ticketId, Guid authorId, string body, DateTimeOffset now) => New(ticketId, null, authorId, body, now);
+
+    public static Comment CreateForDoc(Guid docNodeId, Guid authorId, string body, DateTimeOffset now) => New(null, docNodeId, authorId, body, now);
+
+    private static Comment New(Guid? ticketId, Guid? docNodeId, Guid authorId, string body, DateTimeOffset now) => new()
     {
         Id = EntityId.New(),
         TicketId = ticketId,
+        DocNodeId = docNodeId,
         AuthorId = authorId,
         Body = Text.Required(body, "body", BodyMaxLength),
         CreatedAt = now,

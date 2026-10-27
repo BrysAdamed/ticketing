@@ -128,6 +128,13 @@ export class PageView {
     this.activeId.set(entry.id);
   }
 
+  protected goToComments(event: MouseEvent): void {
+    event.preventDefault();
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    this.host.querySelector('#comments')?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth' });
+    history.replaceState(history.state, '', `${location.pathname}${location.search}#comments`);
+  }
+
   protected edit(): void {
     void this.router.navigate([], {
       relativeTo: this.route,

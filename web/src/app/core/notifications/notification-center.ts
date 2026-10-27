@@ -193,7 +193,7 @@ export class NotificationCenter {
   /// regression item page). A deleted ticket has nothing to open, so the panel stays.
   activate(notification: UserNotification): void {
     void this.markRead(notification);
-    if (notification.ticket?.deleted) return;
+    if (notification.ticket?.deleted || notification.doc?.deleted) return;
     this.close();
     if (notification.ticket) this.peek.open(notification.ticket.key);
     else void this.router.navigateByUrl(notification.url);

@@ -1,0 +1,124 @@
+:host {
+  display: block;
+  scroll-margin-top: 16px;
+}
+
+.sec-h {
+  height: 28px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+
+  h2 {
+    margin: 0;
+    font-size: var(--tk-text-md);
+    font-weight: var(--tk-weight-semibold);
+  }
+
+  .n {
+    color: var(--tk-text-subtle);
+    font-weight: var(--tk-weight-medium);
+  }
+}
+
+.thread {
+  display: flex;
+  flex-direction: column;
+}
+
+.cmt {
+  margin: 8px 0 0;
+  border: 1px solid var(--tk-border);
+  border-radius: var(--tk-radius-lg);
+  background: var(--tk-surface);
+
+  &.deleted {
+    background: none;
+    border-style: dashed;
+  }
+
+  &.pending {
+    opacity: 0.6;
+  }
+}
+
+.cmt-h {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px 0 12px;
+
+  b {
+    font-weight: var(--tk-weight-medium);
+  }
+
+  .right {
+    margin-left: auto;
+    display: flex;
+    gap: 2px;
+    opacity: 0;
+  }
+}
+
+.cmt:hover .cmt-h .right,
+.cmt-h .right:focus-within {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .cmt-h .right {
+    opacity: 1;
+  }
+}
+
+.cmt-b {
+  display: block;
+  padding: 0 14px 12px 44px;
+  overflow-wrap: anywhere;
+}
+
+.cmt-edit {
+  display: block;
+  padding: 0 12px 12px;
+}
+
+.when,
+.subtle {
+  color: var(--tk-text-subtle);
+}
+
+.none {
+  margin: 0;
+  padding: 8px 0;
+  color: var(--tk-text-subtle);
+}
+
+.link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--tk-accent-fg);
+  font: inherit;
+  font-size: var(--tk-text-sm);
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    text-decoration: underline;
+  }
+
+  &:disabled {
+    cursor: default;
+    color: var(--tk-text-subtle);
+  }
+}
+
+.more {
+  margin-top: 8px;
+}
+
+.composer {
+  display: block;
+  margin-top: 12px;
+}

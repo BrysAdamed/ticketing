@@ -14,7 +14,7 @@ using Ticketing.Infrastructure.Persistence;
 namespace Ticketing.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(TicketingDbContext))]
-    [Migration("20261027113408_AddNotifications")]
+    [Migration("20261027114244_AddNotifications")]
     partial class AddNotifications
     {
         /// <inheritdoc />
@@ -341,8 +341,6 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("RecipientId", "ReadAt", "CreatedAt", "Id")
                         .HasDatabaseName("ix_notifications_recipient_id_read_at_created_at_id");
-
-                    NpgsqlIndexBuilderExtensions.IncludeProperties(b.HasIndex("RecipientId", "ReadAt", "CreatedAt", "Id"), new[] { "ProjectId" });
 
                     b.ToTable("notifications", (string)null);
                 });

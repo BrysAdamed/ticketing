@@ -87,8 +87,7 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateIndex(
                 name: "ix_notifications_recipient_id_read_at_created_at_id",
                 table: "notifications",
-                columns: new[] { "recipient_id", "read_at", "created_at", "id" })
-                .Annotation("Npgsql:IndexInclude", new[] { "project_id" });
+                columns: new[] { "recipient_id", "read_at", "created_at", "id" });
 
             migrationBuilder.CreateIndex(
                 name: "ix_notifications_regression_session_id",

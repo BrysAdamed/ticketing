@@ -22,7 +22,7 @@ internal sealed class NotificationConfiguration : IEntityTypeConfiguration<Notif
         builder.HasOne<Project>().WithMany().HasForeignKey(n => n.ProjectId).OnDelete(DeleteBehavior.Cascade);
         builder.HasOne<Ticket>().WithMany().HasForeignKey(n => n.TicketId).OnDelete(DeleteBehavior.Cascade);
         builder.HasOne<RegressionSession>().WithMany().HasForeignKey(n => n.RegressionSessionId).OnDelete(DeleteBehavior.Cascade);
-        builder.HasIndex(n => new { n.RecipientId, n.ReadAt, n.CreatedAt, n.Id }).IncludeProperties(n => n.ProjectId);
+        builder.HasIndex(n => new { n.RecipientId, n.ReadAt, n.CreatedAt, n.Id });
         builder.HasIndex(n => new { n.RecipientId, n.CreatedAt, n.Id });
         builder.HasIndex(n => n.CreatedAt);
     }

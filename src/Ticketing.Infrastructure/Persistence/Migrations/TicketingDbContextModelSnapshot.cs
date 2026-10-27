@@ -339,8 +339,6 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                     b.HasIndex("RecipientId", "ReadAt", "CreatedAt", "Id")
                         .HasDatabaseName("ix_notifications_recipient_id_read_at_created_at_id");
 
-                    NpgsqlIndexBuilderExtensions.IncludeProperties(b.HasIndex("RecipientId", "ReadAt", "CreatedAt", "Id"), new[] { "ProjectId" });
-
                     b.ToTable("notifications", (string)null);
                 });
 

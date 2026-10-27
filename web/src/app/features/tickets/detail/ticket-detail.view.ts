@@ -24,6 +24,7 @@ import { PeekService } from '@core/layout/peek/peek';
 import { ConfirmService } from '@core/notify/confirm.service';
 import { ToastService } from '@core/notify/toast.service';
 import { Shortcut, ShortcutService } from '@core/shortcuts/shortcut.service';
+import { ProjectPeople } from '@core/tickets/project-people';
 import { TicketAttachments } from '@core/tickets/ticket-attachments';
 import { TICKET_DETAIL_SECTIONS } from '@core/tickets/ticket-sections';
 import { TicketLink, TicketRef } from '@core/tickets/ticket.models';
@@ -97,6 +98,9 @@ export class TicketDetailView {
   readonly ticketKey = input.required<string>();
   protected readonly uploadHandler = inject(TicketAttachments).markdownUploader(() =>
     this.ticketKey(),
+  );
+  protected readonly mentionSearch = inject(ProjectPeople).mentionSearch(
+    () => this.store.ticket()?.projectKey ?? this.ticketKey().split('-')[0],
   );
   readonly presentation = input<TicketPresentation>('page');
 

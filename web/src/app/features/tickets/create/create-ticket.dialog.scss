@@ -48,6 +48,12 @@
   }
 }
 
+.field-error {
+  margin-top: 4px;
+  color: var(--tk-danger-fg);
+  font-size: var(--tk-text-sm);
+}
+
 .props {
   display: flex;
   flex-wrap: wrap;

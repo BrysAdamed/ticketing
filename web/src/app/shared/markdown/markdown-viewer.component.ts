@@ -1,9 +1,11 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
 import { Router } from '@angular/router';
+import { MentionUser } from './mentions';
 import { INTERNAL_LINK_ATTR, renderMarkdown } from './render-markdown';
 
-/// Renders markdown safely (see `renderMarkdown`). In-app links navigate with the router.
+/// Renders markdown safely (see `renderMarkdown`). In-app links navigate with the router. Mention
+/// tokens of the users in `mentions` show as chips, others as plain `@Name` text.
 @Component({
   selector: 'tk-markdown',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -15,9 +17,12 @@ export class MarkdownViewerComponent {
   private readonly router = inject(Router);
 
   readonly source = input<string | null | undefined>('');
+  readonly mentions = input<readonly MentionUser[] | null | undefined>(null);
 
   protected readonly html = computed(() =>
-    this.sanitizer.bypassSecurityTrustHtml(renderMarkdown(this.source())),
+    this.sanitizer.bypassSecurityTrustHtml(
+      renderMarkdown(this.source(), { mentions: this.mentions() }),
+    ),
   );
 
   protected onClick(event: MouseEvent): void {

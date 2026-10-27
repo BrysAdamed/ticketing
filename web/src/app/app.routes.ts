@@ -12,6 +12,11 @@ export const routes: Routes = [
     loadChildren: () => import('@features/auth/auth.routes').then((m) => m.LOGIN_ROUTES),
   },
   {
+    path: 'spike/diagrams',
+    loadComponent: () =>
+      import('@features/spike/diagrams-spike.view').then((m) => m.DiagramsSpikeView),
+  },
+  {
     path: 'set-password',
     title: 'Set password',
     loadChildren: () => import('@features/auth/auth.routes').then((m) => m.SET_PASSWORD_ROUTES),

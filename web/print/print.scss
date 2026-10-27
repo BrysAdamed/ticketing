@@ -1,0 +1,115 @@
+@use '../src/styles/tokens';
+@use '../src/styles/markdown';
+
+@font-face {
+  font-family: 'Inter Variable';
+  font-style: normal;
+  font-display: block;
+  font-weight: 100 900;
+  src: url('inter.woff2') format('woff2-variations');
+}
+
+@page {
+  size: A4 portrait;
+  margin: 22mm 18mm 20mm;
+}
+
+html {
+  color-scheme: light;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+body {
+  margin: 0;
+  background: #fff;
+  color: var(--tk-text);
+  font-family: var(--tk-font-sans);
+  font-feature-settings: var(--tk-font-features);
+}
+
+.tk-md {
+  max-width: none;
+}
+
+article + article,
+nav.toc,
+article:first-of-type:not(:first-child) {
+  break-before: page;
+}
+
+.cover {
+  height: 230mm;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+
+  h1 {
+    font-size: 30px;
+    margin: 8px 0;
+  }
+
+  .project,
+  .meta {
+    color: var(--tk-text-muted);
+  }
+}
+
+.toc ol {
+  line-height: 1.9;
+}
+
+article > h1 {
+  font-size: 24px;
+  margin: 0 0 4px;
+}
+
+.doc-meta {
+  color: var(--tk-text-muted);
+  font-size: 11px;
+  margin: 0 0 18px;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  break-after: avoid;
+}
+
+figure,
+img,
+tr,
+pre {
+  break-inside: avoid;
+}
+
+thead {
+  display: table-header-group;
+}
+
+pre,
+code {
+  white-space: pre-wrap;
+}
+
+a {
+  color: var(--tk-accent-fg);
+  text-decoration: underline;
+}
+
+figure {
+  margin: 12px 0;
+  text-align: center;
+
+  svg,
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+figcaption {
+  color: var(--tk-text-muted);
+  font-size: 11px;
+}

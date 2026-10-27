@@ -1,0 +1,48 @@
+name: tkt-11-pdf
+
+services:
+  pdf:
+    image: gotenberg/gotenberg:8.39.0-chromium
+    environment:
+      GOTENBERG_API_BASIC_AUTH_USERNAME: ticketing
+      GOTENBERG_API_BASIC_AUTH_PASSWORD: spike-secret
+    command:
+      - gotenberg
+      - --api-enable-basic-auth
+      - --api-timeout=120s
+      - --api-body-limit=100MB
+      - --api-disable-download-from
+      - --webhook-disable
+      - --pdfengines-disable-routes
+      - --prometheus-disable-collect
+      - --chromium-allow-list=^file:///tmp/.*
+      - --chromium-deny-private-ips
+      - --chromium-deny-public-ips
+      - --chromium-max-concurrency=2
+      - --chromium-max-queue-size=10
+      - --chromium-restart-after=50
+      - --chromium-auto-start
+    networks: [render]
+    mem_limit: 1g
+    cpus: "1.0"
+    read_only: true
+    tmpfs:
+      - /tmp:size=512m
+      - /home/gotenberg:size=64m
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+
+  client:
+    image: curlimages/curl:8.17.0
+    command: ["sleep", "infinity"]
+    networks: [render]
+    volumes:
+      - ./:/work
+
+networks:
+  render:
+    internal: true

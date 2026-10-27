@@ -116,7 +116,7 @@ public sealed class TestCase
         foreach (var step in steps)
             result.Add(Text.Required(step, "steps", StepMaxLength));
         if (result.Count > MaxSteps)
-            throw DomainException.Invalid("steps", "testCase.steps.tooMany", $"A test case can have at most {MaxSteps} steps.");
+            throw DomainException.Invalid("steps", TestCaseErrors.TooManySteps, $"A test case can have at most {MaxSteps} steps.");
         return result;
     }
 
@@ -124,6 +124,6 @@ public sealed class TestCase
     {
         if (status == TestCaseStatus.Manual && steps.Count == 0)
             throw DomainException.Invalid(
-                "steps", "testCase.manualRequiresSteps", "A Manual test case needs at least one step.", "Add steps or keep the status New.");
+                "steps", TestCaseErrors.ManualRequiresSteps, "A Manual test case needs at least one step.", "Add steps or keep the status New.");
     }
 }

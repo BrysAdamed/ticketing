@@ -1,0 +1,128 @@
+<header class="tk-page-header">
+  <h1>Test cases</h1>
+  <span class="tk-page-count" data-testid="tc-count">{{ store.counts().active }}</span>
+  <div class="tk-page-actions">
+    @if (canWrite()) {
+      <button mat-flat-button type="button" data-testid="tc-new" (click)="openNew()">
+        <tk-icon name="tablerPlus" [size]="14" />New test case<tk-kbd tone="on-solid">N</tk-kbd>
+      </button>
+    }
+  </div>
+</header>
+
+<div class="tk-toolbar">
+  <tk-segmented
+    ariaLabel="Status"
+    testId="tc-status"
+    [options]="statusOptions()"
+    [value]="filters().status"
+    (valueChange)="setStatus($event)"
+  />
+  <label class="search">
+    <tk-icon name="tablerSearch" [size]="14" />
+    <input
+      #filter
+      type="search"
+      placeholder="Filter by title or key"
+      aria-label="Filter test cases"
+      data-testid="tc-filter"
+      [value]="filters().text"
+      (input)="onText(filter.value)"
+      (keydown.escape)="filter.blur()"
+    />
+    <tk-kbd>/</tk-kbd>
+  </label>
+  @if (filters().ticket; as ticketKey) {
+    <span class="chip" data-testid="tc-ticket-filter">
+      <tk-icon name="tablerLink" [size]="12" />{{ ticketKey }}
+      <button type="button" class="x" aria-label="Clear ticket filter" (click)="setTicket(null)">
+        <tk-icon name="tablerX" [size]="12" />
+      </button>
+    </span>
+  } @else {
+    <button type="button" class="tbtn" data-testid="tc-ticket-picker" [tkSearchPicker]="ticketSearch" pickerPlaceholder="Filter by ticket…" (picked)="setTicket($event.key)">
+      <tk-icon name="tablerLink" [size]="14" />Ticket
+    </button>
+  }
+  <mat-slide-toggle class="archived" data-testid="tc-archived" [checked]="filters().archived" (change)="setArchived($event.checked)">
+    Archived <span class="tnum muted">{{ store.counts().archived }}</span>
+  </mat-slide-toggle>
+</div>
+
+<div class="body" [class.with-pane]="paneOpen()">
+  <div class="list" role="grid" aria-label="Test cases" data-testid="tc-list">
+    @if (store.status() === 'error' && !store.hasData()) {
+      <tk-empty-state icon="tablerAlertCircle" tone="danger" title="Couldn't load test cases" [description]="store.error()?.title ?? null">
+        <button mat-stroked-button type="button" (click)="store.reload()">Retry</button>
+      </tk-empty-state>
+    } @else if (!store.hasData()) {
+      <tk-skeleton-rows [count]="12" />
+    } @else if (store.items().length === 0) {
+      @if (filtered()) {
+        <tk-empty-state icon="tablerSearch" title="No test cases match these filters" description="Try other filters.">
+          <button mat-stroked-button type="button" (click)="clearFilters()">Clear filters</button>
+        </tk-empty-state>
+      } @else {
+        <tk-empty-state icon="tablerChecklist" title="No test cases yet" description="Write the first one; Manual and Automatic cases join every regression session.">
+          @if (canWrite()) {
+            <button mat-flat-button type="button" (click)="openNew()">New test case <tk-kbd tone="on-solid">N</tk-kbd></button>
+          }
+        </tk-empty-state>
+      }
+    } @else {
+      @for (row of store.items(); track row.id; let i = $index) {
+        <div
+          class="row"
+          role="row"
+          tabindex="-1"
+          [class.focused]="focusIndex() === i"
+          [class.selected]="selectedKey() === row.key"
+          [class.archived]="row.archived"
+          [attr.aria-selected]="selectedKey() === row.key"
+          [attr.data-testid]="'tc-row-' + row.key"
+          (click)="open(row, i)"
+          (keydown.enter)="open(row, i)"
+        >
+          <span class="st"><tk-test-case-status-badge [status]="row.status" /></span>
+          <a class="key tnum" [routerLink]="[row.key]" queryParamsHandling="preserve" (click)="$event.stopPropagation()">{{ row.key }}</a>
+          <span class="t">{{ row.title }}</span>
+          @if (row.archived) {
+            <span class="arch">Archived</span>
+          }
+          <span class="tk">
+            @if (row.ticket; as t) {
+              <button type="button" class="ticket" [matTooltip]="t.title" (click)="peekTicket($event, t.key)">
+                <tk-type-icon [type]="t.type" [size]="14" /><span class="tnum">{{ t.key }}</span>
+              </button>
+            }
+          </span>
+          <span class="steps tnum" [matTooltip]="row.stepCount + ' steps'">
+            @if (row.stepCount > 0) {
+              <tk-icon name="tablerListNumbers" [size]="14" />{{ row.stepCount }}
+            }
+          </span>
+          <span class="run">
+            @if (row.lastRun; as run) {
+              <tk-icon
+                [name]="runIcons[run.status].icon"
+                [size]="16"
+                [style.color]="runIcons[run.status].color"
+                [matTooltip]="runLabels[run.status] + ' in ' + run.sessionKey"
+                [attr.aria-label]="'Last result ' + runLabels[run.status] + ' in ' + run.sessionKey"
+              />
+            }
+          </span>
+          <span class="upd">{{ row.updatedAt | relativeTime }}</span>
+        </div>
+      }
+      @if (store.nextCursor()) {
+        <button type="button" class="more" data-testid="tc-more" [disabled]="store.loadingMore()" (click)="store.loadMore()">
+          {{ store.loadingMore() ? 'Loading…' : 'Load more' }}
+        </button>
+      }
+    }
+  </div>
+  <section class="pane" [class.open]="paneOpen()" aria-label="Test case editor">
+    <router-outlet (activate)="paneOpen.set(true)" (deactivate)="paneOpen.set(false)" />
+  </section>
+</div>

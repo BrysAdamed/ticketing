@@ -9,6 +9,11 @@ A lean, fast, LLM-friendly project and ticket tracker, built as an in-house repl
 - **Users, roles and personal access tokens**, **feature flags** (user / role / percentage targeting, ready for A/B tests), and an admin audit log.
 - **MCP server** at `/mcp`, so Claude Code (or any MCP client) can work with everything above — see [docs/mcp.md](docs/mcp.md).
 
+| Backlog + ticket peek | Board |
+| --- | --- |
+| ![Backlog with ticket peek](docs/screenshots/ticket-light.png) | ![Board, dark theme](docs/screenshots/board-dark.png) |
+| ![Dashboard](docs/screenshots/dashboard-light.png) | ![Regression sessions](docs/screenshots/regression-dark.png) |
+
 Stack: .NET 10 (ASP.NET Core, EF Core) · Angular 22 + Angular Material · PostgreSQL 18 · nginx · Docker Compose.
 
 ## Quickstart (local)

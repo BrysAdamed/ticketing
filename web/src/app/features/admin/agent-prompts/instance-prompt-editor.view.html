@@ -211,10 +211,11 @@
           @case ('preview') {
             @if (store.preview(); as preview) {
               <p class="panel-head tk-subtle" data-testid="agent-prompt-sample">
-                Rendered for a sample ticket, {{ preview.ticketKey }}
-                @if (isGuardrails()) {
-                  , after its type's default prompt
-                }
+                {{
+                  isGuardrails()
+                    ? 'Rendered after the default prompt of a sample ticket, ' + preview.ticketKey
+                    : 'Rendered for a sample ticket, ' + preview.ticketKey
+                }}
               </p>
               @if (preview.prompt === null) {
                 <p class="tk-subtle" data-testid="agent-prompt-preview-errors">

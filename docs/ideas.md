@@ -103,7 +103,6 @@ This file is the pool of unscheduled ideas. Once an idea is scheduled it becomes
 | I-124 | Our own agent helper app: auto-start, background (headless) runs, enforced launch options (permission mode, model) and run reporting | v1 launches through Claude's deep link, which can carry only a folder and a prompt (D-98); the launch options of the helper design were dropped with it. | L |
 | - | Richer agent prompt templates: `else`, nesting, a sanitised `ticket.title` | v1 keeps a flat `if` and trusted placeholders only (D-98); per-type templates already remove most branching. | S |
 | - | Match host-specific URL shapes of one repository | The normalized repository URL compares host and path (D-99), so Azure DevOps' `ssh.dev.azure.com:v3/org/project/repo` and `dev.azure.com/org/project/_git/repo` do not match. A per-host rewrite table would let such clones pass the agent's remote check. | S |
-| - | Admin status line for a missing `TICKETING_PUBLIC_URL` | While it is unset every agent endpoint, the Admin prompt pages included, is `agent.disabled` (D-99), so an Admin with the flag on only learns why from the error message. A small always-available status endpoint would let the Admin page say so. | S |
 | - | Editable merge-policy sentences | The two `{{finish}}` sentences ship fixed with the built-ins (D-98); an Admin may want to word them for the company's forge and review flow. | S |
 
 ## Experiments and UI

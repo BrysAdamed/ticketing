@@ -285,7 +285,12 @@ function hasSkippedAncestor(node: Node): boolean {
   for (let parent = node.parentNode; parent; parent = parent.parentNode) {
     if (SKIP_AUTOLINK.has(parent.nodeName)) return true;
     if (parent instanceof Element && parent.classList.contains('tk-mention')) return true;
-    if (parent instanceof Element && parent.classList.contains('tk-docref-deleted')) return true;
+    if (
+      parent instanceof Element &&
+      (parent.classList.contains('tk-docref-deleted') ||
+        parent.classList.contains('tk-doc-embed-h'))
+    )
+      return true;
   }
   return false;
 }

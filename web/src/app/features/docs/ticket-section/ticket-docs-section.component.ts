@@ -17,7 +17,7 @@ import {
   tablerSitemap,
 } from '@ng-icons/tabler-icons';
 import { firstValueFrom } from 'rxjs';
-import { docPathSegments, docUrl } from '@core/docs/doc-links';
+import { docLocation, docUrl } from '@core/docs/doc-links';
 import { DocMentionsApi, TICKET_DOCS_LIMIT } from '@core/docs/doc-mentions.api';
 import { docKindIcon } from '@core/docs/doc-search.api';
 import { DocMentions } from '@core/docs/doc.models';
@@ -172,12 +172,8 @@ export class TicketDocsSectionComponent {
     return docUrl(key, title);
   }
 
-  /// The folder path, with the project key when the doc lives in another project.
   protected folderOf(projectKey: string, path: string): string {
-    const folder = docPathSegments(path).slice(0, -1).join(' / ');
-    return projectKey === this.projectKey()
-      ? folder
-      : [projectKey, folder].filter(Boolean).join(' · ');
+    return docLocation(path, projectKey, this.projectKey());
   }
 
   private async load(ticketKey: string): Promise<void> {

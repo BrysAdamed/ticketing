@@ -8,7 +8,7 @@ import {
   tablerSitemap,
 } from '@ng-icons/tabler-icons';
 import { docKindIcon } from '@core/docs/doc-search.api';
-import { docUrl } from '@core/docs/doc-links';
+import { docLocation, docUrl } from '@core/docs/doc-links';
 import { Doc } from '@core/docs/doc.models';
 import { AbsoluteTimePipe, RelativeTimePipe } from '@shared/pipes/relative-time.pipe';
 import { IconComponent } from '@shared/ui/icon/icon.component';
@@ -37,7 +37,7 @@ import { IconComponent } from '@shared/ui/icon/icon.component';
           >
             <tk-icon [name]="icon(item.kind, item.diagramFormat)" [size]="14" />
             <span class="t">{{ item.title }}</span>
-            <span class="p" [title]="item.path">{{ item.projectKey }} · {{ item.path }}</span>
+            <span class="p" [title]="item.path">{{ location(item.path, item.projectKey) }}</span>
             <span class="when" [title]="item.updatedAt | absoluteTime">{{
               item.updatedAt | relativeTime
             }}</span>
@@ -59,5 +59,9 @@ export class DocBacklinksSectionComponent {
 
   protected link(key: string, title: string): string {
     return docUrl(key, title);
+  }
+
+  protected location(path: string, projectKey: string): string {
+    return docLocation(path, projectKey, this.doc().projectKey);
   }
 }

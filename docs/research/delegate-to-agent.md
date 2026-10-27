@@ -2,7 +2,7 @@
 
 The feature: a **Delegate to agent** button on the ticket page starts Claude Code on the developer's machine, in their local clone of the project's repository, with a prompt built from a per-project, per-ticket-type template, for example "Fetch the ticket TKT-12. Use subagents to plan and implement it in a new worktree, test in the browser, merge to main."
 
-Everything below was checked on 2026-10-27 against the official Claude Code docs (code.claude.com/docs), the Claude Help Center, Microsoft Learn, Apple developer docs, the freedesktop specs, Chromium source, NuGet and crates.io. Some things were also checked on this Windows 11 machine (Claude Code 2.1.292, .NET SDK 10.0.301): the registry entries, the DOMPurify behaviour and an exe size. Anything not tested is marked **spike**.
+Everything below was checked on 2026-10-27 against the official Claude Code docs (code.claude.com/docs), the Claude Help Center, Microsoft Learn, Apple developer docs, the freedesktop specs, Chromium source, NuGet and crates.io. Some things were also checked on this Windows 11 machine (Claude Code 2.1.292, .NET SDK 10.0.301): the registry entries, the DOMPurify behaviour and an exe size. Anything not tested is marked **spike**. The Windows spikes were run in TKT-26: results in [ADR 0013](../adr/0013-claude-deep-links-on-windows.md) and D-97, and summarised below where they change this page.
 
 ## 0. Decision and red flags
 
@@ -27,8 +27,8 @@ Everything below was checked on 2026-10-27 against the official Claude Code docs
 | R3 | **Native Windows has no Claude Code sandbox** ("On native Windows, Claude Code runs commands unsandboxed"). Windows is our primary platform. | The OS-level boundary in R1's layers is missing on most machines. | Rely on the permission mode and rules. Document WSL2 as the hardened option. Recommend auto or manual mode, never `acceptEdits` plus a broad `Bash` allow. |
 | R4 | **Habituation.** A button that always ends in "press Enter on a prefilled prompt" trains people to press Enter on *any* `claude-cli://` prompt, including attacker links from email or chat. | Weakens Claude Code's own defence. | Keep our prompts short and recognisable (one or two lines plus a skill name), so a long or odd prompt stands out. Claude Code shows a character-count warning above 1,000 characters. |
 | R5 | `repo=owner/name` resolution in `claude-cli://` is **GitHub-slug only** and depends on clones Claude Code has seen. | Our GitLab repos would not resolve. | Use `cwd`, with our own per-user mapping. |
-| R6 | An org can disable the handler with `disableDeepLinkRegistration` (managed setting). The browser cannot detect a missing handler: Chrome shows nothing or a no-op. | The button silently does nothing. | Add a help popover: "Nothing happened? Run `claude` once and send a prompt; see the troubleshooting docs". If the org disables the handler, build v2. |
-| R7 | `URLSearchParams` encodes spaces as `+`. The docs say to URL-encode with `encodeURIComponent` and `%0A` for line breaks. | Prompts would show `+` instead of spaces (**spike**). | Build the query with `encodeURIComponent` per value, not `URLSearchParams`. |
+| R6 | An org can disable the handler with `disableDeepLinkRegistration` (managed setting). The browser cannot detect a missing handler. **Verified (TKT-26):** Chrome only logs to the console, and the page sees no event, the same as while Chrome's dialog is open. Claude Code also silently ignores prompts over 5,000 characters and relative or UNC folders. | The button silently does nothing. | Add a help popover: "Nothing happened? Run `claude` once and send a prompt; see the troubleshooting docs". If the org disables the handler, build v2. Check the 5,000 limit and the folder in the client (D-97). |
+| R7 | `URLSearchParams` encodes spaces as `+`. The docs say to URL-encode with `encodeURIComponent` and `%0A` for line breaks. | **Verified (TKT-26):** a literal `+` arrives as `+`, so `URLSearchParams` output would show `+` instead of spaces. | Build the query with `encodeURIComponent` per value, not `URLSearchParams`. |
 
 ---
 
@@ -55,9 +55,11 @@ Checked on this machine (HKCU, no admin):
 ```text
 HKCU\Software\Classes\claude-cli   (Default) = "URL:Claude Code URL Handler", URL Protocol = ""
   shell\open\command  = "…\WinGet\Packages\Anthropic.ClaudeCode_…\claude.exe" --handle-uri "%1"
-HKCU\Software\Classes\claude       (Claude Desktop)
+HKCU\Software\Classes\claude       (stale stub without a command; Claude Desktop's MSIX package registers `claude` itself: Claude.exe "%1")
 HKCU\Software\Classes\vscode       "…\Code.exe" --open-url -- "%1"
 ```
+
+On Windows the handler validates the link and starts `wt.exe -d <cwd> -- claude.exe --deep-link-origin --deep-link-cwd-b64=… --prefill-b64=…`. The prompt and folder travel as base64, so no shell parses them (TKT-26).
 
 ### 1.2 Can we avoid writing our own app? Yes, for v1
 
@@ -99,7 +101,7 @@ export const claudeDesktopLink = (folder: string, prompt: string) =>
 | Mode | Command | Where output goes | Can the developer steer? | Fit |
 |---|---|---|---|---|
 | **Interactive, visible terminal** | `claude "<prompt>"` (sends immediately) or a deep link (prefills) | the terminal | **yes**: watch, answer permission prompts, interrupt, redirect | **Default.** Delegation means "start my agent", not "run unattended". |
-| Background agent | `claude --bg --name TKT-12 "<prompt>"` | `claude agents` view, `claude attach <id>`, `claude logs <id>` | yes, attach any time. "Needs input" state. | **Opt-in "run in background"** (v2 helper). Each session "moves into an isolated git worktree under `.claude/worktrees/`" before editing. A supervisor keeps it alive after the terminal closes; a reboot stops it. Windows behaviour not stated: **spike**. |
+| Background agent | `claude --bg --name TKT-12 "<prompt>"` | `claude agents` view, `claude attach <id>`, `claude logs <id>` | yes, attach any time. "Needs input" state. | **Opt-in "run in background"** (v2 helper). Each session "moves into an isolated git worktree under `.claude/worktrees/`" before editing. A supervisor keeps it alive after the terminal closes; a reboot stops it. Works on Windows with Claude Code 2.1.292: start, `agents`, `logs`, `stop` and `rm` were verified in TKT-26. Survival after closing the terminal was not tested. |
 | Headless | `claude -p "<prompt>"` | stdout only (`text`/`json`/`stream-json`); transcript saved and resumable with `claude --resume <session_id>` | **no.** From v2.1.302 a `-p` run with no mode starts in Manual and "Calls needing approval are denied". Under `--permission-mode auto` the classifier decides. | CI-style only. Not for delegation: nobody sees questions, and failures are silent. |
 | Claude Desktop | `claude://code/new?folder=&q=` | Desktop Code tab | yes | Users who prefer the app. Worktree is a toggle in the UI. |
 
@@ -166,7 +168,8 @@ cmd.SetValue("", $"\"{Environment.ProcessPath}\" handle \"%1\"");
 - Chrome/Edge show an "Open …?" dialog for every external protocol. An **"Always allow \<origin\> to open links of this type"** checkbox appears only if policy allows it and the initiating origin is *potentially trustworthy*. In the Chromium source, `MayRememberAllowDecisionsForThisOrigin` returns `initiating_origin && network::IsOriginPotentiallyTrustworthy(*initiating_origin)`. HTTPS production (ADR 0012) and `http://localhost:8090` both qualify. Plain-HTTP intranet hosts would prompt every time.
 - Admins can pre-approve: `AutoLaunchProtocolsFromOrigins`, e.g. `[{"protocol":"claude-cli","allowed_origins":["https://ticketing.example"]}]` (Windows/macOS, Chrome/Edge ≥ 85). Origins cannot contain paths. `ExternalProtocolDialogShowAlwaysOpenCheckbox=Disabled` removes the checkbox ([Edge policy](https://learn.microsoft.com/en-us/deployedge/microsoft-edge-browser-policies/autolaunchprotocolsfromorigins)). Pre-approve only our origin and only if the IT team agrees. The confirmation inside Claude Code / the helper is the real gate.
 - Chromium has anti-flood protection: after one launch it needs a user gesture before the next. Trigger the link from the button click, not from code after an `await`.
-- Length: Claude's own limits are what bind: `q` ≤ 5,000 (CLI) and about 14,000 (Desktop). Windows command lines max out at 32,767 characters. The v2 link carries about 60 characters.
+- Length: Claude's own limits are what bind: `q` ≤ 5,000 UTF-16 code units (CLI; one more and the link is silently ignored) and about 14,000 (Desktop). Current Chromium passes the URL to `ShellExecuteA` without the old 2,048-character cap, and `ShellExecuteEx` handled a 30,180-character URL (TKT-26). Windows command lines max out at 32,767 characters. The v2 link carries about 60 characters.
+- Launch by top-level navigation (an anchor click). Our CSP (`default-src 'self'`) blocks a hidden-iframe launch; an anchor click works under it and leaves the page in place, although `beforeunload` fires (TKT-26).
 
 ---
 
@@ -241,7 +244,7 @@ No single layer is a boundary, so all of them apply.
 ## 6. Folder mapping
 
 - **Project setting `repositoryUrl`** (new, nullable, Owner-editable). Compare in normalized form (strip `.git`, scheme, `user@`, and convert `ssh://git@host:port/` and `git@host:group/repo` to `host/group/repo`, case-insensitive) against `git remote get-url origin`. Also accept any remote listed by `git remote -v`, because forks may use `upstream`.
-- **v1:** the path lives in `localStorage` (per browser, so per machine, which matches the meaning of "where is my clone on *this* machine"). The agent verifies the remote as its first step. Claude Code's welcome header shows the path it opened. If the folder does not exist: **spike** what `claude-cli://` does with a missing `cwd`.
+- **v1:** the path lives in `localStorage` (per browser, so per machine, which matches the meaning of "where is my clone on *this* machine"). The agent verifies the remote as its first step. Claude Code's welcome header shows the path it opened. If the folder does not exist, Windows Terminal opens with "Could not access starting directory" and Claude Code does not start. Relative and UNC paths are silently ignored (TKT-26).
 - **v2:** `%APPDATA%\Ticketing\agent.json` / `~/Library/Application Support/Ticketing/agent.json` / `$XDG_CONFIG_HOME/ticketing/agent.json`, keyed by `alias + projectKey`, containing `{ path, remote, verifiedAt }`. Re-verify the remote on every launch. On mismatch, ask again.
 - **Multiple clones:** one mapping per project. The dialog offers "Change folder".
 - **Worktrees:** map the **main checkout**, never a worktree, because `git rev-parse --git-common-dir` differs. The run creates its own worktree (`--worktree` or the prompt's "work in a worktree"), under `<repo>/.claude/worktrees/`, so `.gitignore` should contain `.claude/worktrees/` and `.worktreeinclude` should copy `.env`.
@@ -267,10 +270,10 @@ No single layer is a boundary, so all of them apply.
 **Follow-ups (independent):** `requiresUserInteraction` on destructive MCP tools; a Vitest guard that custom-scheme links stay stripped from markdown; the idea "project-scoped PATs".
 
 **Spikes (half a day, before building):**
-1. `claude-cli://` on Windows with Windows Terminal: a prompt with quotes, `;`, `%`, newlines and Polish characters; `cwd` with spaces; a missing `cwd`; Chrome and Edge dialogs from `https://` and `http://localhost:8090`.
+1. `claude-cli://` on Windows with Windows Terminal: a prompt with quotes, `;`, `%`, newlines and Polish characters; `cwd` with spaces; a missing `cwd`; Chrome and Edge dialogs from `https://` and `http://localhost:8090`. **Done (TKT-26, ADR 0013).** The payloads and folders were verified. Chrome's dialog was captured from `http://localhost`. Edge, Firefox and "always allow" persistence are on the ADR's manual checklist.
 2. The same on macOS (iTerm2 and Terminal.app) and Ubuntu GNOME.
-3. `claude://code/new?folder=&q=` from Desktop on Windows: confirm the folder dialog and the Code tab opening.
-4. `--bg` on Windows: does the supervisor work? (needed only for v2's background option).
+3. `claude://code/new?folder=&q=` from Desktop on Windows: confirm the folder dialog and the Code tab opening. **Partly done (TKT-26):** the Code tab opens with the folder and the prompt intact; no folder dialog appeared within 10 s (manual checklist).
+4. `--bg` on Windows: does the supervisor work? (needed only for v2's background option). **Done (TKT-26):** available and working in 2.1.292.
 
 ## Sources
 

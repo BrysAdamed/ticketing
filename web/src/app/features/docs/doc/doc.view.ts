@@ -32,7 +32,7 @@ import { AvatarComponent } from '@shared/ui/domain/avatar.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { IconComponent } from '@shared/ui/icon/icon.component';
 import { DOCS_ICONS } from '../docs-icons';
-import { DOC_CONTENT_VIEWS } from '../docs.views';
+import { DOC_CONTENT_VIEWS, DOC_EDITABLE_KINDS } from '../docs.views';
 import { DocTreeStore } from '../tree/doc-tree.store';
 import { DocStore } from './doc.store';
 
@@ -223,10 +223,10 @@ export class DocView {
   });
   private contentKind: DocKind | null = null;
 
-  /// Pages and diagrams of a writable project can be edited (`E`, `?mode=edit`).
+  /// Docs of an editable kind in a writable project can be edited (`E`, `?mode=edit`).
   protected readonly canEditContent = computed(() => {
     const doc = this.store.doc();
-    return !!doc && doc.kind !== 'Folder' && doc.permissions.canEdit;
+    return !!doc && DOC_EDITABLE_KINDS.has(doc.kind) && doc.permissions.canEdit;
   });
   /// In edit mode the content view's editor bar replaces the page bar.
   protected readonly editing = computed(() => this.mode() === 'edit' && this.canEditContent());

@@ -53,6 +53,10 @@ export const DOCS_FOLDER_VIEW = defineView({
   },
 });
 
+/// Kinds whose content view renders an editor for `?mode=edit`; the frame offers Edit (`E`) and
+/// hides its page bar only for these. Diagram editors (TKT-17, TKT-18) add `Diagram`.
+export const DOC_EDITABLE_KINDS: ReadonlySet<DocKind> = new Set<DocKind>(['Page']);
+
 export const DOC_CONTENT_VIEWS: Readonly<Record<DocKind, ViewDefinition>> = {
   Folder: DOCS_FOLDER_VIEW,
   Page: DOCS_PAGE_VIEW,

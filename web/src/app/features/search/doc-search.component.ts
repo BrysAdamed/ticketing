@@ -90,6 +90,7 @@ export class DocSearchComponent {
   protected readonly text = signal('');
   protected readonly f = this.store.filters;
   protected readonly filtered = computed(() => hasDocFilters(this.f()));
+  protected readonly chipFilters = computed(() => hasDocFilters({ ...this.f(), q: '' }));
   protected readonly sort = computed(() => effectiveDocSort(this.f()));
   protected readonly sortOptions = computed<SegmentOption<'relevance' | 'updated'>[]>(() =>
     this.f().q.trim()
@@ -243,6 +244,10 @@ export class DocSearchComponent {
 
   protected patch(change: Partial<DocSearchFilters>): void {
     this.navigate({ ...this.f(), ...change }, false);
+  }
+
+  protected clearChips(): void {
+    this.navigate({ ...EMPTY_DOC_SEARCH, q: this.f().q, sort: this.f().sort }, false);
   }
 
   protected clearAll(): void {

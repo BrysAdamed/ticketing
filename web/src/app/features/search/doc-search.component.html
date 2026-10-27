@@ -127,8 +127,8 @@
         </button>
       </span>
     }
-    @if (filtered()) {
-      <button type="button" class="clear" data-testid="doc-filters-clear" (click)="clearAll()">
+    @if (chipFilters()) {
+      <button type="button" class="clear" data-testid="doc-filters-clear" (click)="clearChips()">
         Clear
       </button>
     }

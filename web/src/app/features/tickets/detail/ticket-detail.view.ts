@@ -7,7 +7,6 @@ import {
   effect,
   inject,
   input,
-  signal,
   untracked,
   viewChild,
 } from '@angular/core';
@@ -21,10 +20,9 @@ import { PeekService } from '@core/layout/peek/peek';
 import { ConfirmService } from '@core/notify/confirm.service';
 import { ToastService } from '@core/notify/toast.service';
 import { ShortcutService } from '@core/shortcuts/shortcut.service';
-import { ProjectPeople } from '@core/tickets/project-people';
 import { TicketAttachments } from '@core/tickets/ticket-attachments';
 import { TICKET_DETAIL_SECTIONS } from '@core/tickets/ticket-sections';
-import { TicketLink, TicketRef, UserRef } from '@core/tickets/ticket.models';
+import { TicketLink, TicketRef } from '@core/tickets/ticket.models';
 import { TICKET_TYPE_LABELS } from '@shared/domain/enums';
 import { AbsoluteTimePipe } from '@shared/pipes/relative-time.pipe';
 import { TestCaseStatusBadgeComponent } from '@shared/ui/domain/domain-badges';
@@ -80,7 +78,6 @@ export type TicketPresentation = 'page' | 'peek';
 })
 export class TicketDetailView {
   protected readonly store = inject(TicketDetailStore);
-  private readonly people = inject(ProjectPeople);
   private readonly confirm = inject(ConfirmService);
   private readonly toast = inject(ToastService);
   private readonly clipboard = inject(Clipboard);
@@ -96,7 +93,6 @@ export class TicketDetailView {
   readonly presentation = input<TicketPresentation>('page');
 
   protected readonly typeLabels = TICKET_TYPE_LABELS;
-  protected readonly assignable = signal<readonly UserRef[]>([]);
   protected readonly hasTestCaseSection = inject(TICKET_DETAIL_SECTIONS).some(
     (s) => s.id === 'test-cases',
   );
@@ -117,7 +113,7 @@ export class TicketDetailView {
 
   private readonly title = viewChild(TicketTitleComponent);
   private readonly description = viewChild(TicketDescriptionComponent);
-  private loadedPeopleFor = '';
+  private readonly fields = viewChild(TicketFieldsComponent);
 
   constructor() {
     effect(() => {
@@ -145,19 +141,6 @@ export class TicketDetailView {
         untracked(() => void this.store.loadHistory());
     });
 
-    effect(() => {
-      const projectKey = this.store.ticket()?.projectKey;
-      if (!projectKey || projectKey === this.loadedPeopleFor) return;
-      this.loadedPeopleFor = projectKey;
-      untracked(
-        () =>
-          void this.people
-            .assignable(projectKey)
-            .then((users) => this.assignable.set(users))
-            .catch(() => undefined),
-      );
-    });
-
     inject(ShortcutService).registerScoped([
       {
         keys: 'e',
@@ -172,10 +155,28 @@ export class TicketDetailView {
         handler: () => this.description()?.start(),
       },
       {
-        keys: 'i',
+        keys: 'a',
         section: 'Ticket',
         description: 'Assign to me',
         handler: () => this.assignToMe(),
+      },
+      {
+        keys: 's',
+        section: 'Ticket',
+        description: 'Change status',
+        handler: () => this.fields()?.openPicker('status'),
+      },
+      {
+        keys: 'p',
+        section: 'Ticket',
+        description: 'Change priority',
+        handler: () => this.fields()?.openPicker('priority'),
+      },
+      {
+        keys: 'i',
+        section: 'Ticket',
+        description: 'Assign to…',
+        handler: () => this.fields()?.openPicker('assignee'),
       },
       { keys: 'mod+.', section: 'Ticket', description: 'Copy key', handler: () => this.copyKey() },
       {

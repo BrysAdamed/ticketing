@@ -111,7 +111,6 @@ export interface ArchiveBoardResult {
   stayedDone: number;
 }
 
-
 export interface BoardListQuery {
   query?: string | null;
   projectKey?: string | null;

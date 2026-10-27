@@ -97,8 +97,7 @@
       type="button"
       class="chip"
       data-testid="create-assignee"
-      [tkInlinePicker]="assigneeOptions()"
-      [pickerValue]="assignee()?.id ?? null"
+      [tkSearchPicker]="assigneeSearch"
       pickerPlaceholder="Assign to…"
       (picked)="setAssignee($event)"
     >

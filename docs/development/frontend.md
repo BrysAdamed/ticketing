@@ -137,7 +137,7 @@ The tickets slice (`features/tickets`, `features/backlog`) keeps everything othe
 | Keep lists in sync | `TicketEvents.events` emits `created`, `updated` (with the full ticket) and `deleted`. Emit them after your own ticket writes, and subscribe in list stores (backlog, boards) to patch rows without a refetch. |
 | Open a ticket | `PeekService.open(key)` for the side panel, or route to `/tickets/:key`. |
 | Create a ticket | `TicketCreator.open(prefill)` opens the create dialog with any `NewTicket` fields pre-filled, plus `heading` and an optional `submit(projectKey, ticket)` that replaces the default `POST /projects/{key}/tickets`. The regressions slice uses it for "Create bug" with its own endpoint. It resolves with the created `TicketSummary`, or `null`. The global `C` and the top bar button run the `ticket.create` command registered by `provideTicketCreation` in `app.config.ts`. In the backlog, `C` opens the inline quick-create row instead. |
-| Assignee / label / version pickers | `ProjectPeople.assignable(projectKey)` (active Owners and Members), `FieldHints.get(projectKey, 'labels' \| 'version', prefix)`. |
+| Assignee / label / version pickers | `ProjectPeople.picker(() => projectKey)` for a type-ahead `tkSearchPicker` over `GET /users?projectKey=` (any active user on public projects, Admins and Owner/Member members on private ones; never a members-only list), `FieldHints.get(projectKey, 'labels' \| 'version', prefix)`. |
 
 **Ticket view sections (extension point).** Other features add sections to the ticket view (page and peek) without touching the tickets feature. Register one in `app.config.ts`:
 

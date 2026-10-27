@@ -24,7 +24,9 @@ import {
   signal,
   untracked,
   viewChild,
+  viewChildren,
 } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule } from '@angular/material/menu';
@@ -49,11 +51,7 @@ import {
   TicketStatus,
   TicketType,
 } from '@shared/domain/enums';
-import {
-  PRIORITY_OPTIONS,
-  TICKET_STATUS_OPTIONS,
-  userOptions,
-} from '@shared/domain/picker-options';
+import { PRIORITY_OPTIONS, TICKET_STATUS_OPTIONS } from '@shared/domain/picker-options';
 import { AvatarComponent } from '@shared/ui/domain/avatar.component';
 import { StatusIconComponent } from '@shared/ui/domain/status-icon.component';
 import { TypeIconComponent } from '@shared/ui/domain/type-icon.component';
@@ -63,6 +61,7 @@ import { InlinePickerDirective } from '@shared/ui/inline-picker/inline-picker.di
 import { KbdComponent } from '@shared/ui/kbd/kbd.component';
 import { LabelsPickerDirective } from '@shared/ui/labels-picker/labels-picker.directive';
 import { LabelToggle } from '@shared/ui/labels-picker/labels-picker-panel.component';
+import { SearchPickerDirective } from '@shared/ui/search-picker/search-picker.directive';
 import { SkeletonRowsComponent } from '@shared/ui/skeleton/skeleton-rows.component';
 import { BacklogFiltersComponent } from './backlog-filters.component';
 import { BACKLOG_ICONS } from './backlog-icons';
@@ -73,6 +72,7 @@ import {
   GroupBy,
   SORT_BY_OPTIONS,
   SortBy,
+  stickyGroupAt,
 } from './backlog-logic';
 import { BacklogRowComponent, RowEdit } from './backlog-row.component';
 import { BacklogStore, CreateRow, ListRow } from './backlog.store';
@@ -93,6 +93,7 @@ const PREFETCH_DELAY_MS = 150;
     MatButtonModule,
     MatMenuModule,
     MatSlideToggle,
+    NgTemplateOutlet,
     MatTooltip,
     AvatarComponent,
     StatusIconComponent,
@@ -102,6 +103,7 @@ const PREFETCH_DELAY_MS = 150;
     InlinePickerDirective,
     KbdComponent,
     LabelsPickerDirective,
+    SearchPickerDirective,
     SkeletonRowsComponent,
     BacklogFiltersComponent,
     BacklogRowComponent,
@@ -133,8 +135,7 @@ export class BacklogView {
   protected readonly statusOptions = TICKET_STATUS_OPTIONS;
   protected readonly priorityOptions = PRIORITY_OPTIONS;
   protected readonly rowHeight = computed(() => (this.theme.density() === 'compact' ? 28 : 32));
-  protected readonly assignable = signal<readonly UserRef[]>([]);
-  protected readonly assigneeOptions = computed(() => userOptions(this.assignable()));
+  protected readonly assigneeSearch = this.people.picker(() => this.store.projectKey());
   protected readonly labelOptions = signal<readonly string[]>([]);
   protected readonly versionOptions = signal<readonly string[]>([]);
   protected readonly creating = signal(false);
@@ -155,8 +156,20 @@ export class BacklogView {
     this.hints.get(this.store.projectKey(), 'labels', prefix);
 
   private readonly viewport = viewChild(CdkVirtualScrollViewport);
+  private readonly rows = viewChildren(BacklogRowComponent);
+  private readonly bulkStatusPicker =
+    viewChild<InlinePickerDirective<TicketStatus>>('bulkStatusPicker');
+  private readonly bulkPriorityPicker =
+    viewChild<InlinePickerDirective<Priority>>('bulkPriorityPicker');
+  private readonly bulkAssigneePicker =
+    viewChild<SearchPickerDirective<UserRef | null>>('bulkAssigneePicker');
   private readonly listWrap = viewChild<ElementRef<HTMLElement>>('listWrap');
   protected readonly listHeight = signal(480);
+  private readonly scrollTop = signal(0);
+  protected readonly scrollbarWidth = signal(0);
+  protected readonly stickyGroup = computed(() =>
+    stickyGroupAt(this.store.rows(), this.scrollTop(), this.rowHeight()),
+  );
   private readonly filtersBar = viewChild(BacklogFiltersComponent);
   private readonly quickCreate = viewChild(QuickCreateRowComponent);
   private readonly queryParams = toSignal(this.route.queryParams, { initialValue: {} as Params });
@@ -169,10 +182,6 @@ export class BacklogView {
       untracked(() => {
         this.readUrl(this.queryParams());
         void this.store.load(key);
-        void this.people
-          .assignable(key)
-          .then((users) => this.assignable.set(users))
-          .catch(() => undefined);
       });
     });
 
@@ -186,6 +195,17 @@ export class BacklogView {
     };
     window.addEventListener('resize', onResize);
     inject(DestroyRef).onDestroy(() => window.removeEventListener('resize', onResize));
+
+    effect((onCleanup) => {
+      const viewport = this.viewport();
+      if (!viewport) return;
+      const subscription = viewport.elementScrolled().subscribe(() => {
+        const element = viewport.elementRef.nativeElement;
+        this.scrollTop.set(viewport.measureScrollOffset('top'));
+        this.scrollbarWidth.set(element.offsetWidth - element.clientWidth);
+      });
+      onCleanup(() => subscription.unsubscribe());
+    });
 
     effect(() => {
       const focus = this.store.focusId();
@@ -272,6 +292,24 @@ export class BacklogView {
         section: 'Backlog',
         description: 'Assign to me',
         handler: () => this.assignToMe(),
+      },
+      {
+        keys: 's',
+        section: 'Backlog',
+        description: 'Change status',
+        handler: () => this.openPicker('status'),
+      },
+      {
+        keys: 'p',
+        section: 'Backlog',
+        description: 'Change priority',
+        handler: () => this.openPicker('priority'),
+      },
+      {
+        keys: 'i',
+        section: 'Backlog',
+        description: 'Assign to…',
+        handler: () => this.openPicker('assignee'),
       },
       {
         keys: 'mod+a',
@@ -365,14 +403,7 @@ export class BacklogView {
         void this.store.setPoints(ids, edit.value);
         break;
       case 'assignee':
-        void this.store.setAssignee(
-          ids,
-          edit.value
-            ? (this.assignable().find((u) => u.id === edit.value) ??
-                this.store.users().get(edit.value) ??
-                null)
-            : null,
-        );
+        void this.store.setAssignee(ids, edit.value);
         break;
       case 'label':
         void this.store.toggleLabel(ids, edit.value.label, edit.value.add);
@@ -394,8 +425,8 @@ export class BacklogView {
     void this.store.setPriority(this.store.selectedIds(), priority);
   }
 
-  protected bulkAssignee(userId: string | null): void {
-    this.onEdit(this.store.selectedIds()[0], { field: 'assignee', value: userId });
+  protected bulkAssignee(user: UserRef | null): void {
+    this.onEdit(this.store.selectedIds()[0], { field: 'assignee', value: user });
   }
 
   protected bulkLabel(toggle: LabelToggle): void {
@@ -482,6 +513,21 @@ export class BacklogView {
     if (id) this.store.click(id, 'toggle');
   }
 
+  /// s / p / i: the bulk bar picker when tickets are selected, otherwise the focused row's.
+  private openPicker(field: 'status' | 'priority' | 'assignee'): void {
+    if (!this.store.canWrite()) return;
+    if (this.selectionCount()) {
+      if (field === 'status') this.bulkStatusPicker()?.open();
+      else if (field === 'priority') this.bulkPriorityPicker()?.open();
+      else this.bulkAssigneePicker()?.open();
+      return;
+    }
+    const focus = this.store.focusId();
+    this.rows()
+      .find((row) => row.item().id === focus)
+      ?.openPicker(field);
+  }
+
   private assignToMe(): void {
     const ids = this.store.targets();
     if (ids.length && this.store.canWrite()) void this.store.assignToMe(ids);
@@ -507,7 +553,8 @@ export class BacklogView {
     const top = index * height;
     const offset = viewport.measureScrollOffset();
     const size = viewport.getViewportSize();
-    if (top < offset) viewport.scrollToOffset(top);
+    const pinned = this.store.groupBy() === 'none' ? 0 : height;
+    if (top < offset + pinned) viewport.scrollToOffset(Math.max(0, top - pinned));
     else if (top + height > offset + size) viewport.scrollToOffset(top + height - size);
   }
 

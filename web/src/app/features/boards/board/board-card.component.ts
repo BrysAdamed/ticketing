@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, inject, input } from '@angular/core';
 import { MatTooltip } from '@angular/material/tooltip';
 import { BoardCard, BoardParent } from '@core/boards/board.models';
 import { UserRef } from '@core/tickets/ticket.models';
@@ -77,7 +77,9 @@ import { IconComponent } from '@shared/ui/icon/icon.component';
             class="sub tnum"
             data-testid="card-progress"
             matTooltip="Sub-tickets done"
-            [attr.aria-label]="card().childDoneCount + ' of ' + card().childCount + ' sub-tickets done'"
+            [attr.aria-label]="
+              card().childDoneCount + ' of ' + card().childCount + ' sub-tickets done'
+            "
             ><tk-icon name="tablerSubtask" [size]="12" />{{ card().childDoneCount }}/{{
               card().childCount
             }}</span
@@ -219,6 +221,7 @@ import { IconComponent } from '@shared/ui/icon/icon.component';
   `,
 })
 export class BoardCardComponent {
+  readonly element = inject<ElementRef<HTMLElement>>(ElementRef);
   readonly card = input.required<BoardCard>();
   readonly assignee = input<UserRef | null>(null);
   readonly parent = input<BoardParent | null>(null);

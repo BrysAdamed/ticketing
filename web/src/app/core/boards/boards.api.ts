@@ -45,5 +45,4 @@ export class BoardsApi {
   delete(boardId: string): Observable<void> {
     return this.api.delete(`/boards/${boardId}`);
   }
-
 }

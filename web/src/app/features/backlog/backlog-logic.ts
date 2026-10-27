@@ -362,6 +362,31 @@ export function planDrop(
   return null;
 }
 
+export interface StickyGroup {
+  group: GroupRow;
+  /// 0, or negative while the next group header pushes this one out of view.
+  offset: number;
+}
+
+/// The group header to pin over a fixed-row-height virtual list scrolled to scrollTop: the last
+/// header at or above the first visible row. Null at the very top (the real header is in place) and
+/// when the list is not grouped.
+export function stickyGroupAt(
+  rows: readonly { kind: string }[],
+  scrollTop: number,
+  rowHeight: number,
+): StickyGroup | null {
+  if (scrollTop <= 0 || rowHeight <= 0 || rows.length === 0) return null;
+  const top = Math.min(Math.floor(scrollTop / rowHeight), rows.length - 1);
+  let group: GroupRow | null = null;
+  for (let i = top; i >= 0 && !group; i--)
+    if (rows[i].kind === 'group') group = rows[i] as GroupRow;
+  if (!group) return null;
+  const next = rows.findIndex((r, i) => i > top && r.kind === 'group');
+  const nextTop = next === -1 ? Infinity : next * rowHeight - scrollTop;
+  return { group, offset: nextTop < rowHeight ? nextTop - rowHeight : 0 };
+}
+
 export function categoryOrder(status: TicketStatus): number {
   return STATUS_CATEGORIES.indexOf(statusCategory(status));
 }

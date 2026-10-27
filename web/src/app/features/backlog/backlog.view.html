@@ -125,53 +125,7 @@
         @switch (row.kind) {
           @case ('group') {
             <div class="ghead" role="row" [attr.data-testid]="'group-' + row.id">
-              <button
-                type="button"
-                class="chev"
-                [attr.aria-expanded]="!row.collapsed"
-                [attr.aria-label]="(row.collapsed ? 'Expand ' : 'Collapse ') + row.label"
-                (click)="store.toggleGroup(row.id)"
-              >
-                <tk-icon
-                  [name]="row.collapsed ? 'tablerChevronRight' : 'tablerChevronDown'"
-                  [size]="14"
-                />
-              </button>
-              @switch (row.icon.kind) {
-                @case ('status') {
-                  <tk-status-icon [status]="$any(row.icon).status" />
-                }
-                @case ('type') {
-                  <tk-type-icon [type]="$any(row.icon).type" [size]="14" />
-                }
-                @case ('user') {
-                  <tk-avatar
-                    [userId]="$any(row.icon).user?.id"
-                    [name]="$any(row.icon).user?.displayName"
-                  />
-                }
-                @case ('epic') {
-                  @if ($any(row.icon).parent; as parent) {
-                    <tk-type-icon [type]="parent.type" [size]="14" />
-                  }
-                }
-              }
-              <span class="glabel">{{ row.label }}</span>
-              <span class="gcount tnum">{{ row.count }}</span>
-              @if (row.points > 0) {
-                <span class="gpts">· {{ row.points }} pts</span>
-              }
-              @if (store.canWrite()) {
-                <button
-                  type="button"
-                  class="tk-icon-btn tk-icon-btn-sm add"
-                  [attr.aria-label]="'New ticket in ' + row.label"
-                  [matTooltip]="'New ticket in ' + row.label"
-                  (click)="store.openCreate(row.id)"
-                >
-                  <tk-icon name="tablerPlus" [size]="14" />
-                </button>
-              }
+              <ng-container *ngTemplateOutlet="groupHead; context: { $implicit: row }" />
             </div>
           }
           @case ('create') {
@@ -197,7 +151,7 @@
               [focused]="store.focusId() === row.id"
               [flash]="store.lastCreatedId() === row.id"
               [canWrite]="store.canWrite()"
-              [assigneeOptions]="assigneeOptions()"
+              [assigneeSearch]="assigneeSearch"
               [labelSuggestions]="labelSuggestions"
               (click)="onRowClick($event, row.id, $any(row).item.key)"
               (mouseenter)="onRowHover($any(row).item.key)"
@@ -222,6 +176,16 @@
         }
       </ng-container>
     </cdk-virtual-scroll-viewport>
+    @if (stickyGroup(); as sticky) {
+      <div
+        class="ghead sticky"
+        data-testid="sticky-group"
+        [style.right.px]="scrollbarWidth()"
+        [style.transform]="'translateY(' + sticky.offset + 'px)'"
+      >
+        <ng-container *ngTemplateOutlet="groupHead; context: { $implicit: sticky.group }" />
+      </div>
+    }
     @if (dropIndex() !== null) {
       <div class="drop-line" [style.top.px]="dropLineTop()" data-testid="drop-indicator"></div>
     }
@@ -240,6 +204,7 @@
         type="button"
         class="bbtn"
         data-testid="bulk-status"
+        #bulkStatusPicker="tkInlinePicker"
         [tkInlinePicker]="statusOptions"
         pickerPlaceholder="Change status…"
         pickerShortcut="S"
@@ -250,8 +215,11 @@
       <button
         type="button"
         class="bbtn"
+        data-testid="bulk-priority"
+        #bulkPriorityPicker="tkInlinePicker"
         [tkInlinePicker]="priorityOptions"
         pickerPlaceholder="Change priority…"
+        pickerShortcut="P"
         (picked)="bulkPriority($event)"
       >
         <tk-icon name="tablerFlag" [size]="14" />Priority
@@ -259,8 +227,11 @@
       <button
         type="button"
         class="bbtn"
-        [tkInlinePicker]="assigneeOptions()"
+        data-testid="bulk-assignee"
+        #bulkAssigneePicker="tkSearchPicker"
+        [tkSearchPicker]="assigneeSearch"
         pickerPlaceholder="Assign to…"
+        pickerShortcut="I"
         (picked)="bulkAssignee($event)"
       >
         <tk-icon name="tablerUser" [size]="14" />Assignee
@@ -308,3 +279,47 @@
     </button>
   </div>
 }
+
+<ng-template #groupHead let-row>
+  <button
+    type="button"
+    class="chev"
+    [attr.aria-expanded]="!row.collapsed"
+    [attr.aria-label]="(row.collapsed ? 'Expand ' : 'Collapse ') + row.label"
+    (click)="store.toggleGroup(row.id)"
+  >
+    <tk-icon [name]="row.collapsed ? 'tablerChevronRight' : 'tablerChevronDown'" [size]="14" />
+  </button>
+  @switch (row.icon.kind) {
+    @case ('status') {
+      <tk-status-icon [status]="$any(row.icon).status" />
+    }
+    @case ('type') {
+      <tk-type-icon [type]="$any(row.icon).type" [size]="14" />
+    }
+    @case ('user') {
+      <tk-avatar [userId]="$any(row.icon).user?.id" [name]="$any(row.icon).user?.displayName" />
+    }
+    @case ('epic') {
+      @if ($any(row.icon).parent; as parent) {
+        <tk-type-icon [type]="parent.type" [size]="14" />
+      }
+    }
+  }
+  <span class="glabel">{{ row.label }}</span>
+  <span class="gcount tnum">{{ row.count }}</span>
+  @if (row.points > 0) {
+    <span class="gpts">· {{ row.points }} pts</span>
+  }
+  @if (store.canWrite()) {
+    <button
+      type="button"
+      class="tk-icon-btn tk-icon-btn-sm add"
+      [attr.aria-label]="'New ticket in ' + row.label"
+      [matTooltip]="'New ticket in ' + row.label"
+      (click)="store.openCreate(row.id)"
+    >
+      <tk-icon name="tablerPlus" [size]="14" />
+    </button>
+  }
+</ng-template>

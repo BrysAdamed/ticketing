@@ -35,6 +35,7 @@ export class SearchPickerDirective<T> {
 
   readonly tkSearchPicker = input.required<SearchFn<T>>();
   readonly pickerPlaceholder = input('Search…');
+  readonly pickerShortcut = input<string | null>(null);
   readonly pickerOptionTemplate = input<PickerOptionTemplate<T> | null>(null);
   readonly pickerDisabled = input(false);
 
@@ -52,10 +53,11 @@ export class SearchPickerDirective<T> {
     else this.open();
   }
 
-  open(): void {
+  /// Opens the picker under the host, or under `origin` (for example a focused card) when given.
+  open(origin?: Element): void {
     if (this.isOpen() || this.pickerDisabled()) return;
     const overlayRef = createOverlayRef(this.injector, {
-      positionStrategy: createFlexibleConnectedPositionStrategy(this.injector, this.host)
+      positionStrategy: createFlexibleConnectedPositionStrategy(this.injector, origin ?? this.host)
         .withPositions([
           { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: 4 },
           { originX: 'end', originY: 'bottom', overlayX: 'end', overlayY: 'top', offsetY: 4 },
@@ -72,6 +74,7 @@ export class SearchPickerDirective<T> {
     );
     panel.setInput('search', this.tkSearchPicker());
     panel.setInput('placeholder', this.pickerPlaceholder());
+    panel.setInput('shortcut', this.pickerShortcut());
     panel.setInput('optionTemplate', this.pickerOptionTemplate());
     panel.instance.picked.subscribe((value) => {
       this.close();

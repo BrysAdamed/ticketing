@@ -67,3 +67,15 @@ export function isDocKey(value: string): boolean {
 export function projectKeyOfDoc(key: string): string {
   return key.toUpperCase().replace(/-D-\d+$/, '');
 }
+
+const MENTION_PREFIX = 'mention-';
+
+/// URL fragment that opens a doc at its first mention of a ticket (`#mention-WEB-42`).
+export function mentionFragment(ticketKey: string): string {
+  return `${MENTION_PREFIX}${ticketKey}`;
+}
+
+/// The ticket key of a `#mention-KEY` fragment, or null for any other fragment.
+export function mentionedTicketKey(fragment: string): string | null {
+  return fragment.startsWith(MENTION_PREFIX) ? fragment.slice(MENTION_PREFIX.length) || null : null;
+}

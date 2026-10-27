@@ -236,6 +236,7 @@ function ticketChip(doc: Document, ticket: MarkdownTicketReference): HTMLElement
   chip.className = `tk-tref tk-tref-${ticket.status.toLowerCase()}`;
   chip.title = ticketTitle(ticket);
   chip.setAttribute('data-testid', `ticket-chip-${ticket.key}`);
+  chip.dataset['ticketKey'] = ticket.key;
   const key = doc.createElement('span');
   key.className = 'tk-tref-k';
   key.textContent = ticket.key;

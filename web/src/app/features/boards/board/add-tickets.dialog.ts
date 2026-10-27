@@ -25,8 +25,9 @@ import { IconComponent } from '@shared/ui/icon/icon.component';
 export interface AddTicketsDialogData {
   boardName: string;
   projects: BoardProject[];
-  /// Moves the picked tickets onto the board; the dialog closes when it resolves true.
-  add: (keys: string[]) => Promise<boolean>;
+  /// Moves the picked tickets onto the board (`childCounts` per key, from the backlog rows); the
+  /// dialog closes when it resolves true.
+  add: (keys: string[], childCounts: number[]) => Promise<boolean>;
 }
 
 const SEARCH_DEBOUNCE_MS = 200;
@@ -277,6 +278,7 @@ export class AddTicketsDialog {
   protected readonly shown = computed(() => this.items().slice(0, MAX_SHOWN));
 
   private readonly order = new Map<string, number>();
+  private readonly childCounts = new Map<string, number>();
   private searchTimer: ReturnType<typeof setTimeout> | null = null;
   private loadToken = 0;
 
@@ -310,7 +312,8 @@ export class AddTicketsDialog {
       (a, b) => (this.order.get(a) ?? 0) - (this.order.get(b) ?? 0),
     );
     this.busy.set(true);
-    const added = await this.data.add(keys);
+    const childCounts = keys.map((key) => this.childCounts.get(key) ?? 0);
+    const added = await this.data.add(keys, childCounts);
     this.busy.set(false);
     if (added) this.ref.close(keys);
   }
@@ -324,7 +327,10 @@ export class AddTicketsDialog {
         this.tickets.backlog(projectKey, { text: text || null }),
       );
       if (token !== this.loadToken) return;
-      backlog.items.forEach((item, index) => this.order.set(item.key, index));
+      backlog.items.forEach((item, index) => {
+        this.order.set(item.key, index);
+        this.childCounts.set(item.key, item.childCount);
+      });
       this.items.set(backlog.items);
       this.users.set(new Map(backlog.users.map((u) => [u.id, u])));
       this.status.set('loaded');

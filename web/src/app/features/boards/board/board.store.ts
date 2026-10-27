@@ -15,6 +15,7 @@ import {
 import { BoardsApi } from '@core/boards/boards.api';
 import { ToastService } from '@core/notify/toast.service';
 import { LoadStatus } from '@core/projects/project-directory';
+import { MoveChildren } from '@core/tickets/move-children';
 import { TicketEvents } from '@core/tickets/ticket-events';
 import { TicketsApi } from '@core/tickets/tickets.api';
 import { Ticket, TicketPatch, UserRef } from '@core/tickets/ticket.models';
@@ -42,6 +43,7 @@ export class BoardStore {
   private readonly toast = inject(ToastService);
   private readonly directory = inject(BoardDirectory);
   private readonly events = inject(TicketEvents);
+  private readonly moveChildren = inject(MoveChildren);
 
   readonly boardId = signal<string | null>(null);
   readonly board = signal<Board | null>(null);
@@ -319,23 +321,52 @@ export class BoardStore {
     });
   }
 
+  /// Asks whether sub-tickets on this board come along (TKT-71), then the cards (and those
+  /// sub-tickets) leave the board at once and come back if the move fails.
   async sendToBacklog(ids: readonly string[]): Promise<void> {
     const board = this.board();
     if (!board || ids.length === 0) return;
-    const keys = ids.map((id) => findCard(board.columns, id)?.key).filter((k): k is string => !!k);
-    const before = board.columns;
+    const cards = ids.map((id) => findCard(board.columns, id)).filter((c): c is BoardCard => !!c);
+    const keys = cards.map((c) => c.key);
+    if (keys.length === 0) return;
+    const decision = await this.moveChildren.ask({
+      keys,
+      from: board.id,
+      childCounts: cards.map((c) => c.childCount),
+      source: { kind: 'board' },
+      destination: { kind: 'backlog' },
+    });
+    if (!decision) return;
+    const current = this.board();
+    if (!current) return;
+    const before = current.columns;
     const moving = new Set(ids);
+    const childKeys = new Set(decision.childKeys);
     this.board.set({
-      ...board,
-      columns: before.map((c) => ({ ...c, cards: c.cards.filter((card) => !moving.has(card.id)) })),
+      ...current,
+      columns: before.map((c) => ({
+        ...c,
+        cards: c.cards.filter((card) => !moving.has(card.id) && !childKeys.has(card.key)),
+      })),
     });
     this.selection.set(new Set());
     try {
-      await firstValueFrom(this.ticketsApi.move({ keys, target: 'backlog', from: board.id }));
+      const moved = await firstValueFrom(
+        this.ticketsApi.move({
+          keys,
+          target: 'backlog',
+          from: board.id,
+          ...(decision.includeChildren ? { includeChildren: true } : {}),
+        }),
+      );
+      const children = Math.max(0, (moved?.length ?? keys.length) - keys.length);
       this.toast.success(
-        keys.length === 1
+        (keys.length === 1
           ? `${keys[0]} moved to the backlog`
-          : `${keys.length} tickets moved to their backlogs`,
+          : `${keys.length} tickets moved to their backlogs`) +
+          (children > 0
+            ? ` with ${children} ${children === 1 ? 'sub-ticket' : 'sub-tickets'}`
+            : ''),
       );
       void this.reload(true);
     } catch (error) {
@@ -344,17 +375,31 @@ export class BoardStore {
     }
   }
 
-  async addFromBacklog(keys: readonly string[]): Promise<boolean> {
+  /// "Add tickets from backlog": asks whether sub-tickets in the backlog come along (TKT-71).
+  /// Resolves false when the user cancelled or the move failed, so the dialog stays open.
+  async addFromBacklog(keys: readonly string[], childCounts: readonly number[]): Promise<boolean> {
     const board = this.board();
     if (!board || keys.length === 0) return false;
+    const decision = await this.moveChildren.ask({
+      keys,
+      from: 'backlog',
+      childCounts,
+      source: { kind: 'backlog' },
+      destination: { kind: 'board', name: board.name },
+    });
+    if (!decision) return false;
     try {
-      await firstValueFrom(
-        this.ticketsApi.move({ keys: [...keys], target: board.id, from: 'backlog' }),
+      const moved = await firstValueFrom(
+        this.ticketsApi.move({
+          keys: [...keys],
+          target: board.id,
+          from: 'backlog',
+          ...(decision.includeChildren ? { includeChildren: true } : {}),
+        }),
       );
+      const total = Math.max(moved?.length ?? 0, keys.length);
       this.toast.success(
-        keys.length === 1
-          ? `${keys[0]} added to the board`
-          : `${keys.length} tickets added to the board`,
+        total === 1 ? `${keys[0]} added to the board` : `${total} tickets added to the board`,
       );
       await this.reload(true);
       return true;

@@ -519,6 +519,18 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
   - Picker: `GET /users?projectKey=KEY&access=read` (and `find_users` with `access: Read`) lists active users who can read the project, viewers included; `access=write`, the default, keeps the assignee picker's meaning.
 - Rationale: ids keep mentions stable across renames without rewriting stored text, and checking access when reading means a chip never reveals a user to someone who could not pick them. Comparing with the previous text is enough to tell new mentions from old ones without a mention table, and it keeps edits of old text working. Limiting mentions to the two texts people discuss in keeps the notification model simple; other fields can opt in later.
 
+### D-97 Delegate to agent launches Claude through its deep links, with a 5,000-character budget and no handler detection (TKT-26)
+
+- Question: TKT-26 measured on Windows how `claude-cli://open` and `claude://code/new` behave (details in [ADR 0013](adr/0013-claude-deep-links-on-windows.md)). With those results, how does the Delegate button (TKT-29) build and open the link, and what does it do when nothing opens?
+- Decision:
+  - Links: `claude-cli://open?cwd=<enc path>&q=<enc prompt>` (default) and `claude://code/new?folder=<enc path>&q=<enc prompt>` (Desktop). Each value goes through `encodeURIComponent`, never `URLSearchParams`. No `repo`.
+  - Budget: the resolved prompt, with CRLF normalised to LF and trailing whitespace trimmed, must have `length <= 5000` (UTF-16 code units, JavaScript's `length`). Claude Code silently ignores longer prompts, so above the limit the button does not launch. It shows the count and offers Copy prompt. The same limit applies to Desktop.
+  - Folder: an absolute drive path without `..`, UNC, or control, bidirectional or invisible characters, validated in the setup dialog. Claude Code silently ignores relative and UNC paths. A path that does not exist opens a Windows Terminal error ("Could not access starting directory").
+  - Opening: a top-level navigation (a temporary `<a>` clicked, or `location.assign`) from the click handler, before any `await`, wrapped in one `core/` function that tests can stub. Not a hidden iframe (our CSP `default-src 'self'` blocks it) and not `window.open` (it leaves an empty tab).
+  - No detection: the page cannot tell "no handler", "browser dialog waiting" and "launched" apart. Chrome only logs to the console, and focus and visibility stay unchanged until the terminal opens. Every launch shows the same toast: "Didn't open? Copy prompt · Help". Help covers the browser dialog and "Always allow", registering the handler by sending one prompt in `claude`, a missing folder, and an org-disabled handler.
+  - `claude --bg --name` works on Windows (Claude Code 2.1.292), so nothing on Windows blocks the later background option (I-124).
+- Rationale: the handler passes the prompt to Claude Code as base64 arguments, so quotes, `&`, `%`, `;`, newlines and non-ASCII arrive intact and nothing is re-parsed by a shell. Our only job is to stay inside the limits it enforces silently. Detecting the handler would rely on browser quirks that cannot be told apart from a pending dialog, so a passive toast is both simpler and honest. The browser dialog texts and "always allow" persistence still need the manual checklist in ADR 0013.
+
 ## Product owner answers (v1 review, 2026-10-27)
 
 These were open questions (Q-01..Q-05); the product owner resolved them as follows.

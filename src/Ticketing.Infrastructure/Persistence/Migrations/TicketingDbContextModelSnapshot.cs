@@ -131,6 +131,10 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(100)")
                         .HasColumnName("content_type");
 
+                    b.Property<Guid?>("DocNodeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("doc_node_id");
+
                     b.Property<string>("FileName")
                         .IsRequired()
                         .HasMaxLength(255)
@@ -147,7 +151,7 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("size_bytes");
 
-                    b.Property<Guid>("TicketId")
+                    b.Property<Guid?>("TicketId")
                         .HasColumnType("uuid")
                         .HasColumnName("ticket_id");
 
@@ -162,13 +166,20 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                     b.HasKey("Id")
                         .HasName("pk_attachments");
 
+                    b.HasIndex("DocNodeId")
+                        .HasDatabaseName("ix_attachments_doc_node_id")
+                        .HasFilter("doc_node_id IS NOT NULL");
+
                     b.HasIndex("TicketId")
                         .HasDatabaseName("ix_attachments_ticket_id");
 
                     b.HasIndex("UploadedById")
                         .HasDatabaseName("ix_attachments_uploaded_by_id");
 
-                    b.ToTable("attachments", (string)null);
+                    b.ToTable("attachments", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_attachments_owner", "num_nonnulls(ticket_id, doc_node_id) = 1");
+                        });
                 });
 
             modelBuilder.Entity("Ticketing.Domain.Boards.Board", b =>
@@ -417,6 +428,282 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_comments_ticket_id_created_at");
 
                     b.ToTable("comments", (string)null);
+                });
+
+            modelBuilder.Entity("Ticketing.Domain.Docs.DocDraft", b =>
+                {
+                    b.Property<Guid>("NodeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("node_id");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<int>("BaseVersion")
+                        .HasColumnType("integer")
+                        .HasColumnName("base_version");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("content")
+                        .HasAnnotation("Npgsql:Compression:", "lz4");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("title");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("NodeId", "UserId")
+                        .HasName("pk_doc_drafts");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_doc_drafts_user_id");
+
+                    b.HasIndex("NodeId", "UpdatedAt")
+                        .HasDatabaseName("ix_doc_drafts_node_id_updated_at");
+
+                    b.ToTable("doc_drafts", (string)null);
+                });
+
+            modelBuilder.Entity("Ticketing.Domain.Docs.DocNode", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Content")
+                        .HasColumnType("text")
+                        .HasColumnName("content")
+                        .HasAnnotation("Npgsql:Compression:", "lz4");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedById")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_id");
+
+                    b.Property<int>("CurrentVersion")
+                        .HasColumnType("integer")
+                        .HasColumnName("current_version");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deleted_by_id");
+
+                    b.Property<Guid?>("DeletedRootId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deleted_root_id");
+
+                    b.Property<int?>("DiagramFormat")
+                        .HasColumnType("integer")
+                        .HasColumnName("diagram_format");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("integer")
+                        .HasColumnName("kind");
+
+                    b.Property<int>("Number")
+                        .HasColumnType("integer")
+                        .HasColumnName("number");
+
+                    b.Property<string>("Outline")
+                        .HasColumnType("text")
+                        .HasColumnName("outline")
+                        .HasAnnotation("Npgsql:Compression:", "lz4");
+
+                    b.Property<Guid?>("ParentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("parent_id");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("project_id");
+
+                    b.Property<string>("Rank")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("rank")
+                        .UseCollation("C");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<NpgsqlTsVector>("SearchVector")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("tsvector")
+                        .HasColumnName("search_vector")
+                        .HasComputedColumnSql("setweight(to_tsvector('english'::regconfig, coalesce(title, '')), 'A') || setweight(to_tsvector('english'::regconfig, CASE WHEN diagram_format = 2 THEN coalesce(outline, '') ELSE coalesce(content, '') END), 'B')", true);
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("title");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UpdatedById")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_doc_nodes");
+
+                    b.HasIndex("CreatedById")
+                        .HasDatabaseName("ix_doc_nodes_created_by_id");
+
+                    b.HasIndex("DeletedRootId")
+                        .HasDatabaseName("ix_doc_nodes_deleted_root_id")
+                        .HasFilter("deleted_root_id IS NOT NULL");
+
+                    b.HasIndex("ParentId")
+                        .HasDatabaseName("ix_doc_nodes_parent_id")
+                        .HasFilter("parent_id IS NOT NULL");
+
+                    b.HasIndex("SearchVector")
+                        .HasDatabaseName("ix_doc_nodes_search_vector");
+
+                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("SearchVector"), "gin");
+
+                    b.HasIndex("Title")
+                        .HasDatabaseName("ix_doc_nodes_title_trgm");
+
+                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("Title"), "gin");
+                    NpgsqlIndexBuilderExtensions.HasOperators(b.HasIndex("Title"), new[] { "gin_trgm_ops" });
+
+                    b.HasIndex("UpdatedById")
+                        .HasDatabaseName("ix_doc_nodes_updated_by_id");
+
+                    b.HasIndex("ProjectId", "Number")
+                        .IsUnique()
+                        .HasDatabaseName("ix_doc_nodes_project_id_number");
+
+                    b.HasIndex("ProjectId", "DeletedAt", "Id")
+                        .IsDescending(false, true, true)
+                        .HasDatabaseName("ix_doc_nodes_trash")
+                        .HasFilter("deleted_at IS NOT NULL AND deleted_root_id = id");
+
+                    b.HasIndex("ProjectId", "ParentId", "Rank")
+                        .HasDatabaseName("ix_doc_nodes_tree_rank")
+                        .HasFilter("deleted_at IS NULL");
+
+                    b.HasIndex("ProjectId", "UpdatedAt", "Id")
+                        .IsDescending(false, true, true)
+                        .HasDatabaseName("ix_doc_nodes_recent")
+                        .HasFilter("deleted_at IS NULL");
+
+                    b.ToTable("doc_nodes", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_doc_nodes_diagram_format", "(kind = 3) = (diagram_format IS NOT NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("Ticketing.Domain.Docs.DocReference", b =>
+                {
+                    b.Property<Guid>("SourceNodeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("source_node_id");
+
+                    b.Property<int>("TargetType")
+                        .HasColumnType("integer")
+                        .HasColumnName("target_type");
+
+                    b.Property<Guid>("TargetId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("target_id");
+
+                    b.HasKey("SourceNodeId", "TargetType", "TargetId")
+                        .HasName("pk_doc_references");
+
+                    b.HasIndex("TargetType", "TargetId")
+                        .HasDatabaseName("ix_doc_references_target_type_target_id");
+
+                    b.ToTable("doc_references", (string)null);
+                });
+
+            modelBuilder.Entity("Ticketing.Domain.Docs.DocVersion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AuthorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("author_id");
+
+                    b.Property<string>("ChangeNote")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("change_note");
+
+                    b.Property<int>("Channel")
+                        .HasColumnType("integer")
+                        .HasColumnName("channel");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("content")
+                        .HasAnnotation("Npgsql:Compression:", "lz4");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("NodeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("node_id");
+
+                    b.Property<int>("Number")
+                        .HasColumnType("integer")
+                        .HasColumnName("number");
+
+                    b.Property<int?>("RestoredFrom")
+                        .HasColumnType("integer")
+                        .HasColumnName("restored_from");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("title");
+
+                    b.HasKey("Id")
+                        .HasName("pk_doc_versions");
+
+                    b.HasIndex("AuthorId")
+                        .HasDatabaseName("ix_doc_versions_author_id");
+
+                    b.HasIndex("NodeId", "Number")
+                        .IsUnique()
+                        .HasDatabaseName("ix_doc_versions_node_id_number");
+
+                    b.ToTable("doc_versions", (string)null);
                 });
 
             modelBuilder.Entity("Ticketing.Domain.FeatureFlags.FeatureFlag", b =>
@@ -1436,11 +1723,16 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Ticketing.Domain.Attachments.Attachment", b =>
                 {
+                    b.HasOne("Ticketing.Domain.Docs.DocNode", null)
+                        .WithMany()
+                        .HasForeignKey("DocNodeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_attachments_doc_nodes_doc_node_id");
+
                     b.HasOne("Ticketing.Domain.Tickets.Ticket", null)
                         .WithMany()
                         .HasForeignKey("TicketId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
                         .HasConstraintName("fk_attachments_tickets_ticket_id");
 
                     b.HasOne("Ticketing.Domain.Users.User", null)
@@ -1545,6 +1837,80 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_comments_tickets_ticket_id");
+                });
+
+            modelBuilder.Entity("Ticketing.Domain.Docs.DocDraft", b =>
+                {
+                    b.HasOne("Ticketing.Domain.Docs.DocNode", null)
+                        .WithMany()
+                        .HasForeignKey("NodeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_doc_drafts_doc_nodes_node_id");
+
+                    b.HasOne("Ticketing.Domain.Users.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_doc_drafts_users_user_id");
+                });
+
+            modelBuilder.Entity("Ticketing.Domain.Docs.DocNode", b =>
+                {
+                    b.HasOne("Ticketing.Domain.Users.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_doc_nodes_users_created_by_id");
+
+                    b.HasOne("Ticketing.Domain.Docs.DocNode", null)
+                        .WithMany()
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_doc_nodes_doc_nodes_parent_id");
+
+                    b.HasOne("Ticketing.Domain.Projects.Project", null)
+                        .WithMany()
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_doc_nodes_projects_project_id");
+
+                    b.HasOne("Ticketing.Domain.Users.User", null)
+                        .WithMany()
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_doc_nodes_users_updated_by_id");
+                });
+
+            modelBuilder.Entity("Ticketing.Domain.Docs.DocReference", b =>
+                {
+                    b.HasOne("Ticketing.Domain.Docs.DocNode", null)
+                        .WithMany()
+                        .HasForeignKey("SourceNodeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_doc_references_doc_nodes_source_node_id");
+                });
+
+            modelBuilder.Entity("Ticketing.Domain.Docs.DocVersion", b =>
+                {
+                    b.HasOne("Ticketing.Domain.Users.User", null)
+                        .WithMany()
+                        .HasForeignKey("AuthorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_doc_versions_users_author_id");
+
+                    b.HasOne("Ticketing.Domain.Docs.DocNode", null)
+                        .WithMany()
+                        .HasForeignKey("NodeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_doc_versions_doc_nodes_node_id");
                 });
 
             modelBuilder.Entity("Ticketing.Domain.Idempotency.IdempotencyRecord", b =>

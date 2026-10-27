@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 
 namespace Ticketing.Domain.Common;
 
-/// <summary>Formats and parses human keys: tickets <c>WEB-42</c>, test cases <c>WEB-TC-7</c>, regression sessions <c>WEB-R-3</c> (spec 6.1).</summary>
+/// <summary>Formats and parses human keys: tickets <c>WEB-42</c>, test cases <c>WEB-TC-7</c>, regression sessions <c>WEB-R-3</c> (spec 6.1), docs <c>WEB-D-12</c>.</summary>
 public static partial class HumanKeys
 {
     public static string Ticket(string projectKey, int number) => $"{projectKey}-{number.ToString(CultureInfo.InvariantCulture)}";
@@ -11,6 +11,11 @@ public static partial class HumanKeys
     public static string TestCase(string projectKey, int number) => $"{projectKey}-TC-{number.ToString(CultureInfo.InvariantCulture)}";
 
     public static string Regression(string projectKey, int number) => $"{projectKey}-R-{number.ToString(CultureInfo.InvariantCulture)}";
+
+    public static string Doc(string projectKey, int number) => $"{projectKey}-D-{number.ToString(CultureInfo.InvariantCulture)}";
+
+    public static bool TryParseDoc(string? key, out string projectKey, out int number) =>
+        TryParse(DocPattern(), key, out projectKey, out number);
 
     public static bool TryParseTicket(string? key, out string projectKey, out int number) =>
         TryParse(TicketPattern(), key, out projectKey, out number);
@@ -42,4 +47,7 @@ public static partial class HumanKeys
 
     [GeneratedRegex(@"^([A-Za-z][A-Za-z0-9]{1,9})-[Rr]-(\d{1,9})$", RegexOptions.CultureInvariant)]
     private static partial Regex RegressionPattern();
+
+    [GeneratedRegex(@"^([A-Za-z][A-Za-z0-9]{1,9})-[Dd]-(\d{1,9})$", RegexOptions.CultureInvariant)]
+    private static partial Regex DocPattern();
 }

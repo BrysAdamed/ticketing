@@ -28,6 +28,9 @@ public sealed class AppException : Exception
     /// <summary>Per-field messages keyed by the camelCase input name.</summary>
     public IReadOnlyDictionary<string, string[]> Errors { get; }
 
+    /// <summary>Extra machine-readable members (camelCase) added to the problem details and the MCP error, for example the current version on a conflict.</summary>
+    public IReadOnlyDictionary<string, object?>? Details { get; init; }
+
     public static AppException NotFound(string code, string message) => new(ErrorKind.NotFound, code, message);
 
     public static AppException Forbidden(string code, string message, string? hint = null) => new(ErrorKind.Forbidden, code, message, hint);

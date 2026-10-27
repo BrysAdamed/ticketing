@@ -6,6 +6,7 @@ using Ticketing.Domain.Attachments;
 using Ticketing.Domain.Boards;
 using Ticketing.Domain.Collaboration;
 using Ticketing.Domain.Comments;
+using Ticketing.Domain.Docs;
 using Ticketing.Domain.FeatureFlags;
 using Ticketing.Domain.Idempotency;
 using Ticketing.Domain.Projects;
@@ -63,6 +64,14 @@ public sealed class TicketingDbContext(DbContextOptions<TicketingDbContext> opti
     public DbSet<FeatureFlag> FeatureFlags => Set<FeatureFlag>();
 
     public DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();
+
+    public DbSet<DocNode> DocNodes => Set<DocNode>();
+
+    public DbSet<DocVersion> DocVersions => Set<DocVersion>();
+
+    public DbSet<DocDraft> DocDrafts => Set<DocDraft>();
+
+    public DbSet<DocReference> DocReferences => Set<DocReference>();
 
     public static DbContextOptionsBuilder Configure(DbContextOptionsBuilder options, string connectionString) =>
         options

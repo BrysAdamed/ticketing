@@ -1,6 +1,6 @@
 import { HttpClient, HttpContext, HttpHeaders, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { defer, finalize, Observable, share } from 'rxjs';
 import { Page, PageRequest } from './page';
 
 export const API_BASE_URL = '/api/v1';
@@ -21,13 +21,31 @@ export interface WriteOptions extends RequestOptions {
 }
 
 /// Thin typed wrapper over HttpClient for the Ticketing REST API. Paths are relative to
-/// `/api/v1`. Errors arrive as `ApiError` (mapped by the API error interceptor).
+/// `/api/v1`. Errors arrive as `ApiError` (mapped by the API error interceptor). Identical GETs
+/// in flight at the same time share one request; any write starts a new generation, so a GET
+/// issued after a write never joins one that started before it.
 @Injectable({ providedIn: 'root' })
 export class ApiClient {
   private readonly http = inject(HttpClient);
+  private readonly inFlight = new Map<string, Observable<unknown>>();
 
   get<T>(path: string, query?: Query, options?: RequestOptions): Observable<T> {
-    return this.http.get<T>(this.url(path), { params: toParams(query), context: options?.context });
+    const url = this.url(path);
+    const params = toParams(query);
+    if (options?.context) return this.http.get<T>(url, { params, context: options.context });
+    const key = `${url}?${params.toString()}`;
+    return defer(() => {
+      const pending = this.inFlight.get(key) as Observable<T> | undefined;
+      if (pending) return pending;
+      const shared: Observable<T> = this.http.get<T>(url, { params }).pipe(
+        finalize(() => {
+          if (this.inFlight.get(key) === shared) this.inFlight.delete(key);
+        }),
+        share(),
+      );
+      this.inFlight.set(key, shared);
+      return shared;
+    });
   }
 
   list<T>(path: string, page?: PageRequest, query?: Query): Observable<Page<T>> {
@@ -35,6 +53,7 @@ export class ApiClient {
   }
 
   post<T>(path: string, body?: unknown, options?: RequestOptions): Observable<T> {
+    this.inFlight.clear();
     return this.http.post<T>(this.url(path), body ?? null, {
       headers: headers(options),
       context: options?.context,
@@ -42,6 +61,7 @@ export class ApiClient {
   }
 
   put<T>(path: string, body: unknown, options?: WriteOptions): Observable<T> {
+    this.inFlight.clear();
     return this.http.put<T>(this.url(path), body, {
       headers: headers(options),
       context: options?.context,
@@ -49,6 +69,7 @@ export class ApiClient {
   }
 
   patch<T>(path: string, body: unknown, options?: WriteOptions): Observable<T> {
+    this.inFlight.clear();
     return this.http.patch<T>(this.url(path), body, {
       headers: headers(options),
       context: options?.context,
@@ -56,6 +77,7 @@ export class ApiClient {
   }
 
   delete<T = void>(path: string, options?: WriteOptions): Observable<T> {
+    this.inFlight.clear();
     return this.http.delete<T>(this.url(path), {
       headers: headers(options),
       context: options?.context,

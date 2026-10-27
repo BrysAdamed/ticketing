@@ -2,6 +2,7 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { ApiClient } from '../api/api-client';
 import { ApiError, toApiError } from '../api/api-error';
+import { SwrCache } from '../api/swr-cache';
 import { LoadStatus, ProjectDirectory } from './project-directory';
 import { GlobalRole, ProjectRole, ProjectVisibility } from '@shared/domain/enums';
 
@@ -44,6 +45,7 @@ export interface ProjectDetail {
 export class ProjectContext {
   private readonly api = inject(ApiClient);
   private readonly directory = inject(ProjectDirectory);
+  private readonly cache = inject(SwrCache);
 
   readonly projectKey = signal<string>('');
   readonly project = signal<ProjectDetail | null>(null);
@@ -66,13 +68,15 @@ export class ProjectContext {
   });
   readonly notFound = computed(() => this.error()?.isNotFound ?? false);
 
+  private token = 0;
+
+  /// Shows the cached project at once (stale-while-revalidate) and fetches it once per key: calling
+  /// it again for the same key while loading, loaded or failed does nothing; `reload()` retries.
   async load(projectKey: string): Promise<void> {
     const key = projectKey.toUpperCase();
-    if (key === this.projectKey() && this.status() === 'loaded') return;
+    if (key === this.projectKey() && this.status() !== 'idle') return;
     this.projectKey.set(key);
-    this.status.set('loading');
     this.error.set(null);
-    if (this.project()?.key !== key) this.project.set(null);
     await this.fetch(key);
   }
 
@@ -83,17 +87,41 @@ export class ProjectContext {
 
   /// Applies a project returned by a write (PATCH, archive, unarchive), so every tab sees it at once.
   apply(project: ProjectDetail): void {
-    if (project.key === this.projectKey()) this.project.set(project);
+    if (project.key !== this.projectKey()) return;
+    this.project.set(project);
+    this.cache.set(projectCacheKey(project.key), project, [projectCacheKey(project.key)]);
   }
 
   private async fetch(key: string): Promise<void> {
+    const token = ++this.token;
+    const cacheKey = projectCacheKey(key);
+    const { cached, fresh } = this.cache.load(
+      cacheKey,
+      () => firstValueFrom(this.api.get<ProjectDetail>(`/projects/${key}`)),
+      [cacheKey],
+    );
+    if (cached) this.project.set(cached);
+    else if (this.project()?.key !== key) this.project.set(null);
+    this.status.set(this.project() ? 'loaded' : 'loading');
     try {
-      this.project.set(await firstValueFrom(this.api.get<ProjectDetail>(`/projects/${key}`)));
+      const project = await fresh;
+      if (token !== this.token) return;
+      this.project.set(project);
       this.error.set(null);
       this.status.set('loaded');
     } catch (error) {
-      this.error.set(toApiError(error));
-      this.status.set('error');
+      if (token !== this.token) return;
+      const apiError = toApiError(error);
+      this.error.set(apiError);
+      if (apiError.isNotFound || !this.project()) {
+        this.cache.invalidate(cacheKey);
+        this.project.set(null);
+        this.status.set('error');
+      }
     }
   }
+}
+
+function projectCacheKey(key: string): string {
+  return `project:${key}`;
 }

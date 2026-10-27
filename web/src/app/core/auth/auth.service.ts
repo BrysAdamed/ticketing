@@ -5,6 +5,7 @@ import { firstValueFrom } from 'rxjs';
 import { ApiClient } from '../api/api-client';
 import { ApiError } from '../api/api-error';
 import { SKIP_AUTH_REDIRECT } from '../api/api-error.interceptor';
+import { SwrCache } from '../api/swr-cache';
 import { LOGIN_PATH, UnauthenticatedHandler } from '../api/unauthenticated-handler';
 import { FeatureFlagService } from '../flags/feature-flag.service';
 import { CurrentUser, LoginRequest } from './current-user';
@@ -18,6 +19,7 @@ export class AuthService {
   private readonly api = inject(ApiClient);
   private readonly router = inject(Router);
   private readonly flags = inject(FeatureFlagService);
+  private readonly cache = inject(SwrCache);
 
   private readonly user = signal<CurrentUser | null>(null);
 
@@ -42,6 +44,7 @@ export class AuthService {
 
   async login(request: LoginRequest): Promise<CurrentUser> {
     const user = await firstValueFrom(this.api.post<CurrentUser>('/auth/login', request, quiet()));
+    this.cache.clear();
     this.user.set(user);
     await this.flags.load();
     return user;
@@ -65,5 +68,6 @@ export class AuthService {
   private clearSession(): void {
     this.user.set(null);
     this.flags.clear();
+    this.cache.clear();
   }
 }

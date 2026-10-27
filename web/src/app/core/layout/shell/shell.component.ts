@@ -1,4 +1,13 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  DestroyRef,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
 import { MatProgressBar } from '@angular/material/progress-bar';
 import {
   NavigationCancel,
@@ -8,6 +17,7 @@ import {
   Router,
   RouterOutlet,
 } from '@angular/router';
+import { SwrCache } from '../../api/swr-cache';
 import { LayoutState } from '../layout-state';
 import { PeekPanelComponent } from '../peek/peek-panel.component';
 import { PeekService } from '../peek/peek';
@@ -28,8 +38,12 @@ const PROGRESS_DELAY_MS = 150;
     <div class="main">
       <tk-topbar />
       <div class="progress">
-        @if (navigating()) {
-          <mat-progress-bar mode="indeterminate" aria-label="Loading page" />
+        @if (busy()) {
+          <mat-progress-bar
+            mode="indeterminate"
+            aria-label="Loading"
+            data-testid="top-progress"
+          />
         }
       </div>
       <div class="body">
@@ -99,14 +113,31 @@ export class ShellComponent {
   protected readonly layout = inject(LayoutState);
   protected readonly peek = inject(PeekService);
   protected readonly navigating = signal(false);
+  private readonly revalidating = signal(false);
+  /// The 2px top line: a slow navigation or a background refetch behind cached data (SwrCache).
+  protected readonly busy = computed(() => this.navigating() || this.revalidating());
 
   constructor() {
     const destroyRef = inject(DestroyRef);
+    const document = inject(DOCUMENT);
     inject(ShellActions).register(destroyRef);
+
+    const cache = inject(SwrCache);
+    let revalidateTimer: ReturnType<typeof setTimeout> | null = null;
+    effect(() => {
+      const pending = cache.revalidating();
+      if (revalidateTimer) clearTimeout(revalidateTimer);
+      revalidateTimer = null;
+      if (!pending) this.revalidating.set(false);
+      else revalidateTimer = setTimeout(() => this.revalidating.set(true), PROGRESS_DELAY_MS);
+    });
 
     let timer: ReturnType<typeof setTimeout> | null = null;
     const subscription = inject(Router).events.subscribe((event) => {
       if (event instanceof NavigationStart) {
+        const active = document.activeElement;
+        if (active instanceof HTMLElement && active.matches('tk-topbar .mat-mdc-tooltip-trigger'))
+          active.blur();
         timer ??= setTimeout(() => this.navigating.set(true), PROGRESS_DELAY_MS);
       } else if (
         event instanceof NavigationEnd ||
@@ -121,6 +152,7 @@ export class ShellComponent {
     destroyRef.onDestroy(() => {
       subscription.unsubscribe();
       if (timer) clearTimeout(timer);
+      if (revalidateTimer) clearTimeout(revalidateTimer);
     });
   }
 }

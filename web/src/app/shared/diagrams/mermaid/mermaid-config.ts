@@ -53,7 +53,7 @@ const THEME_VARIABLES: Record<DiagramTheme, Record<string, string | boolean>> = 
   },
 };
 
-/// The one Mermaid configuration used on screen and in PDF exports (ADR 0013): strict security, no
+/// The one Mermaid configuration used on screen and in PDF exports (ADR 0014): strict security, no
 /// HTML labels (labels stay SVG text, so the SVG survives DOMPurify and prints as vectors), dagre
 /// layout instead of the 670 KB ELK default, and the app palette for the given theme. Diagrams can
 /// pick another `layout`/`look` in front-matter, never the keys in `secure`.

@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Ticketing.Application.Abstractions;
+using Ticketing.Application.Agents;
 using Ticketing.Infrastructure.Activity;
 using Ticketing.Infrastructure.Attachments;
 using Ticketing.Infrastructure.Auth;
@@ -45,6 +46,11 @@ public static class DependencyInjection
         services.AddScoped<IAttachmentStore, PostgresAttachmentStore>();
         services.AddScoped<IIdempotency, IdempotencyService>();
         services.AddSingleton<IFeatureFlagStore, FeatureFlagStore>();
+
+        services.AddOptions<AgentOptions>()
+            .Configure(o => o.PublicUrl = configuration[AgentOptions.PublicUrlVariable])
+            .Validate(o => o.IsValid, $"{AgentOptions.PublicUrlVariable} must be an absolute http or https URL without query, for example https://tickets.example.com.")
+            .ValidateOnStart();
 
         services.AddOptions<PdfOptions>().Bind(configuration.GetSection(PdfOptions.Section));
         services.AddSingleton<PrintBundle>();

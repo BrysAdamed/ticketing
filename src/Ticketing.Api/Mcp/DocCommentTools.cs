@@ -47,7 +47,8 @@ public sealed class DocCommentTools
         handler.HandleAsync(new UpdateDocComment.Command(body, commentId), cancellationToken);
 
     [Authorize(Policy = AuthPolicies.CanWrite)]
-    [McpServerTool(Name = "delete_doc_comment", Destructive = true, Title = "Delete doc comment")]
+    [McpMeta(McpToolMeta.RequiresUserInteraction, true)]
+    [McpServerTool(Name = "delete_doc_comment",Destructive = true, Title = "Delete doc comment")]
     [Description("Deletes your own doc comment, or any doc comment if you are a project Owner. A 'Comment deleted' placeholder stays in place.")]
     public static Task<DocCommentDto> DeleteDocComment(
         DeleteDocComment.Handler handler,

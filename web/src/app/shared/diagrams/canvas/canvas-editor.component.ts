@@ -24,7 +24,7 @@ import { exportSceneSvg } from './canvas-export';
 type InitialData = NonNullable<ExcalidrawProps['initialData']>;
 type ClipboardData = Parameters<NonNullable<ExcalidrawProps['onPaste']>>[0];
 
-/// The Canvas editor: Excalidraw mounted as a lazily loaded React island (ADR 0013). `source` is
+/// The Canvas editor: Excalidraw mounted as a lazily loaded React island (ADR 0014). `source` is
 /// the scene to load; setting a different value reloads the editor (load a version, discard), so
 /// do not feed the editor's own output back into it. `changed` fires when the drawing changes;
 /// read the result with `serialize()` and the light SVG snapshot with `exportSvg()`. Images are

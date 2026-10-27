@@ -16,6 +16,7 @@ Technical decisions for Ticketing, in Michael Nygard's format (see [ADR 0001](00
 | [0010](0010-fractional-index-ranking.md) | Ordering with fractional-index rank keys | Accepted |
 | [0011](0011-testing-strategy.md) | Testing strategy | Accepted |
 | [0012](0012-deployment-docker-compose.md) | Deployment with Docker Compose | Accepted |
-| [0013](0013-diagram-editor-and-pdf-pipeline.md) | Diagram editor (Excalidraw island), Mermaid rendering and the PDF pipeline (print bundle in a Gotenberg sidecar) | Accepted |
+| [0013](0013-claude-deep-links-on-windows.md) | Launching Claude from the ticket page with Claude's deep links (verified on Windows) | Proposed |
+| [0014](0014-diagram-editor-and-pdf-pipeline.md) | Diagram editor (Excalidraw island), Mermaid rendering and the PDF pipeline (print bundle in a Gotenberg sidecar) | Accepted |
 
 To add a decision, copy the structure of an existing ADR, take the next number, set Status to `Proposed`, and add a row here. Never renumber or rewrite an accepted ADR; supersede it.

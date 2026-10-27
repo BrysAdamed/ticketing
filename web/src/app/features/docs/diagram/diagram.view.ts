@@ -210,7 +210,7 @@ export class DiagramView {
     if (rendered.exported && canStore) this.storeSnapshot(source, rendered.exported);
   }
 
-  /// A version written over MCP has no picture until a writer opens it (D-99): store the one the
+  /// A version written over MCP has no picture until a writer opens it (D-110): store the one the
   /// browser just made, without creating a version. Failures only cost the next writer an export.
   private storeSnapshot(source: DiagramSource, svg: string): void {
     this.docs.storeSnapshot(source.key, source.version, svg).subscribe({

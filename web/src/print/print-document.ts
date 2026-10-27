@@ -9,7 +9,7 @@ export const EMPTY_DIAGRAM = 'This diagram is empty.';
 export const EMPTY_FOLDER = 'This folder has no pages or diagrams.';
 const IMAGE_FILE = /^[a-z0-9][a-z0-9._-]*$/i;
 
-/// Builds the printable document from the export data (D-100): for a folder a cover and a linked
+/// Builds the printable document from the export data (D-111): for a folder a cover and a linked
 /// contents page, then every entry in tree order, each document on a new page with its title block.
 /// Diagrams are drawn afterwards by `drawDiagrams`.
 export function buildPrint(doc: Document, data: PrintData): HTMLElement[] {

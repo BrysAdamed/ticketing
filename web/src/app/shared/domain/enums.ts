@@ -173,6 +173,7 @@ export const ACTIVITY_ENTITY_TYPES = [
   'User',
   'PersonalAccessToken',
   'FeatureFlag',
+  'AgentPrompt',
 ] as const;
 export type ActivityEntityType = (typeof ACTIVITY_ENTITY_TYPES)[number];
 export const ACTIVITY_ENTITY_TYPE_LABELS: Record<ActivityEntityType, string> = {
@@ -184,4 +185,5 @@ export const ACTIVITY_ENTITY_TYPE_LABELS: Record<ActivityEntityType, string> = {
   User: 'User',
   PersonalAccessToken: 'Access token',
   FeatureFlag: 'Feature flag',
+  AgentPrompt: 'Agent prompt',
 };

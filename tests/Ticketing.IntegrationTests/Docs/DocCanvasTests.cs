@@ -13,7 +13,7 @@ using Ticketing.IntegrationTests.Tickets;
 
 namespace Ticketing.IntegrationTests.Docs;
 
-/// <summary>Canvas diagrams (TKT-18, spec 1.8, D-99): source rules, outline, the SVG picture per version and who may fill it.</summary>
+/// <summary>Canvas diagrams (TKT-18, spec 1.8, D-110): source rules, outline, the SVG picture per version and who may fill it.</summary>
 [Collection(nameof(DocsCollection))]
 public sealed class DocCanvasTests(TicketingApiFactory api)
 {

@@ -21,9 +21,9 @@ public sealed record DocExportContext(string ExportedBy, DateTimeOffset Now, Tim
 public sealed record DocPrintJob(PdfRenderRequest Request, string FileName, int Documents);
 
 /// <summary>
-/// Builds the print bundle of an export (D-100): the data the print script renders (content, references, embeds, Canvas
+/// Builds the print bundle of an export (D-111): the data the print script renders (content, references, embeds, Canvas
 /// pictures and page images), resolved for the exporting user with the same filters as the screen, so unreadable tickets,
-/// docs and diagrams are simply absent; plus Chromium's header and footer (D-101). Nothing in it points back at the API.
+/// docs and diagrams are simply absent; plus Chromium's header and footer (D-112). Nothing in it points back at the API.
 /// </summary>
 public static partial class DocPrint
 {

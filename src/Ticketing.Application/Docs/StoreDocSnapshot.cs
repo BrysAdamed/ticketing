@@ -9,7 +9,7 @@ using Ticketing.Domain.Docs;
 namespace Ticketing.Application.Docs;
 
 /// <summary>
-/// Stores the SVG picture of a Canvas version that has none yet (D-99): versions written over MCP get one when a writer
+/// Stores the SVG picture of a Canvas version that has none yet (D-110): versions written over MCP get one when a writer
 /// opens the diagram and the browser exports it. Creates no version and no activity; the first picture stored wins, later
 /// ones are ignored (<see cref="Result.Stored"/> false).
 /// </summary>

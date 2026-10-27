@@ -5,6 +5,7 @@ import { AuthService } from '@core/auth/auth.service';
 import { ToastService } from '@core/notify/toast.service';
 import { Backlog, BacklogItem, Ticket, TicketSummary } from '@core/tickets/ticket.models';
 import { TicketDeletion } from '@core/tickets/ticket-deletion';
+import { MoveChildren } from '@core/tickets/move-children';
 import { TicketsApi } from '@core/tickets/tickets.api';
 import { BacklogStore } from './backlog.store';
 
@@ -52,12 +53,14 @@ describe('BacklogStore', () => {
   let api: FakeApi;
   let toast: { error: ReturnType<typeof vi.fn>; success: ReturnType<typeof vi.fn> };
   let deletion: { delete: ReturnType<typeof vi.fn> };
+  let moveChildren: { ask: ReturnType<typeof vi.fn> };
   let store: BacklogStore;
 
   beforeEach(async () => {
     api = new FakeApi();
     toast = { error: vi.fn(), success: vi.fn() };
     deletion = { delete: vi.fn().mockResolvedValue([]) };
+    moveChildren = { ask: vi.fn().mockResolvedValue({ includeChildren: false, childKeys: [] }) };
     TestBed.configureTestingModule({
       providers: [
         provideZonelessChangeDetection(),
@@ -65,6 +68,7 @@ describe('BacklogStore', () => {
         { provide: TicketsApi, useValue: api },
         { provide: ToastService, useValue: toast },
         { provide: TicketDeletion, useValue: deletion },
+        { provide: MoveChildren, useValue: moveChildren },
         {
           provide: AuthService,
           useValue: {
@@ -269,6 +273,76 @@ describe('BacklogStore', () => {
     expect(store.onBoardsCount()).toBe(2);
     expect(toast.success.mock.calls[0][0]).toBe('2 tickets moved to Sprint 42');
     expect(toast.success.mock.calls[0][1].action.label).toBe('Undo');
+  });
+
+  it('asks about sub-tickets with the loaded child counts and moves them along', async () => {
+    // Arrange
+    api.backlogResult = {
+      ...api.backlogResult,
+      items: [item(1, { childCount: 2 }), item(2, { parentId: 'id-1' }), item(3)],
+    };
+    await store.reload();
+    moveChildren.ask.mockResolvedValue({ includeChildren: true, childKeys: ['WEB-2', 'WEB-9'] });
+    api.move.mockReturnValue(
+      of([summary(1, 'Ticket 1'), summary(2, 'Ticket 2'), summary(9, 'Elsewhere')]),
+    );
+
+    // Act
+    await store.moveToBoard(['id-1'], 'board-1', 'Sprint 42');
+
+    // Assert
+    expect(moveChildren.ask).toHaveBeenCalledWith({
+      keys: ['WEB-1'],
+      from: 'backlog',
+      childCounts: [2],
+      source: { kind: 'backlog' },
+      destination: { kind: 'board', name: 'Sprint 42' },
+    });
+    expect(api.move).toHaveBeenCalledWith({
+      keys: ['WEB-1'],
+      target: 'board-1',
+      from: 'backlog',
+      includeChildren: true,
+    });
+    expect(store.items().map((i) => i.key)).toEqual(['WEB-3']);
+    expect(store.onBoardsCount()).toBe(3);
+    expect(toast.success.mock.calls[0][0]).toBe('WEB-1 moved with 2 sub-tickets to Sprint 42');
+  });
+
+  it('brings the sub-ticket rows back when the move fails', async () => {
+    // Arrange
+    api.backlogResult = {
+      ...api.backlogResult,
+      items: [item(1, { childCount: 1 }), item(2, { parentId: 'id-1' }), item(3)],
+    };
+    await store.reload();
+    moveChildren.ask.mockResolvedValue({ includeChildren: true, childKeys: ['WEB-2'] });
+    const response = new Subject<TicketSummary[]>();
+    api.move.mockReturnValue(response);
+
+    // Act
+    const moving = store.moveToBoard(['id-1'], 'board-1', 'Sprint 42');
+    await flush();
+    const during = store.items().map((i) => i.key);
+    response.error(new Error('boom'));
+    await moving;
+
+    // Assert
+    expect(during).toEqual(['WEB-3']);
+    expect(store.items().map((i) => i.key)).toEqual(['WEB-1', 'WEB-2', 'WEB-3']);
+    expect(toast.error).toHaveBeenCalled();
+  });
+
+  it('moves nothing when the sub-ticket question is cancelled', async () => {
+    // Arrange
+    moveChildren.ask.mockResolvedValue(null);
+
+    // Act
+    await store.moveToBoard(['id-1'], 'board-1', 'Sprint 42');
+
+    // Assert
+    expect(api.move).not.toHaveBeenCalled();
+    expect(store.items()).toHaveLength(3);
   });
 });
 

@@ -1,4 +1,4 @@
-// Builds the PDF print bundle (D-100, ADR 0013): print.js (the SPA's markdown and Mermaid renderers,
+// Builds the PDF print bundle (D-111, ADR 0014): print.js (the SPA's markdown and Mermaid renderers,
 // one classic script), print.css (tokens + markdown + print rules) and the Inter fonts, into
 // dist/print (or the directory given as the first argument). Fails when Angular, Excalidraw or
 // React end up in the bundle: it must stay framework-free and never run the Canvas editor.

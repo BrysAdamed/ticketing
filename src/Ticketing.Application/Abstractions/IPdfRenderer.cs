@@ -1,7 +1,7 @@
 namespace Ticketing.Application.Abstractions;
 
 /// <summary>
-/// Prints an offline HTML bundle to PDF (D-100, ADR 0013). The renderer adds the print bundle itself (<c>print.js</c>,
+/// Prints an offline HTML bundle to PDF (D-111, ADR 0014). The renderer adds the print bundle itself (<c>print.js</c>,
 /// <c>print.css</c>, fonts); everything else it may show is in the request, already filtered for the exporting user,
 /// and it never calls back. Gotenberg in production, a fake in tests.
 /// </summary>
@@ -18,7 +18,7 @@ public interface IPdfRenderer
 }
 
 /// <param name="IndexHtml">The page: data as JSON in <c>#tk-print-data</c>, loading <c>print.css</c> and <c>print.js</c>.</param>
-/// <param name="HeaderHtml">Chromium's header template, the same on every page (D-101).</param>
+/// <param name="HeaderHtml">Chromium's header template, the same on every page (D-112).</param>
 /// <param name="FooterHtml">Chromium's footer template; <c>pageNumber</c> and <c>totalPages</c> spans are filled in.</param>
 /// <param name="Files">Further files next to the page: Canvas pictures and page images, by bundle file name.</param>
 public sealed record PdfRenderRequest(string IndexHtml, string HeaderHtml, string FooterHtml, IReadOnlyList<PdfFile> Files);

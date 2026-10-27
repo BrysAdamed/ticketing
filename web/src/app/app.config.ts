@@ -30,6 +30,7 @@ import { providePeekView } from '@core/layout/peek/peek';
 import { ShortcutService } from '@core/shortcuts/shortcut.service';
 import { ThemeService } from '@core/theme/theme.service';
 import { provideTicketCreation } from '@core/tickets/create-ticket';
+import { provideTicketHeaderAction } from '@core/tickets/ticket-header-actions';
 import { provideTicketDetailSection } from '@core/tickets/ticket-sections';
 import { provideAttachments } from '@features/attachments/attachments.providers';
 import { provideDocsTicketSection } from '@features/docs/docs.providers';
@@ -73,6 +74,14 @@ export const appConfig: ApplicationConfig = {
       loadComponent: () =>
         import('@features/test-cases/ticket-section/ticket-test-cases.component').then(
           (m) => m.TicketTestCasesComponent,
+        ),
+    }),
+    provideTicketHeaderAction({
+      id: 'delegate',
+      order: 10,
+      loadComponent: () =>
+        import('@features/agent-delegation/delegate-action.component').then(
+          (m) => m.DelegateActionComponent,
         ),
     }),
     { provide: TitleStrategy, useExisting: PageTitleStrategy },

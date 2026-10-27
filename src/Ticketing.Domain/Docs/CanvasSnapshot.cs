@@ -5,7 +5,7 @@ using Ticketing.Domain.Common;
 namespace Ticketing.Domain.Docs;
 
 /// <summary>
-/// The light SVG picture of one Canvas version that the editor exports on publish (D-99), shown by embeds, history and PDF.
+/// The light SVG picture of one Canvas version that the editor exports on publish (D-110), shown by embeds, history and PDF.
 /// It is served behind a sandbox CSP and shown in <c>&lt;img&gt;</c>, and is additionally checked here so that it holds
 /// no active content even where it is inlined: well-formed XML without a DTD, an <c>svg</c> root, no scripts, foreign
 /// objects or frames, no event handler attributes and only fragment, <c>data:image/</c>, <c>http(s)://</c> or app-relative

@@ -29,7 +29,7 @@ export interface EditConflict {
   regions: readonly MergeConflict[];
 }
 
-/// How an editor publishes. `textMerge: false` (Canvas, D-113) turns a stale base straight into
+/// How an editor publishes. `textMerge: false` (Canvas, D-124) turns a stale base straight into
 /// the conflict view instead of a 3-way line merge. `attach` adds fields to the publish of
 /// `content` (the Canvas picture of exactly that content).
 export interface EditSessionOptions {

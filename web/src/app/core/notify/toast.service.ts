@@ -1,11 +1,13 @@
 import { inject, Injectable } from '@angular/core';
 import { MatSnackBar, MatSnackBarRef } from '@angular/material/snack-bar';
 import { toApiError } from '../api/api-error';
-import { ToastComponent, ToastData, ToastIntent } from './toast.component';
+import { ToastAction, ToastComponent, ToastData, ToastIntent } from './toast.component';
 
 export interface ToastOptions {
   intent?: ToastIntent;
-  action?: { label: string; run: () => void };
+  action?: ToastAction;
+  /// Several actions, shown in order (for example "Copy prompt" and "Help"); `action` is the one-action shorthand.
+  actions?: readonly ToastAction[];
   durationMs?: number;
 }
 
@@ -16,10 +18,11 @@ export class ToastService {
   private readonly snackBar = inject(MatSnackBar);
 
   show(message: string, options: ToastOptions = {}): MatSnackBarRef<ToastComponent> {
-    const data: ToastData = { message, intent: options.intent ?? 'info', action: options.action };
+    const actions = options.actions ?? (options.action ? [options.action] : []);
+    const data: ToastData = { message, intent: options.intent ?? 'info', actions };
     return this.snackBar.openFromComponent(ToastComponent, {
       data,
-      duration: options.durationMs ?? (options.action ? 8000 : 5000),
+      duration: options.durationMs ?? (actions.length ? 8000 : 5000),
       horizontalPosition: 'end',
       verticalPosition: 'bottom',
       politeness: options.intent === 'danger' ? 'assertive' : 'polite',

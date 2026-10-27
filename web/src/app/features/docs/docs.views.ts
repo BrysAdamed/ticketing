@@ -73,7 +73,7 @@ export const DOCS_DIAGRAM_MERMAID_EDIT_VIEW = defineView({
   },
 });
 
-/// The Canvas editor (Excalidraw, ADR 0013), a lazy chunk that loads React and Excalidraw on top.
+/// The Canvas editor (Excalidraw, ADR 0014), a lazy chunk that loads React and Excalidraw on top.
 export const DOCS_DIAGRAM_CANVAS_EDIT_VIEW = defineView({
   viewId: 'docs.diagram.canvas.edit',
   variants: {

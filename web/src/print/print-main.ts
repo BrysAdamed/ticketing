@@ -7,7 +7,7 @@ declare global {
   }
 }
 
-/// Entry of the PDF print bundle (D-100): reads the export data the API embedded, renders it with
+/// Entry of the PDF print bundle (D-111): reads the export data the API embedded, renders it with
 /// the SPA's own markdown and Mermaid renderers, then flags readiness for Chromium. A failure is
 /// rethrown as an uncaught error, so the renderer refuses the export instead of printing half of it.
 async function main(): Promise<void> {

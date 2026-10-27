@@ -11,7 +11,7 @@ using Ticketing.Domain.Docs;
 namespace Ticketing.Infrastructure.Pdf;
 
 /// <summary>
-/// <see cref="IPdfRenderer"/> over Gotenberg's Chromium HTML route (ADR 0013): posts the page, header, footer, the print bundle
+/// <see cref="IPdfRenderer"/> over Gotenberg's Chromium HTML route (ADR 0014): posts the page, header, footer, the print bundle
 /// and the export's files, waits for <c>window.__printReady</c>, and fails on uncaught script errors.
 /// </summary>
 internal sealed partial class GotenbergPdfRenderer(

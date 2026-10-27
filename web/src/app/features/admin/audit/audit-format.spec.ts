@@ -38,6 +38,42 @@ describe('describeAuditEntry', () => {
     });
   });
 
+  it('describes an agent prompt change by version, and the mode only when it changed', () => {
+    // Act
+    const guardrails = describeAuditEntry(
+      entry({
+        entityType: 'AgentPrompt',
+        entityLabel: 'Guardrails',
+        action: 'agent.prompt.updated',
+        field: 'Guardrails',
+        oldValue: { version: 1, mode: 'Custom' },
+        newValue: { version: 2, mode: 'Custom' },
+      }),
+    );
+    const project = describeAuditEntry(
+      entry({
+        entityType: 'AgentPrompt',
+        entityLabel: 'TKT Bug',
+        action: 'agent.prompt.updated',
+        field: 'Bug',
+        oldValue: { version: 0, mode: 'Inherit' },
+        newValue: { version: 1, mode: 'Custom' },
+      }),
+    );
+
+    // Assert
+    expect(guardrails).toEqual({
+      verb: 'changed agent prompt',
+      target: 'Guardrails',
+      detail: 'v1 → v2',
+    });
+    expect(project).toEqual({
+      verb: 'changed agent prompt',
+      target: 'TKT Bug',
+      detail: '— → v1, Use default → Custom',
+    });
+  });
+
   it('falls back to the name stored in the entry when the entity is gone', () => {
     // Act
     const description = describeAuditEntry(

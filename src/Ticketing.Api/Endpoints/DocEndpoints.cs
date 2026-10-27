@@ -13,7 +13,7 @@ namespace Ticketing.Api.Endpoints;
 /// <summary>Project docs (spec 1.14): tree, recent, trash and create per project; one doc by key (<c>WEB-D-12</c>) or id; versions, history and restore; markdown export; my draft.</summary>
 public sealed partial class DocEndpoints : IEndpointModule
 {
-    /// <summary>Canvas pictures run nothing and load nothing but their own inline styles and data: fonts (ADR 0013).</summary>
+    /// <summary>Canvas pictures run nothing and load nothing but their own inline styles and data: fonts (ADR 0014).</summary>
     public const string SnapshotSecurityPolicy = "sandbox; default-src 'none'; style-src 'unsafe-inline'; font-src data:; img-src data:";
 
     public void MapEndpoints(RouteGroupBuilder api)

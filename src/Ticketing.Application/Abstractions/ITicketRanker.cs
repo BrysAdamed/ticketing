@@ -2,7 +2,7 @@ namespace Ticketing.Application.Abstractions;
 
 /// <summary>
 /// Computes fractional-index ranks inside a container (spec 6.6): a project backlog or a board for tickets, a docs folder
-/// (or the docs root) for doc nodes (D-97). Must run inside <c>InTransactionAsync</c>: each call takes a per-container lock
+/// (or the docs root) for doc nodes (D-108). Must run inside <c>InTransactionAsync</c>: each call takes a per-container lock
 /// held until commit, so concurrent placements into the same container get distinct, ordered ranks. When a key would get
 /// too long, or the neighbours are equal or out of order, the container is rebalanced in place (one UPDATE). Items in
 /// <c>movingTicketIds</c> (tickets or doc nodes) are never rewritten by a rebalance, so the tracked entities being moved

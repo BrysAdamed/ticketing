@@ -18,7 +18,7 @@ import { provideIcons } from '@ng-icons/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Breadcrumbs } from '@core/layout/breadcrumbs';
 import { PageTitleStrategy } from '@core/layout/page-title';
-import { MoveTarget } from '@core/tickets/move-targets';
+import { MoveTarget, MoveTargets } from '@core/tickets/move-targets';
 import { TicketEvents } from '@core/tickets/ticket-events';
 import { PeekService } from '@core/layout/peek/peek';
 import { ConfirmService } from '@core/notify/confirm.service';
@@ -26,6 +26,7 @@ import { ToastService } from '@core/notify/toast.service';
 import { Shortcut, ShortcutService } from '@core/shortcuts/shortcut.service';
 import { ProjectPeople } from '@core/tickets/project-people';
 import { TicketAttachments } from '@core/tickets/ticket-attachments';
+import { TicketHeaderHost } from '@core/tickets/ticket-header-actions';
 import { TICKET_DETAIL_SECTIONS } from '@core/tickets/ticket-sections';
 import { TicketLink, TicketRef } from '@core/tickets/ticket.models';
 import { TICKET_TYPE_LABELS } from '@shared/domain/enums';
@@ -40,6 +41,7 @@ import { ActivityTab, TicketActivityComponent } from './ticket-activity.componen
 import { NewChild, TicketChildrenComponent } from './ticket-children.component';
 import { FieldEdit, TicketFieldsComponent } from './ticket-fields.component';
 import { NewLink, TicketLinksComponent } from './ticket-links.component';
+import { TicketHeaderActionsHostComponent } from './ticket-header-actions-host.component';
 import { TicketSectionsHostComponent } from './ticket-sections-host.component';
 import { TicketDetailStore } from './ticket-detail.store';
 import { TicketDescriptionComponent, TicketTitleComponent } from './ticket-text.component';
@@ -65,13 +67,14 @@ export type TicketPresentation = 'page' | 'peek';
     TicketActivityComponent,
     TicketChildrenComponent,
     TicketFieldsComponent,
+    TicketHeaderActionsHostComponent,
     TicketLinksComponent,
     TicketSectionsHostComponent,
     TicketTitleComponent,
     TicketDescriptionComponent,
     TicketWatchComponent,
   ],
-  providers: [TicketDetailStore],
+  providers: [TicketDetailStore, TicketHeaderHost],
   viewProviders: [provideIcons(TICKET_ICONS)],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
@@ -85,6 +88,7 @@ export type TicketPresentation = 'page' | 'peek';
 })
 export class TicketDetailView {
   protected readonly store = inject(TicketDetailStore);
+  protected readonly headerHost = inject(TicketHeaderHost);
   private readonly confirm = inject(ConfirmService);
   private readonly toast = inject(ToastService);
   private readonly clipboard = inject(Clipboard);
@@ -94,6 +98,7 @@ export class TicketDetailView {
   private readonly breadcrumbs = inject(Breadcrumbs);
   private readonly pageTitle = inject(PageTitleStrategy);
   private readonly events = inject(TicketEvents);
+  private readonly moveTargets = inject(MoveTargets);
 
   readonly ticketKey = input.required<string>();
   protected readonly uploadHandler = inject(TicketAttachments).markdownUploader(() =>
@@ -248,9 +253,16 @@ export class TicketDetailView {
         handler: () => this.copyLink(),
       },
     ];
+    this.headerHost.refreshRequests
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => void this.store.reload());
+    effect(() =>
+      this.headerHost.shortcutsActive.set(!(this.presentation() === 'page' && this.peek.isOpen())),
+    );
+
     const shortcutService = inject(ShortcutService);
     effect((onCleanup) => {
-      if (this.presentation() === 'page' && this.peek.isOpen()) return;
+      if (!this.headerHost.shortcutsActive()) return;
       const removers = untracked(() => shortcuts.map((s) => shortcutService.register(s)));
       onCleanup(() => removers.forEach((remove) => remove()));
     });
@@ -301,8 +313,14 @@ export class TicketDetailView {
     if (this.store.ticket()?.permissions.canDelete) await this.store.delete();
   }
 
-  protected onMoved(target: MoveTarget): void {
-    void this.store.moveTo(target);
+  protected async onMoved(target: MoveTarget): Promise<void> {
+    const ticket = this.store.ticket();
+    if (!ticket) return;
+    const options =
+      target === 'backlog'
+        ? []
+        : await this.moveTargets.options(ticket.projectKey, ticket.location).catch(() => []);
+    await this.store.moveTo(target, options.find((o) => o.value === target)?.label);
   }
 
   /// Title and description saves carry If-Match; a conflict offers to reload and keeps the editor open.

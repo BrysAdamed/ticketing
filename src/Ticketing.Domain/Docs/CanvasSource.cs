@@ -5,7 +5,7 @@ using Ticketing.Domain.Common;
 namespace Ticketing.Domain.Docs;
 
 /// <summary>
-/// The publish rules of a Canvas diagram's source, an Excalidraw scene (spec 1.8, D-99): a JSON object of type
+/// The publish rules of a Canvas diagram's source, an Excalidraw scene (spec 1.8, D-110): a JSON object of type
 /// <c>excalidraw</c> with an <c>elements</c> array of at most <see cref="MaxElements"/>, no embedded files or images, no web
 /// embeds, and element links that are <c>http(s)://</c> or app-relative. Blank source is an empty canvas.
 /// </summary>

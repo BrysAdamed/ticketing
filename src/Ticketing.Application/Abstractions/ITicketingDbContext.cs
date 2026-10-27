@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Ticketing.Domain.Activity;
+using Ticketing.Domain.Agents;
 using Ticketing.Domain.Attachments;
 using Ticketing.Domain.Boards;
 using Ticketing.Domain.Collaboration;
@@ -65,6 +66,10 @@ public interface ITicketingDbContext
     DbSet<FeatureFlag> FeatureFlags { get; }
 
     DbSet<IdempotencyRecord> IdempotencyRecords { get; }
+
+    DbSet<AgentPromptTemplate> AgentPromptTemplates { get; }
+
+    DbSet<AgentPromptTemplateVersion> AgentPromptTemplateVersions { get; }
 
     DbSet<DocNode> DocNodes { get; }
 

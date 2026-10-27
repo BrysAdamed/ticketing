@@ -15,7 +15,7 @@ namespace Ticketing.Application.TestCases;
 /// </summary>
 public static class UpdateTestCase
 {
-    private const string FieldChanged = "testCase.field.changed";
+    public const string FieldChanged = "testCase.field.changed";
 
     public sealed record Command : IValidatable
     {

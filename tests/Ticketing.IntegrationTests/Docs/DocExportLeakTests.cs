@@ -16,7 +16,7 @@ namespace Ticketing.IntegrationTests.Docs;
 /// <summary>
 /// PDF exports never leak (spec 1.5, docs refinement 1.11): private docs answer outsiders like missing ones, and an export
 /// carries only what the exporter can read. The assertions run on the bundle posted to the renderer, which is everything
-/// the PDF could ever show (D-100).
+/// the PDF could ever show (D-111).
 /// </summary>
 [Collection(nameof(DocsCollection))]
 public sealed class DocExportLeakTests(TicketingApiFactory api)

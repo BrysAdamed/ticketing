@@ -48,6 +48,7 @@ Configuration (environment variables override `appsettings*.json`):
 | `RateLimiting__LoginPermitsPerMinute` | `POST /auth/login` attempts per client IP (default 20) |
 | `ForwardedHeaders__KnownNetworks` | Comma-separated CIDR ranges of proxies whose `X-Forwarded-For`/`-Proto` are believed (compose: `TICKETING_TRUSTED_PROXIES`, default Docker's private pools). Loopback is always trusted. |
 | `ForwardedHeaders__ForwardLimit` | Proxy hops to unwrap (default 1 = nginx; 2 with a TLS proxy in front, whose address must then be trusted too) |
+| `TICKETING_PUBLIC_URL` | This instance's public origin, for example `http://localhost:8090`. Agent prompts build `{{instance.url}}` and `{{ticket.url}}` from it, never from request headers ([spec §13.4](../product/01-refined-spec.md#134-template-language)). While it is unset, agent delegation is off for everyone (`agent.disabled`, [spec §13.2](../product/01-refined-spec.md#132-feature-flag)); a value that is not an absolute http(s) URL stops startup. Compose passes it from `.env`; `appsettings.Development.json` sets `http://localhost:4200` for `ng serve`. |
 | `TICKETING_SEED_DEMO` | `true` seeds [demo data](#demo-data) at startup into a workspace without projects (default false; development and demos only) |
 | `TICKETING_DEMO_PASSWORD` | Password of the demo users (12+ characters, not a common password); without it their set-password links are logged |
 | `Pdf__Password` | Basic-auth password of the PDF renderer (compose: `PDF_RENDERER_PASSWORD`, shared with the `pdf` service). Empty: PDF export answers 503 `doc.export.unavailable` and the `pdf` container idles. |
@@ -57,7 +58,7 @@ Configuration (environment variables override `appsettings*.json`):
 
 Logs are JSON on the console (`simple` in Development).
 
-### PDF export (D-100, D-116)
+### PDF export (D-111, D-127)
 
 The API image builds the print bundle in a Node stage (`npm run build:print` → `/app/print`) and posts exports to the `pdf` service (Gotenberg 8.39 Chromium) on the internal `render` network, which has no egress and no published port. To try exports with `dotnet run`, build the bundle once (`cd web && npm run build:print`), start a renderer and pass the same password:
 
@@ -79,7 +80,7 @@ For development, screenshots and demos only, never on a real installation. The s
 - Boards `Sprint 42` (PAY + WEB) and `Ops Kanban` (OPS).
 - 26 test cases (Manual, Automatic and New) and two PAY regression sessions: `Release 1.4.0` (completed, one failed item with its bug) and `Release 1.5.0` (in progress).
 - 3 feature flags.
-- A docs tree per project (24 docs): two folders, four pages with callouts, tables, code, ticket mentions and doc links, a Mermaid and a Canvas diagram embedded in a page (the Canvas with its picture, so PDF export prints it), later versions with change notes and 8 page comments (D-117).
+- A docs tree per project (24 docs): two folders, four pages with callouts, tables, code, ticket mentions and doc links, a Mermaid and a Canvas diagram embedded in a page (the Canvas with its picture, so PDF export prints it), later versions with change notes and 8 page comments (D-128).
 
 Trigger it explicitly, in either way:
 
@@ -160,7 +161,7 @@ Rules:
 6. **Use the shared helpers for numbering, ranking and retries.**
    - Numbered entities (tickets, test cases, sessions, docs): call `IProjectCounters.NextAsync(projectId, CounterKind.X)` inside `db.InTransactionAsync(...)`, together with the insert.
    - Placement: every user-driven placement change (backlog reorder, backlog to board and back, board to board, column change) goes through `MoveTickets.Handler` (`POST /tickets/move`, MCP `move_ticket`, D-77). Don't add another endpoint that ranks or moves tickets; extend `MoveTickets.Command` instead. Board-level relocations (archive carry-over, unlink, delete, project archive) use `BoardRelocation`.
-   - Ranks: use `ITicketRanker` (`BottomAsync`, `TopAsync`, `BetweenAsync`, and `PlaceManyAsync` for a block of tickets at a `RankAnchor`: top, bottom, before or after a ticket) inside the same transaction; it throws without one. Docs use the same ranker with `RankContainer.DocFolder(projectId, parentId)`; their tree changes go through `DocTree.LockAsync` first (D-98).
+   - Ranks: use `ITicketRanker` (`BottomAsync`, `TopAsync`, `BetweenAsync`, and `PlaceManyAsync` for a block of tickets at a `RankAnchor`: top, bottom, before or after a ticket) inside the same transaction; it throws without one. Docs use the same ranker with `RankContainer.DocFolder(projectId, parentId)`; their tree changes go through `DocTree.LockAsync` first (D-109).
    - Tickets: resolve user input with `TicketLookup.ReadAsync/WriteAsync/OwnerAsync` (key or id; 404 for unreadable, `ticket.deleted` for deleted). Features that create tickets (bugs from regressions) inject `CreateTicket.Handler` and call `HandleAsync`, or `CreateAsync` inside their own transaction; `Placement = BacklogPlacement.Top` puts the ticket at the backlog top.
      - Each call takes a per-container advisory lock held until commit, so parallel placements get distinct ranks.
      - Pass the tickets being moved as `movingTicketIds`. They are excluded from neighbour lookup and from rebalancing.

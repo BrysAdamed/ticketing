@@ -1,0 +1,9 @@
+Fix the bug {{ticket.key}}. Reproduce it before you change anything.
+
+1. Read it with get_ticket: steps, expected and actual behaviour, version, comments, links and test cases. If it came from a regression session, read the session and its test case too.
+2. Work in a git worktree for this ticket (create one if needed), with the branch named as CLAUDE.md asks. Set the ticket to InProgress.
+3. Reproduce it locally, never on a shared or production system, first as an automated test that fails for the reason the ticket describes, at the lowest level that shows it. If you cannot reproduce it, do not guess at a fix: comment what you tried and what you need from the reporter, and ask the developer.
+4. Find the root cause, not only where it surfaces, and make the smallest change that removes it. File tickets for other places with the same cause that you do not fix.
+5. The new test and the full checks from CLAUDE.md pass. If the bug showed in the UI, repeat the original steps in the browser to confirm it is gone.
+6. Keep the regression test. Correct the steps of a wrong test case, or add one with create_test_case (ticketKey {{ticket.key}}) if the scenario is worth re-checking. Do not record regression results.
+7. {{finish}} Your report states the root cause, the test that failed before and passes now, and the affected versions if known.

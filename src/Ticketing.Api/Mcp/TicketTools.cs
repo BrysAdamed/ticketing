@@ -126,6 +126,7 @@ public sealed class TicketTools
             cancellationToken);
 
     [Authorize(Policy = AuthPolicies.CanWrite)]
+    [McpMeta(McpToolMeta.RequiresUserInteraction, true)]
     [McpServerTool(Name = "delete_ticket", Destructive = true, Title = "Delete ticket")]
     [Description("Soft-deletes a ticket (project Owners only). Fails with ticket.hasChildren while it has child tickets. The key is never reused.")]
     public static Task<DeleteTicket.Result> DeleteTicket(
@@ -168,6 +169,7 @@ public sealed class TicketTools
         handler.HandleAsync(new LinkTickets.Command(targetKey, type, sourceKey), cancellationToken);
 
     [Authorize(Policy = AuthPolicies.CanWrite)]
+    [McpMeta(McpToolMeta.RequiresUserInteraction, true)]
     [McpServerTool(Name = "unlink_tickets", Destructive = true, Title = "Unlink tickets")]
     [Description("Removes the link sourceKey -[type]-> targetKey. Type: " + LinkTypes + ".")]
     public static Task<UnlinkTickets.Result> UnlinkTickets(

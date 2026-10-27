@@ -36,6 +36,12 @@ const CALLOUT_TITLES: Record<CalloutKind, string> = {
 const MENTION_ATTR = 'data-tk-mention';
 const SERVER_PATHS = /^\/(\/|api\/|attachments\/|mcp|scalar|health)/;
 
+/// The only URLs a rendered link or image may carry: http(s), mailto and scheme-less (relative,
+/// root, fragment) URLs. DOMPurify's default list also lets tel:, sms:, xmpp: and friends through;
+/// an explicit allowlist keeps app-launching schemes such as `claude-cli:`, `claude:`, `vscode:`
+/// or `ticketing-agent:` out of ticket text, whatever DOMPurify allows by default.
+export const SAFE_URL = /^(?:(?:https?|mailto):|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i;
+
 const escapeHtml = (text: string) =>
   text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -69,11 +75,11 @@ const marked = new Marked({
 });
 
 /// Renders user markdown (CommonMark + GFM) to sanitized HTML: raw HTML is shown as text,
-/// output goes through DOMPurify, ticket and doc keys become links (`linkReferences`), external links
-/// open in a new tab, GFM alerts (`> [!NOTE]` …) become callouts and mention tokens of the given
-/// users become chips (D-96; built after sanitizing, names as text). Safe to bind with
-/// [innerHTML] after DomSanitizer bypass. It must stay free of Angular imports: the PDF print
-/// bundle uses it too (D-100).
+/// output goes through DOMPurify with only `SAFE_URL` links and images, ticket and doc keys become
+/// links (`linkReferences`), external links open in a new tab, GFM alerts (`> [!NOTE]` …) become
+/// callouts and mention tokens of the given users become chips (D-96; built after sanitizing,
+/// names as text). Safe to bind with [innerHTML] after DomSanitizer bypass. It must stay free of
+/// Angular imports: the PDF print bundle uses it too (D-111).
 export function renderMarkdown(
   source: string | null | undefined,
   options: RenderOptions = {},
@@ -84,6 +90,7 @@ export function renderMarkdown(
     RETURN_DOM_FRAGMENT: true,
     FORBID_TAGS: ['style', 'form', 'button', 'textarea', 'select'],
     FORBID_ATTR: ['style'],
+    ALLOWED_URI_REGEXP: SAFE_URL,
   });
   renderMentions(fragment, options.mentions);
   renderCallouts(fragment);

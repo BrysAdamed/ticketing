@@ -35,7 +35,7 @@ test.describe('Canvas diagrams', () => {
         const canvas = new DocCanvasPage(page);
         const external: string[] = [];
         // Excalidraw lists its CDN as a second font source; the page CSP blocks it before it is
-        // sent (ADR 0013), so no external request ever gets a response.
+        // sent (ADR 0014), so no external request ever gets a response.
         page.on('response', (response) => {
             const url = response.url();
             if (/^https?:/.test(url) && new URL(url).origin !== new URL(BASE_URL).origin)

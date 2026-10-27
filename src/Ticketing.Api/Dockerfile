@@ -10,7 +10,7 @@ RUN dotnet restore src/Ticketing.Api/Ticketing.Api.csproj
 COPY src/ src/
 RUN dotnet publish src/Ticketing.Api/Ticketing.Api.csproj -c Release -o /app --no-restore
 
-# The PDF print bundle (D-100): the SPA's markdown and Mermaid renderers as one framework-free script, posted to the renderer.
+# The PDF print bundle (D-111): the SPA's markdown and Mermaid renderers as one framework-free script, posted to the renderer.
 FROM node:24.22.1-alpine AS print
 WORKDIR /web
 COPY web/package.json web/package-lock.json ./

@@ -58,7 +58,7 @@ Deployment target: Docker Compose on an internal VM (API + Angular static files 
 | `ExecutionMode` | `Manual`, `Automatic` | Snapshot of the test case status at session start. |
 | `WriteChannel` | `Web`, `Api`, `Mcp` | |
 | `PatScope` | `ReadOnly`, `ReadWrite` | (I-10) |
-| `ActivityEntityType` | `Ticket`, `TestCase`, `RegressionSession`, `Project`, `Board`, `User`, `PersonalAccessToken`, `FeatureFlag` | |
+| `ActivityEntityType` | `Ticket`, `TestCase`, `RegressionSession`, `Project`, `Board`, `User`, `PersonalAccessToken`, `FeatureFlag`, `AgentPrompt` | `AgentPrompt`: section 13. |
 | `NotificationKind` | `Assigned`, `Mentioned`, `Commented`, `StatusChanged`, `PriorityRaised`, `Moved`, `Deleted`, `RegressionItemAssigned` | Headline rank when merged (6.16): Mentioned > Assigned > RegressionItemAssigned > Deleted > StatusChanged > PriorityRaised > Commented > Moved. |
 
 There is no `Role` table. Global and project roles are fixed enums and the permission rules are code (section 5). Custom roles are out of scope (D-08).
@@ -454,7 +454,7 @@ A PAT acts as its user, with the user's current permissions, intersected with it
 - Maximum depth is 3 levels (for example Epic > UserStory > Technical). Setting a parent that would create a 4th level fails with `ticket.parent.depth`.
 - Cycles are rejected with `ticket.parent.cycle` (the depth rule already prevents most, the server checks explicitly).
 - Changing a ticket's type to `Epic` fails if it has a parent. Changing it from `Epic` is allowed if the depth rule still holds for its subtree.
-- Children are independent of the parent's status, board and backlog placement. No automatic status roll-up.
+- Children are independent of the parent's status, board and backlog placement. No automatic status roll-up. A move may bring the sub-tickets that are still in the place the parent is leaving and not Done along, on request (D-107).
 - The ticket view lists direct children with status and a progress bar by status category.
 
 ### 6.4 Backlog and boards
@@ -665,7 +665,7 @@ Every count links to the search that produces it. Target: dashboard loads in und
 
 - Streamable HTTP MCP endpoint at `/mcp`, hosted in the same API process. No local install. Claude Code connects with `claude mcp add --transport http ticketing https://<host>/mcp --header "Authorization: Bearer tkt_..."`.
 - Every call runs as the PAT's user with that user's permissions and channel `Mcp`.
-- `tools/list` returns only tools allowed by the token scope. Read tools carry `readOnlyHint: true`. `delete_ticket`, `delete_comment`, `unlink_tickets`, `cancel_regression_session`, `archive_board`, `delete_doc` and `delete_doc_comment` carry `destructiveHint: true`.
+- `tools/list` returns only tools allowed by the token scope. Read tools carry `readOnlyHint: true`. `delete_ticket`, `delete_comment`, `unlink_tickets`, `cancel_regression_session`, `archive_board`, `delete_doc` and `delete_doc_comment` carry `destructiveHint: true` and `_meta["anthropic/requiresUserInteraction"]: true`, so Claude Code asks the user before every call even in a session that would otherwise run tools unasked (D-102). Every destructive tool carries both; an integration test on `tools/list` keeps the two sets equal.
 
 ### 9.2 Conventions for all tools
 
@@ -691,9 +691,9 @@ Projects
 | Tool | Inputs | Output |
 | --- | --- | --- |
 | `list_projects` | optional `query`, `includeArchived` (default false) | Readable projects: key, name, visibility, my effective role, open ticket count. |
-| `get_project` | `projectKey` | Project fields, members with roles, linked boards. |
+| `get_project` | `projectKey` | Project fields, members with roles, linked boards; `agent` (the agent setup, 13.3) or null while agent delegation is not available to the caller. |
 | `create_project` | `key`, `name`, optional `description`, `visibility` | Created project. |
-| `update_project` | `projectKey`, any of `name`, `description`, `visibility` | Updated project. Owner only. |
+| `update_project` | `projectKey`, any of `name`, `description`, `visibility` | Updated project. Owner only. The agent setup is not an input: it changes only in the web app (13.6). |
 | `get_field_hints` | `projectKey`, `field` (`labels` or `version`), optional `prefix` | Up to 20 values, most recent first. |
 | `get_project_stats` | `projectKey`, optional `version` | All dashboard widgets from section 7 as JSON. |
 
@@ -708,7 +708,8 @@ Tickets
 | `create_ticket` | `projectKey`, `title`, `type`, optional `description`, `status`, `priority`, `severity`, `storyPoints`, `version`, `labels`, `parentKey`, `assignee`, `boardId`, `idempotencyKey` | Created ticket (summary + rowVersion). |
 | `create_tickets` | `projectKey`, `tickets` (1..50 objects with the `create_ticket` fields except `projectKey`; `parentKey` may also reference an earlier item in the batch as `#index`) | Created ticket summaries in input order. All-or-nothing (I-26). |
 | `update_ticket` | `key`, any of `title`, `description`, `type`, `status`, `resolution`, `priority`, `severity`, `storyPoints`, `version`, `labels` (replace), `addLabels`, `removeLabels`, `parentKey` (null to clear), `assignee` (null to clear), `reporter`, optional `expectedVersion` | Updated ticket. Null clears an optional field; omitted leaves it. |
-| `move_ticket` | `keys` (1..100), `target` (`backlog` or a board id), optional `status` (target column), optional `beforeKey`, `afterKey` or `position` (`Top`/`Bottom`) | Moved ticket summaries. |
+| `move_ticket` | `keys` (1..100), `target` (`backlog` or a board id), optional `status` (target column), optional `beforeKey`, `afterKey` or `position` (`Top`/`Bottom`), optional `includeChildren` (D-107) | Moved ticket summaries, sub-tickets included. |
+| `get_move_children` | `keys` (1..100) | Per ticket, the sub-tickets that `includeChildren` would move and the counts that stay (`onOtherBoard`, `inBacklog`, `done`; D-107). |
 | `delete_ticket` | `key` | Confirmation. Owner only. |
 | `get_children_graph` | `key` | `{ key, nodes, edges }`: the children plus readable linked tickets outside the parent (`external`), each with `blocked`; edges `{ linkId, type, from, to }`. Unreadable and deleted tickets are left out (D-95). |
 | `get_ticket_history` | `key`, `limit`, `cursor` | Activity entries: when, actor, channel, action, field, old, new. |
@@ -807,7 +808,7 @@ Out of MCP in v1: user administration, PAT management, feature flags, project de
 
 ## 12. Docs
 
-Each project has documentation: a tree of folders, markdown pages and diagrams (Mermaid or Canvas). The full feature spec, including the UI, links, search, history and PDF export, is [03-docs-refinement.md §1](03-docs-refinement.md#1-refined-v1-of-docs-spec); this section states the rules as built (epic TKT-10: TKT-12 to TKT-22, decisions D-97 to D-117).
+Each project has documentation: a tree of folders, markdown pages and diagrams (Mermaid or Canvas). The full feature spec, including the UI, links, search, history and PDF export, is [03-docs-refinement.md §1](03-docs-refinement.md#1-refined-v1-of-docs-spec); this section states the rules as built (epic TKT-10: TKT-12 to TKT-22, decisions D-108 to D-128).
 
 ### 12.1 Model and keys
 
@@ -828,7 +829,7 @@ Each project has documentation: a tree of folders, markdown pages and diagrams (
 | The parent must be a folder of the same project | `doc.parent.invalid` (400) |
 | `beforeKey`/`afterKey` must be a sibling in the target folder | `doc.rank.anchor` |
 
-- Every tree change takes the project's docs tree lock first and ranks through the shared ranker (D-98), so concurrent creates and moves cannot break the limits.
+- Every tree change takes the project's docs tree lock first and ranks through the shared ranker (D-109), so concurrent creates and moves cannot break the limits.
 - Create places at the bottom unless `position: Top` or an anchor is given. Duplicate (pages and diagrams) places "Copy of …" (then " (2)" …) right after the original at version 1. Move without `parent` reorders inside the current folder.
 
 ### 12.3 Permissions
@@ -886,7 +887,7 @@ Section [1.5 of the refinement](03-docs-refinement.md#15-permissions-mapped-to-5
 
 Downloading (`GET /attachments/{id}`) and deleting (`DELETE /attachments/{id}`) a page attachment use the ticket attachment endpoints.
 
-The doc URL in the SPA is `/projects/{PK}/docs/{KEY}/{slug}`; the slug is cosmetic and replaced when stale. `/docs/{KEY}` and the `/p/{PK}/docs/{KEY}/{slug}` form that the API returns as `url` redirect to it (D-102).
+The doc URL in the SPA is `/projects/{PK}/docs/{KEY}/{slug}`; the slug is cosmetic and replaced when stale. `/docs/{KEY}` and the `/p/{PK}/docs/{KEY}/{slug}` form that the API returns as `url` redirect to it (D-113).
 
 ### 12.7 Search
 
@@ -895,31 +896,31 @@ The doc URL in the SPA is `/projects/{PK}/docs/{KEY}/{slug}`; the slug is cosmet
 - Sort `relevance` (the default with `q`): an exact key first, then titles containing the text, then `ts_rank`; at most 100 (`limit`), no cursor (a cursor is 400). Sort `updated` (the default without `q`): newest first by `updatedAt`, `id` with a keyset cursor. The response is `{ items, nextCursor, total, totalCapped, sort }`; `total` is counted on the first page only, capped at 1 000.
 - Each item: id, key, projectKey, kind, diagramFormat, title, path, folderPath, version, updatedBy, updatedAt, url and `snippet: { text, highlights: [{ start, length }] }` (null for folders and empty docs). The snippet is plain text, never HTML: up to 30 words around the best match (`ts_headline`), whitespace collapsed, markdown emphasis and heading marks removed, at most 240 characters; ranges are UTF-16 offsets. Without `q` it is the start of the doc.
 - Quick jump (`GET /quick-jump`, 6.8) also answers doc keys (exact match first) and lists up to 5 docs by relevance after the tickets, each with `docKind`, `diagramFormat`, `folderPath` and `snippet`.
-- `scope=Docs` keeps only docs (an exact doc key, then up to 20 by relevance) and `scope=Tickets` only tickets (an exact ticket key, then up to 20 by title); any other value is 400. In the command palette the prefixes `p:` and `t:` set these scopes: only the Docs or the Tickets group (and its "Search … for" row) is shown, commands are hidden, `p:` alone lists the recent docs, and the palette footer shows both hints (D-104).
-- p95 under 150 ms with 20 000 docs and 200 000 tickets (`DocSearchPerformanceTests`, D-103).
+- `scope=Docs` keeps only docs (an exact doc key, then up to 20 by relevance) and `scope=Tickets` only tickets (an exact ticket key, then up to 20 by title); any other value is 400. In the command palette the prefixes `p:` and `t:` set these scopes: only the Docs or the Tickets group (and its "Search … for" row) is shown, commands are hidden, `p:` alone lists the recent docs, and the palette footer shows both hints (D-115).
+- p95 under 150 ms with 20 000 docs and 200 000 tickets (`DocSearchPerformanceTests`, D-114).
 
 
 ### 12.8 Reading and editing pages (web)
 
-- **Reader** (`docs.page`): title, a meta line (key, `vN`, "Edited by X, 2 h ago", path, "3 comments" linking to the thread, and who else is editing), the rendered markdown, "On this page" (h1–h3, scroll spy) in a 220 px right rail from 1440 px (`]` hides it, remembered per browser; whenever it is not shown, a page bar button opens it as a popover, and below 1440 px `]` toggles that popover; D-111), and the page sections (attachments, "Tickets mentioned", "Linked from" and comments; 12.9, 12.11). Headings get stable ids (`#heading-slug`, duplicates `-2`, `-3`); hovering one shows `#`, which scrolls there and copies the link. GFM alerts (`> [!NOTE]`, `TIP`, `IMPORTANT`, `WARNING`, `CAUTION`) render as callouts everywhere markdown renders. Fenced code with a known language is highlighted (highlight.js, loaded lazily, tickets included); doc pages add a header with the language and Copy. The page bar has Download .md and Edit (`E`); `Ctrl .` / `Ctrl Shift .` copy the doc's key / link, and `Ctrl \` hides or shows the tree panel (remembered per browser; D-109). The open doc is refetched every 30 s, so "Jane is editing" appears within 30 s of her first autosave and disappears 10 minutes after her last one.
+- **Reader** (`docs.page`): title, a meta line (key, `vN`, "Edited by X, 2 h ago", path, "3 comments" linking to the thread, and who else is editing), the rendered markdown, "On this page" (h1–h3, scroll spy) in a 220 px right rail from 1440 px (`]` hides it, remembered per browser; whenever it is not shown, a page bar button opens it as a popover, and below 1440 px `]` toggles that popover; D-122), and the page sections (attachments, "Tickets mentioned", "Linked from" and comments; 12.9, 12.11). Headings get stable ids (`#heading-slug`, duplicates `-2`, `-3`); hovering one shows `#`, which scrolls there and copies the link. GFM alerts (`> [!NOTE]`, `TIP`, `IMPORTANT`, `WARNING`, `CAUTION`) render as callouts everywhere markdown renders. Fenced code with a known language is highlighted (highlight.js, loaded lazily, tickets included); doc pages add a header with the language and Copy. The page bar has Download .md and Edit (`E`); `Ctrl .` / `Ctrl Shift .` copy the doc's key / link, and `Ctrl \` hides or shows the tree panel (remembered per browser; D-120). The open doc is refetched every 30 s, so "Jane is editing" appears within 30 s of her first autosave and disappears 10 minutes after her last one.
 - **Draft banner**: when I have a draft, the reader shows "You have unpublished changes from 10:42" with Continue editing and Discard (confirmed); the tree shows the pencil dot.
 - **Editor** (`?mode=edit`, writers only; `docs.page.edit`, a lazy chunk): edit bar (draft status, base version, "Jane published v8", presence, Write / Split / Preview with `Mod+Shift+P`, Discard, Close `Esc`, Publish `Mod+S`), toolbar (heading, bold, italic, code, link, lists, task list, code block, table, callout, image), inline title, optional change note, a CodeMirror 6 markdown source and a live preview (the reader's renderer, 150 ms after typing stops, scroll synced through the headings). `/` at the start of a line opens the block menu. `Mod+Enter` publishes and closes; `Esc` closes and keeps the draft.
-- **Draft autosave**: 1 s after the last change, on blur, when the tab is hidden, before leaving the editor and on unload (a keepalive request; a draft over 60 KB, too large for one, is saved with a normal request and the browser asks before leaving, D-115). Status: Editing, Unsaved changes, Saving draft…, Draft saved, Couldn't save draft · Retry, Publishing…, Published vN, Conflicting changes.
-- **Publishing** sends `content`, `baseVersion` and `changeNote`, and the title only when it differs from the base version's title, so a concurrent rename survives. On 409 `doc.version.conflict` the client loads the latest doc and the base version (`GET /docs/{key}/versions/{n}`) and merges line by line: changes to different parts (at least one unchanged line between them) merge and are published with the toast "Merged with Jane's changes (v8)"; the same change on both sides counts once; overlapping or touching changes open the conflict view with "Theirs (vN)" and "Mine" side by side, clashing lines marked, and Keep editing on latest (my text stays in a side panel), Overwrite with mine, Discard mine (D-105).
+- **Draft autosave**: 1 s after the last change, on blur, when the tab is hidden, before leaving the editor and on unload (a keepalive request; a draft over 60 KB, too large for one, is saved with a normal request and the browser asks before leaving, D-126). Status: Editing, Unsaved changes, Saving draft…, Draft saved, Couldn't save draft · Retry, Publishing…, Published vN, Conflicting changes.
+- **Publishing** sends `content`, `baseVersion` and `changeNote`, and the title only when it differs from the base version's title, so a concurrent rename survives. On 409 `doc.version.conflict` the client loads the latest doc and the base version (`GET /docs/{key}/versions/{n}`) and merges line by line: changes to different parts (at least one unchanged line between them) merge and are published with the toast "Merged with Jane's changes (v8)"; the same change on both sides counts once; overlapping or touching changes open the conflict view with "Theirs (vN)" and "Mine" side by side, clashing lines marked, and Keep editing on latest (my text stays in a side panel), Overwrite with mine, Discard mine (D-116).
 - **Images**: pasting, dropping or picking files uploads them to the page and inserts `![name](/api/v1/attachments/{id})` (other types a download link) in place of an "Uploading…" placeholder.
 - Budgets (e2e `docs-pages.perf.spec.ts`, run alone: `E2E_PERF=1 npx playwright test --project=perf`): a 100 000-character page renders in under 500 ms; typing in it costs under 16 ms of main-thread CPU time per keystroke. Measured on the reference laptop: render 100–130 ms, editor open about 200 ms, typing 9–12 ms per keystroke, longest key handler 2–5 ms.
 
 ### 12.9 Comments
 
 - Pages and diagrams (not folders: 409 `doc.kind.unsupported` on add, an empty list on read) have one comment thread below the content, oldest first, with the rules of ticket comments (6.9): markdown 1..20 000 characters rendered by the shared renderer (ticket keys link), writers add (Owners and Members; on public projects every signed-in user), the author edits (`EditedAt`, "edited" marker; the previous body goes to the doc's activity), the author or an Owner deletes (the body is cleared and a "Comment deleted" placeholder keeps its place), `comment.notAuthor` (403) and `comment.deleted` (409) as for tickets. Viewers and read-only tokens read only; archived projects answer 409 `project.archived` on every write. @mentions and watching docs are not part of v1 (the "Docs collaboration" follow-up, I-85, I-86).
-- Doc comments share the `comments` table with ticket comments through a nullable owner pair (`ticket_id` or `doc_node_id`, exactly one; D-106). Ticket comment endpoints and tools never see doc comments and the doc ones never see ticket comments (404 `comment.notFound`). Unreadable projects answer 404 like a missing doc or comment; search and quick jump never read comments.
+- Doc comments share the `comments` table with ticket comments through a nullable owner pair (`ticket_id` or `doc_node_id`, exactly one; D-117). Ticket comment endpoints and tools never see doc comments and the doc ones never see ticket comments (404 `comment.notFound`). Unreadable projects answer 404 like a missing doc or comment; search and quick jump never read comments.
 - Adding, editing or deleting a comment creates no version and leaves the doc's `updatedAt` and row version as they are. `GET /docs/{key}`, the tree items (`GET …/docs/tree`, `list_docs`) and a folder's `children` return `commentCount` (comments that are not deleted); the tree row tooltip shows it ("3 comments") for pages and diagrams. Comments stay with a deleted doc (its comment routes answer 404 `doc.deleted`) and return with it on restore.
 - Notifications (6.16): a new comment notifies the doc's creator and the authors of the doc's earlier comments that are not deleted, never the actor, only while they can read the project; edits and deletes notify nobody.
 - Web: the `comments` footer section (`provideDocPageSection`, order 90, pages and diagrams) with the thread, edit and delete on hover, a composer for writers (`Shift+C` focuses it, `Mod+Enter` posts), optimistic add, edit and delete with rollback, and `#comments` scrolling to it.
 
 ### 12.10 Version history
 
-- `GET /docs/{key}/history` (MCP `get_doc_history`) lists, newest first, the versions (`type: Version`: `version`, `title`, `changeNote`, `restoredFrom`, `linesAdded` / `linesRemoved` against the version before it (computed at publish, null for Canvas diagrams; D-112), `actor`, `channel`, `at`) merged with every other activity entry of the doc (`type: Activity`: `action`, `field`, `oldValue`, `newValue`, `actor`, `channel`, `at`). `doc.updated`, `doc.version.restored` and, for pages and diagrams, `doc.created` are not listed: the version rows are those events. Paged with `limit` (1..100, default 25) and one `cursor` over both; `currentVersion` is the latest version (0 for folders). Every reader may read it, Viewers and archived projects included (D-107).
+- `GET /docs/{key}/history` (MCP `get_doc_history`) lists, newest first, the versions (`type: Version`: `version`, `title`, `changeNote`, `restoredFrom`, `linesAdded` / `linesRemoved` against the version before it (computed at publish, null for Canvas diagrams; D-123), `actor`, `channel`, `at`) merged with every other activity entry of the doc (`type: Activity`: `action`, `field`, `oldValue`, `newValue`, `actor`, `channel`, `at`). `doc.updated`, `doc.version.restored` and, for pages and diagrams, `doc.created` are not listed: the version rows are those events. Paged with `limit` (1..100, default 25) and one `cursor` over both; `currentVersion` is the latest version (0 for folders). Every reader may read it, Viewers and archived projects included (D-118).
 - `GET /docs/{key}?version=n` (MCP `get_doc` with `version`) returns the doc as it is now with `content` of version n and `atVersion` (`number`, `title`, `changeNote`, `author`, `channel`, `createdAt`, `restoredFrom`); `title`, `path` and `version` stay the current ones. `references` and `embeds` are those of version n, resolved from its content for the reader (the index covers only the latest content; same rules and read filter, 12.11), and so are those of `GET /docs/{key}/versions/{n}`; `backlinks` stay the doc's. A missing version is 404 `doc.version.notFound`.
 - `POST /docs/{key}/versions/{n}/restore` (MCP `restore_doc_version`; writers only, 409 `project.archived` on archived projects) publishes version n's title and content as a new version with `restoredFrom = n` and `doc.version.restored`; no `baseVersion` is needed. A folder is 409 `doc.kind.unsupported`; a sibling now holding the old title is 409 `doc.title.duplicate`. When the latest version already has that title and content nothing is written. The restorer's draft is kept (the editor merges it onto the new version on publish).
 - **Web** (`?history=n[&with=m]`, `docs.history`, a lazy chunk): `H`, the History button or the `vN` badge opens it; `Esc` or `H` closes it. A 320 px panel lists the history by day: versions with avatar (a robot for MCP), author, time, channel, change note, "Restored from vN" and `Current`; activity as one line (renamed, moved, deleted, restored, attachments, comments). Clicking an older version compares it with the current one; clicking the current one shows its own changes; Shift+click picks a second version; ↑/↓ move through versions. The main area shows `Changes` (a unified or side-by-side line diff with word highlights inside paired lines, unchanged runs folded to "··· n unchanged lines", `+a −r lines` and a changed title) or `Rendered` (the selected version, read-only); Canvas diagrams show both versions rendered side by side. Writers get `Restore vN` (confirmed). Copy link copies the `?v=n` URL.
@@ -928,7 +929,7 @@ The doc URL in the SPA is `/projects/{PK}/docs/{KEY}/{slug}`; the slug is cosmet
 
 ### 12.11 Links, backlinks and ticket mentions
 
-- **Index.** Every publish (create, update, find/replace edit, duplicate, version restore) rebuilds the doc's rows in `doc_references` inside the publish transaction (`DocPublisher`, D-108). Pages are scanned as markdown: upper-case ticket keys (`WEB-42`) and doc keys (`WEB-D-12`) in text, in `[text](KEY)` links and in `![caption](KEY)` embeds count; keys inside code spans, fenced or indented code blocks and URLs do not, and test case and session keys (`WEB-TC-7`, `WEB-R-3`) are not tickets. Mermaid sources are scanned as plain text; Canvas diagrams and folders have no references. Keys must name an existing ticket or doc in any project (deleted ones included, so a restore needs no re-index; unknown keys are dropped); a doc never references itself; at most 500 tickets and 500 docs per content.
+- **Index.** Every publish (create, update, find/replace edit, duplicate, version restore) rebuilds the doc's rows in `doc_references` inside the publish transaction (`DocPublisher`, D-119). Pages are scanned as markdown: upper-case ticket keys (`WEB-42`) and doc keys (`WEB-D-12`) in text, in `[text](KEY)` links and in `![caption](KEY)` embeds count; keys inside code spans, fenced or indented code blocks and URLs do not, and test case and session keys (`WEB-TC-7`, `WEB-R-3`) are not tickets. Mermaid sources are scanned as plain text; Canvas diagrams and folders have no references. Keys must name an existing ticket or doc in any project (deleted ones included, so a restore needs no re-index; unknown keys are dropped); a doc never references itself; at most 500 tickets and 500 docs per content.
 - **Reading** is filtered per caller with `ReadableProjects()`. `GET /docs/{key}` (and every doc a write returns) carries:
   - `references.tickets`: mentioned, non-deleted tickets the caller can read: `{ id, key, title, type, status, url }`;
   - `references.docs`: mentioned or linked docs the caller can read; a deleted one has only `{ key, deleted: true }` (no title or url);
@@ -937,12 +938,12 @@ The doc URL in the SPA is `/projects/{PK}/docs/{KEY}/{slug}`; the slug is cosmet
   A ticket or doc the caller cannot read is absent everywhere, so it never shows a title or status and is not counted.
 - **A ticket's docs**: `GET /tickets/{key}/docs` and MCP `get_ticket` with `include: docs` (the MCP default includes it; the REST ticket read leaves it out unless `include=docs` is asked for) list readable, non-deleted docs mentioning the ticket, newest first, at most 20 plus `total`. An unreadable ticket answers 404 like a missing one. The docs search `mentions` filter (12.7) reads the same index.
 - **Rendering** (`renderMarkdown` with `references`, the reader and the PDF): a readable ticket key becomes a chip with its status ring (title and status on hover); a readable doc key or `[text](KEY)` links to the doc with its title on hover; a deleted doc renders struck through as `KEY (deleted)`; an unreadable or unknown key renders as plain text (the custom text of a link stays). `![caption](KEY)` of a readable diagram becomes a figure (`figure.tk-doc-embed` with `data-doc-key`, `data-diagram-format`, `data-version`, a header linking the diagram, an empty `.tk-doc-embed-body` for the diagram renderer and the caption); anything else shows "Diagram not available" without key, title or caption. The editor preview links keys it cannot resolve yet and shows unresolved embeds as a link until the page is published. Markdown outside docs (tickets, comments) links ticket keys to `/tickets/KEY` and doc keys (also as `[text](KEY)` and `![caption](KEY)`) to `/docs/KEY`.
-- **Web**: page footer sections "Tickets mentioned" (status ring, key, title; opens the ticket peek) and "Linked from" (title, folder path, updated; "and N more" past 50), both from the GET and hidden when empty; the ticket view's "Docs mentioning this ticket" section (`provideTicketDetailSection`, after attachments; title, folder path, last editor and time; "and N more" opens docs search `mentions=KEY`), hidden when empty. A row opens the doc at `#mention-KEY`: the reader scrolls to the first chip of the ticket and flashes it with `--tk-accent-subtle` for 600 ms (a mention only inside a diagram just opens the doc). Writers of the ticket's project get "Write doc" in its header: a page at the top level titled "KEY Ticket title" (" (2)", " (3)" … when taken) with the content `Related: KEY`, opened in the editor (D-114). In the editor `[[` + title text offers docs (the current project first; recent docs while empty) and inserts `[Title](KEY)`; `#` + key or title text offers tickets and inserts the key; the toolbar ("Link a doc", "Mention a ticket") and the `/` menu ("Doc link", "Ticket mention") open the same pickers.
+- **Web**: page footer sections "Tickets mentioned" (status ring, key, title; opens the ticket peek) and "Linked from" (title, folder path, updated; "and N more" past 50), both from the GET and hidden when empty; the ticket view's "Docs mentioning this ticket" section (`provideTicketDetailSection`, after attachments; title, folder path, last editor and time; "and N more" opens docs search `mentions=KEY`), hidden when empty. A row opens the doc at `#mention-KEY`: the reader scrolls to the first chip of the ticket and flashes it with `--tk-accent-subtle` for 600 ms (a mention only inside a diagram just opens the doc). Writers of the ticket's project get "Write doc" in its header: a page at the top level titled "KEY Ticket title" (" (2)", " (3)" … when taken) with the content `Related: KEY`, opened in the editor (D-125). In the editor `[[` + title text offers docs (the current project first; recent docs while empty) and inserts `[Title](KEY)`; `#` + key or title text offers tickets and inserts the key; the toolbar ("Link a doc", "Mention a ticket") and the `/` menu ("Doc link", "Ticket mention") open the same pickers.
 
 ### 12.12 Mermaid diagrams (web, MCP)
 
 - **Supported types** (tested, offered as templates and named in the MCP descriptions): `flowchart`, `sequenceDiagram`, `classDiagram`, `stateDiagram-v2`, `erDiagram`, `gantt`, `mindmap`. Mermaid 12.2.0 renders more; those work but are not promised. The source is not validated on the server (I-104); the web editor warns before publishing a source that does not parse.
-- **Rendering** (one renderer for screen and PDF, free of Angular): `securityLevel: 'strict'`, no HTML labels, dagre layout, the app palette per theme, and a DOMPurify SVG pass (D-99). Mermaid is a lazy chunk loaded on the first diagram.
+- **Rendering** (one renderer for screen and PDF, free of Angular): `securityLevel: 'strict'`, no HTML labels, dagre layout, the app palette per theme, and a DOMPurify SVG pass (D-110). Mermaid is a lazy chunk loaded on the first diagram.
 - **Inline blocks**: ```` ```mermaid ```` fences render as diagrams in pages, the editor preview, ticket descriptions and comments (every markdown surface). A block renders when it comes within 600 px of the viewport; until then it is a skeleton of the height it had last time on this device (kept in localStorage) or of an estimate from its type and size, so later renders don't shift the page. A block that does not parse stays as code with a danger box "Mermaid syntax error" and the parser message (with the line). In the editor preview a block keeps its last good render, dimmed, above the error box. Diagrams re-render when the theme changes; rendered SVGs are cached per source and theme (64), so the preview and theme toggles don't flicker.
 - **Diagram docs** (`docs.diagram`): title, meta line, draft banner, a figure with the type ("Mermaid · sequence"), Copy source, and the diagram fitted to the width (never enlarged, at most 70 % of the window high) with zoom: buttons, `=` / `-`, `0` fit, `1` 100 %, Ctrl/⌘ + wheel around the pointer, drag to pan. A source that does not parse shows the error and the source; an empty one "This diagram is empty" with Start drawing `E`. The footer page sections follow (comments).
 - **Mermaid editor** (`?mode=edit`, `docs.diagram.mermaid.edit`, a lazy chunk with CodeMirror): the page editor's edit bar (draft status, base version, presence, Discard, Close `Esc`, Publish `Mod+S`, `Mod+Enter` publish and close), a Template menu (the seven types; replacing a non-empty source asks first), a Syntax link, the type label, the change note, the inline title, the source with line numbers and Mermaid token colours, and a zoomable live preview 300 ms after typing stops. A syntax error shows in a strip under the preview while the last good render stays (dimmed). Drafts, autosave, publishing, the 3-way merge and the conflict view are the page's (12.8). Limit 20 000 characters.
@@ -951,7 +952,7 @@ The doc URL in the SPA is `/projects/{PK}/docs/{KEY}/{slug}`; the slug is cosmet
 
 ### 12.13 Canvas diagrams (web, MCP)
 
-- **Source**: Excalidraw's file JSON (D-99). Every publish checks it (D-113): a JSON object with `type: "excalidraw"` and an `elements` array, else 400 `doc.diagram.invalidSource`; at most 10 000 elements (`doc.diagram.tooManyElements`) and 2 000 000 characters (`doc.content.tooLong`); no `image` elements and empty `files` (`doc.diagram.embeddedFiles`); no `embeddable`/`iframe` elements and element links only `http(s)://` or app-relative (`doc.diagram.invalidSource`). Empty source is an empty canvas. Drafts are not checked. Find/replace edits are not available (`doc.kind.unsupported`).
+- **Source**: Excalidraw's file JSON (D-110). Every publish checks it (D-124): a JSON object with `type: "excalidraw"` and an `elements` array, else 400 `doc.diagram.invalidSource`; at most 10 000 elements (`doc.diagram.tooManyElements`) and 2 000 000 characters (`doc.content.tooLong`); no `image` elements and empty `files` (`doc.diagram.embeddedFiles`); no `embeddable`/`iframe` elements and element links only `http(s)://` or app-relative (`doc.diagram.invalidSource`). Empty source is an empty canvas. Drafts are not checked. Find/replace edits are not available (`doc.kind.unsupported`).
 - **Outline**: on publish the server extracts the labels (reading order) and the relations of bound arrows (`API → DB (label)`, `↔` two heads, `—` none) one per line; it feeds search (12.7) and is returned as `outline` by `GET /docs/{key}` and MCP `get_doc` (for `?version=n`, that version's).
 - **Picture**: each version may hold a light SVG (`snapshot` with `content` on create and `PATCH`; at most 5 000 000 characters, an SVG without scripts, foreign objects, frames, event handlers or links other than fragment, `data:image/`, `http(s)` and app-relative, else 400 `doc.snapshot.invalid`; `snapshot` on a non-Canvas doc is 400 `doc.kind.unsupported`). `GET /docs/{key}/versions/{n}/snapshot.svg` serves it to readers as `image/svg+xml` with a sandbox CSP; 404 `doc.snapshot.notFound` while the version has none. `snapshotUrl` in the doc, its versions and its embeds points there (null while missing). `PUT /docs/{key}/versions/{n}/snapshot` `{ svg }` lets a writer store the picture of a version that has none (versions written over MCP); it creates no version and no activity, the first picture wins (`{ docKey, version, stored, snapshotUrl }`), non-Canvas docs are 409 `doc.kind.unsupported`. Restore and duplicate copy the picture of the copied version.
 - **Diagram view** (`docs.diagram`): "Canvas" in the figure header and the picture in the zoomable viewport, CSS-inverted in dark mode. Without a stored picture the browser exports one from the source (loading Excalidraw) and, for writers on the latest version, stores it. An empty canvas offers Start drawing `E`.
@@ -962,8 +963,8 @@ The doc URL in the SPA is `/projects/{PK}/docs/{KEY}/{slug}`; the slug is cosmet
 ### 12.14 PDF export (web, REST, MCP)
 
 - **What**: a page or a diagram (latest, or `?version=n`), or a folder with its whole subtree depth-first in tree order, deleted docs excluded. Every reader can export: Viewers and archived projects included. Exports write no activity; the API logs user, doc, documents, bytes and time.
-- **How** (D-100, D-116): the API resolves everything for the caller (content, references, embeds, Canvas pictures, page images that are readable image attachments), writes it as JSON into an offline print page and posts it with the print bundle to the `pdf` service (Gotenberg Chromium, internal network, basic auth). The page renders with the SPA's own `renderMarkdown` and Mermaid renderer, always light, A4 portrait (a single wide diagram turns landscape and scales to the page). Canvas diagrams print their stored picture ("Preview not rendered yet" without one); Excalidraw never runs. Tickets, docs and diagrams the caller cannot read are absent from the data: plain text, or "Diagram not available".
-- **Layout** (D-101): a single doc has a title block (title, key, version, last edited by and on, path). A folder has a cover (project, folder title and path, document count and key, exported by and on), a linked contents page (indented like the tree; no page numbers), then each document on a new page, subfolders as headings over their documents. Links to docs inside the export jump within the PDF; any other app link is absolute. Header: `PK · title` and the folder path; footer: "Exported {date time} by {name}" (+ "Private project"), `{KEY} v{n}` or `{KEY} · N documents`, "Page x of y". Dates use `tz` (an IANA zone from the browser), else UTC. Bookmarks come from the headings.
+- **How** (D-111, D-127): the API resolves everything for the caller (content, references, embeds, Canvas pictures, page images that are readable image attachments), writes it as JSON into an offline print page and posts it with the print bundle to the `pdf` service (Gotenberg Chromium, internal network, basic auth). The page renders with the SPA's own `renderMarkdown` and Mermaid renderer, always light, A4 portrait (a single wide diagram turns landscape and scales to the page). Canvas diagrams print their stored picture ("Preview not rendered yet" without one); Excalidraw never runs. Tickets, docs and diagrams the caller cannot read are absent from the data: plain text, or "Diagram not available".
+- **Layout** (D-112): a single doc has a title block (title, key, version, last edited by and on, path). A folder has a cover (project, folder title and path, document count and key, exported by and on), a linked contents page (indented like the tree; no page numbers), then each document on a new page, subfolders as headings over their documents. Links to docs inside the export jump within the PDF; any other app link is absolute. Header: `PK · title` and the folder path; footer: "Exported {date time} by {name}" (+ "Private project"), `{KEY} v{n}` or `{KEY} · N documents`, "Page x of y". Dates use `tz` (an IANA zone from the browser), else UTC. Bookmarks come from the headings.
 - **Limits**: at most 300 documents and 100 MB of files or output (400 `doc.export.tooLarge`); 2 exports run at once per API process and 10 wait, beyond that 429 `doc.export.busy` with `Retry-After: 15`; 2 minutes per export (503 `doc.export.timeout`). Without `PDF_RENDERER_PASSWORD` or with the renderer down: 503 `doc.export.unavailable`; a print failure is 409 `doc.export.failed`. `version` on a folder is 400.
 - **Export links**: `POST /docs/{key}/export-link` and MCP `get_doc_export_link` return a server-relative `GET` URL with a signed token (Data Protection, 15 minutes) bound to the caller and the doc (and version). Using it needs no other credentials; the export runs as that user, so access is checked again. An expired or tampered link, one used on another doc, one whose user was deactivated or changed their password, or whose user lost access answers 404 `doc.notFound`. Dates in link exports are UTC.
 - **Web**: Export PDF in the page bar of pages, diagrams (the shown version with `?v=n`) and folders, `Mod+P` (replaces the browser's print), and in the tree's `…` menu. A page or diagram downloads directly. A folder exports in the background: a toast says so, the user keeps working, and a "ready" toast offers Download. One export per doc at a time; errors show the server's message.
@@ -971,5 +972,187 @@ The doc URL in the SPA is `/projects/{PK}/docs/{KEY}/{slug}`; the slug is cosmet
 
 ### 12.15 Dashboard and demo data
 
-- **Dashboard widget 13 "Recent docs"** (section 7): `GET /projects/{pk}/dashboard` and MCP `get_project_stats` return `recentDocs: { total, items }`: the number of non-deleted pages and diagrams and the 5 most recently updated (the `GET …/docs/recent` summary: key, kind, diagramFormat, title, path, version, updatedBy, updatedAt, url). Docs belong to the dashboard's project, so whoever can read the dashboard can read them; the version filter does not apply (D-117). The web card sits at the end of the lazily loaded part of the grid: rows with the kind icon, title, folder ("Top level" at the root), last editor and time, open the doc; "N docs" in the header and the empty state link to the Docs home. A project with docs but no tickets is not shown as an empty dashboard.
+- **Dashboard widget 13 "Recent docs"** (section 7): `GET /projects/{pk}/dashboard` and MCP `get_project_stats` return `recentDocs: { total, items }`: the number of non-deleted pages and diagrams and the 5 most recently updated (the `GET …/docs/recent` summary: key, kind, diagramFormat, title, path, version, updatedBy, updatedAt, url). Docs belong to the dashboard's project, so whoever can read the dashboard can read them; the version filter does not apply (D-128). The web card sits at the end of the lazily loaded part of the grid: rows with the kind icon, title, folder ("Top level" at the root), last editor and time, open the doc; "N docs" in the header and the empty state link to the Docs home. A project with docs but no tickets is not shown as an empty dashboard.
 - **Demo data** (D-85): the demo seeder writes a docs tree into each demo project through the use cases: two folders, four pages with callouts, tables, code blocks, ticket mentions and doc links, a Mermaid and a Canvas diagram embedded in a page (the Canvas with its picture, so embeds and PDFs show it at once), later versions with change notes for the history, and a few comments.
+
+## 13. Agent delegation
+
+A developer hands a ticket to Claude Code: Ticketing renders a short prompt for the ticket's type and the developer's browser opens Claude's own deep link with it. The design and its history are in [04-delegate-to-agent-refinement.md](04-delegate-to-agent-refinement.md) (its section 6 overrides section 4); this section is the normative summary and grows with each part of epic TKT-25. Decisions: D-98, D-99, D-100, D-101, D-102, D-103.
+
+### 13.1 Parts
+
+| Part | Ticket |
+| --- | --- |
+| Prompt templates: model, renderer, versions, built-ins, REST (13.2 to 13.8) | TKT-27 |
+| Project agent setup (`PATCH /projects/{pk}/agent`), `TICKETING_PUBLIC_URL`, resolved prompt over REST and MCP `get_agent_prompt` | TKT-28 |
+| Delegate button, deep link, folder mapping, Copy prompt | TKT-29 |
+| Agent tab in project settings, Admin page | TKT-30, TKT-31 |
+| Final default prompts (13.10), confirmation hint on destructive MCP tools (9.1) | TKT-32 |
+
+### 13.2 Feature flag
+
+`agent.delegate` is an ordinary string-variant flag (6.13): `on` or `off`, targeted at users, roles (Admins first) or a percentage. While it is off for the caller, every agent endpoint returns 404 `agent.disabled` and nothing about agents is shown. Stored templates stay untouched. The server checks it on every request (`AgentGate`).
+
+The instance also needs `TICKETING_PUBLIC_URL`, its public origin (for example `https://tickets.example.com`): prompts link to tickets with it, never with request headers. While it is unset the feature is off for everyone, exactly as if the flag were off (404 `agent.disabled`, whose message then names the variable for callers the flag is on for). A value that is not an absolute http(s) URL stops the API at startup. The one exception is the Admin status (`GET /api/v1/admin/agent/status`), which needs only the flag so the Admin page can say the variable is missing (D-103).
+
+The web app tells whether agent delegation is available from the project: `agent` in the project DTO is null while it is not.
+
+### 13.3 Domain model
+
+| Enum | Values | Notes |
+| --- | --- | --- |
+| `AgentPromptScope` | `Instance`, `Project` | |
+| `AgentPromptMode` | `Inherit`, `Custom`, `Off` | Project rows only; instance rows are always `Custom`. |
+| `AgentPromptSource` | `Default`, `Custom` | Where a resolved prompt's type template came from. |
+| `AgentMergePolicy` | `Review`, `MergeWhenVerified` | Picks the sentence `{{finish}}` renders. |
+
+**Project** gains the agent setup, changed together through `PATCH /projects/{pk}/agent` (13.7) and validated as a whole:
+
+| Field | Type | Constraints |
+| --- | --- | --- |
+| AgentDelegationEnabled | bool | Default false. Enabling needs a repository URL (`agent.project.repositoryRequired`); so does clearing the URL of an enabled project. |
+| RepositoryUrl | text(500)? | `https://[user@]host[:port]/path`, `ssh://[user@]host[:port]/path` or scp-style `user@host:path`, each optionally ending in `.git`. Printable ASCII; no password, query or fragment; no empty, `.` or `..` path segment. Stored as typed (trimmed); otherwise `project.repositoryUrl.invalid`. |
+| DefaultBranch | text(100) | Default `main`. A name `git check-ref-format --branch` accepts, in printable ASCII (`project.defaultBranch.invalid`). |
+| AgentMergePolicy | AgentMergePolicy | Default `Review`. |
+| AgentAssignOnDelegate | bool | Default true. Delegating assigns the ticket to the delegating user if it is unassigned. |
+| AgentStartProgressOnDelegate | bool | Default true. Delegating moves a `ToDo` ticket to `InProgress`; other statuses stay. |
+
+The **normalized repository URL** is what clones are compared by: host and path in lower case, without scheme, user, port, `.git` or slashes at either end, so `https://git.example.com/Team/Repo.git` and `git@git.example.com:team/repo` both give `git.example.com/team/repo`. The API returns it next to the URL (`normalizedRepositoryUrl`). The two on-delegate toggles are applied by the delegation history entry (TKT-29), not by reading the prompt.
+
+**AgentPromptTemplate** (`agent_prompt_templates`), one row per slot:
+
+| Field | Type | Constraints |
+| --- | --- | --- |
+| Id | uuid | |
+| Scope | AgentPromptScope | |
+| ProjectId | uuid? | Set if and only if Scope = `Project`. |
+| TicketType | TicketType? | Null is the guardrails block, instance only. |
+| Mode | AgentPromptMode | |
+| Body | text(4500)? | `Custom` rows; null for `Inherit` and `Off`, and for empty guardrails. |
+| CurrentVersion | int | 1..n (a project slot that never left `Inherit` has no row; it reads as version 0). |
+| BasedOnDefaultVersion | int? | Project `Custom` rows: the instance default version the override was written against. Newer default: `defaultChanged`. |
+| BuiltInVersion | text(20)? | Instance rows: the built-in release the row last took its text from. |
+| FollowsBuiltIn | bool | Instance rows: the current text is a verbatim built-in. |
+| UpdatedAt, UpdatedById | timestamptz, uuid? | Null user for system (built-in) versions. |
+
+Unique (Scope, ProjectId, TicketType) with nulls not distinct. Six instance rows always exist: the five types and the guardrails.
+
+**AgentPromptTemplateVersion** (`agent_prompt_template_versions`), immutable and never deleted: (TemplateId, Number) key, Mode, Body, BuiltInVersion (set for verbatim built-ins), ChangeNote text(200)?, AuthorId (null for system versions), CreatedAt, RestoredFrom.
+
+**Built-ins** are embedded in `Ticketing.Application` (`Agents/BuiltIns/*.txt`) with one release number (`EmbeddedAgentPrompts.Release`, for example `2026.10.1`; dotted numbers compared numerically). At startup, and before any agent prompt use case, missing instance rows are created from them, and rows that still follow the built-ins take a newer release as a new system version (activity with no actor). Rows an Admin edited are left alone and report `newerBuiltInAvailable`; "Reset to built-in" adopts the shipped text and makes the row follow later releases again. The two `{{finish}}` sentences ship with the built-ins and are not editable; they are templates themselves and may use every placeholder except `finish` (13.10).
+
+### 13.4 Template language
+
+Plain text; Markdown is shown as written.
+
+- `{{name}}`, spaces inside the braces allowed, replaced verbatim; a null value renders empty. Values are inserted in one pass and never interpreted.
+- `{{#if name}}…{{/if}}` keeps its content when the value is non-empty. No `else`, nesting, loops or filters.
+- `\{{` renders a literal `{{`.
+- Errors, each with a 1-based line and column: `agent.template.unknownPlaceholder`, `agent.template.unclosedPlaceholder`, `agent.template.unbalancedIf`, `agent.template.nestedIf`; also `agent.template.empty` (a `Custom` type template without a body) and `agent.template.tooLong` (body over 4 500 characters).
+- The composed prompt is the rendered type template, then a blank line and the rendered guardrails when they are non-empty. It must stay **below 4 500 characters** (`agent.prompt.tooLong`), well inside the 5 000 characters Claude Code accepts in a deep link (D-97). Saves check it for a sample ticket; resolution checks the real one.
+
+Placeholders, deliberately only trusted values (D-98): there is **no** title, description or comment placeholder; the agent reads the ticket over MCP.
+
+| Placeholder | Value |
+| --- | --- |
+| `ticket.key`, `ticket.type` | `TKT-42`, `Bug` |
+| `ticket.url` | `{TICKETING_PUBLIC_URL}/tickets/{KEY}`; empty while the variable is unset |
+| `project.key`, `project.repositoryUrl`, `project.defaultBranch` | The URL as typed; the branch defaults to `main` |
+| `instance.url` | `TICKETING_PUBLIC_URL` without a trailing slash |
+| `finish` | The finish sentence for the project's merge policy |
+| `template.id` | `<TicketType> v<n> / <D\|C>` (D = instance default, C = project custom) |
+
+### 13.5 Resolving the prompt for a ticket
+
+`ResolveAgentPrompt`, in order:
+
+1. Flag off for the caller, or `TICKETING_PUBLIC_URL` unset: 404 `agent.disabled`.
+2. Ticket not readable: 404 `ticket.notFound`; deleted ticket: `ticket.deleted` (as every ticket read). Archived project: 409 `agent.unavailable`.
+3. Project `AgentDelegationEnabled = false`: 409 `agent.project.disabled`.
+4. The project row for the ticket's type: `Off` gives 409 `agent.type.off`; `Custom` uses its body; `Inherit` or no row uses the instance default.
+5. The template and the guardrails must still parse. A stored body that no longer does, for example after a release removed a placeholder, is 409 `agent.template.invalid`; the message gives the position and the hint names where to fix it (the project's Agent settings, or Admin → Agent prompts), never the body.
+6. Render it with the trusted values, append the guardrails when non-empty, and enforce the limit (409 `agent.prompt.tooLong`).
+
+The result carries the prompt, the ticket key and type, the template's source, version and last editor, the guardrails version and `outsiderContent`: `{ source: Title | Description | Comment | Attachment | RelatedTicket | TestCase, author, at, projectKey, itemKey }` for the newest text the agent reads that came from someone who is neither an Admin nor an Owner or Member of the project it was written in, otherwise null (D-100, D-104, D-106). That text is any title or description write, non-deleted comment (at its last edit) or attachment on the ticket, its parent, its children and its linked tickets (those the caller can read), and the creation and text edits of the ticket's test cases. Viewers and former members count as outside, private projects are checked too, and a later write by an insider does not clear it. `itemKey` names the related ticket or test case. Anyone who can read the project may resolve, including Viewers and read-only tokens; nothing is written.
+
+### 13.6 Permissions
+
+| Action | Owner/Admin | Member | Viewer | No access |
+| --- | --- | --- | --- | --- |
+| Read a project's templates, versions; preview | Yes | Yes | Yes | 404 |
+| Read a project's agent setup; resolve a ticket's prompt (REST, `get_agent_prompt`) | Yes | Yes | Yes | 404 |
+| Change a project's templates (save, restore, reset to default) | Yes | No (403) | No (403) | 404 |
+| Change a project's agent setup | Yes | No (403) | No (403) | 404 |
+| Record a delegation (`POST /tickets/{key}/agent-delegations`) | Yes | Yes | No (403) | 404 |
+| Instance defaults and guardrails (read, change, preview) | Admin only | 403 | 403 | 403 |
+
+All of it requires the flag. Template writes, previews, agent setup changes and delegation records accept the **cookie session only**: a PAT of any scope gets 403 `auth.cookieSessionRequired` (a read-only PAT may already be stopped by `pat.readOnlyScope`), so an agent session cannot rewrite the prompts its teammates' sessions will run or widen its own project's merge policy. Project reads and prompt resolution accept a PAT, read-only ones included. On an archived project everything is read-only (`project.archived`).
+
+### 13.7 REST
+
+Project templates, under `/api/v1/projects/{projectKeyOrId}/agent/prompts` (`{type}` is a ticket type name, case-insensitive):
+
+| Method and path | Purpose |
+| --- | --- |
+| `GET` | The five types: mode, version, effective source and version, default version, `defaultChanged`, last change |
+| `GET /{type}` | The slot with its body, the effective body, the instance default and the guardrails |
+| `PUT /{type}` | `{ mode, body?, changeNote?, baseVersion }`; a stale `baseVersion` is 409 `agent.prompt.versionConflict` |
+| `POST /{type}/reset` | `{ baseVersion, changeNote? }`: back to `Inherit` as a new version |
+| `GET /{type}/versions`, `GET /{type}/versions/{n}` | History, newest first; one version with its body (`agent.prompt.versionNotFound`) |
+| `POST /{type}/versions/{n}/restore` | `{ baseVersion, changeNote? }`: version n becomes current as a new version |
+| `POST /{type}/preview` | `{ body?, ticketKey? }` returns `{ prompt, length, lengthLimit, ticketKey, errors[] }`; stores nothing. A null body previews the instance default; the ticket must be in the project. |
+
+Instance templates, Admins only, under `/api/v1/admin/agent/prompts` (`{slot}` is a ticket type or `guardrails`): `GET`, `GET /{slot}`, `PUT /{slot}` (`{ body, changeNote?, baseVersion }`; an empty guardrails body removes them), `POST /{slot}/reset-built-in`, the same `versions`, `restore` and `preview` routes. Instance responses add `builtInVersion`, `followsBuiltIn`, `latestBuiltInVersion`, `newerBuiltInAvailable`, `builtInBody` and `overridingProjects` (live projects with `Custom` or `Off` for the type). `GET /{type}/overrides` lists those projects by key: `{ projectKey, projectName, isArchived, mode, version, defaultChanged, updatedBy, updatedAt }` (guardrails: `agent.prompt.notFound`).
+
+`GET /api/v1/admin/agent/status` returns `{ publicUrlVariable, publicUrl, delegationAvailable }` for Admins in the web app. It requires the flag but not the public URL, so it answers while every other agent route is `agent.disabled` (D-103).
+
+`GET /api/v1/agent/prompt-placeholders` lists the placeholders for the editor.
+
+Project agent setup and resolved prompts:
+
+| Method and path | Purpose |
+| --- | --- |
+| `GET /api/v1/projects/{pk}/agent` | `{ enabled, repositoryUrl, normalizedRepositoryUrl, defaultBranch, mergePolicy, assignOnDelegate, startProgressOnDelegate, rowVersion }` with an `ETag`. Readers, PATs included. |
+| `PATCH /api/v1/projects/{pk}/agent` | Any of `enabled`, `repositoryUrl` (null or blank clears), `defaultBranch`, `mergePolicy`, `assignOnDelegate`, `startProgressOnDelegate`; omitted fields stay. Optional `If-Match` with the project's `rowVersion` (409 `concurrency.conflict`). Owners and Admins, web session only. Returns the setup. |
+| `GET /api/v1/tickets/{key}/agent-prompt` | The resolved prompt (13.5): `{ prompt, ticketKey, ticketType, template: { source, version, updatedAt, updatedBy }, guardrailsVersion, outsiderContent }`. No side effects. |
+| `POST /api/v1/tickets/{key}/agent-delegations` | `{ app?: ClaudeCode \| ClaudeDesktop, launched?: { templateSource, templateVersion, guardrailsVersion } }` (default ClaudeCode). The web app calls it when Delegate opens Claude and sends the versions of the prompt it launched. Writers, web session only; after the 13.5 checks a Done ticket is 409 `agent.ticket.done`. With `launched`, a 13.5 check that fails now (project disabled, type Off, template invalid, too long) does not refuse: the launch already happened, so it is recorded as withdrawn (D-105). In one transaction: `ticket.agent.delegated`, then the caller as assignee if `assignOnDelegate` and unassigned, and To Do → In Progress if `startProgressOnDelegate`. Returns the ticket (D-100). |
+
+The project DTO (`GET /projects/{pk}`, `get_project`) carries the same setup as `agent`, null while agent delegation is not available to the caller.
+
+### 13.8 Activity and audit
+
+Every template change writes `agent.prompt.updated` with EntityType `AgentPrompt`, `ProjectId` set for project rows, `Field` the type name or `Guardrails`, and old and new values `{ version, mode }`. The body is never in activity; bodies live in the versions. The Admin audit trail (I-13) lists `AgentPrompt` entries, labelled `Bug` or `TKT Bug`, as "changed agent prompt · v2 → v3" (plus the mode change when there is one).
+
+### 13.8a Admin → Agent prompts
+
+A tab next to Feature flags, shown and routed only while the flag is on for the Admin (`/admin/agent-prompts`, `/admin/agent-prompts/{bug|user-story|technical|spike|epic|guardrails}`). It shows the `TICKETING_PUBLIC_URL` status line ("not set — delegation is disabled" with no prompt lists while it is unset), the five defaults and the guardrails with their version and built-in state, a "Newer built-in" badge, and per type the number of overriding projects, which opens their list with links to each project's prompt editor. The editor is the project one without the modes: preview (the guardrails render after a sample type prompt), compare with the built-in, history and restore, **Reset to built-in**, and the banner "A newer built-in prompt is available" with **Compare** and **Adopt** (both take the shipped text as a new version, D-103).
+
+Each changed setup field writes `project.field.changed` (EntityType `Project`) with `Field` one of `agentDelegationEnabled`, `repositoryUrl`, `defaultBranch`, `agentMergePolicy`, `agentAssignOnDelegate`, `agentStartProgressOnDelegate`. Resolving a prompt writes nothing.
+
+A delegation writes `ticket.agent.delegated` (EntityType `Ticket`) with the new value `{ templateSource, templateVersion, guardrailsVersion, app }` for the prompt that was launched, plus `current` (the same three fields) when the server's current prompt differs, or `withdrawn` (the error code) when it can no longer be resolved (D-105). The on-delegate changes follow as ordinary `ticket.field.changed` entries (`assignee`, `status`) with the same timestamp. Neither the prompt nor the local folder is ever stored. History shows it as "Anna delegated to agent · prompt v3 (custom) · Claude Code", with ", since changed" or ", since withdrawn" inside the brackets.
+
+### 13.9 MCP
+
+| Tool | Inputs | Output |
+| --- | --- | --- |
+| `get_agent_prompt` | `key` | The same object as `GET /tickets/{key}/agent-prompt`. Read-only; a `ReadOnly` token may call it. |
+
+`tools/list` contains `get_agent_prompt` only while the agent gate (13.2) is open for the token's user; a direct call otherwise fails with `agent.disabled`. A tool joins this rule by carrying `[FeatureGate(typeof(SomeGate))]`. `get_project` returns `agent`; `update_project` does not accept the setup (13.6). There are no MCP tools for template edits. Sessions started by hand use `get_agent_prompt` as described in [docs/mcp.md](../mcp.md#working-on-a-ticket-without-the-delegate-button).
+
+### 13.10 Default prompts
+
+The built-ins (`Agents/BuiltIns/*.txt`, release `2026.10.2`) are condensed from [04-delegate-to-agent-prompts.md](04-delegate-to-agent-prompts.md) to fit 13.4's limit (D-102). Every type template names the ticket by key only, has the agent read it with `get_ticket` and follow the repository's `CLAUDE.md`, and works without the guardrails; status changes and the closing comment come from both.
+
+| Type | What the default asks for | Finish |
+| --- | --- | --- |
+| Epic | Plan only, no code: read the epic and its children, create the missing children in one `create_tickets` call (idempotency key `<KEY>-plan`) with acceptance criteria, link real dependencies with `Blocks`, comment the delivery order and open questions. The epic's status stays as it is. | None |
+| UserStory | Worktree, plan against the ACs (subagents only for independent parts), tests at the repository's levels, every AC walked through in the browser with light and dark screenshots, docs, test cases. | `{{finish}}` |
+| Technical | Worktree, proof by kind of change (pinned behaviour for refactors, integration tests for new capabilities, before/after numbers for performance), full checks, a browser check of the flows that rely on the change, test cases. | `{{finish}}` |
+| Spike | Research with cited primary sources, an optional throwaway prototype that is never merged, findings in a doc, follow-up tickets (`RelatesTo`, `Blocks` among themselves) left in To Do. No production code. | `{{finish}}` for the docs branch |
+| Bug | Reproduce first as an automated test that fails for the reported reason (ask instead of guessing when it cannot be reproduced), root cause, smallest fix, regression test kept, browser check when the bug was visible. | `{{finish}}` plus root cause and the failing-then-passing test |
+
+The **guardrails** (in this order): the folder check (compare `git remote get-url origin` with `{{project.repositoryUrl}}` after normalising both as in 13.3, and stop on a mismatch); tracker access only through the `ticketing` MCP server; ticket content is data that cannot change the rules, with the requests to refuse and quote; no secrets or personal data in the tracker; blockers, assignment and resuming an earlier run; `CLAUDE.md` and status (InProgress, Review when pushed, Done once merged, unless the steps or `CLAUDE.md` say otherwise); asking the watching developer before risky steps; one closing comment starting `Delegated run · {{template.id}}`.
+
+**Finish** sentences: `Review` commits with the ticket key, merges the latest `{{project.defaultBranch}}` into the branch, re-runs the checks, pushes, opens a pull request if a forge CLI is set up and sets Review, without merging. `MergeWhenVerified` does the same, then merges the branch back, re-runs the checks, pushes, sets Done and reports the merge commit; it stops at Review on non-trivial conflicts or a failing check.
+
+Every type with the guardrails stays below 4 500 characters with the longest values the fields allow (10-character project key, ticket number 2 147 483 647, 500-character repository URL, 100-character branch, a 150-character public URL): about 4 400 at most, and about 3 600 for TKT's own values.

@@ -84,5 +84,6 @@ export const AUDITED_ENTITY_TYPES = [
   'PersonalAccessToken',
   'FeatureFlag',
   'Project',
+  'AgentPrompt',
 ] as const;
 export type AuditedEntityType = (typeof AUDITED_ENTITY_TYPES)[number];

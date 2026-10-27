@@ -1,6 +1,6 @@
 namespace Ticketing.Infrastructure.Pdf;
 
-/// <summary>The PDF renderer sidecar (Gotenberg, ADR 0013) and the print bundle the API posts to it.</summary>
+/// <summary>The PDF renderer sidecar (Gotenberg, ADR 0014) and the print bundle the API posts to it.</summary>
 public sealed class PdfOptions
 {
     public const string Section = "Pdf";

@@ -29,6 +29,7 @@ services:
       ConnectionStrings__Db: Host=db;Port=5432;Database=ticketing;Username=ticketing;Password=${DB_PASSWORD:?set DB_PASSWORD in .env};GSS Encryption Mode=Disable
       Database__MigrateOnStartup: "true"
       Auth__CookieSecurePolicy: ${COOKIE_SECURE_POLICY:-SameAsRequest}
+      TICKETING_PUBLIC_URL: ${TICKETING_PUBLIC_URL:-}
       TICKETING_SEED_DEMO: ${TICKETING_SEED_DEMO:-false}
       TICKETING_DEMO_PASSWORD: ${TICKETING_DEMO_PASSWORD:-}
       TICKETING_BOOTSTRAP_ADMIN_EMAIL: ${TICKETING_BOOTSTRAP_ADMIN_EMAIL:?set TICKETING_BOOTSTRAP_ADMIN_EMAIL in .env}
@@ -41,7 +42,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  # PDF renderer (ADR 0013, D-100): Gotenberg's Chromium on an internal network shared only with the API, no published
+  # PDF renderer (ADR 0014, D-111): Gotenberg's Chromium on an internal network shared only with the API, no published
   # port, no egress, basic auth. Without PDF_RENDERER_PASSWORD it idles (healthy) and PDF export is off.
   pdf:
     image: gotenberg/gotenberg:8.39.0-chromium

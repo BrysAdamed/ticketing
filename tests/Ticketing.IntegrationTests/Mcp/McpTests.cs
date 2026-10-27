@@ -71,6 +71,30 @@ public sealed class McpTests(TicketingApiFactory api)
     }
 
     [Fact]
+    public async Task Every_destructive_tool_asks_the_client_to_confirm_with_the_user()
+    {
+        // Arrange
+        var user = await api.CreateUserAsync();
+        await using var mcp = await api.CreateMcpClientAsync(await api.CreatePatAsync(user, PatScope.ReadWrite));
+        string[] expected =
+        [
+            "archive_board", "cancel_regression_session", "delete_comment", "delete_doc", "delete_doc_comment", "delete_ticket", "unlink_tickets",
+        ];
+
+        // Act
+        var tools = (await mcp.ListToolsAsync(cancellationToken: _ct)).Select(t => t.ProtocolTool).ToList();
+
+        // Assert
+        var destructive = tools.Where(t => t.Annotations?.DestructiveHint == true).Select(t => t.Name).Order(StringComparer.Ordinal);
+        var confirmed = tools
+            .Where(t => t.Meta?["anthropic/requiresUserInteraction"]?.GetValueKind() == JsonValueKind.True)
+            .Select(t => t.Name)
+            .Order(StringComparer.Ordinal);
+        Assert.Equal(expected, destructive);
+        Assert.Equal(expected, confirmed);
+    }
+
+    [Fact]
     public async Task Read_only_token_calling_a_write_tool_directly_is_refused()
     {
         // Arrange

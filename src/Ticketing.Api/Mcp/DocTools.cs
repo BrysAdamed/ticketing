@@ -220,7 +220,8 @@ public sealed class DocTools
         handler.HandleAsync(new MoveDoc.Command(parent, position, beforeKey, afterKey, docKey), cancellationToken);
 
     [Authorize(Policy = AuthPolicies.CanWrite)]
-    [McpServerTool(Name = "delete_doc", Destructive = true, Title = "Delete doc")]
+    [McpMeta(McpToolMeta.RequiresUserInteraction, true)]
+    [McpServerTool(Name = "delete_doc",Destructive = true, Title = "Delete doc")]
     [Description("Deletes a doc; a folder is deleted with everything in it. Owners can delete anything; Members only docs they created, and "
         + "folders only when empty. Returns deletedCount. Undo and the trash are in the web app and REST API, not MCP.")]
     public static Task<DeleteDoc.Result> DeleteDoc(

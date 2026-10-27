@@ -19,3 +19,18 @@ export const AUDIT_LOG_VIEW = defineView({
   viewId: 'admin.audit',
   variants: { default: () => import('./audit/audit-log.view').then((m) => m.AuditLogView) },
 });
+
+export const AGENT_PROMPTS_VIEW = defineView({
+  viewId: 'admin.agent-prompts',
+  variants: {
+    default: () => import('./agent-prompts/agent-prompts.view').then((m) => m.AgentPromptsView),
+  },
+});
+
+export const INSTANCE_AGENT_PROMPT_VIEW = defineView({
+  viewId: 'admin.agent-prompt',
+  variants: {
+    default: () =>
+      import('./agent-prompts/instance-prompt-editor.view').then((m) => m.InstancePromptEditorView),
+  },
+});

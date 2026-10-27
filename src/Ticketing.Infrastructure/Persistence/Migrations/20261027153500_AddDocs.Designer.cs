@@ -14,7 +14,7 @@ using Ticketing.Infrastructure.Persistence;
 namespace Ticketing.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(TicketingDbContext))]
-    [Migration("20261027152626_AddDocs")]
+    [Migration("20261027153500_AddDocs")]
     partial class AddDocs
     {
         /// <inheritdoc />

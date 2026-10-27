@@ -1,6 +1,12 @@
-import { provideZonelessChangeDetection } from '@angular/core';
+import { Overlay } from '@angular/cdk/overlay';
+import { ComponentPortal } from '@angular/cdk/portal';
+import { Component, provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { vi } from 'vitest';
 import { normalizeKeys, OWN_KEYS_ATTR, ShortcutService } from './shortcut.service';
+
+@Component({ template: 'menu' })
+class OverlayContentComponent {}
 
 const press = (key: string, init: KeyboardEventInit = {}, target: EventTarget = document.body) =>
   target.dispatchEvent(
@@ -144,6 +150,26 @@ describe('ShortcutService', () => {
 
     // Assert
     expect(calls).toEqual(['enter']);
+  });
+
+  it('ignores shortcuts from the moment an overlay opens, before its backdrop has faded in', () => {
+    // Arrange
+    vi.stubGlobal('requestAnimationFrame', () => 0);
+    const calls: string[] = [];
+    service.register({ keys: 'shift+d', description: 'delegate', handler: () => calls.push('d') });
+    const overlay = TestBed.inject(Overlay).create({ hasBackdrop: true });
+    overlay.attach(new ComponentPortal(OverlayContentComponent));
+
+    // Act
+    press('D', { shiftKey: true });
+    overlay.detach();
+    press('D', { shiftKey: true });
+
+    // Assert
+    expect(document.querySelector('.cdk-overlay-backdrop')).not.toBeNull();
+    expect(calls).toEqual(['d']);
+    overlay.dispose();
+    vi.unstubAllGlobals();
   });
 
   it('tells whether keys are registered in the current scope', () => {

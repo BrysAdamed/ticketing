@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Ticketing.Domain.Agents;
 using Ticketing.Domain.Common;
 
 namespace Ticketing.Domain.Projects;
@@ -41,6 +42,22 @@ public sealed partial class Project
 
     public uint RowVersion { get; private set; }
 
+    /// <summary>Owners opt a project in to agent delegation (spec 13.3); it needs a <see cref="RepositoryUrl"/>.</summary>
+    public bool AgentDelegationEnabled { get; private set; }
+
+    public string? RepositoryUrl { get; private set; }
+
+    public AgentMergePolicy AgentMergePolicy { get; private set; } = AgentMergePolicy.Review;
+
+    public string DefaultBranch { get; private set; } = GitBranchName.Default;
+
+    public bool AgentAssignOnDelegate { get; private set; } = true;
+
+    public bool AgentStartProgressOnDelegate { get; private set; } = true;
+
+    public AgentDelegationSettings AgentDelegation =>
+        new(AgentDelegationEnabled, RepositoryUrl, DefaultBranch, AgentMergePolicy, AgentAssignOnDelegate, AgentStartProgressOnDelegate);
+
     public IReadOnlyList<ProjectMember> Members => _members;
 
     public bool IsArchived => ArchivedAt is not null;
@@ -79,6 +96,23 @@ public sealed partial class Project
         Description = Text.Optional(description, "description", DescriptionMaxLength);
 
     public void ChangeVisibility(ProjectVisibility visibility) => Visibility = visibility;
+
+    public void ConfigureAgentDelegation(AgentDelegationSettings settings)
+    {
+        var url = string.IsNullOrWhiteSpace(settings.RepositoryUrl) ? null : GitRemoteUrl.Parse(settings.RepositoryUrl, "repositoryUrl");
+        if (settings.Enabled && url is null)
+            throw DomainException.Invalid(
+                "enabled", AgentErrors.RepositoryRequired, "Set the repository URL before enabling agent delegation.",
+                "Agents check their local clone against it.");
+        var branch = GitBranchName.Normalize(settings.DefaultBranch, "defaultBranch");
+
+        AgentDelegationEnabled = settings.Enabled;
+        RepositoryUrl = url?.Value;
+        DefaultBranch = branch;
+        AgentMergePolicy = settings.MergePolicy;
+        AgentAssignOnDelegate = settings.AssignOnDelegate;
+        AgentStartProgressOnDelegate = settings.StartProgressOnDelegate;
+    }
 
     public void EnsureWritable()
     {

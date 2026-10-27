@@ -39,7 +39,7 @@ export interface PrintEntry {
   images: Record<string, string>;
 }
 
-/// The data the API writes into `index.html` (`#tk-print-data`) for one export (D-100).
+/// The data the API writes into `index.html` (`#tk-print-data`) for one export (D-111).
 export interface PrintData {
   mode: 'single' | 'folder';
   appUrl: string;

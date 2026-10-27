@@ -49,6 +49,8 @@ This file is the pool of unscheduled ideas. Once an idea is scheduled it becomes
 | I-35 | Sprints with dates, goal, velocity and burndown | Scrum metrics. Board archive covers the flow until then. | L |
 | I-53 | Releases with release notes | Turns the free-text version into a managed release. | M |
 | I-75 | Stale ticket housekeeping | Bulk close or flag long-untouched tickets. | S |
+| I-125 | "Don't ask again" for the move-with-sub-tickets prompt | D-107 asks before every move that has qualifying sub-tickets; a per-browser default would save a click for people who always choose the same. | S |
+| I-126 | Drop backlog rows onto a board in the "on boards" panel | Today the panel only counts tickets on boards; tracked as TKT-73, which also wires in the D-107 prompt. | S |
 | – | Readable board URLs | `/boards/{guid}` is hard to read and share by voice; a short board key or slug (`/boards/web-sprint-42`) with the id as fallback (UX review UX-38). Needs a unique, renamable slug and redirects from old slugs. | S |
 
 ## Tickets and search
@@ -100,6 +102,13 @@ This file is the pool of unscheduled ideas. Once an idea is scheduled it becomes
 | I-49 | Outgoing webhooks | Lets other tools react to ticket changes. | M |
 | I-50 | Git integration by ticket key | Shows commits and pull requests on the ticket. | M |
 | I-48 | Built-in Jira importer | Not planned: the PO decided against migrating Jira data (Q-01). Revisit only if that changes. | L |
+| I-124 | Our own agent helper app: auto-start, background (headless) runs, enforced launch options (permission mode, model) and run reporting | v1 launches through Claude's deep link, which can carry only a folder and a prompt (D-98); the launch options of the helper design were dropped with it. | L |
+| - | Richer agent prompt templates: `else`, nesting, a sanitised `ticket.title` | v1 keeps a flat `if` and trusted placeholders only (D-98); per-type templates already remove most branching. | S |
+| - | Match host-specific URL shapes of one repository | The normalized repository URL compares host and path (D-99), so Azure DevOps' `ssh.dev.azure.com:v3/org/project/repo` and `dev.azure.com/org/project/_git/repo` do not match. A per-host rewrite table would let such clones pass the agent's remote check. | S |
+| - | Evaluate the default agent prompts | The built-ins (D-102) are hypotheses. The prompt designer's evaluation plan (04-delegate-to-agent-prompts.md §6: a sandbox stack, 2–3 historical tickets per type, injection probes, a rubric with safety as a gate, and field data from the `Delegated run` marker) would show which wording works before the next release. | M |
+| - | Deny rules for delegated runs | The prompt designer wanted `--disallowedTools` for tracker writes a delegated run never needs and for force-pushes (§2.2). A deep link cannot pass flags, so v1 relies on the guardrails and on `requiresUserInteraction` for destructive tools (D-102); our own helper (I-124) or a shipped `.claude/settings.json` snippet could add them. | S |
+| - | Editable merge-policy sentences | The two `{{finish}}` sentences ship fixed with the built-ins (D-98); an Admin may want to word them for the company's forge and review flow. | S |
+| - | Project-scoped personal access tokens | A token limited to one project would cap what a hijacked agent or a stolen PAT can change (research §4.4, agent delegation threat model T5). | M |
 
 ## Experiments and UI
 

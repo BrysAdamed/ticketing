@@ -13,7 +13,7 @@ export interface ExcalidrawRuntime {
 let runtime: Promise<ExcalidrawRuntime> | undefined;
 
 /// Loads React and Excalidraw on first use and points Excalidraw at the self-hosted fonts and
-/// stylesheet that angular.json copies to /excalidraw/ (ADR 0013): no request leaves our origin.
+/// stylesheet that angular.json copies to /excalidraw/ (ADR 0014): no request leaves our origin.
 export function loadExcalidraw(doc: Document = document): Promise<ExcalidrawRuntime> {
   runtime ??= (async () => {
     const view = doc.defaultView as (Window & { EXCALIDRAW_ASSET_PATH?: string }) | null;

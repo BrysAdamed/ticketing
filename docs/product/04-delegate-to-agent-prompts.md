@@ -1,5 +1,7 @@
 # Delegate to agent: default prompts per ticket type
 
+> **Shipped texts (TKT-32).** The built-ins in `src/Ticketing.Application/Agents/BuiltIns/` are condensed from §3 and §4 to fit the 4 500-character deep-link budget with worst-case values. They drop `{{run.mode}}`, the launcher flags and the epic delivery variant (v1 sessions are always interactive), add the folder check, and render the finish sentences with the default branch. Spec §13.10 and D-102 are normative; this document remains the rationale.
+
 Part of spike [TKT-24](http://localhost:8090/tickets/TKT-24) "Refine 'Delegate to agent'". This document covers the prompts only. The launcher, the custom protocol and how a project's clone is found belong to the rest of the spike.
 
 Owner's example for a User Story (verbatim):

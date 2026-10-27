@@ -4,7 +4,7 @@ import type { DiagramRender, DiagramRenderer } from '../diagram-renderers';
 export const PREVIEW_NOT_RENDERED = 'Preview not rendered yet';
 const DRAW_FAILED = "Couldn't draw the diagram.";
 
-/// Excalidraw's own dark transform: the light picture inverted, hues turned back (D-99).
+/// Excalidraw's own dark transform: the light picture inverted, hues turned back (D-110).
 export const CANVAS_DARK_FILTER = 'invert(93%) hue-rotate(180deg)';
 
 type Picture = Extract<DiagramRender, { element: Element }>;

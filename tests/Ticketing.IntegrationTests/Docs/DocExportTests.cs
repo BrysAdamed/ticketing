@@ -11,7 +11,7 @@ using Ticketing.IntegrationTests.Tickets;
 
 namespace Ticketing.IntegrationTests.Docs;
 
-/// <summary>PDF export (TKT-20, docs refinement 1.11, D-100): what the API hands the renderer, limits and who may export.</summary>
+/// <summary>PDF export (TKT-20, docs refinement 1.11, D-111): what the API hands the renderer, limits and who may export.</summary>
 [Collection(nameof(DocsCollection))]
 public sealed class DocExportTests(TicketingApiFactory api)
 {

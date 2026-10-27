@@ -6,7 +6,7 @@ using Ticketing.Domain.Docs;
 namespace Ticketing.Application.Docs;
 
 /// <summary>
-/// A page, a diagram (any version) or a folder (recursively, in tree order) as an A4 PDF (docs refinement 1.11, D-100).
+/// A page, a diagram (any version) or a folder (recursively, in tree order) as an A4 PDF (docs refinement 1.11, D-111).
 /// Every reader can export, Viewers and archived projects included; what the PDF shows is resolved for the caller.
 /// At most 2 exports run at once and 10 wait (<c>doc.export.busy</c>); one export takes at most 2 minutes.
 /// </summary>

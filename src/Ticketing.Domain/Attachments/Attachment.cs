@@ -4,7 +4,7 @@ namespace Ticketing.Domain.Attachments;
 
 /// <summary>
 /// Attachment metadata. The bytes live behind the application's attachment store (spec 4.8, D-15). An attachment belongs
-/// to exactly one owner: a ticket or a doc page (D-97).
+/// to exactly one owner: a ticket or a doc page (D-108).
 /// </summary>
 public sealed class Attachment
 {

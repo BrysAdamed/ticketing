@@ -6,7 +6,7 @@ Owner's idea (verbatim):
 
 > Each project requires some documentation so something that replaces the confluence would be beneficial. A new tab on the project named Docs, with folders, and pages written in markdown will be sufficient. We will need to however add the ability to make some diagrams and insert some shapes and arrows or a whiteboard that allows to draw freely, as they are really helpful usually. There should be a way to export each one of them to pdf.
 
-Numbering: spec §12 "Docs", decisions D-97 to D-117 (D-93 to D-96 went to watchers, notifications, the sub-tickets graph and mentions while this was refined), ideas I-82 onwards.
+Numbering: spec §12 "Docs", decisions D-108 to D-128 (D-93 to D-96 went to watchers, notifications, the sub-tickets graph and mentions while this was refined; D-97 to D-107 to agent delegation and moving sub-tickets, which reached `main` first), ideas I-82 onwards.
 
 ---
 
@@ -15,7 +15,7 @@ Numbering: spec §12 "Docs", decisions D-97 to D-117 (D-93 to D-96 went to watch
 ### 1.1 Scope and placement
 - Docs becomes a new project section: a sidebar sub-item **Docs** under each project. D-83 says project sections live in the sidebar, so it is not a header tab, even though the owner said "tab". View ids are `docs.home`, `docs.page`, `docs.diagram`, `docs.history` and `docs.trash`.
 - Layout is two panes:
-  - Left: a tree panel, 280 px, resizable 200–480 px, collapsible with `Ctrl \` (D-109; `[` is the app sidebar). It is per project and its state is persisted.
+  - Left: a tree panel, 280 px, resizable 200–480 px, collapsible with `Ctrl \` (D-120; `[` is the app sidebar). It is per project and its state is persisted.
   - Right: the content. A page body is at most 760 px wide. At ≥1440 px a 220 px "On this page" rail sits on the right.
 - One project owns three kinds of documents:
   - **Folders.**
@@ -422,7 +422,7 @@ Loading uses skeletons for the tree rows and page anatomy, and stale-while-reval
 
 ## 3. Open questions
 
-### Decided by me (recorded in D-97 onwards)
+### Decided by me (recorded in D-108 onwards)
 1. **Placement.** A sidebar sub-item "Docs" per D-83, not a header tab.
 2. **Node model.** Three kinds in one tree (Folder, Page, Diagram). Pages have no children, which keeps folder semantics and folder export unambiguous.
 3. **Keys.** `{PK}-D-{n}` for every node from one per-project counter. The key is the canonical URL part and the slug is cosmetic, which is rename-safe with no slug table. The format can't collide with the ticket regex.
@@ -495,7 +495,7 @@ Loading uses skeletons for the tree rows and page anatomy, and stale-while-reval
 **Out of scope:** comments, watchers and mentions on docs; spaces; real-time; importers; Word export (ideas I-82..I-105).
 
 **Definition of done for every child:**
-- Spec §12, glossary, decisions D-97+ and `docs/mcp.md` updated.
+- Spec §12, glossary, decisions D-108+ and `docs/mcp.md` updated.
 - Additive migrations only (ADR 0006).
 - Integration tests including permission and leak paths, copying the leak-guard test.
 - Light and dark theme checked, with screenshots on the ticket.
@@ -522,7 +522,7 @@ AC:
 
   The spike decides whether ToC page numbers are feasible (a two-pass render or Paged.js) and measures timings for 1 and 50 documents.
 - [ ] The renderer's isolation is documented: no outbound network except the API, an auth model for the print route (short-lived render token), memory and CPU limits in compose.
-- [ ] Output: ADR 0013 (diagram editor + PDF pipeline), chosen libraries with exact versions and licences, bundle-size numbers, and the decision on the `Canvas` source format.
+- [ ] Output: ADR 0014 (diagram editor + PDF pipeline), chosen libraries with exact versions and licences, bundle-size numbers, and the decision on the `Canvas` source format.
 
 #### D2 · Docs backend core: tree, pages, folders (REST + MCP) · Technical · 8 pts · deps: none (can run alongside D1)
 AC:
@@ -653,7 +653,7 @@ AC:
 - [ ] Dashboard widget "Recent docs" (5 latest plus total, linking to the Docs home), with an empty state. `get_project_stats.recentDocs` uses the readability filter.
 - [ ] The demo seeder (through use cases, D-85) creates a small docs tree per demo project: folders, 4 pages with callouts, a table, ticket mentions, one Mermaid diagram and one Canvas diagram embedded in a page.
 - [ ] `docs/mcp.md` gains a "Docs from Claude Code" section with example prompts and the Confluence copy playbook (Q-09 A). README screenshots of Docs in light and dark.
-- [ ] Spec §12, glossary terms (Doc, Folder, Page, Diagram, Canvas, Draft, Publish, Doc key, Backlink) and the decisions D-97+ are merged.
+- [ ] Spec §12, glossary terms (Doc, Folder, Page, Diagram, Canvas, Draft, Publish, Doc key, Backlink) and the decisions D-108+ are merged.
 
 #### D12 · Page comments · User story · 5 pts · deps: D4 (notifications part: TKT-7)
 *As a reader I want to discuss a page in comments below it, so that review feedback stays next to the document instead of in chat.*
@@ -675,10 +675,10 @@ AC:
 
 | Topic | Research | Decision for the tickets |
 | --- | --- | --- |
-| Canvas editor | Excalidraw 0.18.1 (MIT) as a lazy React 19 island; tldraw rejected (license key + watermark); draw.io kept as a later option | **Excalidraw.** Store the native JSON plus an SVG snapshot on every publish; pages and PDFs embed the SVG. Self-host assets and fonts, `aiEnabled={false}`. **D1 outcome (TKT-11, D-99, ADR 0013):** the island is `tk-canvas-editor` in `shared/diagrams/canvas`. `wasm-unsafe-eval` is not enough (font subsetting needs eval), so the page CSP stays unchanged and a worker-only CSP on hashed scripts lets subsetting run. Dark embeds CSS-invert the light snapshot. |
+| Canvas editor | Excalidraw 0.18.1 (MIT) as a lazy React 19 island; tldraw rejected (license key + watermark); draw.io kept as a later option | **Excalidraw.** Store the native JSON plus an SVG snapshot on every publish; pages and PDFs embed the SVG. Self-host assets and fonts, `aiEnabled={false}`. **D1 outcome (TKT-11, D-110, ADR 0014):** the island is `tk-canvas-editor` in `shared/diagrams/canvas`. `wasm-unsafe-eval` is not enough (font subsetting needs eval), so the page CSP stays unchanged and a worker-only CSP on hashed scripts lets subsetting run. Dark embeds CSS-invert the light snapshot. |
 | Mermaid | 12.2.0, lazy, `layout: "dagre"` (ELK default is 670 KB gz) | Adopted as stated. |
 | Page editor | CodeMirror 6 + live preview, slash commands, `[[` completion, paste upload; WYSIWYG later | Adopted: matches the split-pane editor of §1.8. |
-| PDF | Gotenberg 8.39 (MIT) Chromium sidecar on an `internal` network; API posts a self-contained HTML bundle rendered with Markdig | **Gotenberg sidecar adopted.** **D1 outcome (D-100, ADR 0013):** neither the print route nor Markdig. The API posts an offline **print bundle** built from the SPA's own `renderMarkdown` and Mermaid renderer, with the data already authorised for the exporter. One renderer, no callback from the renderer. Measured: one page 1.3–2.5 s, 50 documents 9–12 s warm. |
-| PDF ToC page numbers | Not feasible (Chromium; Paged.js unmaintained) | Linked contents page + PDF bookmarks + `Page X of Y` footers — the accepted fallback in §1.11. Confirmed in D1: hierarchical bookmarks come from `generateDocumentOutline`. Footers are per export, so a folder export shows the folder key in the footer centre (D-101). |
+| PDF | Gotenberg 8.39 (MIT) Chromium sidecar on an `internal` network; API posts a self-contained HTML bundle rendered with Markdig | **Gotenberg sidecar adopted.** **D1 outcome (D-111, ADR 0014):** neither the print route nor Markdig. The API posts an offline **print bundle** built from the SPA's own `renderMarkdown` and Mermaid renderer, with the data already authorised for the exporter. One renderer, no callback from the renderer. Measured: one page 1.3–2.5 s, 50 documents 9–12 s warm. |
+| PDF ToC page numbers | Not feasible (Chromium; Paged.js unmaintained) | Linked contents page + PDF bookmarks + `Page X of Y` footers — the accepted fallback in §1.11. Confirmed in D1: hierarchical bookmarks come from `generateDocumentOutline`. Footers are per export, so a folder export shows the folder key in the footer centre (D-112). |
 | Attachments | Separate `doc_attachments` table on the existing store | D2 decides between that and the nullable owner pair of §1.3, recorded as a decision. |
 | Version storage | Full copies, lz4 TOAST compression | Adopted. |

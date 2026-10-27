@@ -1,13 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { RouteTab, RouteTabsComponent } from '@shared/ui/route-tabs/route-tabs.component';
+import { RouteTabsComponent } from '@shared/ui/route-tabs/route-tabs.component';
 import { AdminLayoutStore } from './admin-layout.store';
-
-const TABS: readonly RouteTab[] = [
-  { path: 'users', label: 'Users' },
-  { path: 'flags', label: 'Feature flags' },
-  { path: 'audit', label: 'Audit log' },
-];
 
 @Component({
   selector: 'tk-admin-layout-view',
@@ -19,12 +13,11 @@ const TABS: readonly RouteTab[] = [
     <header class="tk-page-header">
       <h1>{{ store.title }}</h1>
     </header>
-    <tk-route-tabs [tabs]="tabs" ariaLabel="Admin sections" testIdPrefix="admin-tab-">
+    <tk-route-tabs [tabs]="store.tabs()" ariaLabel="Admin sections" testIdPrefix="admin-tab-">
       <router-outlet />
     </tk-route-tabs>
   `,
 })
 export class AdminLayoutView {
   protected readonly store = inject(AdminLayoutStore);
-  protected readonly tabs = TABS;
 }

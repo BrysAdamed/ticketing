@@ -24,7 +24,7 @@ How a feature slice is delivered in this repo. Every slice is full-stack: use ca
 * **Backend** — every use case has integration tests (Testcontainers) covering the happy path, validation, permissions (owner/member/viewer/outsider, public vs private) and private-project leak paths (spec §10). Domain rules get unit tests.
 * **MCP** — every use case of the slice listed in spec §9.3 gets its MCP tool calling the same handler, with at least one integration test per tool through the MCP client helper. Tool descriptions list allowed enum values.
 * **Frontend** — pages follow the store + view split and are registered in the view registry. Lists use skeletons, never spinners. Optimistic updates with rollback for inline edits and drag and drop. Keyboard shortcuts from spec §10 where they apply. Vitest tests for non-trivial logic (stores, mappers, validators).
-* **E2E** — add Playwright specs under `e2e/tests/<slice>/` for the slice's main user journeys (seed via the API helper, not the UI, except for the journey under test).
+* **E2E** — add Playwright specs under `e2e/tests/<slice>/` for the slice's main user journeys (seed via the API helper, not the UI, except for the journey under test). Run `npm run typecheck` in `e2e/` before the suite.
 * **Look and feel** — check every page in the browser in light and dark themes against the mockups; take screenshots. It must look professional and feel instant.
 * **Performance** — `AsNoTracking` projections, no N+1, paging, indexes exist for your queries (check `EXPLAIN` for heavy ones). Lazy routes, `@defer` for heavy widgets, virtual scroll for long lists.
 * **Style** — minimal comments (only TODO/FIXME, Arrange/Act/Assert in tests, `///` on public abstractions). No heredocs in shell. Don't prefix `dotnet test` with `rtk` (it runs zero tests).
@@ -35,7 +35,7 @@ Update in the same branch: `docs/domain/workflows.md` and `docs/glossary.md` if 
 
 ## Definition of done
 
-`dotnet build` warning-free, `dotnet test` green, `npm run build` within budgets, `npm test` and `npm run lint` green, your Playwright specs green against `docker compose up --build`, branch pushed.
+`dotnet build` warning-free, `dotnet test` green, `npm run build` within budgets, `npm test`, `npm run lint` and `npm run format:check` green, `npm run typecheck` in `e2e/` clean, your Playwright specs green against `docker compose up --build`, branch pushed.
 
 ## Report (reply to the orchestrator, ≤25 lines)
 

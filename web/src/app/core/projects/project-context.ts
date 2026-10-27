@@ -5,6 +5,10 @@ import { ApiError, toApiError } from '../api/api-error';
 import { LoadStatus, ProjectDirectory } from './project-directory';
 import { GlobalRole, ProjectRole, ProjectVisibility } from '@shared/domain/enums';
 
+/// Shown after a project is unarchived: archiving unlinked it from every board, and unarchive does not relink (ideas.md).
+export const BOARDS_NOT_RELINKED =
+  "Its former boards are not linked again; add the project back from each board's settings.";
+
 /// Member row of a project (`members` in `GET /api/v1/projects/{key}`, or `GET …/members`).
 export interface ProjectMember {
   userId: string;

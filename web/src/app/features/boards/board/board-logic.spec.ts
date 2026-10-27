@@ -25,6 +25,8 @@ function card(n: number, overrides: Partial<BoardCard> = {}): BoardCard {
     labels: [],
     assigneeId: null,
     parentId: null,
+    childCount: 0,
+    childDoneCount: 0,
     ...overrides,
   };
 }

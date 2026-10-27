@@ -17,6 +17,7 @@ import {
   signal,
   untracked,
   viewChild,
+  viewChildren,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
@@ -30,15 +31,18 @@ import { Breadcrumbs } from '@core/layout/breadcrumbs';
 import { PeekService } from '@core/layout/peek/peek';
 import { ShortcutService } from '@core/shortcuts/shortcut.service';
 import { TicketCreator } from '@core/tickets/create-ticket';
+import { ProjectPeople } from '@core/tickets/project-people';
 import { TicketCache } from '@core/tickets/ticket-cache';
-import { TicketsApi } from '@core/tickets/tickets.api';
+import { UserRef } from '@core/tickets/ticket.models';
 import {
+  Priority,
   STATUS_CATEGORY_LABELS,
   statusCategory,
   TICKET_STATUS_LABELS,
   TICKET_STATUSES,
   TicketStatus,
 } from '@shared/domain/enums';
+import { PRIORITY_OPTIONS, TICKET_STATUS_OPTIONS } from '@shared/domain/picker-options';
 import { AvatarComponent } from '@shared/ui/domain/avatar.component';
 import { BadgeComponent } from '@shared/ui/domain/badge.component';
 import { ProjectTileComponent } from '@shared/ui/domain/project-tile.component';
@@ -46,7 +50,9 @@ import { StatusIconComponent } from '@shared/ui/domain/status-icon.component';
 import { TypeIconComponent } from '@shared/ui/domain/type-icon.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { IconComponent } from '@shared/ui/icon/icon.component';
-import { filter, firstValueFrom } from 'rxjs';
+import { InlinePickerDirective } from '@shared/ui/inline-picker/inline-picker.directive';
+import { SearchPickerDirective } from '@shared/ui/search-picker/search-picker.directive';
+import { filter } from 'rxjs';
 import { BOARD_ICONS } from '../board-icons';
 import { AddTicketsDialog, AddTicketsDialogData } from './add-tickets.dialog';
 import { BoardCardComponent } from './board-card.component';
@@ -58,6 +64,7 @@ import {
   filtersFromParams,
   filtersToParams,
   Lane,
+  statusOf,
   Swimlanes,
 } from './board-logic';
 import { BoardSettingsDialog } from './board-settings.dialog';
@@ -101,6 +108,8 @@ const SKELETON_COLUMNS = [3, 2, 1, 2, 1, 1, 1, 2].map((n) =>
     IconComponent,
     BoardCardComponent,
     BoardFiltersComponent,
+    InlinePickerDirective,
+    SearchPickerDirective,
   ],
   providers: [BoardStore],
   viewProviders: [provideIcons(BOARD_ICONS)],
@@ -117,8 +126,8 @@ export class BoardView {
   private readonly cache = inject(TicketCache);
   private readonly dialog = inject(MatDialog);
   private readonly creator = inject(TicketCreator);
-  private readonly ticketsApi = inject(TicketsApi);
   private readonly breadcrumbs = inject(Breadcrumbs);
+  private readonly people = inject(ProjectPeople);
 
   readonly boardId = input.required<string>();
 
@@ -130,6 +139,24 @@ export class BoardView {
   protected readonly skeletonColumns = SKELETON_COLUMNS;
   protected readonly dragging = signal<ReadonlySet<string>>(new Set());
   protected readonly filtersBar = viewChild(BoardFiltersComponent);
+  protected readonly statusOptions = TICKET_STATUS_OPTIONS;
+  protected readonly priorityOptions = PRIORITY_OPTIONS;
+  protected readonly focusedStatus = computed(() => {
+    const id = this.store.focusId();
+    return id ? statusOf(this.store.columns(), id) : null;
+  });
+  protected readonly focusedPriority = computed(() => {
+    const id = this.store.focusId();
+    return id ? (this.store.cardById(id)?.priority ?? null) : null;
+  });
+  protected readonly assigneeSearch = this.people.picker(() => this.editProjectKey);
+  private readonly cards = viewChildren(BoardCardComponent);
+  private readonly statusPicker = viewChild<InlinePickerDirective<TicketStatus>>('kbStatusPicker');
+  private readonly priorityPicker = viewChild<InlinePickerDirective<Priority>>('kbPriorityPicker');
+  private readonly assigneePicker =
+    viewChild<SearchPickerDirective<UserRef | null>>('kbAssigneePicker');
+  private editIds: string[] = [];
+  private editProjectKey = '';
 
   protected readonly swimlaneLabel = computed(
     () => SWIMLANE_OPTIONS.find((o) => o.value === this.store.swimlanes())?.label ?? 'None',
@@ -249,6 +276,24 @@ export class BoardView {
         handler: () => this.toggleFocused(),
       },
       {
+        keys: 's',
+        section: 'Board',
+        description: 'Change status',
+        handler: () => this.openPicker('status'),
+      },
+      {
+        keys: 'p',
+        section: 'Board',
+        description: 'Change priority',
+        handler: () => this.openPicker('priority'),
+      },
+      {
+        keys: 'i',
+        section: 'Board',
+        description: 'Assign to…',
+        handler: () => this.openPicker('assignee'),
+      },
+      {
         keys: '/',
         section: 'Board',
         description: 'Filter cards',
@@ -261,6 +306,34 @@ export class BoardView {
         showInHelp: false,
       },
     ]);
+  }
+
+  protected pickStatus(status: TicketStatus): void {
+    const columns = this.store.columns();
+    const ids = this.editIds.filter((id) => statusOf(columns, id) !== status);
+    if (ids.length) void this.store.move(ids, status, {});
+  }
+
+  protected pickPriority(priority: Priority): void {
+    void this.store.setPriority(this.editIds, priority);
+  }
+
+  protected pickAssignee(user: UserRef | null): void {
+    void this.store.setAssignee(this.editIds, user);
+  }
+
+  /// s / p / i: a picker under the focused card for it, or for the selection when there is one.
+  private openPicker(field: 'status' | 'priority' | 'assignee'): void {
+    const ids = this.store.editTargets();
+    if (!ids.length) return;
+    this.editIds = ids;
+    this.editProjectKey = this.store.cardById(ids[0])?.projectKey ?? '';
+    const focus = this.store.focusId();
+    const anchorId = focus && ids.includes(focus) ? focus : ids[0];
+    const origin = this.cards().find((c) => c.card().id === anchorId)?.element.nativeElement;
+    if (field === 'status') this.statusPicker()?.open(origin);
+    else if (field === 'priority') this.priorityPicker()?.open(origin);
+    else this.assigneePicker()?.open(origin);
   }
 
   protected setFilters(filters: BoardFilters): void {
@@ -375,16 +448,12 @@ export class BoardView {
     const board = this.store.board();
     const project = board?.projects.find((p) => p.canWrite && !p.isArchived);
     if (!board || !project) return;
-    const created = await this.creator.open({
+    await this.creator.open({
       projectKey: project.key,
       status,
+      boardId: board.id,
       heading: `New ticket on ${board.name}`,
-      submit: (projectKey, ticket) =>
-        firstValueFrom(
-          this.ticketsApi.create(projectKey, { ...ticket, boardId: board.id } as typeof ticket),
-        ),
     });
-    if (created) await this.store.reload(true);
   }
 
   protected sendSelectionToBacklog(): void {

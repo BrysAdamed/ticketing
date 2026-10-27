@@ -590,7 +590,7 @@ Material 22 has no `@angular/animations` dependency (its only runtime dependency
 - the palettes `$azure-palette`, `$violet-palette`, etc.
 - per-component `*-overrides` mixins (`mat.button-overrides`, `mat.card-overrides`, ...)
 
-Map our design tokens (`docs/design/tokens.scss`) onto M3 system variables, not per-component CSS hacks:
+Map our design tokens (`web/src/styles/_tokens.scss`) onto M3 system variables, not per-component CSS hacks:
 
 ```scss
 @use '@angular/material' as mat;

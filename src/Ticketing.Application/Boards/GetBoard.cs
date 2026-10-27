@@ -12,7 +12,8 @@ namespace Ticketing.Application.Boards;
 /// <summary>
 /// A board with its columns (spec 6.4): every status in enum order, cards in board rank order. Cards from projects the
 /// caller cannot read are omitted entirely (spec 6.5). One query loads all cards with their parent and grandparent, so a
-/// 500-card board is a single indexed range scan.
+/// 500-card board is a single indexed range scan; a second grouped query counts the children of cards that have any
+/// (children share their parent's project, so they are readable whenever the card is).
 /// </summary>
 public static class GetBoard
 {
@@ -145,11 +146,20 @@ public static class GetBoard
                     })
                 .ToListAsync(cancellationToken);
 
+            var progress = await (
+                    from child in db.Tickets.AsNoTracking()
+                    join parent in tickets on child.ParentId equals parent.Id
+                    where child.DeletedAt == null
+                    group child by child.ParentId into g
+                    select new { Id = g.Key!.Value, Total = g.Count(), Done = g.Count(c => c.Status == TicketStatus.Done) })
+                .ToDictionaryAsync(p => p.Id, cancellationToken);
+
             return rows.Select(r => new CardRow(
                     r.Status,
                     new BoardCardDto(
                         r.Id, HumanKeys.Ticket(r.ProjectKey, r.Number), r.ProjectKey, r.Title, r.Type, r.Priority, r.Severity, r.StoryPoints,
-                        r.Labels, r.AssigneeId, r.ParentId),
+                        r.Labels, r.AssigneeId, r.ParentId,
+                        progress.GetValueOrDefault(r.Id)?.Total ?? 0, progress.GetValueOrDefault(r.Id)?.Done ?? 0),
                     r.ParentId is { } parentId
                         ? new BoardParentDto(parentId, HumanKeys.Ticket(r.ProjectKey, r.ParentNumber!.Value), r.ParentTitle!, r.ParentType!.Value, r.GrandId)
                         : null,

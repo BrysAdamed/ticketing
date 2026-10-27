@@ -7,6 +7,7 @@ import { ToastService } from '@core/notify/toast.service';
 import { LoadStatus } from '@core/projects/project-directory';
 import { FieldHints } from '@core/tickets/field-hints';
 import { TicketCache } from '@core/tickets/ticket-cache';
+import { TicketAttachments } from '@core/tickets/ticket-attachments';
 import { TicketEvents } from '@core/tickets/ticket-events';
 import {
   ActivityEntry,
@@ -32,6 +33,7 @@ export class TicketDetailStore {
   private readonly api = inject(TicketsApi);
   private readonly cache = inject(TicketCache);
   private readonly events = inject(TicketEvents);
+  private readonly attachments = inject(TicketAttachments);
   private readonly toast = inject(ToastService);
   private readonly hints = inject(FieldHints);
   private readonly auth = inject(AuthService);
@@ -61,6 +63,9 @@ export class TicketDetailStore {
       if (!current) return;
       if (event.kind === 'updated' && event.ticket.id !== current.id)
         this.refreshRelated(event.ticket);
+    });
+    this.attachments.changes.pipe(takeUntilDestroyed(inject(DestroyRef))).subscribe((change) => {
+      if (change.ticketKey === this.ticket()?.key.toUpperCase()) void this.refreshMeta();
     });
   }
 
@@ -261,6 +266,7 @@ export class TicketDetailStore {
     try {
       await firstValueFrom(this.api.unlink(before.key, linkId));
       this.cache.put(this.ticket()!);
+      void this.refreshMeta();
     } catch (error) {
       this.ticket.set(before);
       this.toast.error(`Couldn't remove the link: ${toApiError(error).title}`);
@@ -323,8 +329,29 @@ export class TicketDetailStore {
       comments: [...this.comments()],
       commentCount: this.commentCount(),
     };
-    this.cache.put(updated);
-    this.events.emit({ kind: 'updated', ticket: updated });
+    this.ticket.set(updated);
+    void this.refreshMeta();
+  }
+
+  /// Comments, links and attachments bump the ticket's `UpdatedAt` and row version on the server: take
+  /// those (keeping the collections loaded here) and refresh the activity list.
+  private async refreshMeta(): Promise<void> {
+    const key = this.key();
+    try {
+      const fresh = await firstValueFrom(this.api.get(key));
+      const current = this.ticket();
+      if (!current || current.id !== fresh.id) return;
+      const merged: Ticket = {
+        ...current,
+        updatedAt: fresh.updatedAt,
+        rowVersion: fresh.rowVersion,
+      };
+      this.ticket.set(merged);
+      this.cache.put(merged);
+      this.events.emit({ kind: 'updated', ticket: merged });
+    } catch {
+      // The view keeps its current values; the next load brings the new ones.
+    }
     if (this.historyStatus() !== 'idle') void this.loadHistory();
   }
 

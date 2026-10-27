@@ -6,6 +6,7 @@ import {
   moveBlock,
   planDrop,
   sortItems,
+  stickyGroupAt,
 } from './backlog-logic';
 import { EMPTY_SELECTION, prune, select, step, targets } from './backlog-selection';
 
@@ -214,5 +215,30 @@ describe('selection', () => {
     expect(step(order, null, 1)).toBe('a');
     expect(step(order, 'd', 1)).toBe('d');
     expect(step(order, 'b', -1)).toBe('a');
+  });
+});
+
+describe('stickyGroupAt', () => {
+  const group = (id: string) => ({ kind: 'group', id }) as const;
+  const ticket = { kind: 'ticket' } as const;
+  const rows = [group('a'), ticket, ticket, ticket, group('b'), ticket, ticket];
+
+  it('pins the group of the first visible row and lets the next header push it out', () => {
+    // Act
+    const atTop = stickyGroupAt(rows, 0, 32);
+    const inA = stickyGroupAt(rows, 40, 32);
+    const pushed = stickyGroupAt(rows, 3 * 32 + 10, 32);
+    const inB = stickyGroupAt(rows, 5 * 32, 32);
+
+    // Assert
+    expect(atTop).toBeNull();
+    expect(inA).toEqual({ group: group('a'), offset: 0 });
+    expect(pushed).toEqual({ group: group('a'), offset: -10 });
+    expect(inB).toEqual({ group: group('b'), offset: 0 });
+  });
+
+  it('returns null for an ungrouped list', () => {
+    // Act / Assert
+    expect(stickyGroupAt([ticket, ticket, ticket], 50, 32)).toBeNull();
   });
 });

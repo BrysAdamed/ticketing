@@ -4,8 +4,8 @@ How our tokens drive **Angular Material 22 + Angular CDK** (both MIT), so the ap
 
 ## 1. Strategy
 
-- **`tokens.scss` is the single source of truth.** No hex values in the Material layer. `mat.theme` generates the `--mat-sys-*` scaffolding once, and `mat.theme-overrides` points every system color, typescale, shape, elevation and state value at a `--tk-*` variable.
-- **Dark mode comes from our variables.** `tokens.scss` flips `--tk-*` and `color-scheme` on `html[data-theme="dark"]`. Material reads `--mat-sys-*`, which resolve to `--tk-*`, so it follows the theme with no second theme emission. Values left at Material defaults use `light-dark()` (theme-type `color-scheme`), and those follow `color-scheme`, which our tokens also flip.
+- **`web/src/styles/_tokens.scss` is the single source of truth.** No hex values in the Material layer. `mat.theme` generates the `--mat-sys-*` scaffolding once, and `mat.theme-overrides` points every system color, typescale, shape, elevation and state value at a `--tk-*` variable.
+- **Dark mode comes from our variables.** `_tokens.scss` flips `--tk-*` and `color-scheme` on `html[data-theme="dark"]`. Material reads `--mat-sys-*`, which resolve to `--tk-*`, so it follows the theme with no second theme emission. Values left at Material defaults use `light-dark()` (theme-type `color-scheme`), and those follow `color-scheme`, which our tokens also flip.
 - **Material for form controls and overlays, CDK for everything that defines the product's feel.** Material contributes accessibility, focus management and overlay positioning. Our own components contribute density and the visual language (see §5).
 - **Sizes and shapes come from component overrides**, not from density alone. Density `-2` is set globally (touch targets, list and checkbox geometry). The exact 28/32px control heights, 6px radii and 32px rows are pinned with `mat.<component>-overrides`.
 - **No Material look**: no ripples, no pill buttons, no floating labels, no filled text fields, no tonal elevation tint, no Roboto, no Material Symbols.
@@ -51,7 +51,7 @@ Form field labels sit **above** the field as plain `<label>` elements (Linear st
 
 ```scss
 @use '@fontsource-variable/inter/wght.css';
-@use 'styles/tokens';           // docs/design/tokens.scss → src/styles/_tokens.scss
+@use 'styles/tokens';           // src/styles/_tokens.scss, the single source of truth
 @use 'styles/material-theme';   // §3
 @use 'styles/material-overrides'; // §4
 

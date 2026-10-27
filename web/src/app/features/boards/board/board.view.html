@@ -286,6 +286,41 @@
     }
   </div>
 
+  <div class="tk-sr-only">
+    <button
+      type="button"
+      tabindex="-1"
+      aria-label="Change status"
+      #kbStatusPicker="tkInlinePicker"
+      [tkInlinePicker]="statusOptions"
+      [pickerValue]="focusedStatus()"
+      pickerPlaceholder="Change status…"
+      pickerShortcut="S"
+      (picked)="pickStatus($event)"
+    ></button>
+    <button
+      type="button"
+      tabindex="-1"
+      aria-label="Change priority"
+      #kbPriorityPicker="tkInlinePicker"
+      [tkInlinePicker]="priorityOptions"
+      [pickerValue]="focusedPriority()"
+      pickerPlaceholder="Change priority…"
+      pickerShortcut="P"
+      (picked)="pickPriority($event)"
+    ></button>
+    <button
+      type="button"
+      tabindex="-1"
+      aria-label="Assign to"
+      #kbAssigneePicker="tkSearchPicker"
+      [tkSearchPicker]="assigneeSearch"
+      pickerPlaceholder="Assign to…"
+      pickerShortcut="I"
+      (picked)="pickAssignee($event)"
+    ></button>
+  </div>
+
   @if (store.selection().size > 0) {
     <div class="bulk" role="toolbar" aria-label="Selected cards" data-testid="board-bulk">
       <span class="count tnum">{{ store.selection().size }} selected</span>

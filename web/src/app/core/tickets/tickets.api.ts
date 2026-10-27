@@ -8,7 +8,7 @@ import {
   Comment,
   HintField,
   NewTicket,
-  RankRequest,
+  MoveTicketsRequest,
   Ticket,
   TicketHistoryPage,
   TicketLink,
@@ -60,8 +60,9 @@ export class TicketsApi {
     return this.api.get<Backlog>(`/projects/${projectKey}/backlog`, { ...query });
   }
 
-  rank(projectKey: string, request: RankRequest): Observable<void> {
-    return this.api.post<void>(`/projects/${projectKey}/backlog/rank`, request);
+  /// Every placement change: backlog reorder, backlog to board and back, board to board, column change.
+  move(request: MoveTicketsRequest): Observable<TicketSummary[]> {
+    return this.api.post<TicketSummary[]>('/tickets/move', request);
   }
 
   find(projectKey: string, text: string, types?: readonly TicketType[]): Observable<TicketRef[]> {

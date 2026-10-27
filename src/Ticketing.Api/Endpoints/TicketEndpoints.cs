@@ -15,6 +15,16 @@ public sealed class TicketEndpoints : IEndpointModule
         MapProjectScoped(api.MapGroup("/projects/{projectKeyOrId}").WithTags("Tickets"));
         MapTickets(api.MapGroup("/tickets/{keyOrId}").WithTags("Tickets"));
         MapComments(api.MapGroup("/comments/{commentId:guid}").WithTags("Tickets"));
+
+        api.MapPost("/tickets/move", async (MoveTickets.Command command, MoveTickets.Handler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.HandleAsync(command, ct)))
+            .WithTags("Tickets")
+            .WithSummary("The one placement call: moves 1..100 tickets as a block to 'backlog' or a board id, optionally into a status column, "
+                + "before/after another ticket or to the Top/Bottom. Reorders a backlog or board too. 'from' guards against stale views.")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
     }
 
     private static void MapProjectScoped(RouteGroupBuilder project)
@@ -55,16 +65,6 @@ public sealed class TicketEndpoints : IEndpointModule
                 new GetBacklog.Query(projectKeyOrId, showDone ?? false, type, status, priority, assignee, label, version, text), ct)))
             .WithSummary("The project backlog in rank order (no paging). Repeat type/status/priority/label for several values; assignee is an id, email, me or unassigned.")
             .ProducesProblem(StatusCodes.Status404NotFound);
-
-        project.MapPost("/backlog/rank", async (
-                string projectKeyOrId, RankBacklogTickets.Command command, RankBacklogTickets.Handler handler, CancellationToken ct) =>
-            {
-                await handler.HandleAsync(command with { ProjectKeyOrId = projectKeyOrId }, ct);
-                return TypedResults.NoContent();
-            })
-            .WithSummary("Moves backlog tickets as a block before/after a ticket, or to the Top/Bottom, keeping the given order.")
-            .ProducesProblem(StatusCodes.Status400BadRequest)
-            .ProducesProblem(StatusCodes.Status409Conflict);
 
         project.MapGet("/hints/{field}", async (string projectKeyOrId, string field, string? prefix, GetFieldHints.Handler handler, CancellationToken ct) =>
             {

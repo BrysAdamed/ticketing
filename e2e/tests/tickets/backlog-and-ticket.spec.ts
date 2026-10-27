@@ -1,6 +1,7 @@
 import { BacklogPage } from '../../pages/backlog.page';
 import { TicketPage } from '../../pages/ticket.page';
 import { Api } from '../../support/api';
+import { seedUser } from '../identity/identity';
 import { expect, test } from '../../support/fixtures';
 
 interface TicketSummary {
@@ -97,14 +98,14 @@ test.describe('backlog and ticket view', () => {
 
         // Act
         const ranked = page.waitForResponse(
-            (r) => r.url().includes('/backlog/rank') && r.request().method() === 'POST',
+            (r) => r.url().includes('/tickets/move') && r.request().method() === 'POST',
         );
         await backlog.dragBefore(`${projectKey}-4`, `${projectKey}-2`);
 
         // Assert: optimistic order, then the server order after a reload
         const expected = [1, 4, 2, 3].map((n) => `${projectKey}-${n}`);
         await expect.poll(() => backlog.keys()).toEqual(expected);
-        expect((await ranked).status()).toBe(204);
+        expect((await ranked).status()).toBe(200);
         await page.reload();
         await expect(backlog.row(`${projectKey}-1`)).toBeVisible();
         await expect.poll(() => backlog.keys()).toEqual(expected);
@@ -142,5 +143,69 @@ test.describe('backlog and ticket view', () => {
 
         // Assert
         await expect(page.getByText(`${ticket.key} was deleted by`)).toBeVisible();
+    });
+
+    test('s and i open pickers for the focused row; the assignee picker offers any active user', async ({
+        page,
+        api,
+    }) => {
+        // Arrange
+        const projectKey = await seedProject(api);
+        const ticket = await createTicket(api, projectKey, 'Keyboard first');
+        const outsider = await seedUser(api, `kbd${Date.now().toString(36)}`);
+        const backlog = new BacklogPage(page);
+        await backlog.goto(projectKey);
+        await expect(backlog.row(ticket.key)).toBeVisible();
+
+        // Act: status through s
+        await page.keyboard.press('j');
+        await page.keyboard.press('s');
+        await page
+            .getByTestId('inline-picker')
+            .getByRole('option', { name: /^Review/ })
+            .click();
+
+        // Act: assignee through i, searching a user who is not a project member
+        await page.keyboard.press('i');
+        const search = page.getByTestId('search-picker');
+        await search.getByTestId('search-picker-input').fill(outsider.displayName);
+        await search.getByRole('option', { name: outsider.displayName }).click();
+
+        // Assert
+        await expect(backlog.row(ticket.key).getByTestId('row-status')).toHaveAttribute(
+            'aria-label',
+            'Status: Review',
+        );
+        await expect
+            .poll(
+                async () =>
+                    (await api.get<{ assignee: { id: string } | null }>(`/tickets/${ticket.key}`))
+                        .assignee?.id,
+            )
+            .toBe(outsider.id);
+    });
+
+    test('the current group header stays pinned while the backlog scrolls', async ({
+        page,
+        api,
+    }) => {
+        // Arrange
+        const projectKey = await seedProject(api);
+        await api.post(`/projects/${projectKey}/tickets/batch`, {
+            tickets: Array.from({ length: 40 }, (_, i) => ({
+                title: `Ticket ${i + 1}`,
+                type: 'UserStory',
+            })),
+        });
+        const backlog = new BacklogPage(page);
+        await backlog.goto(projectKey);
+        await expect(backlog.row(`${projectKey}-1`)).toBeVisible();
+        await expect(page.getByTestId('sticky-group')).toHaveCount(0);
+
+        // Act
+        await page.getByTestId('backlog-list').evaluate((list) => list.scrollTo({ top: 400 }));
+
+        // Assert
+        await expect(page.getByTestId('sticky-group')).toContainText('To Do');
     });
 });

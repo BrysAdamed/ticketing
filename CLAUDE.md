@@ -16,7 +16,7 @@ dotnet build                                   # warnings are errors
 dotnet test                                    # unit + integration (Testcontainers; needs Docker)
 cd web && npm test && npm run lint && npm run format:check && npm run build
 cp .env.example .env && docker compose up --build   # full stack on http://localhost:8080
-cd e2e && npx tsc --noEmit && npx playwright test   # against the running stack
+cd e2e && npm run typecheck && npx playwright test   # against the running stack
 ```
 
 - Never prefix `dotnet test` with `rtk` — it makes the run report zero tests.
@@ -30,7 +30,7 @@ cd e2e && npx tsc --noEmit && npx playwright test   # against the running stack
 - **Ordering** goes through `ITicketRanker` inside `db.InTransactionAsync` — never write `rank` by hand.
 - **Schema**: until v1 ships there is a single `InitialCreate` migration that is regenerated, not appended to (ADR 0006, backend.md). On a migration merge conflict: delete `Persistence/Migrations`, regenerate, and recreate dev databases (`docker compose down -v`).
 - **Frontend**: features live in `web/src/app/features/<name>/` and may not import each other; shared clients go in `core/`, reusable UI in `shared/`. Every routed page is a store + view pair registered through the view registry (`defineView` / `viewRoute`) so A/B variants can be added later (ADR 0008). Other features extend the ticket view via `provideTicketDetailSection`, never by editing it.
-- **UI quality**: match `docs/design/` (tokens, mockups). Skeletons instead of spinners, optimistic updates with rollback, keyboard shortcuts registered via `ShortcutService`, light and dark theme both checked.
+- **UI quality**: match `docs/design/` (design system, mockups); design tokens live in `web/src/styles/_tokens.scss`. Skeletons instead of spinners, optimistic updates with rollback, keyboard shortcuts registered via `ShortcutService`, light and dark theme both checked.
 - **Tests**: integration tests for every use case including permission and leak paths; Vitest for non-trivial frontend logic; Playwright specs seed data through the API helper, never the UI.
 
 ## Style

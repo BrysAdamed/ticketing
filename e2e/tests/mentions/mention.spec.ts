@@ -37,7 +37,9 @@ test.describe('@mentions', () => {
 
         // Act: type @ and part of the reader's email, pick with Enter
         await ticket.composer.click();
-        await ticket.composer.pressSequentially(`Can you check this @${reader.email.slice(0, 12)}`);
+        await ticket.composer.pressSequentially(
+            `Can you check this @${reader.email.split('@')[0]}`,
+        );
         const picker = page.getByTestId('mention-picker');
         const option = picker.getByTestId(`mention-option-${reader.email}`);
         await expect(option).toHaveAttribute('aria-selected', 'true');

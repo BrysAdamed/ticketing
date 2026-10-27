@@ -1,6 +1,13 @@
 import { Board, BoardCard, BoardColumn, BoardParent } from '@core/boards/board.models';
 import { UserRef } from '@core/tickets/ticket.models';
-import { TICKET_STATUSES, TicketStatus, TicketType } from '@shared/domain/enums';
+import {
+  Priority,
+  PRIORITIES,
+  PRIORITY_LABELS,
+  TICKET_STATUSES,
+  TicketStatus,
+  TicketType,
+} from '@shared/domain/enums';
 
 export const UNASSIGNED = 'unassigned';
 
@@ -23,13 +30,20 @@ export const EMPTY_FILTERS: BoardFilters = {
   text: '',
 };
 
-export type Swimlanes = 'none' | 'assignee' | 'epic';
+export const SWIMLANES = ['none', 'assignee', 'epic', 'project', 'priority'] as const;
+export type Swimlanes = (typeof SWIMLANES)[number];
+
+export function parseSwimlanes(value: unknown): Swimlanes {
+  return (SWIMLANES as readonly unknown[]).includes(value) ? (value as Swimlanes) : 'none';
+}
 
 export interface Lane {
   key: string;
   label: string;
   user: UserRef | null;
   epic: BoardParent | null;
+  projectKey: string | null;
+  priority: Priority | null;
   cells: Record<TicketStatus, BoardCard[]>;
   count: number;
   points: number;
@@ -77,7 +91,8 @@ export function epicOf(
 
 /// Groups the visible cards into swimlanes (rows), each with one cell per status. Lanes keep the
 /// board order inside every cell. Assignee lanes sort by name with Unassigned last; epic lanes by
-/// key with "No epic" last. Lanes without visible cards are left out.
+/// key with "No epic" last; project lanes by key; priority lanes from Highest to Lowest. Lanes
+/// without visible cards are left out.
 export function buildLanes(
   board: Board,
   filters: BoardFilters,
@@ -86,6 +101,7 @@ export function buildLanes(
 ): Lane[] {
   const users = new Map(board.users.map((u) => [u.id, u]));
   const parents = new Map(board.parents.map((p) => [p.id, p]));
+  const projects = new Map(board.projects.map((p) => [p.key, p]));
   const lanes = new Map<string, Lane>();
 
   const laneFor = (card: BoardCard): Lane => {
@@ -93,7 +109,17 @@ export function buildLanes(
     let label = '';
     let user: UserRef | null = null;
     let epic: BoardParent | null = null;
-    if (swimlanes === 'assignee') {
+    let projectKey: string | null = null;
+    let priority: Priority | null = null;
+    if (swimlanes === 'project') {
+      projectKey = card.projectKey;
+      key = projectKey;
+      label = projects.get(projectKey)?.name ?? projectKey;
+    } else if (swimlanes === 'priority') {
+      priority = card.priority;
+      key = priority;
+      label = PRIORITY_LABELS[priority];
+    } else if (swimlanes === 'assignee') {
       user = card.assigneeId ? (users.get(card.assigneeId) ?? null) : null;
       key = user?.id ?? UNASSIGNED;
       label = user?.displayName ?? 'Unassigned';
@@ -104,7 +130,17 @@ export function buildLanes(
     }
     let lane = lanes.get(key);
     if (!lane) {
-      lane = { key, label, user, epic, cells: emptyCells(), count: 0, points: 0 };
+      lane = {
+        key,
+        label,
+        user,
+        epic,
+        projectKey,
+        priority,
+        cells: emptyCells(),
+        count: 0,
+        points: 0,
+      };
       lanes.set(key, lane);
     }
     return lane;
@@ -127,13 +163,20 @@ export function buildLanes(
         label: '',
         user: null,
         epic: null,
+        projectKey: null,
+        priority: null,
         cells: emptyCells(),
         count: 0,
         points: 0,
       },
     ];
+  const all = [...lanes.values()];
+  if (swimlanes === 'project')
+    return all.sort((a, b) => a.projectKey!.localeCompare(b.projectKey!));
+  if (swimlanes === 'priority')
+    return all.sort((a, b) => PRIORITIES.indexOf(a.priority!) - PRIORITIES.indexOf(b.priority!));
   const fallback = swimlanes === 'assignee' ? UNASSIGNED : 'none';
-  return [...lanes.values()].sort((a, b) => {
+  return all.sort((a, b) => {
     if (a.key === fallback) return 1;
     if (b.key === fallback) return -1;
     return swimlanes === 'epic'

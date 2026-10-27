@@ -39,7 +39,7 @@ import { CreateBoardDialog, CreateBoardDialogData } from './create-board.dialog'
       <h1>Boards</h1>
       <span class="tk-page-count">{{ store.counts().active }}</span>
       <div class="tk-page-actions">
-        <button mat-flat-button type="button" data-testid="boards-new" (click)="openCreate()">
+        <button mat-stroked-button type="button" data-testid="boards-new" (click)="openCreate()">
           <tk-icon name="tablerPlus" [size]="14" />New board
         </button>
       </div>
@@ -134,7 +134,7 @@ import { CreateBoardDialog, CreateBoardDialogData } from './create-board.dialog'
                 title="No boards yet"
                 description="A board pulls tickets from one or more project backlogs, like a sprint."
               >
-                <button mat-flat-button type="button" (click)="openCreate()">New board</button>
+                <button mat-stroked-button type="button" (click)="openCreate()">New board</button>
               </tk-empty-state>
             }
           </div>

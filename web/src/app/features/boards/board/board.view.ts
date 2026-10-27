@@ -45,6 +45,7 @@ import {
 import { PRIORITY_OPTIONS, TICKET_STATUS_OPTIONS } from '@shared/domain/picker-options';
 import { AvatarComponent } from '@shared/ui/domain/avatar.component';
 import { BadgeComponent } from '@shared/ui/domain/badge.component';
+import { PriorityIconComponent } from '@shared/ui/domain/priority-icon.component';
 import { ProjectTileComponent } from '@shared/ui/domain/project-tile.component';
 import { StatusIconComponent } from '@shared/ui/domain/status-icon.component';
 import { TypeIconComponent } from '@shared/ui/domain/type-icon.component';
@@ -64,6 +65,7 @@ import {
   filtersFromParams,
   filtersToParams,
   Lane,
+  parseSwimlanes,
   statusOf,
   Swimlanes,
 } from './board-logic';
@@ -79,6 +81,8 @@ const SWIMLANE_OPTIONS: { value: Swimlanes; label: string }[] = [
   { value: 'none', label: 'None' },
   { value: 'assignee', label: 'Assignee' },
   { value: 'epic', label: 'Epic' },
+  { value: 'project', label: 'Project' },
+  { value: 'priority', label: 'Priority' },
 ];
 const PREFETCH_DELAY_MS = 150;
 const SKELETON_COLUMNS = [3, 2, 1, 2, 1, 1, 1, 2].map((n) =>
@@ -101,6 +105,7 @@ const SKELETON_COLUMNS = [3, 2, 1, 2, 1, 1, 1, 2].map((n) =>
     RouterLink,
     AvatarComponent,
     BadgeComponent,
+    PriorityIconComponent,
     ProjectTileComponent,
     StatusIconComponent,
     TypeIconComponent,
@@ -135,7 +140,11 @@ export class BoardView {
   protected readonly statusLabels = TICKET_STATUS_LABELS;
   protected readonly categoryLabels = STATUS_CATEGORY_LABELS;
   protected readonly categoryOf = statusCategory;
-  protected readonly swimlaneOptions = SWIMLANE_OPTIONS;
+  protected readonly swimlaneOptions = computed(() =>
+    (this.store.board()?.projects.length ?? 0) > 1 || this.store.swimlanes() === 'project'
+      ? SWIMLANE_OPTIONS
+      : SWIMLANE_OPTIONS.filter((o) => o.value !== 'project'),
+  );
   protected readonly skeletonColumns = SKELETON_COLUMNS;
   protected readonly dragging = signal<ReadonlySet<string>>(new Set());
   protected readonly filtersBar = viewChild(BoardFiltersComponent);
@@ -288,10 +297,16 @@ export class BoardView {
         handler: () => this.openPicker('priority'),
       },
       {
-        keys: 'i',
+        keys: 'a',
         section: 'Board',
         description: 'Assign to…',
         handler: () => this.openPicker('assignee'),
+      },
+      {
+        keys: 'i',
+        section: 'Board',
+        description: 'Assign to me',
+        handler: () => void this.store.assignToMe(this.store.editTargets()),
       },
       {
         keys: '/',
@@ -322,7 +337,7 @@ export class BoardView {
     void this.store.setAssignee(this.editIds, user);
   }
 
-  /// s / p / i: a picker under the focused card for it, or for the selection when there is one.
+  /// s / p / a: a picker under the focused card for it, or for the selection when there is one.
   private openPicker(field: 'status' | 'priority' | 'assignee'): void {
     const ids = this.store.editTargets();
     if (!ids.length) return;
@@ -497,7 +512,7 @@ export class BoardView {
   private readUrl(params: Params): void {
     this.store.filters.set(filtersFromParams(params));
     const lanes = params['lanes'];
-    this.store.swimlanes.set(lanes === 'assignee' || lanes === 'epic' ? lanes : 'none');
+    this.store.swimlanes.set(parseSwimlanes(lanes));
   }
 
   private writeUrl(): void {

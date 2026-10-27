@@ -224,25 +224,63 @@ export class BoardStore {
     });
   }
 
-  setPriority(ids: readonly string[], priority: Priority): Promise<void> {
+  setPriority(ids: readonly string[], priority: Priority): Promise<boolean> {
     return this.patchCards(ids, { priority }, { priority });
   }
 
-  setAssignee(ids: readonly string[], user: UserRef | null): Promise<void> {
+  /// `I`: assigns the cards to the current user, with an Undo that puts back each previous assignee.
+  async assignToMe(ids: readonly string[]): Promise<void> {
+    const user = this.auth.currentUser();
+    const board = this.board();
+    if (!user || !board) return;
+    const cards = ids
+      .map((id) => findCard(board.columns, id))
+      .filter((c): c is BoardCard => !!c && c.assigneeId !== user.id);
+    if (cards.length === 0) return;
+    const me: UserRef = {
+      id: user.id,
+      email: user.email,
+      displayName: user.displayName,
+      isActive: true,
+    };
+    const previous = new Map(cards.map((c) => [c.id, c.assigneeId]));
+    if (!(await this.setAssignee([...previous.keys()], me))) return;
+    this.toast.success(
+      cards.length === 1
+        ? `${cards[0].key} assigned to you`
+        : `${cards.length} tickets assigned to you`,
+      { action: { label: 'Undo', run: () => void this.restoreAssignees(previous) } },
+    );
+  }
+
+  setAssignee(ids: readonly string[], user: UserRef | null): Promise<boolean> {
     const board = this.board();
     if (board && user && !board.users.some((u) => u.id === user.id))
       this.board.set({ ...board, users: [...board.users, user] });
     return this.patchCards(ids, { assignee: user?.id ?? null }, { assigneeId: user?.id ?? null });
   }
 
+  private async restoreAssignees(previous: ReadonlyMap<string, string | null>): Promise<void> {
+    const byAssignee = new Map<string | null, string[]>();
+    for (const [id, assigneeId] of previous)
+      byAssignee.set(assigneeId, [...(byAssignee.get(assigneeId) ?? []), id]);
+    const users = this.users();
+    await Promise.all(
+      [...byAssignee].map(([assigneeId, ids]) =>
+        this.setAssignee(ids, assigneeId ? (users.get(assigneeId) ?? null) : null),
+      ),
+    );
+  }
+
   /// Optimistic field edit of several cards: one PATCH per ticket, rollback of the cards that failed.
+  /// Resolves true when every ticket was updated.
   private async patchCards(
     ids: readonly string[],
     patch: TicketPatch,
     local: Partial<BoardCard>,
-  ): Promise<void> {
+  ): Promise<boolean> {
     const board = this.board();
-    if (!board || ids.length === 0) return;
+    if (!board || ids.length === 0) return false;
     const before = new Map(
       ids
         .map((id) => [id, findCard(board.columns, id)])
@@ -257,7 +295,7 @@ export class BoardStore {
       }),
     );
     const failed = cards.filter((_, i) => results[i].status === 'rejected');
-    if (failed.length === 0) return;
+    if (failed.length === 0) return true;
     const failedIds = new Set(failed.map((c) => c.id));
     this.replaceCards((card) => (failedIds.has(card.id) ? (before.get(card.id) ?? card) : card));
     const reason = (results.find((r) => r.status === 'rejected') as PromiseRejectedResult).reason;
@@ -266,6 +304,7 @@ export class BoardStore {
         ? `${failed[0].key}: ${toApiError(reason).title}`
         : `${failed.length} tickets were not updated: ${toApiError(reason).title}`,
     );
+    return false;
   }
 
   private replaceCards(map: (card: BoardCard) => BoardCard): void {

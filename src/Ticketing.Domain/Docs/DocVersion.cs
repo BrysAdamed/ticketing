@@ -33,10 +33,18 @@ public sealed class DocVersion
     /// <summary>Set when the version was created by restoring an older one.</summary>
     public int? RestoredFrom { get; private set; }
 
-    /// <summary>Snapshots <paramref name="node"/>'s current version, title and content.</summary>
-    public static DocVersion Snapshot(DocNode node, string? changeNote, Guid authorId, WriteChannel channel, DateTimeOffset now, int? restoredFrom = null)
+    /// <summary>Lines added compared with the previous version; null for Canvas diagrams and versions published before TKT-48.</summary>
+    public int? LinesAdded { get; private set; }
+
+    /// <summary>Lines removed compared with the previous version; null like <see cref="LinesAdded"/>.</summary>
+    public int? LinesRemoved { get; private set; }
+
+    /// <summary>Snapshots <paramref name="node"/>'s current version, title and content; <paramref name="previousContent"/> is the content of the version before it (null for version 1).</summary>
+    public static DocVersion Snapshot(
+        DocNode node, string? previousContent, string? changeNote, Guid authorId, WriteChannel channel, DateTimeOffset now, int? restoredFrom = null)
     {
         node.EnsureHasContent();
+        DocLineChanges? changes = node.DiagramFormat == DiagramFormat.Canvas ? null : DocLineDiff.Count(previousContent, node.Content);
         return new DocVersion
         {
             Id = EntityId.New(),
@@ -49,6 +57,8 @@ public sealed class DocVersion
             Channel = channel,
             CreatedAt = now,
             RestoredFrom = restoredFrom,
+            LinesAdded = changes?.Added,
+            LinesRemoved = changes?.Removed,
         };
     }
 }

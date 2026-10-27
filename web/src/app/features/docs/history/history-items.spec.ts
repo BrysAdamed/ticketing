@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { DocHistoryItem } from '@core/docs/doc-history.api';
-import { comparison, describeActivity, groupByDay, versionParam } from './history-items';
+import {
+  comparison,
+  describeActivity,
+  groupByDay,
+  linesTitle,
+  versionParam,
+} from './history-items';
 
 function activity(
   action: string,
@@ -18,6 +24,8 @@ function activity(
     title: null,
     changeNote: null,
     restoredFrom: null,
+    linesAdded: null,
+    linesRemoved: null,
     action,
     field: null,
     oldValue,
@@ -89,5 +97,31 @@ describe('groupByDay', () => {
     expect(days.map((d) => d.items.map((i) => i.id).join(''))).toEqual(['ab', 'c', 'd', 'e']);
     expect(days.slice(0, 2).map((d) => d.label)).toEqual(['Today', 'Yesterday']);
     expect(days[3].label).toContain('2025');
+  });
+});
+
+describe('linesTitle', () => {
+  it('spells out the counts against the version before', () => {
+    // Arrange
+    const v5 = {
+      ...activity('v5'),
+      type: 'Version' as const,
+      version: 5,
+      linesAdded: 12,
+      linesRemoved: 3,
+    };
+    const v1 = {
+      ...activity('v1'),
+      type: 'Version' as const,
+      version: 1,
+      linesAdded: 1,
+      linesRemoved: 0,
+    };
+
+    // Act
+    const titles = [v5, v1].map(linesTitle);
+
+    // Assert
+    expect(titles).toEqual(['12 lines added, 3 removed against v4', '1 line added, 0 removed']);
   });
 });

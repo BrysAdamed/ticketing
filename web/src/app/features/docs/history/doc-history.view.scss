@@ -450,3 +450,13 @@
     padding-left: 16px;
   }
 }
+
+.lines {
+  .add {
+    color: var(--tk-success-fg);
+  }
+
+  .del {
+    color: var(--tk-danger-fg);
+  }
+}

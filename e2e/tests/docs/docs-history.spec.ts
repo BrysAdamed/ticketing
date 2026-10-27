@@ -51,6 +51,9 @@ test.describe('docs history', () => {
         await expect(history.bar).toContainText('Changes in v3');
         await expect(history.version(3)).toContainText('Current');
         await expect(history.version(2)).toContainText('PaymentIntent');
+        await expect(history.version(3).getByTestId('doc-history-lines')).toHaveText('+4 −0');
+        await expect(history.version(2).getByTestId('doc-history-lines')).toHaveText('+2 −1');
+        await expect(history.version(1).getByTestId('doc-history-lines')).toHaveText('+7 −0');
         await expect(history.diff.locator('.dl.add')).toContainText(['## Failure handling']);
         await expect(history.titleChange).toContainText('Payment flow');
 

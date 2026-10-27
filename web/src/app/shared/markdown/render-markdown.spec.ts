@@ -159,9 +159,7 @@ describe('renderMarkdown', () => {
       );
 
       // Assert
-      expect([...dom.querySelectorAll('a.tk-keyref')].map((a) => a.textContent)).toEqual([
-        'PAY-1',
-      ]);
+      expect([...dom.querySelectorAll('a.tk-keyref')].map((a) => a.textContent)).toEqual(['PAY-1']);
     });
 
     it('keeps a malformed token as text and markdown links working', () => {

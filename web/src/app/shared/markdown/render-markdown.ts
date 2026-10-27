@@ -73,7 +73,10 @@ export function renderMarkdown(
   return container.innerHTML;
 }
 
-function renderMentions(root: DocumentFragment, mentions: Iterable<MentionUser> | null | undefined) {
+function renderMentions(
+  root: DocumentFragment,
+  mentions: Iterable<MentionUser> | null | undefined,
+) {
   const placeholders = root.querySelectorAll(`span[${MENTION_ATTR}]`);
   if (placeholders.length === 0) return;
   const users = new Map<string, MentionUser>();

@@ -130,12 +130,7 @@ let nextEditorId = 0;
     </div>
     <ng-template #mentionPicker>
       <div class="tk-popover mention-picker" data-testid="mention-picker">
-        <div
-          role="listbox"
-          aria-label="People"
-          [id]="pickerId"
-          [attr.aria-busy]="searching()"
-        >
+        <div role="listbox" aria-label="People" [id]="pickerId" [attr.aria-busy]="searching()">
           @for (candidate of candidates(); track candidate.id; let i = $index) {
             <div
               role="option"
@@ -558,7 +553,7 @@ export class MarkdownEditorComponent {
     this.searchTimer = null;
     const abort = new AbortController();
     this.searchAbort = abort;
-    let found: readonly MentionCandidate[] = [];
+    let found: readonly MentionCandidate[];
     try {
       found = await search(query.trim(), abort.signal);
     } catch {

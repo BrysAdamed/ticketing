@@ -117,7 +117,7 @@ function codeSpans(text: string, from: number, to: number): [number, number][] {
     }
     const length = runLength(text, i, to);
     let close = -1;
-    for (let j = i + length; j < to; ) {
+    for (let j = i + length; j < to;) {
       if (text[j] !== '`') {
         j++;
         continue;

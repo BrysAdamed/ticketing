@@ -48,6 +48,7 @@ Configuration (environment variables override `appsettings*.json`):
 | `RateLimiting__LoginPermitsPerMinute` | `POST /auth/login` attempts per client IP (default 20) |
 | `ForwardedHeaders__KnownNetworks` | Comma-separated CIDR ranges of proxies whose `X-Forwarded-For`/`-Proto` are believed (compose: `TICKETING_TRUSTED_PROXIES`, default Docker's private pools). Loopback is always trusted. |
 | `ForwardedHeaders__ForwardLimit` | Proxy hops to unwrap (default 1 = nginx; 2 with a TLS proxy in front, whose address must then be trusted too) |
+| `TICKETING_PUBLIC_URL` | This instance's public origin, for example `http://localhost:8090`. Agent prompts build `{{instance.url}}` and `{{ticket.url}}` from it, never from request headers ([spec §13.4](../product/01-refined-spec.md#134-template-language)). While it is unset, agent delegation is off for everyone (`agent.disabled`, [spec §13.2](../product/01-refined-spec.md#132-feature-flag)); a value that is not an absolute http(s) URL stops startup. Compose passes it from `.env`; `appsettings.Development.json` sets `http://localhost:4200` for `ng serve`. |
 | `TICKETING_SEED_DEMO` | `true` seeds [demo data](#demo-data) at startup into a workspace without projects (default false; development and demos only) |
 | `TICKETING_DEMO_PASSWORD` | Password of the demo users (12+ characters, not a common password); without it their set-password links are logged |
 

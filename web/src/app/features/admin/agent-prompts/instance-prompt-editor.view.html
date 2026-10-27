@@ -1,0 +1,322 @@
+@if (!target()) {
+  <tk-empty-state
+    icon="tablerAlertCircle"
+    data-testid="agent-prompt-unknown-slot"
+    title="There is no such prompt"
+    description="Pick a ticket type or the guardrails from the list."
+  >
+    <a mat-stroked-button routerLink="..">Back to Agent prompts</a>
+  </tk-empty-state>
+} @else if (store.status() === 'error') {
+  @if (store.error()?.isNotFound) {
+    <tk-empty-state
+      icon="tablerRobot"
+      data-testid="agent-prompt-unavailable"
+      title="Agent delegation isn't available"
+      [description]="store.error()?.title ?? null"
+    >
+      <a mat-stroked-button routerLink="..">Back to Agent prompts</a>
+    </tk-empty-state>
+  } @else {
+    <tk-empty-state
+      icon="tablerAlertCircle"
+      tone="danger"
+      title="Couldn't load the prompt"
+      [description]="store.error()?.title ?? null"
+    >
+      <a mat-stroked-button routerLink="..">Back to Agent prompts</a>
+    </tk-empty-state>
+  }
+} @else if (prompt(); as prompt) {
+  <header class="bar">
+    <a mat-button routerLink=".." class="back" data-testid="agent-prompt-back">
+      <tk-icon name="tablerArrowLeft" [size]="16" />
+      Agent prompts
+    </a>
+    <span class="title">
+      @if (type(); as type) {
+        <tk-type-icon [type]="type" />
+      } @else {
+        <tk-icon name="tablerShieldLock" [size]="16" class="shield" />
+      }
+      <h2>{{ title() }}</h2>
+    </span>
+    <tk-badge [tone]="prompt.followsBuiltIn ? 'gray' : 'violet'" data-testid="agent-prompt-chip">
+      {{ chip() }}
+    </tk-badge>
+    <span class="changed tk-subtle">
+      <tk-user [user]="prompt.updatedBy" emptyLabel="System" />
+      <span [title]="prompt.updatedAt | absoluteTime">{{ prompt.updatedAt | relativeTime }}</span>
+    </span>
+    <span class="spacer"></span>
+    <tk-length-meter
+      [length]="store.length()"
+      [limit]="store.limit()"
+      [estimated]="store.lengthEstimated()"
+    />
+    @if (!prompt.followsBuiltIn) {
+      <button
+        mat-button
+        type="button"
+        data-testid="agent-prompt-reset-built-in"
+        [disabled]="store.saving()"
+        (click)="resetToBuiltIn(false)"
+      >
+        Reset to built-in
+      </button>
+    }
+    <button
+      mat-button
+      type="button"
+      data-testid="agent-prompt-discard"
+      [disabled]="!store.dirty() || store.saving()"
+      (click)="store.discard()"
+    >
+      Discard
+    </button>
+    <button
+      mat-flat-button
+      type="button"
+      data-testid="agent-prompt-save"
+      [disabled]="!store.canSave()"
+      (click)="store.save()"
+    >
+      {{ store.saving() ? 'Saving…' : 'Save' }}
+      <tk-kbd class="kbd">{{ shortcuts.format('mod+s')[0] }}</tk-kbd>
+    </button>
+  </header>
+
+  <div class="notices">
+    @if (store.lostEdit(); as lost) {
+      <div class="tk-callout tk-callout-warning" role="alert" data-testid="agent-prompt-conflict">
+        <tk-icon name="tablerAlertTriangle" [size]="16" />
+        <span class="grow">
+          Someone else saved version {{ lost.latestVersion }} while you were editing. It is shown
+          now; your edit was not saved.
+        </span>
+        <button
+          mat-stroked-button
+          type="button"
+          data-testid="agent-prompt-conflict-reapply"
+          (click)="store.reapplyLostEdit()"
+        >
+          Apply my edit again
+        </button>
+        <button mat-button type="button" (click)="store.dismissLostEdit()">Dismiss</button>
+      </div>
+    }
+    @if (prompt.newerBuiltInAvailable) {
+      <div class="tk-callout tk-callout-warning" data-testid="agent-prompt-newer-built-in">
+        <tk-icon name="tablerInfoCircle" [size]="16" />
+        <span class="grow">
+          A newer built-in prompt is available (built-in {{ prompt.latestBuiltInVersion }}). This
+          one was edited, so it was not updated.
+        </span>
+        <button
+          mat-button
+          type="button"
+          data-testid="agent-prompt-newer-compare"
+          (click)="showPanel('compare')"
+        >
+          Compare
+        </button>
+        <button
+          mat-stroked-button
+          type="button"
+          data-testid="agent-prompt-adopt"
+          [disabled]="store.saving()"
+          (click)="resetToBuiltIn(true)"
+        >
+          Adopt
+        </button>
+      </div>
+    }
+  </div>
+
+  <div class="columns">
+    <section class="left" aria-label="Template">
+      <div class="facts">
+        @if (prompt.followsBuiltIn) {
+          <p class="help tk-subtle" data-testid="agent-prompt-follows-built-in">
+            Follows the built-in prompt: newer built-ins replace it automatically until you edit it.
+          </p>
+        }
+        @if (isGuardrails()) {
+          <p class="help tk-subtle">
+            Appended to every prompt, after the ticket type's prompt. Projects can't remove them.
+            Save an empty text to send no guardrails.
+          </p>
+        } @else {
+          <p class="help tk-subtle">
+            Used by projects that don't override {{ label() }} tickets.
+            @if (prompt.overridingProjects > 0) {
+              <button
+                type="button"
+                class="link"
+                data-testid="agent-prompt-overrides"
+                (click)="openOverrides()"
+              >
+                {{ prompt.overridingProjects }}
+                {{ prompt.overridingProjects === 1 ? 'project overrides' : 'projects override' }}
+                it.
+              </button>
+            } @else {
+              <span data-testid="agent-prompt-overrides">No project overrides it.</span>
+            }
+          </p>
+        }
+      </div>
+      <span class="tk-field-label">
+        {{ isGuardrails() ? 'Guardrails' : 'Prompt for ' + label() + ' tickets' }}
+      </span>
+      <tk-template-editor
+        testId="agent-prompt-body"
+        [ariaLabel]="title() + ' template'"
+        [value]="store.body()"
+        [placeholders]="store.placeholders()"
+        [issues]="store.issues()"
+        (valueChange)="store.edit($event)"
+      />
+      <p class="help tk-subtle">
+        Type <code>{{ '{{' }}</code> for placeholders. Ticket titles and descriptions are not
+        available here: the agent reads them over MCP.
+      </p>
+      <div class="note">
+        <label class="tk-field-label" for="agent-prompt-change-note">Change note</label>
+        <mat-form-field>
+          <input
+            matInput
+            id="agent-prompt-change-note"
+            autocomplete="off"
+            placeholder="Optional: why you changed it"
+            data-testid="agent-prompt-change-note"
+            [attr.maxlength]="changeNoteMax"
+            [value]="store.changeNote()"
+            (input)="store.changeNote.set($any($event.target).value)"
+          />
+        </mat-form-field>
+      </div>
+    </section>
+
+    <section class="right" aria-label="Preview, compare and history">
+      <tk-segmented
+        ariaLabel="Side panel"
+        testId="agent-prompt-panel"
+        [options]="panelOptions"
+        [value]="panel()"
+        (valueChange)="showPanel($event)"
+      />
+      <div class="panel">
+        @switch (panel()) {
+          @case ('preview') {
+            @if (store.preview(); as preview) {
+              <p class="panel-head tk-subtle" data-testid="agent-prompt-sample">
+                {{
+                  isGuardrails()
+                    ? 'Rendered after the default prompt of a sample ticket, ' + preview.ticketKey
+                    : 'Rendered for a sample ticket, ' + preview.ticketKey
+                }}
+              </p>
+              @if (preview.prompt === null) {
+                <p class="tk-subtle" data-testid="agent-prompt-preview-errors">
+                  Fix the template errors to see the prompt.
+                </p>
+              } @else {
+                @for (issue of preview.errors; track $index) {
+                  @if (issue.line === null) {
+                    <div
+                      class="tk-callout tk-callout-danger issue"
+                      data-testid="agent-prompt-length-error"
+                    >
+                      <tk-icon name="tablerAlertCircle" [size]="16" />
+                      <span>{{ issue.message }}</span>
+                    </div>
+                  }
+                }
+                <tk-prompt-preview
+                  [prompt]="preview.prompt"
+                  [splitAt]="splitAt()"
+                  [muted]="isGuardrails() ? 'before' : 'after'"
+                  [mutedLabel]="
+                    isGuardrails() ? 'Default prompt of the sample ticket' : 'Guardrails'
+                  "
+                  [loading]="store.previewPending()"
+                />
+              }
+            } @else {
+              <tk-skeleton-rows [count]="6" />
+            }
+          }
+          @case ('compare') {
+            <tk-prompt-diff
+              [left]="prompt.builtInBody"
+              [right]="store.body()"
+              [leftLabel]="'Built-in ' + prompt.latestBuiltInVersion"
+              [rightLabel]="
+                store.dirty() ? 'Your edit (not saved)' : 'Current (v' + prompt.version + ')'
+              "
+            />
+          }
+          @case ('history') {
+            @if (opened(); as opened) {
+              <div class="panel-head">
+                <button
+                  mat-button
+                  type="button"
+                  data-testid="agent-prompt-history-back"
+                  (click)="closeVersion()"
+                >
+                  <tk-icon name="tablerArrowLeft" [size]="16" />
+                  History
+                </button>
+                <span class="spacer"></span>
+                @if (opened.version.number !== prompt.version) {
+                  <button
+                    mat-stroked-button
+                    type="button"
+                    data-testid="agent-prompt-history-restore"
+                    [disabled]="store.saving()"
+                    (click)="restore(opened.version.number)"
+                  >
+                    Restore version {{ opened.version.number }}
+                  </button>
+                }
+              </div>
+              @if (opened.diff) {
+                <tk-prompt-diff
+                  [left]="opened.version.body ?? ''"
+                  [right]="savedText()"
+                  [leftLabel]="'Version ' + opened.version.number"
+                  [rightLabel]="'Current (v' + prompt.version + ')'"
+                />
+              } @else {
+                <p class="tk-subtle" data-testid="agent-prompt-version-heading">
+                  Version {{ opened.version.number }}
+                  @if (opened.version.builtInVersion) {
+                    · built-in {{ opened.version.builtInVersion }}
+                  }
+                </p>
+                <pre class="readonly-text" data-testid="agent-prompt-version-body">{{
+                  opened.version.body ?? ''
+                }}</pre>
+              }
+            } @else if (store.versions(); as versions) {
+              <tk-prompt-history
+                [versions]="versions"
+                [currentVersion]="prompt.version"
+                [canRestore]="true"
+                (view)="openVersion($event, false)"
+                (compare)="openVersion($event, true)"
+                (restore)="restore($event)"
+              />
+            } @else {
+              <tk-skeleton-rows [count]="5" />
+            }
+          }
+        }
+      </div>
+    </section>
+  </div>
+} @else {
+  <div class="loading"><tk-skeleton-rows [count]="12" /></div>
+}

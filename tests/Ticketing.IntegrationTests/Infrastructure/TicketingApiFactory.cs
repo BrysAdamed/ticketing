@@ -2,9 +2,11 @@ using System.Net;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Logging;
 using Npgsql;
 using Respawn;
 using Ticketing.Application.Abstractions;
+using Ticketing.Application.Agents;
 using Ticketing.Infrastructure.Persistence;
 using Xunit.v3;
 
@@ -20,10 +22,14 @@ public sealed class TicketingApiFactory : WebApplicationFactory<Program>, IAsync
     public const string BootstrapAdminEmail = "bootstrap-admin@ticketing.test";
     public const string BootstrapAdminPassword = "Bootstrap-Admin-Password-1";
     public const string RemoteAddressHeader = "X-Test-Remote-Address";
+    public const string PublicUrl = "https://ticketing.test";
 
     private Respawner _respawner = null!;
 
     public string ConnectionString { get; private set; } = string.Empty;
+
+    /// <summary>What the host logged at Information and above (the production default level) since the current test started.</summary>
+    public CapturedLogs Logs { get; } = new();
 
     public async ValueTask InitializeAsync()
     {
@@ -46,6 +52,7 @@ public sealed class TicketingApiFactory : WebApplicationFactory<Program>, IAsync
         await connection.OpenAsync();
         await _respawner.ResetAsync(connection);
         Services.GetRequiredService<IFeatureFlagStore>().Invalidate();
+        Logs.Clear();
     }
 
     public ValueTask OnTestFinishedAsync(IXunitTest test) => ValueTask.CompletedTask;
@@ -56,11 +63,16 @@ public sealed class TicketingApiFactory : WebApplicationFactory<Program>, IAsync
         builder.UseSetting("ConnectionStrings:Db", ConnectionString);
         builder.UseSetting(DatabaseInitializer.AdminEmailVariable, BootstrapAdminEmail);
         builder.UseSetting(DatabaseInitializer.AdminPasswordVariable, BootstrapAdminPassword);
+        builder.UseSetting(AgentOptions.PublicUrlVariable, PublicUrl);
         builder.UseSetting("Auth:CookieSecurePolicy", "Always");
         builder.UseSetting("RateLimiting:LoginPermitsPerMinute", "100000");
         builder.UseSetting("Logging:Console:FormatterName", "simple");
         builder.UseSetting("Logging:LogLevel:Default", "Warning");
         builder.UseSetting("Logging:LogLevel:Microsoft.AspNetCore", "Error");
+        builder.ConfigureLogging(logging => logging
+            .AddProvider(Logs)
+            .AddFilter<CapturedLogs>(null, LogLevel.Information)
+            .AddFilter<CapturedLogs>("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Warning));
         builder.ConfigureServices(services => services.AddSingleton<IStartupFilter, RemoteAddressStartupFilter>());
     }
 

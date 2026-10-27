@@ -58,7 +58,7 @@ Deployment target: Docker Compose on an internal VM (API + Angular static files 
 | `ExecutionMode` | `Manual`, `Automatic` | Snapshot of the test case status at session start. |
 | `WriteChannel` | `Web`, `Api`, `Mcp` | |
 | `PatScope` | `ReadOnly`, `ReadWrite` | (I-10) |
-| `ActivityEntityType` | `Ticket`, `TestCase`, `RegressionSession`, `Project`, `Board`, `User`, `PersonalAccessToken`, `FeatureFlag` | |
+| `ActivityEntityType` | `Ticket`, `TestCase`, `RegressionSession`, `Project`, `Board`, `User`, `PersonalAccessToken`, `FeatureFlag`, `AgentPrompt` | `AgentPrompt`: section 13. |
 | `NotificationKind` | `Assigned`, `Mentioned`, `Commented`, `StatusChanged`, `PriorityRaised`, `Moved`, `Deleted`, `RegressionItemAssigned` | Headline rank when merged (6.16): Mentioned > Assigned > RegressionItemAssigned > Deleted > StatusChanged > PriorityRaised > Commented > Moved. |
 
 There is no `Role` table. Global and project roles are fixed enums and the permission rules are code (section 5). Custom roles are out of scope (D-08).
@@ -663,7 +663,7 @@ Every count links to the search that produces it. Target: dashboard loads in und
 
 - Streamable HTTP MCP endpoint at `/mcp`, hosted in the same API process. No local install. Claude Code connects with `claude mcp add --transport http ticketing https://<host>/mcp --header "Authorization: Bearer tkt_..."`.
 - Every call runs as the PAT's user with that user's permissions and channel `Mcp`.
-- `tools/list` returns only tools allowed by the token scope. Read tools carry `readOnlyHint: true`. `delete_ticket`, `delete_comment`, `unlink_tickets`, `cancel_regression_session` and `archive_board` carry `destructiveHint: true`.
+- `tools/list` returns only tools allowed by the token scope. Read tools carry `readOnlyHint: true`. `delete_ticket`, `delete_comment`, `unlink_tickets`, `cancel_regression_session` and `archive_board` carry `destructiveHint: true` and `_meta["anthropic/requiresUserInteraction"]: true`, so Claude Code asks the user before every call even in a session that would otherwise run tools unasked (D-102). Every destructive tool carries both; an integration test on `tools/list` keeps the two sets equal.
 
 ### 9.2 Conventions for all tools
 
@@ -689,9 +689,9 @@ Projects
 | Tool | Inputs | Output |
 | --- | --- | --- |
 | `list_projects` | optional `query`, `includeArchived` (default false) | Readable projects: key, name, visibility, my effective role, open ticket count. |
-| `get_project` | `projectKey` | Project fields, members with roles, linked boards. |
+| `get_project` | `projectKey` | Project fields, members with roles, linked boards; `agent` (the agent setup, 13.3) or null while agent delegation is not available to the caller. |
 | `create_project` | `key`, `name`, optional `description`, `visibility` | Created project. |
-| `update_project` | `projectKey`, any of `name`, `description`, `visibility` | Updated project. Owner only. |
+| `update_project` | `projectKey`, any of `name`, `description`, `visibility` | Updated project. Owner only. The agent setup is not an input: it changes only in the web app (13.6). |
 | `get_field_hints` | `projectKey`, `field` (`labels` or `version`), optional `prefix` | Up to 20 values, most recent first. |
 | `get_project_stats` | `projectKey`, optional `version` | All dashboard widgets from section 7 as JSON. |
 
@@ -777,3 +777,185 @@ Out of MCP in v1: user administration, PAT management, feature flags, project de
 | Accessibility | All actions reachable by keyboard; visible focus; WCAG 2.1 AA colour contrast. |
 | Operations | Docker Compose with `api`, `web` and `db` services. `/health/live` and `/health/ready` endpoints. Structured JSON logs. Database migrations applied on API start. Documented `pg_dump` backup procedure, attachments included. |
 | Security | All writes authorised server-side. Private-project data never leaks through search, boards, links, hints, dashboards or MCP. Tests cover each of these paths. |
+
+## 13. Agent delegation
+
+A developer hands a ticket to Claude Code: Ticketing renders a short prompt for the ticket's type and the developer's browser opens Claude's own deep link with it. The design and its history are in [04-delegate-to-agent-refinement.md](04-delegate-to-agent-refinement.md) (its section 6 overrides section 4); this section is the normative summary and grows with each part of epic TKT-25. Decisions: D-98, D-99, D-100, D-101, D-102, D-103.
+
+### 13.1 Parts
+
+| Part | Ticket |
+| --- | --- |
+| Prompt templates: model, renderer, versions, built-ins, REST (13.2 to 13.8) | TKT-27 |
+| Project agent setup (`PATCH /projects/{pk}/agent`), `TICKETING_PUBLIC_URL`, resolved prompt over REST and MCP `get_agent_prompt` | TKT-28 |
+| Delegate button, deep link, folder mapping, Copy prompt | TKT-29 |
+| Agent tab in project settings, Admin page | TKT-30, TKT-31 |
+| Final default prompts (13.10), confirmation hint on destructive MCP tools (9.1) | TKT-32 |
+
+### 13.2 Feature flag
+
+`agent.delegate` is an ordinary string-variant flag (6.13): `on` or `off`, targeted at users, roles (Admins first) or a percentage. While it is off for the caller, every agent endpoint returns 404 `agent.disabled` and nothing about agents is shown. Stored templates stay untouched. The server checks it on every request (`AgentGate`).
+
+The instance also needs `TICKETING_PUBLIC_URL`, its public origin (for example `https://tickets.example.com`): prompts link to tickets with it, never with request headers. While it is unset the feature is off for everyone, exactly as if the flag were off (404 `agent.disabled`, whose message then names the variable for callers the flag is on for). A value that is not an absolute http(s) URL stops the API at startup. The one exception is the Admin status (`GET /api/v1/admin/agent/status`), which needs only the flag so the Admin page can say the variable is missing (D-103).
+
+The web app tells whether agent delegation is available from the project: `agent` in the project DTO is null while it is not.
+
+### 13.3 Domain model
+
+| Enum | Values | Notes |
+| --- | --- | --- |
+| `AgentPromptScope` | `Instance`, `Project` | |
+| `AgentPromptMode` | `Inherit`, `Custom`, `Off` | Project rows only; instance rows are always `Custom`. |
+| `AgentPromptSource` | `Default`, `Custom` | Where a resolved prompt's type template came from. |
+| `AgentMergePolicy` | `Review`, `MergeWhenVerified` | Picks the sentence `{{finish}}` renders. |
+
+**Project** gains the agent setup, changed together through `PATCH /projects/{pk}/agent` (13.7) and validated as a whole:
+
+| Field | Type | Constraints |
+| --- | --- | --- |
+| AgentDelegationEnabled | bool | Default false. Enabling needs a repository URL (`agent.project.repositoryRequired`); so does clearing the URL of an enabled project. |
+| RepositoryUrl | text(500)? | `https://[user@]host[:port]/path`, `ssh://[user@]host[:port]/path` or scp-style `user@host:path`, each optionally ending in `.git`. Printable ASCII; no password, query or fragment; no empty, `.` or `..` path segment. Stored as typed (trimmed); otherwise `project.repositoryUrl.invalid`. |
+| DefaultBranch | text(100) | Default `main`. A name `git check-ref-format --branch` accepts, in printable ASCII (`project.defaultBranch.invalid`). |
+| AgentMergePolicy | AgentMergePolicy | Default `Review`. |
+| AgentAssignOnDelegate | bool | Default true. Delegating assigns the ticket to the delegating user if it is unassigned. |
+| AgentStartProgressOnDelegate | bool | Default true. Delegating moves a `ToDo` ticket to `InProgress`; other statuses stay. |
+
+The **normalized repository URL** is what clones are compared by: host and path in lower case, without scheme, user, port, `.git` or slashes at either end, so `https://git.example.com/Team/Repo.git` and `git@git.example.com:team/repo` both give `git.example.com/team/repo`. The API returns it next to the URL (`normalizedRepositoryUrl`). The two on-delegate toggles are applied by the delegation history entry (TKT-29), not by reading the prompt.
+
+**AgentPromptTemplate** (`agent_prompt_templates`), one row per slot:
+
+| Field | Type | Constraints |
+| --- | --- | --- |
+| Id | uuid | |
+| Scope | AgentPromptScope | |
+| ProjectId | uuid? | Set if and only if Scope = `Project`. |
+| TicketType | TicketType? | Null is the guardrails block, instance only. |
+| Mode | AgentPromptMode | |
+| Body | text(4500)? | `Custom` rows; null for `Inherit` and `Off`, and for empty guardrails. |
+| CurrentVersion | int | 1..n (a project slot that never left `Inherit` has no row; it reads as version 0). |
+| BasedOnDefaultVersion | int? | Project `Custom` rows: the instance default version the override was written against. Newer default: `defaultChanged`. |
+| BuiltInVersion | text(20)? | Instance rows: the built-in release the row last took its text from. |
+| FollowsBuiltIn | bool | Instance rows: the current text is a verbatim built-in. |
+| UpdatedAt, UpdatedById | timestamptz, uuid? | Null user for system (built-in) versions. |
+
+Unique (Scope, ProjectId, TicketType) with nulls not distinct. Six instance rows always exist: the five types and the guardrails.
+
+**AgentPromptTemplateVersion** (`agent_prompt_template_versions`), immutable and never deleted: (TemplateId, Number) key, Mode, Body, BuiltInVersion (set for verbatim built-ins), ChangeNote text(200)?, AuthorId (null for system versions), CreatedAt, RestoredFrom.
+
+**Built-ins** are embedded in `Ticketing.Application` (`Agents/BuiltIns/*.txt`) with one release number (`EmbeddedAgentPrompts.Release`, for example `2026.10.1`; dotted numbers compared numerically). At startup, and before any agent prompt use case, missing instance rows are created from them, and rows that still follow the built-ins take a newer release as a new system version (activity with no actor). Rows an Admin edited are left alone and report `newerBuiltInAvailable`; "Reset to built-in" adopts the shipped text and makes the row follow later releases again. The two `{{finish}}` sentences ship with the built-ins and are not editable; they are templates themselves and may use every placeholder except `finish` (13.10).
+
+### 13.4 Template language
+
+Plain text; Markdown is shown as written.
+
+- `{{name}}`, spaces inside the braces allowed, replaced verbatim; a null value renders empty. Values are inserted in one pass and never interpreted.
+- `{{#if name}}…{{/if}}` keeps its content when the value is non-empty. No `else`, nesting, loops or filters.
+- `\{{` renders a literal `{{`.
+- Errors, each with a 1-based line and column: `agent.template.unknownPlaceholder`, `agent.template.unclosedPlaceholder`, `agent.template.unbalancedIf`, `agent.template.nestedIf`; also `agent.template.empty` (a `Custom` type template without a body) and `agent.template.tooLong` (body over 4 500 characters).
+- The composed prompt is the rendered type template, then a blank line and the rendered guardrails when they are non-empty. It must stay **below 4 500 characters** (`agent.prompt.tooLong`), well inside the 5 000 characters Claude Code accepts in a deep link (D-97). Saves check it for a sample ticket; resolution checks the real one.
+
+Placeholders, deliberately only trusted values (D-98): there is **no** title, description or comment placeholder; the agent reads the ticket over MCP.
+
+| Placeholder | Value |
+| --- | --- |
+| `ticket.key`, `ticket.type` | `TKT-42`, `Bug` |
+| `ticket.url` | `{TICKETING_PUBLIC_URL}/tickets/{KEY}`; empty while the variable is unset |
+| `project.key`, `project.repositoryUrl`, `project.defaultBranch` | The URL as typed; the branch defaults to `main` |
+| `instance.url` | `TICKETING_PUBLIC_URL` without a trailing slash |
+| `finish` | The finish sentence for the project's merge policy |
+| `template.id` | `<TicketType> v<n> / <D\|C>` (D = instance default, C = project custom) |
+
+### 13.5 Resolving the prompt for a ticket
+
+`ResolveAgentPrompt`, in order:
+
+1. Flag off for the caller, or `TICKETING_PUBLIC_URL` unset: 404 `agent.disabled`.
+2. Ticket not readable: 404 `ticket.notFound`; deleted ticket: `ticket.deleted` (as every ticket read). Archived project: 409 `agent.unavailable`.
+3. Project `AgentDelegationEnabled = false`: 409 `agent.project.disabled`.
+4. The project row for the ticket's type: `Off` gives 409 `agent.type.off`; `Custom` uses its body; `Inherit` or no row uses the instance default.
+5. The template and the guardrails must still parse. A stored body that no longer does, for example after a release removed a placeholder, is 409 `agent.template.invalid`; the message gives the position and the hint names where to fix it (the project's Agent settings, or Admin → Agent prompts), never the body.
+6. Render it with the trusted values, append the guardrails when non-empty, and enforce the limit (409 `agent.prompt.tooLong`).
+
+The result carries the prompt, the ticket key and type, the template's source, version and last editor, the guardrails version and `outsiderContent`: `{ source: Title | Description | Comment | Attachment | RelatedTicket | TestCase, author, at, projectKey, itemKey }` for the newest text the agent reads that came from someone who is neither an Admin nor an Owner or Member of the project it was written in, otherwise null (D-100, D-104, D-106). That text is any title or description write, non-deleted comment (at its last edit) or attachment on the ticket, its parent, its children and its linked tickets (those the caller can read), and the creation and text edits of the ticket's test cases. Viewers and former members count as outside, private projects are checked too, and a later write by an insider does not clear it. `itemKey` names the related ticket or test case. Anyone who can read the project may resolve, including Viewers and read-only tokens; nothing is written.
+
+### 13.6 Permissions
+
+| Action | Owner/Admin | Member | Viewer | No access |
+| --- | --- | --- | --- | --- |
+| Read a project's templates, versions; preview | Yes | Yes | Yes | 404 |
+| Read a project's agent setup; resolve a ticket's prompt (REST, `get_agent_prompt`) | Yes | Yes | Yes | 404 |
+| Change a project's templates (save, restore, reset to default) | Yes | No (403) | No (403) | 404 |
+| Change a project's agent setup | Yes | No (403) | No (403) | 404 |
+| Record a delegation (`POST /tickets/{key}/agent-delegations`) | Yes | Yes | No (403) | 404 |
+| Instance defaults and guardrails (read, change, preview) | Admin only | 403 | 403 | 403 |
+
+All of it requires the flag. Template writes, previews, agent setup changes and delegation records accept the **cookie session only**: a PAT of any scope gets 403 `auth.cookieSessionRequired` (a read-only PAT may already be stopped by `pat.readOnlyScope`), so an agent session cannot rewrite the prompts its teammates' sessions will run or widen its own project's merge policy. Project reads and prompt resolution accept a PAT, read-only ones included. On an archived project everything is read-only (`project.archived`).
+
+### 13.7 REST
+
+Project templates, under `/api/v1/projects/{projectKeyOrId}/agent/prompts` (`{type}` is a ticket type name, case-insensitive):
+
+| Method and path | Purpose |
+| --- | --- |
+| `GET` | The five types: mode, version, effective source and version, default version, `defaultChanged`, last change |
+| `GET /{type}` | The slot with its body, the effective body, the instance default and the guardrails |
+| `PUT /{type}` | `{ mode, body?, changeNote?, baseVersion }`; a stale `baseVersion` is 409 `agent.prompt.versionConflict` |
+| `POST /{type}/reset` | `{ baseVersion, changeNote? }`: back to `Inherit` as a new version |
+| `GET /{type}/versions`, `GET /{type}/versions/{n}` | History, newest first; one version with its body (`agent.prompt.versionNotFound`) |
+| `POST /{type}/versions/{n}/restore` | `{ baseVersion, changeNote? }`: version n becomes current as a new version |
+| `POST /{type}/preview` | `{ body?, ticketKey? }` returns `{ prompt, length, lengthLimit, ticketKey, errors[] }`; stores nothing. A null body previews the instance default; the ticket must be in the project. |
+
+Instance templates, Admins only, under `/api/v1/admin/agent/prompts` (`{slot}` is a ticket type or `guardrails`): `GET`, `GET /{slot}`, `PUT /{slot}` (`{ body, changeNote?, baseVersion }`; an empty guardrails body removes them), `POST /{slot}/reset-built-in`, the same `versions`, `restore` and `preview` routes. Instance responses add `builtInVersion`, `followsBuiltIn`, `latestBuiltInVersion`, `newerBuiltInAvailable`, `builtInBody` and `overridingProjects` (live projects with `Custom` or `Off` for the type). `GET /{type}/overrides` lists those projects by key: `{ projectKey, projectName, isArchived, mode, version, defaultChanged, updatedBy, updatedAt }` (guardrails: `agent.prompt.notFound`).
+
+`GET /api/v1/admin/agent/status` returns `{ publicUrlVariable, publicUrl, delegationAvailable }` for Admins in the web app. It requires the flag but not the public URL, so it answers while every other agent route is `agent.disabled` (D-103).
+
+`GET /api/v1/agent/prompt-placeholders` lists the placeholders for the editor.
+
+Project agent setup and resolved prompts:
+
+| Method and path | Purpose |
+| --- | --- |
+| `GET /api/v1/projects/{pk}/agent` | `{ enabled, repositoryUrl, normalizedRepositoryUrl, defaultBranch, mergePolicy, assignOnDelegate, startProgressOnDelegate, rowVersion }` with an `ETag`. Readers, PATs included. |
+| `PATCH /api/v1/projects/{pk}/agent` | Any of `enabled`, `repositoryUrl` (null or blank clears), `defaultBranch`, `mergePolicy`, `assignOnDelegate`, `startProgressOnDelegate`; omitted fields stay. Optional `If-Match` with the project's `rowVersion` (409 `concurrency.conflict`). Owners and Admins, web session only. Returns the setup. |
+| `GET /api/v1/tickets/{key}/agent-prompt` | The resolved prompt (13.5): `{ prompt, ticketKey, ticketType, template: { source, version, updatedAt, updatedBy }, guardrailsVersion, outsiderContent }`. No side effects. |
+| `POST /api/v1/tickets/{key}/agent-delegations` | `{ app?: ClaudeCode \| ClaudeDesktop, launched?: { templateSource, templateVersion, guardrailsVersion } }` (default ClaudeCode). The web app calls it when Delegate opens Claude and sends the versions of the prompt it launched. Writers, web session only; after the 13.5 checks a Done ticket is 409 `agent.ticket.done`. With `launched`, a 13.5 check that fails now (project disabled, type Off, template invalid, too long) does not refuse: the launch already happened, so it is recorded as withdrawn (D-105). In one transaction: `ticket.agent.delegated`, then the caller as assignee if `assignOnDelegate` and unassigned, and To Do → In Progress if `startProgressOnDelegate`. Returns the ticket (D-100). |
+
+The project DTO (`GET /projects/{pk}`, `get_project`) carries the same setup as `agent`, null while agent delegation is not available to the caller.
+
+### 13.8 Activity and audit
+
+Every template change writes `agent.prompt.updated` with EntityType `AgentPrompt`, `ProjectId` set for project rows, `Field` the type name or `Guardrails`, and old and new values `{ version, mode }`. The body is never in activity; bodies live in the versions. The Admin audit trail (I-13) lists `AgentPrompt` entries, labelled `Bug` or `TKT Bug`, as "changed agent prompt · v2 → v3" (plus the mode change when there is one).
+
+### 13.8a Admin → Agent prompts
+
+A tab next to Feature flags, shown and routed only while the flag is on for the Admin (`/admin/agent-prompts`, `/admin/agent-prompts/{bug|user-story|technical|spike|epic|guardrails}`). It shows the `TICKETING_PUBLIC_URL` status line ("not set — delegation is disabled" with no prompt lists while it is unset), the five defaults and the guardrails with their version and built-in state, a "Newer built-in" badge, and per type the number of overriding projects, which opens their list with links to each project's prompt editor. The editor is the project one without the modes: preview (the guardrails render after a sample type prompt), compare with the built-in, history and restore, **Reset to built-in**, and the banner "A newer built-in prompt is available" with **Compare** and **Adopt** (both take the shipped text as a new version, D-103).
+
+Each changed setup field writes `project.field.changed` (EntityType `Project`) with `Field` one of `agentDelegationEnabled`, `repositoryUrl`, `defaultBranch`, `agentMergePolicy`, `agentAssignOnDelegate`, `agentStartProgressOnDelegate`. Resolving a prompt writes nothing.
+
+A delegation writes `ticket.agent.delegated` (EntityType `Ticket`) with the new value `{ templateSource, templateVersion, guardrailsVersion, app }` for the prompt that was launched, plus `current` (the same three fields) when the server's current prompt differs, or `withdrawn` (the error code) when it can no longer be resolved (D-105). The on-delegate changes follow as ordinary `ticket.field.changed` entries (`assignee`, `status`) with the same timestamp. Neither the prompt nor the local folder is ever stored. History shows it as "Anna delegated to agent · prompt v3 (custom) · Claude Code", with ", since changed" or ", since withdrawn" inside the brackets.
+
+### 13.9 MCP
+
+| Tool | Inputs | Output |
+| --- | --- | --- |
+| `get_agent_prompt` | `key` | The same object as `GET /tickets/{key}/agent-prompt`. Read-only; a `ReadOnly` token may call it. |
+
+`tools/list` contains `get_agent_prompt` only while the agent gate (13.2) is open for the token's user; a direct call otherwise fails with `agent.disabled`. A tool joins this rule by carrying `[FeatureGate(typeof(SomeGate))]`. `get_project` returns `agent`; `update_project` does not accept the setup (13.6). There are no MCP tools for template edits. Sessions started by hand use `get_agent_prompt` as described in [docs/mcp.md](../mcp.md#working-on-a-ticket-without-the-delegate-button).
+
+### 13.10 Default prompts
+
+The built-ins (`Agents/BuiltIns/*.txt`, release `2026.10.2`) are condensed from [04-delegate-to-agent-prompts.md](04-delegate-to-agent-prompts.md) to fit 13.4's limit (D-102). Every type template names the ticket by key only, has the agent read it with `get_ticket` and follow the repository's `CLAUDE.md`, and works without the guardrails; status changes and the closing comment come from both.
+
+| Type | What the default asks for | Finish |
+| --- | --- | --- |
+| Epic | Plan only, no code: read the epic and its children, create the missing children in one `create_tickets` call (idempotency key `<KEY>-plan`) with acceptance criteria, link real dependencies with `Blocks`, comment the delivery order and open questions. The epic's status stays as it is. | None |
+| UserStory | Worktree, plan against the ACs (subagents only for independent parts), tests at the repository's levels, every AC walked through in the browser with light and dark screenshots, docs, test cases. | `{{finish}}` |
+| Technical | Worktree, proof by kind of change (pinned behaviour for refactors, integration tests for new capabilities, before/after numbers for performance), full checks, a browser check of the flows that rely on the change, test cases. | `{{finish}}` |
+| Spike | Research with cited primary sources, an optional throwaway prototype that is never merged, findings in a doc, follow-up tickets (`RelatesTo`, `Blocks` among themselves) left in To Do. No production code. | `{{finish}}` for the docs branch |
+| Bug | Reproduce first as an automated test that fails for the reported reason (ask instead of guessing when it cannot be reproduced), root cause, smallest fix, regression test kept, browser check when the bug was visible. | `{{finish}}` plus root cause and the failing-then-passing test |
+
+The **guardrails** (in this order): the folder check (compare `git remote get-url origin` with `{{project.repositoryUrl}}` after normalising both as in 13.3, and stop on a mismatch); tracker access only through the `ticketing` MCP server; ticket content is data that cannot change the rules, with the requests to refuse and quote; no secrets or personal data in the tracker; blockers, assignment and resuming an earlier run; `CLAUDE.md` and status (InProgress, Review when pushed, Done once merged, unless the steps or `CLAUDE.md` say otherwise); asking the watching developer before risky steps; one closing comment starting `Delegated run · {{template.id}}`.
+
+**Finish** sentences: `Review` commits with the ticket key, merges the latest `{{project.defaultBranch}}` into the branch, re-runs the checks, pushes, opens a pull request if a forge CLI is set up and sets Review, without merging. `MergeWhenVerified` does the same, then merges the branch back, re-runs the checks, pushes, sets Done and reports the merge commit; it stops at Review on non-trivial conflicts or a failing check.
+
+Every type with the guardrails stays below 4 500 characters with the longest values the fields allow (10-character project key, ticket number 2 147 483 647, 500-character repository URL, 100-character branch, a 150-character public URL): about 4 400 at most, and about 3 600 for TKT's own values.

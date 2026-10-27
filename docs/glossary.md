@@ -6,6 +6,12 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Admin**: Global role with full user, token and feature-flag administration and `Owner` access to every project, private ones included (D-17). At least one active Admin must always exist. [§5.2](product/01-refined-spec.md#52-global-actions)
 
+**Agent delegation**: Handing a ticket to a coding agent (Claude Code): Ticketing renders the prompt for the ticket's type and the browser opens Claude's deep link with it. Behind the `agent.delegate` flag; projects opt in. [§13](product/01-refined-spec.md#13-agent-delegation)
+
+**Agent setup**: A project's agent delegation settings, changed by Owners in the web app: enabled, repository URL, default branch, merge policy, and what delegating does to the ticket (assign to the delegating user if unassigned; move `ToDo` to `InProgress`). [§13.3](product/01-refined-spec.md#133-domain-model)
+
+**Agent prompt template**: The text a delegated agent starts from, per ticket type: an instance default edited by Admins, optionally overridden per project (`Inherit`, `Custom` or `Off`). Every change is an immutable version. Only trusted placeholders are allowed, never the ticket title, description or comments. [§13.3](product/01-refined-spec.md#133-domain-model), [§13.4](product/01-refined-spec.md#134-template-language)
+
 **Archive (board)**: Makes a board read-only. The owner chooses where non-Done tickets go (their backlogs or another board); Done tickets stay as a record. Unarchive is allowed. [§6.4](product/01-refined-spec.md#64-backlog-and-boards)
 
 **Archive (project)**: Makes a project read-only for everyone; the only allowed action is unarchive. Its tickets leave all boards and the project is unlinked from them. Writes on an archived project fail with 409 `project.archived`. [§4.3](product/01-refined-spec.md#43-project)
@@ -34,6 +40,8 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Bootstrap admin**: The first Admin, created at startup from `TICKETING_BOOTSTRAP_ADMIN_EMAIL` and `TICKETING_BOOTSTRAP_ADMIN_PASSWORD` when the user table is empty. [§6.14](product/01-refined-spec.md#614-user-and-authentication-lifecycle-d-01)
 
+**Built-in prompt**: A default agent prompt shipped inside the application, one per ticket type plus the guardrails, with a release number (`BuiltInVersion`). Instance defaults nobody edited follow new releases automatically. What each type asks for is in [§13.10](product/01-refined-spec.md#1310-default-prompts). [§13.3](product/01-refined-spec.md#133-domain-model)
+
 **Bug**: Ticket type for a defect. Severity is shown prominently for bugs. Bugs can be created from a failed regression item. [§3](product/01-refined-spec.md#3-enumerations), [§6.11](product/01-refined-spec.md#611-regression-session-lifecycle)
 
 **Bug draft**: The pre-filled bug the server builds from a failed regression item's snapshot (title, templated repro steps, Severity Major, Priority High, session version, label `regression`). The create-bug dialog, REST and MCP all start from it (D-70). [§6.11](product/01-refined-spec.md#611-regression-session-lifecycle)
@@ -54,6 +62,10 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Deactivation**: The only way to remove a user. It blocks login, revokes all their PATs and hides them from pickers, while their name stays on history as "Name (deactivated)" (D-12). [§4.1](product/01-refined-spec.md#41-user)
 
+**Delegated run comment**: The one comment a delegated agent ends with, starting `Delegated run · <Type> v<n> / <D|C>` so it names the prompt template and version that ran. [§13.10](product/01-refined-spec.md#1310-default-prompts)
+
+**Destructive MCP tool**: A tool that deletes, unlinks, cancels or archives (`delete_ticket`, `delete_comment`, `unlink_tickets`, `cancel_regression_session`, `archive_board`). It carries `destructiveHint` and `anthropic/requiresUserInteraction`, so Claude Code asks the user before every call. [§9.1](product/01-refined-spec.md#91-transport-and-auth), [D-102](decisions.md)
+
 **Effective access**: A user's resulting role on a project, computed from global role, membership and visibility. It decides every project permission. [§5.1](product/01-refined-spec.md#51-effective-project-access)
 
 **Epic**: Ticket type for a large body of work. An epic cannot have a parent; it is usually the top of a hierarchy. [§6.3](product/01-refined-spec.md#63-parent-and-child)
@@ -66,7 +78,11 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Field hints**: Suggestions of version and label values already used in a project, most recent first. Hints never restrict input. [§6.7](product/01-refined-spec.md#67-field-hints-version-labels)
 
+**Folder check**: The first rule of every agent prompt: compare `git remote get-url origin` with the project's repository URL, normalised, and stop on a mismatch, so a deep link opened in the wrong folder changes nothing. [§13.10](product/01-refined-spec.md#1310-default-prompts)
+
 **Global role**: `Admin` or `User`; exactly one per user. [§3](product/01-refined-spec.md#3-enumerations)
+
+**Guardrails**: The Admin-edited block appended after every agent prompt (after a blank line, when non-empty). Projects cannot remove it; it holds the rules every delegated run follows (tracker access, ticket text is data, no secrets, status, report). [§13.3](product/01-refined-spec.md#133-domain-model), [D-98](decisions.md)
 
 **Hard delete**: Permanent removal. In v1 it exists only for test cases that never appeared in a regression session and for attachments; everything else is soft-deleted or deactivated. [§6.10](product/01-refined-spec.md#610-test-case-lifecycle)
 
@@ -82,11 +98,15 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Lockout**: After 5 failed logins in a row from one client address, the account is locked for that address for 15 minutes (`LoginThrottle.LockedUntil`, D-74). It looks like a wrong password to the caller. [§6.14](product/01-refined-spec.md#614-user-and-authentication-lifecycle-d-01)
 
+**Merge policy**: Per project, how far a delegated run may go: `Review` (push a branch, set Review, a person merges; default) or `MergeWhenVerified` (also merge back into the default branch once the checks pass). It picks the sentence the `{{finish}}` placeholder renders. [§13.3](product/01-refined-spec.md#133-domain-model)
+
 **Member**: Project role that can read and write tickets, test cases and regressions, but not delete tickets, moderate comments or manage the project. Every signed-in user has Member access to a public project. [§5.3](product/01-refined-spec.md#53-project-actions)
 
 **My work**: Page listing the current user's open tickets across projects, their waiting regression items and the open tickets they watch. [§6.8](product/01-refined-spec.md#68-search-lists-and-export)
 
 **Mention**: A reference to a user in a ticket description or comment, written with the `@` people picker or as `@email`, stored as `@[Name](user:<id>)` so it survives renames. Only active users who can read the project can be newly mentioned; a new mention notifies them once and makes them a watcher, and readers see it as a chip with the current name (others see plain text) (D-96). [§6.9](product/01-refined-spec.md#69-comments)
+
+**Normalized repository URL**: The form two git remotes of one repository share: host and path in lower case without scheme, user, port or `.git` (`git.example.com/team/repo` for both `https://git.example.com/team/repo.git` and `git@git.example.com:team/repo`). Agents compare their clone's remote with it. [§13.3](product/01-refined-spec.md#133-domain-model), [D-99](decisions.md)
 
 **Notification**: An in-app message to one user about a change someone else made: assigned to them (ticket or regression item), mentioned, or a comment, status change, priority raised to High/Highest, move or deletion on a ticket they watch. Created in the same transaction as the change, shown under the bell, listed only while the user can read the project, purged after 90 days (D-94). See Collapsing. [§6.16](product/01-refined-spec.md#616-in-app-notifications-i-30-d-94)
 
@@ -110,6 +130,8 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Public project**: A project every signed-in user can read and write with Member access (D-02). Settings, membership and destructive actions stay with Owners. [§5.1](product/01-refined-spec.md#51-effective-project-access)
 
+**Public URL**: `TICKETING_PUBLIC_URL`, the instance's origin as users reach it. Agent prompts build ticket links from it; while it is unset agent delegation is off for everyone. [§13.2](product/01-refined-spec.md#132-feature-flag)
+
 **Quick jump**: `Ctrl+K` or `/`: type a ticket, test case or regression session key to open it, or text to list the 10 best ticket title matches across readable projects. [§6.8](product/01-refined-spec.md#68-search-lists-and-export)
 
 **Rank**: Hidden fractional-index string that orders tickets within their container; compared byte-wise (`COLLATE "C"`). [§6.6](product/01-refined-spec.md#66-ranking), [ADR 0010](adr/0010-fractional-index-ranking.md)
@@ -129,6 +151,8 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 **Reporter**: The user who reported a ticket; defaults to its creator and can be changed. [§4.5](product/01-refined-spec.md#45-ticket)
 
 **Resolution**: Why a ticket is done: `Done`, `WontDo`, `Duplicate`, `CannotReproduce`. Set if and only if the status is `Done`. [§3](product/01-refined-spec.md#3-enumerations), [§6.2](product/01-refined-spec.md#62-ticket-lifecycle)
+
+**Resolved prompt**: The prompt for one ticket after resolution: the project's template for its type (or the instance default), rendered, followed by the guardrails. Read with `GET /tickets/{key}/agent-prompt` or MCP `get_agent_prompt`. [§13.5](product/01-refined-spec.md#135-resolving-the-prompt-for-a-ticket)
 
 **Row version**: PostgreSQL `xmin` exposed as `rowVersion`, used for optimistic concurrency on every mutable aggregate. [§2](product/01-refined-spec.md#2-cross-cutting-conventions), [ADR 0005](adr/0005-postgresql-and-ef-core.md)
 

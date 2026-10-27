@@ -139,8 +139,12 @@ export class ShortcutService {
   }
 
   /// A dialog, menu, picker or any other overlay with a backdrop owns the keyboard while it is open.
+  /// The CDK adds `-showing` a frame after attaching and turns off pointer events when detaching, so
+  /// a backdrop that still takes pointer events is the open state from the first frame to the last.
   private isOverlayOpen(): boolean {
-    return this.document.querySelector('.cdk-overlay-backdrop-showing') !== null;
+    return Array.from(this.document.querySelectorAll<HTMLElement>('.cdk-overlay-backdrop')).some(
+      (backdrop) => backdrop.style.pointerEvents !== 'none',
+    );
   }
 
   private clearPending(): void {

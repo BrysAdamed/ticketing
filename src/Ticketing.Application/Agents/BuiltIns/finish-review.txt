@@ -1,0 +1,1 @@
+Finish: commit with messages starting {{ticket.key}}, merge the latest {{project.defaultBranch}} into your branch as CLAUDE.md says and re-run the checks. Push, open a pull request if a forge CLI is set up, and set the ticket to Review. Do not merge it yourself: a person reviews and merges.

@@ -11,6 +11,7 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Users\Resources\common-passwords.txt" LogicalName="Ticketing.Application.Users.common-passwords.txt" />
+    <EmbeddedResource Include="Agents\BuiltIns\*.txt" LogicalName="Ticketing.Application.Agents.BuiltIns.%(Filename)%(Extension)" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Ticketing.IntegrationTests" />

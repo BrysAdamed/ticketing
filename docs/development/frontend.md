@@ -58,13 +58,15 @@ ESLint enforces the boundaries: `core` and `shared` may not import `@features/*`
 | `/projects/:projectKey/backlog` | `backlog` | `backlog.list` |
 | `/projects/:projectKey/test-cases`, `…/test-cases/:testCaseKey`, `…/test-cases/new?forTicket=KEY` (filters `?status=&q=&ticket=&archived=`) | `test-cases` | `testcases.list`, `testcases.editor` (side pane) |
 | `/projects/:projectKey/regressions[/:sessionKey]` (`?status=`; session `?item=KEY&show=mine`, `waiting` or `failed`) | `regressions` | `regressions.list`, `regressions.session` |
-| `/projects/:projectKey/settings` | `project-settings` | `project.settings` |
+| `/projects/:projectKey/settings` (tabs: General; Agent while `project.agent` is non-null) | `project-settings` | `project.settings.layout`, `project.settings` |
+| `/projects/:projectKey/settings/agent`, `…/settings/agent/:ticketType` (`bug`, `user-story`, …; flag `agent.delegate`) | `project-settings` | `project.settings.agent`, `project.settings.agent-prompt` |
 | `/tickets/:ticketKey` | `tickets` | `ticket.detail` (presentation `page`) |
 | `?peek=KEY` on any shell URL | `tickets` | `ticket.detail` (presentation `peek`) |
 | `/boards`, `/boards/:boardId` | `boards` | `boards.list`, `board.kanban` |
 | `/search` | `search` | `search.results` |
 | `/profile`, `/profile/tokens` | `profile` | `profile.layout`, `profile.general`, `profile.tokens` |
 | `/admin/users \| flags \| audit` (Admins only; others get 404) | `admin` | `admin.layout`, `admin.users`, `admin.flags`, `admin.audit` |
+| `/admin/agent-prompts`, `…/agent-prompts/:slot` (`bug`, `user-story`, …, `guardrails`; Admins with flag `agent.delegate`) | `admin` | `admin.agent-prompts`, `admin.agent-prompt` |
 | `/dev/ui-kit` | `ui-kit` | `dev.ui-kit` (UI kit catalogue) |
 | anything else | `not-found` | `app.not-found` |
 
@@ -119,7 +121,7 @@ Inside project sections, `inject(ProjectContext)` gives the current project (`pr
 | Current user | `AuthService.currentUser()`, `isAdmin()`. Startup runs `GET /auth/csrf`, then `GET /me`, then `GET /me/flags` (`provideAppInitializer`). |
 | Guards | `authGuard` (shell), `adminGuard` (`canMatch`, so non-admins fall through to 404), `guestGuard` (login page), `featureGuard('flag.key', 'on')`. |
 | Feature flags | `FeatureFlagService.isOn(key)` / `variant(key)` (missing = `off`). Refreshes on window focus when older than 5 minutes. In templates: `<x *tkFeature="'board.swimlanes'; else old" />` or `*tkFeature="'k'; variant: 'b'"`. `flagBucket(flagKey, userId)` matches the C# bucketing, and both are tested against `docs/architecture/flag-bucketing-vectors.json`. |
-| Toasts | `ToastService.show / success / warning / error(err)` with an optional `{ action: { label: 'Undo', run } }`. |
+| Toasts | `ToastService.show / success / warning / error(err)` with an optional `{ action: { label: 'Undo', run } }`, or `actions: [...]` for several (shown in order). |
 | Confirm | `await ConfirmService.confirm({ title, message, confirmLabel, danger, requireText })`. |
 | Palette | `CommandRegistry.registerCommands([...], destroyRef)` or `provideCommands(() => [...])` in route providers. Use `registerSearchProvider({ id, remote: true, minQueryLength, search(q, signal) })` for API-backed results (debounced 120 ms, aborted when the query changes). Registering the command id `ticket.create` shows the top-bar "New ticket" button and turns on the global `C`. |
 | Shortcuts | `ShortcutService.registerScoped([{ keys, description, section, handler, allowInInputs }])` for the component's lifetime. The latest registration of the same keys wins (a page can take over `/`). Notation: `mod+k` (Ctrl or ⌘), `shift+enter`, `g b` (sequence), `escape`, `?`. Single keys are ignored while typing in a field unless `allowInInputs` is set, and every shortcut is ignored while an overlay with a backdrop (dialog, menu, picker) is open. Everything registered appears in the `?` sheet. `isRegistered(keys)` tells pickers whether to show their key hint (`PICKER_SHORTCUT_AVAILABLE`). |
@@ -158,6 +160,20 @@ provideTicketDetailSection({
 ```
 
 The component is lazily loaded, receives the inputs `ticketKey`, `ticketId` and `projectKey` (declare all three, for example `input.required<string>()`, because unknown inputs are reported as errors), and renders its own heading. Reuse the look of the built-in sections (`sec-h` header with an `h2`, a bordered `box` of 34 px rows). While no section with id `test-cases` is registered, the ticket view shows a read-only test case list from `GET /tickets/{key}` itself.
+
+**Ticket header actions (extension point).** A feature adds a control to the ticket view's header bar (page and peek), before the watch and copy buttons, with `provideTicketHeaderAction({ id, order, loadComponent })` in `app.config.ts` (D-100). The component is lazily loaded inside `data-testid="ticket-action-<id>"` and receives the inputs `ticket` (the full `Ticket`) and `presentation` (`'page' | 'peek'`). It can inject the view's `TicketHeaderHost` to add `…` menu items (`setMenuItems(id, items)`, cleared on destroy; rendered as `ticket-menu-<item id>`), to register shortcuts only while `shortcutsActive()` is true, and to ask the view to reload the ticket and its history (`refresh()`) after a write of its own. Delegate to agent (`features/agent-delegation`) is the first user.
+
+## Agent prompts: shared editor
+
+The project Agent tab and the Admin prompts page edit the same kind of thing, so the pieces live outside both features (D-101):
+
+| Need | Use |
+| --- | --- |
+| Wire types, clients | `core/agent/agent-prompt.models.ts`; `AgentPromptsClient` (`listProject`, `listInstance`, `getProject`, `getInstance`, `save(scope, slot, …)`, `resetProject`, `resetInstanceToBuiltIn`, `versions`, `version`, `restore`, `preview`, `placeholders`, and for Admins `instanceStatus`, `overrides(slot)`); `ProjectAgentSettingsClient` (`get`, `update(pk, patch, rowVersion)`). A scope is `{ kind: 'project', projectKey }` or `{ kind: 'instance' }`; a slot is a ticket type or `Guardrails`. |
+| Editor state | `AgentPromptEditorStore` (`core/agent/`, provide it in the view): `open(scope, slot, sampleTicket?)`, `setEditable`, `setMode`, `edit(body)`, `setPreviewTicket`, `save`, `reset` (default or built-in), `markReviewed`, `restore(n)`, `loadVersions`, `version(n)`, `discard`, `reapplyLostEdit`. Signals: `document` (with `reference` = what "Compare" diffs against, `referenceChanged`, `raw` DTO), `mode`, `body`, `changeNote`, `dirty`, `canSave`, `preview`, `previewPending`, `issues`, `length`, `lengthEstimated`, `limit`, `lostEdit`, `versions`. |
+| UI | `shared/agent-prompts/`: `tk-template-editor [(value)] [placeholders] [issues] [readonly] testId` (`{{` completion, issues underlined and listed), `tk-prompt-preview [prompt] [splitAt] [muted]="'after' \| 'before'" [mutedLabel]`, `tk-prompt-diff [left] [right] [leftLabel] [rightLabel]`, `tk-prompt-history [versions] [currentVersion] [canRestore] (view) (compare) (restore)`, `tk-length-meter [length] [limit] [estimated]`. Pure helpers: `line-diff.ts`, `template-text.ts`. |
+| Leave guard | `unsavedChangesGuard` (`core/layout/`) on the route; the view implements `LeaveGuarded.confirmLeave()`. |
+| Slots in URLs, page layout | `core/agent/prompt-slugs.ts` (`promptTypeSlug`, `promptSlotSlug`, `promptSlotFromSlug`, labels); `shared/agent-prompts/prompt-editor-page.scss` for the editor page grid both views use (D-103). |
 
 ## UI kit (`shared/`)
 

@@ -1,0 +1,32 @@
+.shield {
+  color: var(--tk-text-muted);
+}
+
+.facts {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.left > .tk-field-label {
+  margin: 4px 0 0;
+}
+
+.link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--tk-accent-fg);
+  font: inherit;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--tk-focus);
+    outline-offset: 2px;
+    border-radius: var(--tk-radius-sm);
+  }
+}

@@ -6,11 +6,13 @@ import {
   TICKET_KEY_PATTERN,
   projectKeyOf,
 } from '@shared/domain/keys';
+import { AGENT_FLAG } from '../agent/agent-prompt.models';
 import { AuthService } from '../auth/auth.service';
 import { PaletteItem } from '../commands/command';
 import { CommandPaletteService } from '../commands/command-palette.service';
 import { CommandRegistry } from '../commands/command-registry';
 import { matchScore } from '../commands/command';
+import { FeatureFlagService } from '../flags/feature-flag.service';
 import { ProjectDirectory } from '../projects/project-directory';
 import { ShortcutHelpDialog } from '../shortcuts/shortcut-help.dialog';
 import { ShortcutService } from '../shortcuts/shortcut.service';
@@ -34,6 +36,7 @@ export class ShellActions {
   private readonly shortcuts = inject(ShortcutService);
   private readonly commands = inject(CommandRegistry);
   private readonly directory = inject(ProjectDirectory);
+  private readonly flags = inject(FeatureFlagService);
 
   showShortcuts(): void {
     if (this.dialog.getDialogById('tk-shortcut-help')) return;
@@ -157,6 +160,14 @@ export class ShellActions {
           icon: 'tablerFlag',
           run: go('/admin/flags'),
           available: () => this.auth.isAdmin(),
+        },
+        {
+          id: 'nav.admin.agentPrompts',
+          label: 'Admin: Agent prompts',
+          group: NAVIGATION,
+          icon: 'tablerRobot',
+          run: go('/admin/agent-prompts'),
+          available: () => this.auth.isAdmin() && this.flags.isOn(AGENT_FLAG),
         },
         {
           id: 'nav.admin.audit',

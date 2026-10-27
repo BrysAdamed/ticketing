@@ -88,8 +88,34 @@ module.exports = defineConfig([
     },
   },
   {
+    files: ['src/**/*.ts'],
+    ignores: ['src/app/shared/markdown/markdown-viewer.component.ts'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'CallExpression[callee.property.name=/^bypassSecurityTrust/]',
+          message:
+            'Only tk-markdown may bypass Angular sanitization; render user text with <tk-markdown>.',
+        },
+        {
+          selector: "Property[key.value='[innerHTML]']",
+          message: 'Render user text with <tk-markdown>, which sanitizes it and strips app links.',
+        },
+      ],
+    },
+  },
+  {
     files: ['**/*.html'],
     extends: [angular.configs.templateRecommended, angular.configs.templateAccessibility],
-    rules: {},
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "BoundAttribute[name='innerHTML']",
+          message: 'Render user text with <tk-markdown>, which sanitizes it and strips app links.',
+        },
+      ],
+    },
   },
 ]);

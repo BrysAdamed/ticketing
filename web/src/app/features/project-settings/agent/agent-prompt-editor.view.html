@@ -1,0 +1,337 @@
+@if (!type()) {
+  <tk-empty-state
+    icon="tablerAlertCircle"
+    data-testid="agent-prompt-unknown-type"
+    title="There is no such ticket type"
+    description="Pick a type from the list on the Agent tab."
+  >
+    <a mat-stroked-button routerLink="..">Back to Agent</a>
+  </tk-empty-state>
+} @else if (store.status() === 'error') {
+  <tk-empty-state
+    icon="tablerAlertCircle"
+    tone="danger"
+    title="Couldn't load the prompt"
+    [description]="store.error()?.title ?? null"
+  >
+    <a mat-stroked-button routerLink="..">Back to Agent</a>
+  </tk-empty-state>
+} @else if (document(); as document) {
+  <header class="bar">
+    <a mat-button routerLink=".." class="back" data-testid="agent-prompt-back">
+      <tk-icon name="tablerArrowLeft" [size]="16" />
+      Agent
+    </a>
+    <span class="title">
+      <tk-type-icon [type]="type()!" />
+      <h2>{{ typeLabel() }} prompt</h2>
+    </span>
+    <tk-badge
+      [tone]="document.mode === 'Custom' ? 'violet' : 'gray'"
+      data-testid="agent-prompt-chip"
+    >
+      {{ chip() }}
+    </tk-badge>
+    @if (document.updatedAt) {
+      <span class="changed tk-subtle">
+        <tk-user [user]="document.updatedBy" emptyLabel="System" />
+        <span [title]="document.updatedAt | absoluteTime">{{
+          document.updatedAt | relativeTime
+        }}</span>
+      </span>
+    }
+    <span class="spacer"></span>
+    @if (store.mode() !== 'Off') {
+      <tk-length-meter
+        [length]="store.length()"
+        [limit]="store.limit()"
+        [estimated]="store.lengthEstimated()"
+      />
+    }
+    @if (editable()) {
+      @if (document.mode !== 'Inherit') {
+        <button
+          mat-button
+          type="button"
+          data-testid="agent-prompt-reset"
+          [disabled]="store.saving()"
+          (click)="reset()"
+        >
+          Reset to default
+        </button>
+      }
+      <button
+        mat-button
+        type="button"
+        data-testid="agent-prompt-discard"
+        [disabled]="!store.dirty() || store.saving()"
+        (click)="store.discard()"
+      >
+        Discard
+      </button>
+      <button
+        mat-flat-button
+        type="button"
+        data-testid="agent-prompt-save"
+        [disabled]="!store.canSave()"
+        (click)="save()"
+      >
+        {{ store.saving() ? 'Saving…' : 'Save' }}
+        <tk-kbd class="kbd">{{ shortcuts.format('mod+s')[0] }}</tk-kbd>
+      </button>
+    }
+  </header>
+
+  <div class="notices">
+    @if (!editable()) {
+      <div class="tk-callout" data-testid="agent-prompt-readonly">
+        <tk-icon name="tablerLock" [size]="16" />
+        <span>
+          {{
+            context.isArchived()
+              ? 'Archived projects are read-only.'
+              : 'Only project owners can change prompts. You can read them, preview them and see their history.'
+          }}
+        </span>
+      </div>
+    }
+    @if (store.lostEdit(); as lost) {
+      <div class="tk-callout tk-callout-warning" role="alert" data-testid="agent-prompt-conflict">
+        <tk-icon name="tablerAlertTriangle" [size]="16" />
+        <span class="grow">
+          Someone else saved version {{ lost.latestVersion }} while you were editing. It is shown
+          now; your edit was not saved.
+        </span>
+        <button
+          mat-stroked-button
+          type="button"
+          data-testid="agent-prompt-conflict-reapply"
+          (click)="store.reapplyLostEdit()"
+        >
+          Apply my edit again
+        </button>
+        <button mat-button type="button" (click)="store.dismissLostEdit()">Dismiss</button>
+      </div>
+    }
+    @if (showDefaultChanged()) {
+      <div class="tk-callout tk-callout-warning" data-testid="agent-prompt-default-changed">
+        <tk-icon name="tablerInfoCircle" [size]="16" />
+        <span class="grow">
+          The default prompt changed after this was customised (now
+          {{ document.reference.label.toLowerCase() }}).
+        </span>
+        <button mat-button type="button" (click)="showPanel('compare')">Compare</button>
+        @if (editable()) {
+          <button
+            mat-stroked-button
+            type="button"
+            data-testid="agent-prompt-mark-reviewed"
+            [disabled]="store.dirty() || store.saving()"
+            (click)="store.markReviewed()"
+          >
+            Mark as reviewed
+          </button>
+        }
+      </div>
+    }
+  </div>
+
+  <div class="columns">
+    <section class="left" aria-label="Template">
+      <div class="mode">
+        <span class="tk-field-label" id="agent-prompt-mode-label"
+          >Prompt for {{ typeLabel() }} tickets</span
+        >
+        @if (editable()) {
+          <tk-segmented
+            ariaLabel="Prompt mode"
+            testId="agent-prompt-mode"
+            [options]="modeOptions"
+            [value]="store.mode()"
+            (valueChange)="store.setMode($event)"
+          />
+        }
+      </div>
+      @switch (store.mode()) {
+        @case ('Custom') {
+          <tk-template-editor
+            testId="agent-prompt-body"
+            [ariaLabel]="typeLabel() + ' prompt template'"
+            [value]="store.body()"
+            [placeholders]="store.placeholders()"
+            [issues]="store.issues()"
+            [readonly]="!editable()"
+            (valueChange)="store.edit($event)"
+          />
+          <p class="help tk-subtle">
+            Type <code>{{ '{{' }}</code> for placeholders. Ticket titles and descriptions are not
+            available here: the agent reads them over MCP.
+          </p>
+        }
+        @case ('Inherit') {
+          <p class="help tk-subtle" data-testid="agent-prompt-inherits">
+            {{ typeLabel() }} tickets use the default prompt ({{
+              document.reference.label.toLowerCase()
+            }}), maintained by your Admin.
+            @if (editable()) {
+              Choose Custom to start from it.
+            }
+          </p>
+          <pre class="readonly-text">{{ document.reference.body }}</pre>
+        }
+        @case ('Off') {
+          <tk-empty-state
+            icon="tablerBan"
+            data-testid="agent-prompt-off"
+            [title]="'Delegation is off for ' + typeLabel() + ' tickets'"
+            description="The Delegate button is not offered on them, and Copy prompt explains why."
+          />
+        }
+      }
+      @if (editable()) {
+        <div class="note">
+          <label class="tk-field-label" for="agent-prompt-change-note">Change note</label>
+          <mat-form-field>
+            <input
+              matInput
+              id="agent-prompt-change-note"
+              autocomplete="off"
+              placeholder="Optional: why you changed it"
+              data-testid="agent-prompt-change-note"
+              [attr.maxlength]="changeNoteMax"
+              [value]="store.changeNote()"
+              (input)="store.changeNote.set($any($event.target).value)"
+            />
+          </mat-form-field>
+        </div>
+      }
+    </section>
+
+    <section class="right" aria-label="Preview, compare and history">
+      <tk-segmented
+        ariaLabel="Side panel"
+        testId="agent-prompt-panel"
+        [options]="panelOptions"
+        [value]="panel()"
+        (valueChange)="showPanel($event)"
+      />
+      <div class="panel">
+        @switch (panel()) {
+          @case ('preview') {
+            <div class="panel-head">
+              <span class="tk-subtle">Rendered for</span>
+              <button
+                mat-stroked-button
+                type="button"
+                class="sample"
+                data-testid="agent-prompt-sample"
+                pickerPlaceholder="Find a ticket…"
+                [tkSearchPicker]="findSample"
+                (picked)="pickSample($event)"
+              >
+                {{ sampleLabel() }}
+                <tk-icon name="tablerChevronDown" [size]="14" />
+              </button>
+            </div>
+            @if (store.mode() === 'Off') {
+              <p class="tk-subtle">Nothing is sent for {{ typeLabel() }} tickets.</p>
+            } @else if (store.preview(); as preview) {
+              @if (preview.prompt === null) {
+                <p class="tk-subtle" data-testid="agent-prompt-preview-errors">
+                  Fix the template errors to see the prompt.
+                </p>
+              } @else {
+                @for (issue of preview.errors; track $index) {
+                  @if (issue.line === null) {
+                    <div
+                      class="tk-callout tk-callout-danger issue"
+                      data-testid="agent-prompt-length-error"
+                    >
+                      <tk-icon name="tablerAlertCircle" [size]="16" />
+                      <span>{{ issue.message }}</span>
+                    </div>
+                  }
+                }
+                <tk-prompt-preview
+                  [prompt]="preview.prompt"
+                  [splitAt]="preview.guardrailsStart"
+                  [loading]="store.previewPending()"
+                />
+              }
+            } @else {
+              <tk-skeleton-rows [count]="6" />
+            }
+          }
+          @case ('compare') {
+            <tk-prompt-diff
+              [left]="document.reference.body"
+              [right]="currentText()"
+              [leftLabel]="document.reference.label"
+              [rightLabel]="store.dirty() ? 'Your edit (not saved)' : chip()"
+            />
+          }
+          @case ('history') {
+            @if (opened(); as opened) {
+              <div class="panel-head">
+                <button
+                  mat-button
+                  type="button"
+                  data-testid="agent-prompt-history-back"
+                  (click)="closeVersion()"
+                >
+                  <tk-icon name="tablerArrowLeft" [size]="16" />
+                  History
+                </button>
+                <span class="spacer"></span>
+                @if (editable() && opened.version.number !== document.version) {
+                  <button
+                    mat-stroked-button
+                    type="button"
+                    data-testid="agent-prompt-history-restore"
+                    [disabled]="store.saving()"
+                    (click)="restore(opened.version.number)"
+                  >
+                    Restore version {{ opened.version.number }}
+                  </button>
+                }
+              </div>
+              @if (opened.diff) {
+                <tk-prompt-diff
+                  [left]="opened.version.body ?? ''"
+                  [right]="savedText()"
+                  [leftLabel]="'Version ' + opened.version.number"
+                  [rightLabel]="'Current (v' + document.version + ')'"
+                />
+              } @else {
+                <p class="tk-subtle" data-testid="agent-prompt-version-heading">
+                  Version {{ opened.version.number }}
+                  @if (opened.version.mode !== 'Custom') {
+                    · {{ opened.version.mode === 'Off' ? 'Off' : 'Use default' }}
+                  }
+                </p>
+                @if (opened.version.body !== null) {
+                  <pre class="readonly-text" data-testid="agent-prompt-version-body">{{
+                    opened.version.body
+                  }}</pre>
+                }
+              }
+            } @else if (store.versions(); as versions) {
+              <tk-prompt-history
+                [versions]="versions"
+                [currentVersion]="document.version"
+                [canRestore]="editable()"
+                (view)="openVersion($event, false)"
+                (compare)="openVersion($event, true)"
+                (restore)="restore($event)"
+              />
+            } @else {
+              <tk-skeleton-rows [count]="5" />
+            }
+          }
+        }
+      </div>
+    </section>
+  </div>
+} @else {
+  <div class="loading"><tk-skeleton-rows [count]="12" /></div>
+}

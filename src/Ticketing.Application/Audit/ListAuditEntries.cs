@@ -4,10 +4,11 @@ using Ticketing.Application.Abstractions;
 using Ticketing.Application.Common;
 using Ticketing.Application.Users;
 using Ticketing.Domain.Activity;
+using Ticketing.Domain.Agents;
 
 namespace Ticketing.Application.Audit;
 
-/// <summary>An admin audit row. <see cref="EntityLabel"/> is the current email, flag key, project key or token name, when the entity still exists.</summary>
+/// <summary>An admin audit row. <see cref="EntityLabel"/> is the current email, flag key, project key, token name or agent prompt slot (<c>Bug</c>, <c>TKT Bug</c>), when the entity still exists.</summary>
 public sealed record AuditEntryDto(
     Guid Id,
     DateTimeOffset OccurredAt,
@@ -28,7 +29,7 @@ public sealed record AuditEntryDto(
 public static class ListAuditEntries
 {
     public static readonly IReadOnlyList<ActivityEntityType> AuditedTypes =
-        [ActivityEntityType.User, ActivityEntityType.PersonalAccessToken, ActivityEntityType.FeatureFlag, ActivityEntityType.Project];
+        [ActivityEntityType.User, ActivityEntityType.PersonalAccessToken, ActivityEntityType.FeatureFlag, ActivityEntityType.Project, ActivityEntityType.AgentPrompt];
 
     public sealed record Query(
         Guid? ActorId = null,
@@ -96,6 +97,7 @@ public static class ListAuditEntries
             var tokenIds = Ids(ActivityEntityType.PersonalAccessToken);
             var flagIds = Ids(ActivityEntityType.FeatureFlag);
             var projectIds = Ids(ActivityEntityType.Project);
+            var promptIds = Ids(ActivityEntityType.AgentPrompt);
 
             var labels = new Dictionary<Guid, string>();
             if (userIds.Count > 0)
@@ -110,6 +112,19 @@ public static class ListAuditEntries
             if (projectIds.Count > 0)
                 foreach (var p in await db.Projects.AsNoTracking().Where(p => projectIds.Contains(p.Id)).Select(p => new { p.Id, p.Key }).ToListAsync(cancellationToken))
                     labels[p.Id] = p.Key;
+            if (promptIds.Count > 0)
+            {
+                var prompts = await db.AgentPromptTemplates
+                    .AsNoTracking()
+                    .Where(t => promptIds.Contains(t.Id))
+                    .Select(t => new { t.Id, t.TicketType, ProjectKey = db.Projects.Where(p => p.Id == t.ProjectId).Select(p => p.Key).FirstOrDefault() })
+                    .ToListAsync(cancellationToken);
+                foreach (var t in prompts)
+                {
+                    var slot = new AgentPromptSlot(t.TicketType).Name;
+                    labels[t.Id] = t.ProjectKey is null ? slot : $"{t.ProjectKey} {slot}";
+                }
+            }
             return labels;
         }
 

@@ -197,6 +197,89 @@ public sealed class RecordAgentDelegationTests(TicketingApiFactory api)
     }
 
     [Fact]
+    public async Task The_entry_records_the_launched_versions_when_the_template_changed_after_page_load()
+    {
+        // Arrange
+        var owner = await api.CreateUserAsync();
+        var project = await api.ProjectAsync(owner, "TKT");
+        var changed = await api.TicketAsync(project, owner);
+        var unchanged = await api.TicketAsync(project, owner, TicketType.Technical);
+        await api.EnableAgentFlagAsync(owner);
+        var client = await api.LoginAsync(owner);
+        var loaded = await (await client.GetAsync(PromptPath(changed), _ct)).ReadAsync<JsonElement>();
+        var launched = Launched(loaded);
+        await (await client.PutPromptAsync("TKT", "Bug", new { mode = "Custom", body = "Fix {{ticket.key}}.", baseVersion = 0 })).ShouldHaveStatusAsync(HttpStatusCode.OK);
+
+        // Act
+        var afterChange = await client.PostAsJsonAsync(Path(changed), new { app = "ClaudeCode", launched }, _ct);
+        var withoutChange = await client.PostAsJsonAsync(
+            Path(unchanged), new { app = "ClaudeCode", launched = Launched(await (await client.GetAsync(PromptPath(unchanged), _ct)).ReadAsync<JsonElement>()) }, _ct);
+
+        // Assert
+        await afterChange.ShouldHaveStatusAsync(HttpStatusCode.OK);
+        await withoutChange.ShouldHaveStatusAsync(HttpStatusCode.OK);
+        var entries = (await EntriesAsync()).Where(e => e.Action == RecordAgentDelegation.Action).ToList();
+        var stale = JsonDocument.Parse(entries[0].NewValue!).RootElement;
+        Assert.Equal(("Default", 1, 1), Versions(stale));
+        Assert.Equal(("Custom", 1, 1), Versions(stale.GetProperty("current")));
+        Assert.False(stale.TryGetProperty("withdrawn", out _));
+        var fresh = JsonDocument.Parse(entries[1].NewValue!).RootElement;
+        Assert.Equal(["app", "guardrailsVersion", "templateSource", "templateVersion"], fresh.EnumerateObject().Select(p => p.Name).Order());
+    }
+
+    [Fact]
+    public async Task A_launch_whose_prompt_was_withdrawn_after_page_load_is_still_recorded_as_withdrawn()
+    {
+        // Arrange
+        var owner = await api.CreateUserAsync();
+        var project = await api.ProjectAsync(owner, "TKT");
+        var epic = await api.TicketAsync(project, owner, TicketType.Epic);
+        var bug = await api.TicketAsync(project, owner);
+        await api.EnableAgentFlagAsync(owner);
+        var client = await api.LoginAsync(owner);
+        var epicLaunched = Launched(await (await client.GetAsync(PromptPath(epic), _ct)).ReadAsync<JsonElement>());
+        var bugLaunched = Launched(await (await client.GetAsync(PromptPath(bug), _ct)).ReadAsync<JsonElement>());
+
+        // Act
+        await (await client.PutPromptAsync("TKT", "Epic", new { mode = "Off", baseVersion = 0 })).ShouldHaveStatusAsync(HttpStatusCode.OK);
+        var typeOff = await client.PostAsJsonAsync(Path(epic), new { app = "ClaudeCode", launched = epicLaunched }, _ct);
+        await (await client.PatchAsJsonAsync("/api/v1/projects/TKT/agent", new { enabled = false }, _ct)).ShouldHaveStatusAsync(HttpStatusCode.OK);
+        var projectOff = await client.PostAsJsonAsync(Path(bug), new { app = "ClaudeDesktop", launched = bugLaunched }, _ct);
+        var withoutLaunched = await client.PostAsync(Path(bug), null, _ct);
+
+        // Assert
+        var epicDto = await typeOff.ReadAsync<JsonElement>();
+        Assert.Equal((owner.Id, "InProgress"), (epicDto.GetProperty("assignee").GetProperty("id").GetGuid(), epicDto.GetProperty("status").GetString()));
+        await projectOff.ShouldHaveStatusAsync(HttpStatusCode.OK);
+        await withoutLaunched.ShouldBeProblemAsync(HttpStatusCode.Conflict, AgentErrors.ProjectDisabled);
+        var values = (await EntriesAsync()).Where(e => e.Action == RecordAgentDelegation.Action).Select(e => JsonDocument.Parse(e.NewValue!).RootElement).ToList();
+        Assert.Equal(2, values.Count);
+        Assert.Equal((AgentErrors.TypeOff, ("Default", 1, 1)), (values[0].GetProperty("withdrawn").GetString(), Versions(values[0])));
+        Assert.Equal((AgentErrors.ProjectDisabled, "ClaudeDesktop"), (values[1].GetProperty("withdrawn").GetString(), values[1].GetProperty("app").GetString()));
+        Assert.All(values, v => Assert.False(v.TryGetProperty("current", out _)));
+    }
+
+    [Theory]
+    [InlineData("Default", 0, 1, "launched.templateVersion")]
+    [InlineData("Default", 1, 0, "launched.guardrailsVersion")]
+    public async Task Launched_versions_start_at_one(string source, int templateVersion, int guardrailsVersion, string field)
+    {
+        // Arrange
+        var owner = await api.CreateUserAsync();
+        var ticket = await api.TicketAsync(await api.ProjectAsync(owner, "TKT"), owner);
+        await api.EnableAgentFlagAsync(owner);
+
+        // Act
+        var response = await (await api.LoginAsync(owner)).PostAsJsonAsync(
+            Path(ticket), new { launched = new { templateSource = source, templateVersion, guardrailsVersion } }, _ct);
+
+        // Assert
+        var problem = await response.ShouldBeProblemAsync(HttpStatusCode.BadRequest, AppErrors.Validation);
+        Assert.True(problem.GetProperty("errors").TryGetProperty(field, out _));
+        Assert.Empty(await EntriesAsync());
+    }
+
+    [Fact]
     public async Task The_resolved_prompt_flags_a_public_project_outsiders_comment_even_after_an_insider_replies()
     {
         // Arrange
@@ -274,6 +357,16 @@ public sealed class RecordAgentDelegationTests(TicketingApiFactory api)
         var content = resolved.GetProperty("outsiderContent");
         return (content.GetProperty("source").GetString(), content.GetProperty("author").GetProperty("id").GetGuid());
     }
+
+    private static object Launched(JsonElement resolved) => new
+    {
+        templateSource = resolved.GetProperty("template").GetProperty("source").GetString(),
+        templateVersion = resolved.GetProperty("template").GetProperty("version").GetInt32(),
+        guardrailsVersion = resolved.GetProperty("guardrailsVersion").GetInt32(),
+    };
+
+    private static (string?, int, int) Versions(JsonElement value) =>
+        (value.GetProperty("templateSource").GetString(), value.GetProperty("templateVersion").GetInt32(), value.GetProperty("guardrailsVersion").GetInt32());
 
     private static string Path(string ticketKey) => $"/api/v1/tickets/{ticketKey}/agent-delegations";
 

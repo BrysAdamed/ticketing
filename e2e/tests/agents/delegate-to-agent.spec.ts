@@ -334,4 +334,38 @@ test.describe('delegate to agent', () => {
         await expect.poll(() => adminDelegate.launched()).toHaveLength(1);
         await adminContext.close();
     });
+
+    test('a template changed after the page loaded is recorded as the launched version, since changed', async ({
+        page,
+        api,
+    }) => {
+        // Arrange
+        await setFlag(api, true);
+        const { projectKey, ticketKey } = await seed(api);
+        await DelegatePage.stubLaunches(page);
+        await page.addInitScript(
+            ([key]) =>
+                window.localStorage.setItem(
+                    'tk-agent-folders',
+                    JSON.stringify({ [key]: 'C:\\src\\changed' }),
+                ),
+            [projectKey],
+        );
+        const ticket = new TicketPage(page);
+        const delegate = new DelegatePage(page, ticket.root);
+        await ticket.goto(ticketKey);
+        await expect(delegate.button).toBeEnabled();
+        await api.put(`/projects/${projectKey}/agent/prompts/Bug`, {
+            mode: 'Custom',
+            body: 'Fix {{ticket.key}}.',
+            baseVersion: 0,
+        });
+
+        // Act
+        await delegate.button.click();
+
+        // Assert
+        await expect.poll(() => delegate.launched()).toHaveLength(1);
+        await expect(ticket.activity).toContainText(/prompt v\d+ \(default, since changed\)/);
+    });
 });

@@ -628,6 +628,18 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
   - The browser checks the stored local folder again on every read; an invalid value asks for the folder again instead of launching.
   - `CapturedLogs` in the integration tests records the API's log lines and scopes at Information and above (EF commands at Warning, as in production), so tests can assert that no prompt, path or token is logged.
 - Rationale: the warning exists because ticket text steers the agent. An insider's reply does not remove an outsider's text, so it must not remove the warning. An allowlist is the only form of URL filtering that stays correct when a sanitizer's defaults change. The repository URL and branch reach every reader and every prompt, so they are kept to what a git remote and a branch need.
+
+### D-105 A delegation records the prompt versions that were launched; a since-withdrawn prompt is still recorded (TKT-42)
+
+- Question: the Delegate button launches the prompt resolved when the page loaded, but `POST /tickets/{key}/agent-delegations` re-resolved it and recorded the versions current at POST time, or refused with 409 when resolution now failed although Claude had already opened. Which versions does the history keep, and what happens to a launch whose prompt was withdrawn in between?
+- Decision:
+  - The web app sends what it launched: `{ app, launched: { templateSource, templateVersion, guardrailsVersion } }`, copied from the `ResolvedAgentPromptDto` it used. Versions start at 1 (400 `validation` otherwise). `launched` stays optional: a request without it (an older web build, a script) is recorded as before, with the current versions, and resolution failures still refuse it.
+  - The entry keeps the launched versions in `templateSource`, `templateVersion` and `guardrailsVersion`. When the server's current resolution differs it adds `current: { templateSource, templateVersion, guardrailsVersion }`.
+  - When `launched` is sent and resolution now fails with `agent.project.disabled`, `agent.type.off`, `agent.template.invalid` or `agent.prompt.tooLong`, the delegation is still recorded, with `withdrawn: "<that code>"` and no `current`, and the on-delegate settings still apply: the agent was started and is working the ticket. The other checks (gate, web session with XSRF, readable, archived, write access, Done) are unchanged and still refuse.
+  - History shows "prompt v3 (custom, since changed) · Claude Code" or "…, since withdrawn". The launch itself stays synchronous in the click handler (D-97); nothing is re-resolved before it.
+  - The launched versions are reported by the browser. They are the user's own record of their own launch, so they are only checked for shape, not against version history.
+- Rationale: the alternative, re-resolving on focus or before the launch, only narrows the window, adds a request per focus, and an await before the navigation would break the user gesture (D-97). Recording what the client launched closes the window entirely with one optional field and no new endpoint. Versions point at the exact template text in its history; a hash of the rendered prompt would also change with project facts (repository URL, branch, merge policy) and could not be traced back to anything.
+
 ## Product owner answers (v1 review, 2026-10-27)
 
 These were open questions (Q-01..Q-05); the product owner resolved them as follows.

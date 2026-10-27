@@ -6,7 +6,7 @@ using Ticketing.Domain.Docs;
 
 namespace Ticketing.Api.Endpoints;
 
-/// <summary>Project docs (spec 1.14): tree, recent, trash and create per project; one doc by key (<c>WEB-D-12</c>) or id; a version; markdown export; my draft.</summary>
+/// <summary>Project docs (spec 1.14): tree, recent, trash and create per project; one doc by key (<c>WEB-D-12</c>) or id; versions, history and restore; markdown export; my draft.</summary>
 public sealed class DocEndpoints : IEndpointModule
 {
     public void MapEndpoints(RouteGroupBuilder api)
@@ -67,14 +67,15 @@ public sealed class DocEndpoints : IEndpointModule
 
     private static void MapDocs(RouteGroupBuilder doc)
     {
-        doc.MapGet("", async (string keyOrId, GetDoc.Handler handler, HttpResponse response, CancellationToken ct) =>
+        doc.MapGet("", async (string keyOrId, int? version, GetDoc.Handler handler, HttpResponse response, CancellationToken ct) =>
             {
-                var dto = await handler.HandleAsync(new GetDoc.Query(keyOrId), ct);
+                var dto = await handler.HandleAsync(new GetDoc.Query(keyOrId, Version: version), ct);
                 response.SetRowVersion(dto.RowVersion);
                 return TypedResults.Ok(dto);
             })
             .WithSummary("A doc with its latest content, path, breadcrumb, other editors, my draft marker and permissions; folders list their children. "
-                + "references (mentioned tickets and docs), embeds (diagrams) and backlinks (docs linking here) hold only what the caller can read.")
+                + "references (mentioned tickets and docs), embeds (diagrams) and backlinks (docs linking here) hold only what the caller can read. "
+                + "version=n returns that version's content, described in atVersion.")
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         doc.MapPatch("", async (string keyOrId, UpdateDoc.Command command, UpdateDoc.Handler handler, HttpRequest request, CancellationToken ct) =>
@@ -139,6 +140,27 @@ public sealed class DocEndpoints : IEndpointModule
         doc.MapGet("/versions/{number:int}", async (string keyOrId, int number, GetDocVersion.Handler handler, CancellationToken ct) =>
             TypedResults.Ok(await handler.HandleAsync(new GetDocVersion.Query(keyOrId, number), ct)))
             .WithSummary("One published version with its full content; 404 doc.version.notFound when the doc has no such version.")
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        doc.MapPost("/versions/{number:int}/restore", async (
+                string keyOrId, int number, RestoreDocVersion.Command? command, RestoreDocVersion.Handler handler, HttpResponse response, CancellationToken ct) =>
+            {
+                var dto = await handler.HandleAsync((command ?? new RestoreDocVersion.Command()) with { KeyOrId = keyOrId, Number = number }, ct);
+                response.SetRowVersion(dto.RowVersion);
+                return TypedResults.Ok(dto);
+            })
+            .WithSummary("Publishes the title and content of version n as a new version with restoredFrom = n (optional body { changeNote }). "
+                + "Nothing is written when the latest version already equals it.")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
+
+        doc.MapGet("/history", async (string keyOrId, int? limit, string? cursor, GetDocHistory.Handler handler, CancellationToken ct) =>
+            TypedResults.Ok(await handler.HandleAsync(new GetDocHistory.Query(keyOrId, new PageRequest(limit, cursor)), ct)))
+            .WithSummary("Versions merged with the other activity of the doc (rename, move, delete, restore, attachments), newest first; "
+                + "{ docKey, currentVersion, items, nextCursor }.")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         doc.MapGet("/export.md", async (string keyOrId, ExportDocMarkdown.Handler handler, HttpResponse response, CancellationToken ct) =>

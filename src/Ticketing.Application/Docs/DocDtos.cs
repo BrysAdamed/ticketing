@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Ticketing.Application.Tickets;
 using Ticketing.Domain.Activity;
 using Ticketing.Domain.Docs;
@@ -58,7 +59,11 @@ public sealed record DocDto(
     int CommentCount,
     DocReferencesDto References,
     IReadOnlyList<DocEmbedDto> Embeds,
-    DocMentionsDto Backlinks);
+    DocMentionsDto Backlinks)
+{
+    /// <summary>Set when an older version was asked for: <see cref="Content"/> is then that version's; everything else describes the doc now.</summary>
+    public DocVersionInfoDto? AtVersion { get; init; }
+}
 
 /// <summary>What the latest content mentions, resolved for the reader: tickets and docs the reader cannot read are left out.</summary>
 public sealed record DocReferencesDto(IReadOnlyList<DocTicketReferenceDto> Tickets, IReadOnlyList<DocLinkReferenceDto> Docs)
@@ -142,3 +147,41 @@ public sealed record DocTrashItemDto(
     int Count,
     UserRefDto DeletedBy,
     DateTimeOffset DeletedAt);
+
+/// <summary>A published version without its content.</summary>
+public sealed record DocVersionInfoDto(
+    int Number,
+    string Title,
+    string? ChangeNote,
+    UserRefDto Author,
+    WriteChannel Channel,
+    DateTimeOffset CreatedAt,
+    int? RestoredFrom);
+
+public enum DocHistoryItemType
+{
+    Version = 1,
+    Activity = 2,
+}
+
+/// <summary>
+/// One entry of a doc's history: a published version (number, title, change note, restored from) or an activity entry that no
+/// version represents (rename, move, delete, restore, attachments, comments) with its action and JSON values.
+/// </summary>
+public sealed record DocHistoryItemDto(
+    Guid Id,
+    DocHistoryItemType Type,
+    DateTimeOffset At,
+    UserRefDto? Actor,
+    WriteChannel? Channel,
+    int? Version,
+    string? Title,
+    string? ChangeNote,
+    int? RestoredFrom,
+    string? Action,
+    string? Field,
+    JsonElement? OldValue,
+    JsonElement? NewValue);
+
+/// <summary>A page of a doc's history, newest first; <see cref="CurrentVersion"/> is the latest version (0 for folders).</summary>
+public sealed record DocHistoryPage(string DocKey, int CurrentVersion, IReadOnlyList<DocHistoryItemDto> Items, string? NextCursor);

@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   DestroyRef,
   effect,
   ElementRef,
@@ -11,6 +12,7 @@ import {
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { DOC_MARKDOWN_ENHANCERS, DocMarkdownContext } from '@core/docs/doc-extensions';
+import { DocEmbed, DocReferences } from '@core/docs/doc.models';
 import { ToastService } from '@core/notify/toast.service';
 import { ThemeService } from '@core/theme/theme.service';
 import { codeLanguage, highlightCodeBlocks } from '@shared/markdown/highlight-code';
@@ -42,6 +44,15 @@ export class DocMarkdownComponent {
   readonly source = input<string | null>('');
   readonly mode = input<DocMarkdownContext['mode']>('view');
   readonly docKey = input<string | null>(null);
+  /// What the reader may see of the keys the source names (the doc's references); null renders
+  /// every key as a plain link.
+  readonly references = input<DocReferences | null>(null);
+  readonly embeds = input<readonly DocEmbed[]>([]);
+
+  private readonly links = computed(
+    () => ({ references: this.references(), embeds: this.embeds() }),
+    { equal: (a, b) => JSON.stringify(a) === JSON.stringify(b) },
+  );
 
   readonly rendered = output<HTMLElement>();
 
@@ -49,6 +60,7 @@ export class DocMarkdownComponent {
     effect(() => {
       const source = this.source();
       const theme = this.theme();
+      this.links();
       untracked(() => this.render(source, theme));
     });
     inject(DestroyRef).onDestroy(() => this.controller?.abort());
@@ -59,14 +71,25 @@ export class DocMarkdownComponent {
     const controller = new AbortController();
     this.controller = controller;
     const started = performance.now();
-    this.host.innerHTML = renderMarkdown(source, { headingAnchors: true });
+    const { references, embeds } = this.links();
+    const mode = this.mode();
+    this.host.innerHTML = renderMarkdown(source, {
+      headingAnchors: true,
+      references: references && {
+        tickets: references.tickets,
+        docs: references.docs,
+        embeds,
+        unresolved: mode === 'preview' ? 'link' : 'text',
+      },
+    });
     decorateCodeBlocks(this.host);
     performance.measure(DOC_RENDER_MEASURE, { start: started });
     this.rendered.emit(this.host);
     const context: DocMarkdownContext = {
-      mode: this.mode(),
+      mode,
       theme,
       docKey: this.docKey(),
+      embeds,
       signal: controller.signal,
     };
     void highlightCodeBlocks(this.host);

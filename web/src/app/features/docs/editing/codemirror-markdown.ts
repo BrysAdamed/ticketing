@@ -4,6 +4,8 @@ import {
   Completion,
   CompletionContext,
   completionKeymap,
+  CompletionResult,
+  CompletionSource,
 } from '@codemirror/autocomplete';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 import { markdownKeymap, markdownLanguage } from '@codemirror/lang-markdown';
@@ -18,6 +20,7 @@ import {
   EditorSelection,
   EditorState,
   Extension,
+  Facet,
   Prec,
   RangeSetBuilder,
   Transaction,
@@ -43,6 +46,11 @@ export interface SlashCommand {
   hint?: string;
   run(view: EditorView): void;
 }
+
+/// Completion sources that editor plugins add (for example `[[` doc links), as
+/// `markdownCompletions.of(source)` in their extensions. The editor's own `autocompletion` config
+/// overrides language-data sources, so this facet is the way in; the first source with a result wins.
+export const markdownCompletions = Facet.define<CompletionSource>();
 
 export interface MarkdownEditorOptions {
   parent: HTMLElement;
@@ -80,7 +88,7 @@ export function createMarkdownEditor(options: MarkdownEditorOptions): EditorView
         fenceBand,
         placeholder(options.placeholder),
         autocompletion({
-          override: [slashSource(options.slashCommands)],
+          override: [slashSource(options.slashCommands), pluginCompletions],
           icons: false,
           activateOnTyping: true,
         }),
@@ -207,6 +215,14 @@ export function prefixLines(view: EditorView, prefix: (index: number) => string)
 export function topLine(view: EditorView): number {
   const block = view.lineBlockAtHeight(view.scrollDOM.scrollTop);
   return view.state.doc.lineAt(block.from).number - 1;
+}
+
+async function pluginCompletions(context: CompletionContext): Promise<CompletionResult | null> {
+  for (const source of context.state.facet(markdownCompletions)) {
+    const result = await source(context);
+    if (result) return result;
+  }
+  return null;
 }
 
 function slashSource(commands: () => readonly SlashCommand[]) {

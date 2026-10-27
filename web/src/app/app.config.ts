@@ -32,6 +32,7 @@ import { ThemeService } from '@core/theme/theme.service';
 import { provideTicketCreation } from '@core/tickets/create-ticket';
 import { provideTicketDetailSection } from '@core/tickets/ticket-sections';
 import { provideAttachments } from '@features/attachments/attachments.providers';
+import { provideDocsTicketSection } from '@features/docs/docs.providers';
 import { provideSearch } from '@features/search/search.providers';
 import { TICKET_DETAIL_VIEW } from '@features/tickets/tickets.views';
 import { APP_ICONS } from '@shared/ui/icon/app-icons';
@@ -60,6 +61,7 @@ export const appConfig: ApplicationConfig = {
     providePeekView(TICKET_DETAIL_VIEW),
     provideSearch(),
     provideAttachments(),
+    provideDocsTicketSection(),
     provideTicketCreation(() =>
       import('@features/tickets/create/create-ticket.dialog').then((m) => m.CreateTicketDialog),
     ),

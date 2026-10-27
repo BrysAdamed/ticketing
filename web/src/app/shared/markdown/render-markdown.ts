@@ -1,11 +1,11 @@
 import DOMPurify from 'dompurify';
 import { Marked, Tokens, TokenizerAndRendererExtension } from 'marked';
-import { TICKET_KEY_IN_TEXT } from '@shared/domain/keys';
 import { initialsOf } from '@shared/util/initials';
 import { paletteIndex } from '@shared/util/hash';
+import { linkReferences, MarkdownReferences } from './link-references';
 import { MENTION_AT_START, MentionUser } from './mentions';
 
-export const TICKET_ROUTE_PREFIX = '/tickets/';
+export { TICKET_ROUTE_PREFIX } from './link-references';
 export const INTERNAL_LINK_ATTR = 'data-tk-route';
 
 export interface RenderOptions {
@@ -15,6 +15,10 @@ export interface RenderOptions {
   /// Gives headings stable ids (`#heading-slug`, duplicates `-2`, `-3`) and an empty
   /// `a.tk-anchor` link to them (docs pages); off for tickets, where several renders share a page.
   headingAnchors?: boolean;
+  /// The tickets, docs and diagrams the reader may see (docs): known ticket keys become chips with
+  /// their status, doc keys links with the title on hover, `![caption](KEY)` diagram embeds, and
+  /// other keys plain text. Without it every key links to its route (tickets, comments).
+  references?: MarkdownReferences | null;
 }
 
 export const CALLOUT_KINDS = ['note', 'tip', 'important', 'warning', 'caution'] as const;
@@ -30,7 +34,6 @@ const CALLOUT_TITLES: Record<CalloutKind, string> = {
 };
 
 const MENTION_ATTR = 'data-tk-mention';
-const SKIP_AUTOLINK = new Set(['A', 'CODE', 'PRE']);
 const SERVER_PATHS = /^\/(\/|api\/|attachments\/|mcp|scalar|health)/;
 
 const escapeHtml = (text: string) =>
@@ -66,7 +69,7 @@ const marked = new Marked({
 });
 
 /// Renders user markdown (CommonMark + GFM) to sanitized HTML: raw HTML is shown as text,
-/// output goes through DOMPurify, ticket keys become links to /tickets/KEY, external links
+/// output goes through DOMPurify, ticket and doc keys become links (`linkReferences`), external links
 /// open in a new tab, GFM alerts (`> [!NOTE]` …) become callouts and mention tokens of the given
 /// users become chips (D-96; built after sanitizing, names as text). Safe to bind with
 /// [innerHTML] after DomSanitizer bypass. It must stay free of Angular imports: the PDF print
@@ -84,7 +87,7 @@ export function renderMarkdown(
   });
   renderMentions(fragment, options.mentions);
   renderCallouts(fragment);
-  linkTicketKeys(fragment);
+  linkReferences(fragment, options.references);
   decorateLinks(fragment);
   if (options.headingAnchors) anchorHeadings(fragment);
   const container = fragment.ownerDocument.createElement('div');
@@ -122,44 +125,6 @@ function mentionChip(doc: Document, user: MentionUser): HTMLElement {
   avatar.textContent = initialsOf(user.displayName);
   chip.append(avatar, doc.createTextNode(user.displayName));
   return chip;
-}
-
-function linkTicketKeys(root: DocumentFragment): void {
-  const doc = root.ownerDocument;
-  const walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-  const textNodes: Text[] = [];
-  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-    if (!hasSkippedAncestor(node)) textNodes.push(node as Text);
-  }
-  for (const node of textNodes) {
-    const text = node.data;
-    TICKET_KEY_IN_TEXT.lastIndex = 0;
-    if (!TICKET_KEY_IN_TEXT.test(text)) continue;
-    TICKET_KEY_IN_TEXT.lastIndex = 0;
-    const parts = doc.createDocumentFragment();
-    let last = 0;
-    for (const match of text.matchAll(TICKET_KEY_IN_TEXT)) {
-      const index = match.index ?? 0;
-      if (index > last) parts.appendChild(doc.createTextNode(text.slice(last, index)));
-      const anchor = doc.createElement('a');
-      anchor.href = `${TICKET_ROUTE_PREFIX}${match[0]}`;
-      anchor.className = 'tk-keyref';
-      anchor.setAttribute(INTERNAL_LINK_ATTR, '');
-      anchor.textContent = match[0];
-      parts.appendChild(anchor);
-      last = index + match[0].length;
-    }
-    if (last < text.length) parts.appendChild(doc.createTextNode(text.slice(last)));
-    node.replaceWith(parts);
-  }
-}
-
-function hasSkippedAncestor(node: Node): boolean {
-  for (let parent = node.parentNode; parent; parent = parent.parentNode) {
-    if (SKIP_AUTOLINK.has(parent.nodeName)) return true;
-    if (parent instanceof Element && parent.classList.contains('tk-mention')) return true;
-  }
-  return false;
 }
 
 /// The anchor of a heading text: lower case, letters, digits, `-` and `_` kept, spaces become

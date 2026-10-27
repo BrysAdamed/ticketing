@@ -36,6 +36,9 @@ function doc(overrides: Partial<Doc> = {}): Doc {
     children: null,
     url: '/p/WEB/docs/WEB-D-1/payment-flow',
     rowVersion: 1,
+    references: { tickets: [], docs: [] },
+    embeds: [],
+    backlinks: { total: 0, items: [] },
     ...overrides,
   };
 }

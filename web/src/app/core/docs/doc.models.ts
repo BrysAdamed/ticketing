@@ -1,4 +1,4 @@
-import { ProjectRole } from '@shared/domain/enums';
+import { ProjectRole, TicketStatus, TicketType } from '@shared/domain/enums';
 import { UserRef } from '../tickets/ticket.models';
 
 export const DOC_KINDS = ['Folder', 'Page', 'Diagram'] as const;
@@ -88,6 +88,56 @@ export interface Doc {
   children: DocTreeItem[] | null;
   url: string;
   rowVersion: number;
+  references: DocReferences;
+  embeds: DocEmbed[];
+  backlinks: DocMentions;
+}
+
+/// A mentioned ticket the reader may see (what a ticket chip shows).
+export interface DocTicketReference {
+  id: string;
+  key: string;
+  title: string;
+  type: TicketType;
+  status: TicketStatus;
+  url: string;
+}
+
+/// A mentioned or linked doc the reader may see; a deleted one has only its key.
+export interface DocLinkReference {
+  id: string;
+  key: string;
+  projectKey: string;
+  kind: DocKind;
+  diagramFormat: DiagramFormat | null;
+  title: string | null;
+  deleted: boolean;
+  url: string | null;
+}
+
+/// What the latest content mentions, filtered for the reader (spec 1.9).
+export interface DocReferences {
+  tickets: DocTicketReference[];
+  docs: DocLinkReference[];
+}
+
+/// A diagram embedded with `![caption](KEY)` that the reader may see; `content` is the Mermaid
+/// source (null for Canvas, whose snapshot is fetched by key and version).
+export interface DocEmbed {
+  id: string;
+  key: string;
+  projectKey: string;
+  title: string;
+  diagramFormat: DiagramFormat;
+  version: number;
+  content: string | null;
+  url: string;
+}
+
+/// Docs that mention a ticket or link to a doc, newest first; `total` counts beyond the page.
+export interface DocMentions {
+  total: number;
+  items: DocSummary[];
 }
 
 /// A recently updated page or diagram (Docs home).

@@ -37,6 +37,9 @@ import { Doc } from '@core/docs/doc.models';
     :host {
       display: contents;
     }
+    :host ::ng-deep .section:has(> .tk-section-empty) {
+      display: none;
+    }
   `,
 })
 export class DocPageSectionsComponent {

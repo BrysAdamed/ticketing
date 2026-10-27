@@ -103,4 +103,27 @@ test.describe('docs search and quick jump', () => {
         await expect(page.getByTestId(`doc-search-row-${doc.key}`)).toBeVisible();
         await expect(page.getByTestId('doc-filter-kind')).toContainText('Page');
     });
+
+    test('Ctrl+K with an empty query lists recently viewed docs', async ({ page, api, shell }) => {
+        // Arrange
+        const projectKey = (await api.createProject()).key;
+        const doc = await createPage(api, projectKey, 'Recently read', 'Body');
+        await page.goto(`/docs/${doc.key}`);
+        await expect(page).toHaveURL(
+            new RegExp(`/projects/${projectKey}/docs/${doc.key}/recently-read`),
+        );
+        await page.goto('/my-work');
+        await shell.expectVisible();
+
+        // Act
+        await page.keyboard.press('ControlOrMeta+k');
+        const item = page.getByTestId(`palette-item-recent-doc:${doc.key}`);
+
+        // Assert
+        await expect(item).toBeVisible();
+        await item.click();
+        await expect(page).toHaveURL(
+            new RegExp(`/projects/${projectKey}/docs/${doc.key}/recently-read`),
+        );
+    });
 });

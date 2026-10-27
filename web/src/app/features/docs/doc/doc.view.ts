@@ -17,6 +17,7 @@ import { provideIcons } from '@ng-icons/core';
 import { filter, map } from 'rxjs';
 import { docsHomeUrl, docSlug, docUrl } from '@core/docs/doc-links';
 import { Doc, DocKind } from '@core/docs/doc.models';
+import { RecentDocs } from '@core/docs/recent-docs';
 import { Breadcrumbs } from '@core/layout/breadcrumbs';
 import { PageTitleStrategy } from '@core/layout/page-title';
 import { ToastService } from '@core/notify/toast.service';
@@ -148,6 +149,7 @@ export class DocView {
   private readonly breadcrumbs = inject(Breadcrumbs);
   private readonly pageTitle = inject(PageTitleStrategy);
   private readonly toast = inject(ToastService);
+  private readonly recentDocs = inject(RecentDocs);
 
   readonly projectKey = input.required<string>();
   readonly docKey = input.required<string>();
@@ -216,6 +218,7 @@ export class DocView {
       if (!doc) return;
       untracked(() => {
         this.pageTitle.setSubject(doc.title);
+        this.recentDocs.visited(doc);
         this.breadcrumbs.setTail([
           ...doc.breadcrumb.map((c) => ({ label: c.title, url: docUrl(c.key, c.title) })),
           { label: doc.title, url: null },

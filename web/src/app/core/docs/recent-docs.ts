@@ -1,14 +1,15 @@
 import { computed, inject, Injectable, linkedSignal } from '@angular/core';
 import { AuthService } from '../auth/auth.service';
-import { DocSearchFormat, DocSearchKind } from './doc-search.api';
+import { docUrl } from './doc-links';
+import { DiagramFormat, Doc, DocKind } from './doc.models';
 
 /// A doc the user opened, as shown in the command palette's "Recent docs".
 export interface RecentDoc {
   key: string;
   title: string;
   projectKey: string;
-  kind: DocSearchKind;
-  diagramFormat: DocSearchFormat | null;
+  kind: DocKind;
+  diagramFormat: DiagramFormat | null;
   folderPath: string;
   url: string;
 }
@@ -17,7 +18,7 @@ const STORAGE_PREFIX = 'tk-recent-docs:';
 export const MAX_RECENT_DOCS = 8;
 
 /// The docs the signed-in user viewed last, newest first, kept per user in localStorage. The doc
-/// view calls `record()`; `forget()` drops a doc that turned out to be deleted or unreadable.
+/// view calls `visited()`; `forget()` drops a doc that turned out to be deleted or unreadable.
 @Injectable({ providedIn: 'root' })
 export class RecentDocs {
   private readonly auth = inject(AuthService);
@@ -26,8 +27,8 @@ export class RecentDocs {
 
   readonly items = this.list.asReadonly();
 
-  record(doc: RecentDoc): void {
-    this.update((list) => addRecent(list, doc));
+  visited(doc: Doc): void {
+    this.update((list) => addRecent(list, toRecentDoc(doc)));
   }
 
   forget(key: string): void {
@@ -45,6 +46,20 @@ export class RecentDocs {
       // Storage can be unavailable (private mode); the list then lives for the session only.
     }
   }
+}
+
+export function toRecentDoc(doc: Doc): RecentDoc {
+  return {
+    key: doc.key,
+    title: doc.title,
+    projectKey: doc.projectKey,
+    kind: doc.kind,
+    diagramFormat: doc.diagramFormat,
+    folderPath: doc.breadcrumb
+      .map((c) => c.title.replaceAll('\\', '\\\\').replaceAll('/', '\\/'))
+      .join('/'),
+    url: docUrl(doc.key, doc.title),
+  };
 }
 
 /// `doc` moved to the front, without duplicates, at most `MAX_RECENT_DOCS` long.

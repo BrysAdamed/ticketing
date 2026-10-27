@@ -2,9 +2,8 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiClient, Query } from '../api/api-client';
 import { UserRef } from '../tickets/ticket.models';
+import { DiagramFormat, DocKind } from './doc.models';
 
-export type DocSearchKind = 'Folder' | 'Page' | 'Diagram';
-export type DocSearchFormat = 'Mermaid' | 'Canvas';
 export type DocSearchSort = 'Relevance' | 'Updated';
 
 /// A part of a string to emphasise, as UTF-16 offsets.
@@ -24,8 +23,8 @@ export interface DocSearchItem {
   id: string;
   key: string;
   projectKey: string;
-  kind: DocSearchKind;
-  diagramFormat: DocSearchFormat | null;
+  kind: DocKind;
+  diagramFormat: DiagramFormat | null;
   title: string;
   path: string;
   folderPath: string;
@@ -55,7 +54,7 @@ export class DocSearchApi {
 }
 
 /// The icon of a doc kind: folder, page, Mermaid diagram or Canvas.
-export function docKindIcon(kind: DocSearchKind, format: DocSearchFormat | null): string {
+export function docKindIcon(kind: DocKind, format: DiagramFormat | null): string {
   if (kind === 'Folder') return 'tablerFolder';
   if (kind === 'Diagram') return format === 'Canvas' ? 'tablerChalkboard' : 'tablerSitemap';
   return 'tablerFileText';

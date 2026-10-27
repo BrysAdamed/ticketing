@@ -3,10 +3,12 @@ import { Router } from '@angular/router';
 import { firstValueFrom, fromEvent, takeUntil } from 'rxjs';
 import { ApiClient } from '@core/api/api-client';
 import { PaletteItem, SearchProvider } from '@core/commands/command';
-import { docKindIcon, DocSearchFormat, DocSearchKind, DocSnippet } from '@core/docs/doc-search.api';
+import { docKindIcon, DocSnippet } from '@core/docs/doc-search.api';
+import { DiagramFormat, DocKind } from '@core/docs/doc.models';
 import { RecentDoc, RecentDocs } from '@core/docs/recent-docs';
 import { TicketType } from '@shared/domain/enums';
 import {
+  DOC_KEY_PATTERN,
   REGRESSION_SESSION_KEY_PATTERN,
   TEST_CASE_KEY_PATTERN,
   TICKET_KEY_PATTERN,
@@ -23,13 +25,12 @@ export interface QuickJumpItem {
   url: string;
   ticketType: TicketType | null;
   status: string | null;
-  docKind?: DocSearchKind | null;
-  diagramFormat?: DocSearchFormat | null;
+  docKind?: DocKind | null;
+  diagramFormat?: DiagramFormat | null;
   folderPath?: string | null;
   snippet?: DocSnippet | null;
 }
 
-const DOC_KEY = /^[A-Z][A-Z0-9]{1,9}-D-\d+$/;
 const DOCS_GROUP = 'Docs';
 const GROUPS: Record<QuickJumpItem['kind'], string> = {
   Ticket: 'Tickets',
@@ -61,7 +62,7 @@ export function keyJumpItem(query: string, navigate: (url: string) => void): Pal
   else if (TEST_CASE_KEY_PATTERN.test(key)) url = `/projects/${project}/test-cases/${key}`;
   else if (REGRESSION_SESSION_KEY_PATTERN.test(key))
     url = `/projects/${project}/regressions/${key}`;
-  else if (DOC_KEY.test(key)) url = `/docs/${key}`;
+  else if (DOC_KEY_PATTERN.test(key)) url = `/docs/${key}`;
   if (!url) return null;
   const target = url;
   return {

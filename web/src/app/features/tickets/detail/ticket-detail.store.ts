@@ -8,6 +8,7 @@ import { LoadStatus } from '@core/projects/project-directory';
 import { FieldHints } from '@core/tickets/field-hints';
 import { TicketCache } from '@core/tickets/ticket-cache';
 import { TicketAttachments } from '@core/tickets/ticket-attachments';
+import { MoveChildren } from '@core/tickets/move-children';
 import { MoveTarget } from '@core/tickets/move-targets';
 import { TicketDeletion } from '@core/tickets/ticket-deletion';
 import { TicketEvents } from '@core/tickets/ticket-events';
@@ -42,6 +43,7 @@ export class TicketDetailStore {
   private readonly hints = inject(FieldHints);
   private readonly auth = inject(AuthService);
   private readonly deletion = inject(TicketDeletion);
+  private readonly moveChildren = inject(MoveChildren);
 
   readonly key = signal('');
   readonly ticket = signal<Ticket | null>(null);
@@ -170,27 +172,48 @@ export class TicketDetailStore {
     });
   }
 
-  /// Moves the ticket to its backlog (top) or a board (bottom of its status column), spec 6.4.
-  async moveTo(target: MoveTarget): Promise<void> {
+  /// Moves the ticket to its backlog (top) or a board (bottom of its status column), spec 6.4, after
+  /// asking whether its sub-tickets in the place it leaves come along (TKT-71).
+  async moveTo(target: MoveTarget, targetName?: string): Promise<void> {
     const ticket = this.ticket();
     if (!ticket) return;
     const from: MoveTarget =
       ticket.location.kind === 'Backlog' ? 'backlog' : (ticket.location.boardId ?? 'backlog');
     if (target === from) return;
+    const decision = await this.moveChildren.ask({
+      keys: [ticket.key],
+      from,
+      childCounts: [ticket.children?.length ?? ticket.childProgress?.total ?? 0],
+      source:
+        ticket.location.kind === 'Backlog'
+          ? { kind: 'backlog' }
+          : { kind: 'board', name: ticket.location.boardName ?? undefined },
+      destination:
+        target === 'backlog'
+          ? { kind: 'backlog' }
+          : { kind: 'board', name: targetName ?? 'the board' },
+    });
+    if (!decision) return;
     try {
-      await firstValueFrom(
+      const moved = await firstValueFrom(
         this.api.move({
           keys: [ticket.key],
           target,
           from,
           ...(target === 'backlog' ? { position: 'Top' as const } : {}),
+          ...(decision.includeChildren ? { includeChildren: true } : {}),
         }),
       );
       this.cache.evict(ticket.key);
+      const children = (moved ?? []).filter((t) => t.key !== ticket.key);
+      children.forEach((child) => this.cache.evict(child.key));
       const fresh = await this.cache.fetch(ticket.key);
       this.applyServer(fresh);
+      const along = children.length
+        ? ` with ${children.length} ${children.length === 1 ? 'sub-ticket' : 'sub-tickets'}`
+        : '';
       this.toast.success(
-        `${ticket.key} moved to ${fresh.location.kind === 'Backlog' ? 'the backlog' : fresh.location.boardName}`,
+        `${ticket.key} moved${along} to ${fresh.location.kind === 'Backlog' ? 'the backlog' : fresh.location.boardName}`,
       );
       if (this.historyStatus() !== 'idle') void this.loadHistory();
     } catch (error) {

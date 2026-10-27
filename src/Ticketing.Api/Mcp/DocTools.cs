@@ -40,9 +40,11 @@ public sealed class DocTools
     [McpServerTool(Name = "get_doc", ReadOnly = true, Idempotent = true, Title = "Get doc")]
     [Description("Gets a doc by docKey, or by projectKey and path. Pages return their markdown in content; diagrams their source in content "
         + "(diagramFormat Mermaid: Mermaid text; Canvas: Excalidraw JSON); folders "
-        + "list their children. Also: breadcrumb, editors (others with an unpublished draft changed in the last 10 minutes) and permissions. "
-        + "Use version as baseVersion for update_doc. With version (a number from get_doc_history), content is that older version's "
-        + "and atVersion describes it (number, title, changeNote, author, createdAt, restoredFrom); every other field is the doc now.")]
+        + "list their children. Also: breadcrumb, editors (others with an unpublished draft changed in the last 10 minutes), permissions, "
+        + "references (tickets with key, title, type and status, and docs, that the content mentions), embeds (diagrams embedded with "
+        + "![caption](KEY), Mermaid with its source) and backlinks (docs whose content links here: { total, items }). Tickets and docs you "
+        + "cannot read are left out. Use version as baseVersion for update_doc. With version (a number from get_doc_history), content is that older version's "
+        + "and atVersion describes it (number, title, changeNote, author, createdAt, restoredFrom); every other field (references included) is the doc now.")]
     public static Task<DocDto> GetDoc(
         GetDoc.Handler handler,
         [Description(DocKey + " Leave empty when giving projectKey and path.")] string? docKey = null,
@@ -96,8 +98,9 @@ public sealed class DocTools
     [Authorize(Policy = AuthPolicies.CanWrite)]
     [McpServerTool(Name = "create_page", Destructive = false, Title = "Create docs page")]
     [Description("Creates a markdown page (version 1) in a project's docs. Markdown is CommonMark + GFM; ticket keys (WEB-42) and doc keys "
-        + "(WEB-D-12) become links, [text](WEB-D-12) links with custom text, ```mermaid blocks render as diagrams (" + MermaidTypes + "), "
-        + "![caption](WEB-D-12) embeds a diagram doc, GFM alerts (> [!NOTE]) render as callouts. " + DocOutput)]
+        + "(WEB-D-12) become links (keys inside code are not), [text](WEB-D-12) links with custom text, ![caption](WEB-D-7) embeds a "
+        + "diagram doc, and every mention shows up in the ticket's docs and the doc's backlinks; ```mermaid blocks render as diagrams ("
+        + MermaidTypes + "), GFM alerts (> [!NOTE]) render as callouts. " + DocOutput)]
     public static Task<DocDto> CreatePage(
         CreateDoc.Handler handler,
         [Description("Project key, for example WEB.")] string projectKey,

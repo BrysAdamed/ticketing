@@ -22,6 +22,8 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Automation ratio**: Share of runnable test cases that are automated: `Automatic / (Manual + Automatic)` over non-archived cases; `New` cases do not count. Shown on the dashboard. [§7](product/01-refined-spec.md#7-project-dashboard)
 
+**Backlink**: A doc whose latest content links to another doc (by key or `[text](KEY)`); listed under "Linked from" on the linked doc, readable and non-deleted ones only.
+
 **Backlog**: The ordered list of a project's tickets that are not on any board (`BoardId = null`). Every project has exactly one. [§6.4](product/01-refined-spec.md#64-backlog-and-boards)
 
 **Blocked ticket**: An open ticket that at least one open, readable ticket blocks (a `Blocks` link). Shown red in the sub-tickets graph; the opposite is a ready ticket. [D-95](decisions.md)
@@ -62,6 +64,8 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Delete group (docs)**: The docs deleted by one delete: a doc, or a folder with its whole subtree. Its members share `DeletedRootId`; restore and the trash work on whole groups. [§12.5](product/01-refined-spec.md#125-delete-and-restore)
 
+**Diagram embed**: `![caption](WEB-D-7)` in a page: the diagram doc rendered read-only in a figure with its title and caption. An unreadable or deleted diagram shows "Diagram not available". The diagram is drawn by its format's renderer when it scrolls into view ([§12.12](product/01-refined-spec.md#1212-mermaid-diagrams-web-mcp)).
+
 **Doc**: A node of a project's docs tree: a `Folder`, a markdown `Page` or a `Diagram` (`Mermaid` or `Canvas`). Pages and diagrams have versions; folders hold other docs, up to 6 levels deep. [§12](product/01-refined-spec.md#12-docs)
 
 **Doc draft**: A user's private, unpublished edit of a page or diagram, autosaved by the editor. Others only see that the user is editing. Publishing creates a version and deletes the draft. [§12.4](product/01-refined-spec.md#124-content-versions-and-drafts)
@@ -70,11 +74,12 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Doc path**: A doc's titles from the root joined by `/` (`Architecture/ADRs/0001 Use Postgres`), case-insensitive; `/` inside a title is written `\/`. Unique because titles are unique within a folder. [§12.1](product/01-refined-spec.md#121-model-and-keys)
 
+**Doc reference**: An entry of the index of ticket and doc keys a doc's latest content names (`doc_references`), rebuilt on every publish and filtered for each reader. It feeds the ticket chips, the "Tickets mentioned" and "Linked from" sections, a ticket's "Docs mentioning this ticket" and the `mentions` search filter.
+
 **Doc search**: Search over doc titles, the latest published content and Canvas labels in readable projects (never drafts or deleted docs), by relevance or newest first. Each result carries a snippet. [§12.7](product/01-refined-spec.md#127-search)
 
 **Doc version**: An immutable full snapshot of a page or diagram's title and content, numbered 1..n, created by every publish. `baseVersion` names the version an edit started from. [§12.4](product/01-refined-spec.md#124-content-versions-and-drafts)
 
-**Diagram embed**: `![caption](WEB-D-12)` in a page: the diagram doc drawn read-only in place, with its caption and a link to open it. An unreadable or deleted diagram shows "Diagram not available". [§12.11](product/01-refined-spec.md#1211-mermaid-diagrams-web-mcp)
 **Doc history**: A doc's versions merged with its other activity (renames, moves, deletes, attachments, comments), newest first: the History panel (`H`) and MCP `get_doc_history`. Any two versions can be compared as a line diff with word highlights. [§12.10](product/01-refined-spec.md#1210-version-history), D-107
 
 **Effective access**: A user's resulting role on a project, computed from global role, membership and visibility. It decides every project permission. [§5.1](product/01-refined-spec.md#51-effective-project-access)
@@ -111,7 +116,7 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Mention**: A reference to a user in a ticket description or comment, written with the `@` people picker or as `@email`, stored as `@[Name](user:<id>)` so it survives renames. Only active users who can read the project can be newly mentioned; a new mention notifies them once and makes them a watcher, and readers see it as a chip with the current name (others see plain text) (D-96). [§6.9](product/01-refined-spec.md#69-comments)
 
-**Mermaid diagram**: Diagram written as Mermaid text, either inline in markdown (a ```` ```mermaid ```` block, in pages, tickets and comments) or as a diagram doc with its own view and editor. Rendered in the browser with strict security; the supported types are flowchart, sequence, class, state (v2), ER, gantt and mind map. [§12.11](product/01-refined-spec.md#1211-mermaid-diagrams-web-mcp), D-108
+**Mermaid diagram**: Diagram written as Mermaid text, either inline in markdown (a ```` ```mermaid ```` block, in pages, tickets and comments) or as a diagram doc with its own view and editor. Rendered in the browser with strict security; the supported types are flowchart, sequence, class, state (v2), ER, gantt and mind map. [§12.12](product/01-refined-spec.md#1212-mermaid-diagrams-web-mcp), D-109
 
 **Notification**: An in-app message to one user about a change someone else made: assigned to them (ticket or regression item), mentioned, or a comment, status change, priority raised to High/Highest, move or deletion on a ticket they watch, or a new comment on a doc they wrote or commented on. Created in the same transaction as the change, shown under the bell, listed only while the user can read the project, purged after 90 days (D-94). See Collapsing. [§6.16](product/01-refined-spec.md#616-in-app-notifications-i-30-d-94)
 
@@ -194,6 +199,8 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 **Test case status**: `New` (not ready, excluded from regressions), `Manual` (needs at least one step) or `Automatic` (auto-passed in regressions). [§3](product/01-refined-spec.md#3-enumerations), [§6.10](product/01-refined-spec.md#610-test-case-lifecycle)
 
 **Ticket**: The unit of work: title, markdown description, type, status, priority, severity, story points, version, labels, parent, assignee, comments, attachments and links. [§4.5](product/01-refined-spec.md#45-ticket)
+
+**Ticket chip**: How a doc shows a mentioned ticket the reader may see: the status ring and the key, with the title and status on hover. Unreadable tickets show as plain text.
 
 **Ticket key**: `{ProjectKey}-{n}`, for example `WEB-42`. Numbers come from a per-project counter, are never reused and are looked up case-insensitively. [§4.5](product/01-refined-spec.md#45-ticket), [§6.1](product/01-refined-spec.md#61-keys)
 

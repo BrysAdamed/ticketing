@@ -93,8 +93,10 @@
         }
       }
     </figure>
-    <div class="footer">
-      <tk-doc-page-sections placement="footer" [doc]="diagram" />
-    </div>
+    @if (latest()) {
+      <div class="footer">
+        <tk-doc-page-sections placement="footer" [doc]="diagram" />
+      </div>
+    }
   </article>
 }

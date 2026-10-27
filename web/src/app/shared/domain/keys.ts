@@ -8,6 +8,10 @@ export const DOC_KEY_PATTERN = /^[A-Z][A-Z0-9]{1,9}-D-\d+$/;
 /// `WEB-TC-7` and the `R-3` in `WEB-R-3` from being mistaken for ticket keys.
 export const TICKET_KEY_IN_TEXT = /(?<![A-Za-z0-9-])\b[A-Z][A-Z0-9]{1,9}-\d+\b/g;
 
+/// Ticket keys and doc keys (`WEB-D-12`) inside free text, with the same boundaries; the server's
+/// reference index (`DocReferenceParser`) uses the same patterns.
+export const REFERENCE_KEY_IN_TEXT = /(?<![A-Za-z0-9-])\b[A-Z][A-Z0-9]{1,9}-(?:D-)?\d+\b/g;
+
 export function projectKeyOf(key: string): string {
   return key.slice(0, key.indexOf('-'));
 }

@@ -13,6 +13,13 @@ public sealed class DocEndpoints : IEndpointModule
     {
         MapProjectScoped(api.MapGroup("/projects/{projectKeyOrId}/docs").WithTags("Docs"));
         MapDocs(api.MapGroup("/docs/{keyOrId}").WithTags("Docs"));
+
+        api.MapGet("/tickets/{ticketKeyOrId}/docs", async (string ticketKeyOrId, int? limit, GetTicketDocs.Handler handler, CancellationToken ct) =>
+            TypedResults.Ok(await handler.HandleAsync(new GetTicketDocs.Query(ticketKeyOrId, limit), ct)))
+            .WithTags("Docs")
+            .WithSummary("Docs mentioning the ticket: readable, non-deleted docs whose latest content names its key, newest first "
+                + "(limit 1..100, default 20), with the total for \"and N more\".")
+            .ProducesProblem(StatusCodes.Status404NotFound);
     }
 
     private static void MapProjectScoped(RouteGroupBuilder docs)
@@ -67,6 +74,7 @@ public sealed class DocEndpoints : IEndpointModule
                 return TypedResults.Ok(dto);
             })
             .WithSummary("A doc with its latest content, path, breadcrumb, other editors, my draft marker and permissions; folders list their children. "
+                + "references (mentioned tickets and docs), embeds (diagrams) and backlinks (docs linking here) hold only what the caller can read. "
                 + "version=n returns that version's content, described in atVersion.")
             .ProducesProblem(StatusCodes.Status404NotFound);
 

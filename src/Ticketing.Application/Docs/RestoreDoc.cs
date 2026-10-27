@@ -27,7 +27,7 @@ public static class RestoreDoc
         {
             var target = await DocLookup.WriteIncludingDeletedAsync(db, access, command.KeyOrId, cancellationToken);
             var root = await db.InTransactionAsync(ct => RestoreAsync(target, ct), cancellationToken);
-            return await DocQueries.LoadAsync(db, currentUser, clock, root, cancellationToken);
+            return await DocQueries.LoadAsync(db, access, currentUser, clock, root, cancellationToken);
         }
 
         private async Task<DocTarget> RestoreAsync(DocTarget target, CancellationToken cancellationToken)

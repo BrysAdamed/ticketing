@@ -10,13 +10,15 @@ import {
   provideDocMarkdownEnhancer,
 } from '@core/docs/doc-extensions';
 import { renderMermaidBlocks } from '@shared/diagrams/mermaid/mermaid-blocks';
+import { renderDiagramEmbeds } from './diagram-embeds';
 import type { InsertDiagramData, InsertDiagramResult } from './insert-diagram.dialog';
 
 const INLINE_MERMAID = 'flowchart LR\n  A[Start] --> B[Finish]';
 
 /// Diagrams in docs (TKT-17): ```` ```mermaid ```` blocks in the reader and the editor preview
-/// (lazy, theme-aware; the preview keeps a block's last good render while it has an error), and
-/// the editor's "Diagram" toolbar button and `/` commands. Provided by the docs routes.
+/// (lazy, theme-aware; the preview keeps a block's last good render while it has an error),
+/// embedded diagram docs (`![caption](KEY)`) drawn with their format's renderer, and the editor's
+/// "Diagram" toolbar button and `/` commands. Provided by the docs routes.
 export function provideDocsDiagrams(): EnvironmentProviders {
   const lastGood = new WeakMap<HTMLElement, Map<number, string>>();
   return makeEnvironmentProviders([
@@ -34,6 +36,12 @@ export function provideDocsDiagrams(): EnvironmentProviders {
           lastGood: previous,
         });
       },
+    }),
+    provideDocMarkdownEnhancer({
+      id: 'diagram-embeds',
+      order: 20,
+      enhance: (host, context) =>
+        renderDiagramEmbeds(host, context.embeds, context.theme, context.signal),
     }),
     provideIcons({ tablerSitemap }),
     { provide: DOC_EDITOR_PLUGINS, useFactory: diagramEditorPlugin, multi: true },

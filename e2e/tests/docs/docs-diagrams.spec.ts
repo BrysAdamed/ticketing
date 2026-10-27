@@ -274,5 +274,15 @@ test.describe('Mermaid diagrams', () => {
 
         // Assert
         await expect(editor.source).toContainText(`![Deployment](${diagram.key})`);
+
+        // Act: publish and close
+        await editor.publish();
+        await editor.expectStatus('Published v2');
+        await page.keyboard.press('Escape');
+
+        // Assert: the reader draws the embedded diagram and the inline block
+        const embed = editor.content.locator(`figure.tk-doc-embed[data-doc-key="${diagram.key}"]`);
+        await expect(embed.locator('.tk-doc-embed-body svg')).toContainText('Ticketing API');
+        await expect(editor.content.locator('figure.tk-mermaid svg')).toContainText('Start');
     });
 });

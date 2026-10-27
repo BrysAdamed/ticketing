@@ -3,6 +3,7 @@ import { provideDocPageSection } from '@core/docs/doc-extensions';
 import { viewRoute } from '@core/views/view-registry';
 import { provideDocsDiagrams } from './diagram/docs-diagrams.providers';
 import { DOCS_DOC_VIEW, DOCS_HOME_VIEW, DOCS_LAYOUT_VIEW, DOCS_TRASH_VIEW } from './docs.views';
+import { provideDocLinks } from './page/links/doc-links.providers';
 
 /// `/projects/:projectKey/docs`: the tree layout around the home, the trash and one doc
 /// (`:docKey/:slug`, the slug cosmetic and replaced when stale or missing). Page sections,
@@ -11,6 +12,7 @@ export default [
   viewRoute(DOCS_LAYOUT_VIEW, {
     path: '',
     providers: [
+      ...provideDocLinks(),
       provideDocPageSection({
         id: 'attachments',
         order: 50,

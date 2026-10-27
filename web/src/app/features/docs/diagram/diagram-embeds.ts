@@ -1,18 +1,13 @@
-import { DiagramFormat } from '@core/docs/doc.models';
+import { DocEmbed } from '@core/docs/doc.models';
 import { rememberedHeight, rememberHeight } from '@shared/diagrams/diagram-heights';
 import { DiagramTheme } from '@shared/diagrams/diagram-theme';
 import { mermaidErrorBox } from '@shared/diagrams/mermaid/mermaid-blocks';
 import { whenVisible } from '@shared/diagrams/when-visible';
 import { DIAGRAM_RENDERERS } from './diagram-renderers';
 
-/// What an embedded diagram needs to render: the readable diagram docs of the page (`embeds` of
-/// the doc, filled by the server for the viewer).
-export interface EmbeddedDiagram {
-  readonly key: string;
-  readonly diagramFormat: DiagramFormat | null;
-  readonly version: number;
-  readonly content: string | null;
-}
+/// What an embedded diagram needs to render, from the doc's `embeds` (the readable diagrams the
+/// server resolved for this reader).
+export type EmbeddedDiagram = Pick<DocEmbed, 'key' | 'diagramFormat' | 'version' | 'content'>;
 
 export const EMBED_SELECTOR = 'figure.tk-doc-embed[data-doc-key]';
 
@@ -37,7 +32,10 @@ export async function renderDiagramEmbeds(
       if (!body || !embed || !renderer || !embed.content?.trim()) return;
       const heightId = `doc:${embed.key}:${embed.version}`;
       const reserved = rememberedHeight(heightId);
-      if (reserved) body.style.minHeight = `${reserved}px`;
+      if (reserved) {
+        body.style.boxSizing = 'border-box';
+        body.style.minHeight = `${reserved}px`;
+      }
       body.setAttribute('aria-busy', 'true');
       await whenVisible(figure, signal);
       if (signal?.aborted) return;
@@ -45,6 +43,7 @@ export async function renderDiagramEmbeds(
       if (signal?.aborted) return;
       body.removeAttribute('aria-busy');
       body.style.removeProperty('min-height');
+      body.style.removeProperty('box-sizing');
       if ('error' in rendered) {
         body.replaceChildren(mermaidErrorBox(body.ownerDocument, rendered.error));
         return;

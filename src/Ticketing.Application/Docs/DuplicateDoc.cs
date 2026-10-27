@@ -46,8 +46,8 @@ public static class DuplicateDoc
                         grant.ProjectId, number, original.Kind, original.DiagramFormat, original.ParentId, rank, title, original.Content, currentUser.Id, clock.Now);
                     node.SetOutline(original.Outline);
                     db.DocNodes.Add(node);
-                    publisher.AddInitialVersion(
-                        node, string.Create(CultureInfo.InvariantCulture, $"Duplicated from {source.Key} v{original.CurrentVersion}"));
+                    await publisher.AddInitialVersionAsync(
+                        node, string.Create(CultureInfo.InvariantCulture, $"Duplicated from {source.Key} v{original.CurrentVersion}"), ct);
                     activity.Record(ActivityEntityType.Doc, node.Id, grant.ProjectId, CreateDoc.Action, new
                     {
                         key = node.KeyIn(grant.ProjectKey),
@@ -61,7 +61,7 @@ public static class DuplicateDoc
                     return new DocTarget(node.Id, node.ProjectId, node.Number, node.Kind, grant);
                 },
                 cancellationToken);
-            return await DocQueries.LoadAsync(db, currentUser, clock, copy, cancellationToken);
+            return await DocQueries.LoadAsync(db, access, currentUser, clock, copy, cancellationToken);
         }
     }
 }

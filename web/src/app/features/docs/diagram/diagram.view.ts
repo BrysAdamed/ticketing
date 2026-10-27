@@ -28,6 +28,7 @@ import { AbsoluteTimePipe, RelativeTimePipe } from '@shared/pipes/relative-time.
 import { IconComponent } from '@shared/ui/icon/icon.component';
 import { KbdComponent } from '@shared/ui/kbd/kbd.component';
 import { DocDraftBannerComponent } from '../doc/doc-draft-banner.component';
+import { DocStore } from '../doc/doc.store';
 import { docIcon, DOCS_ICONS } from '../docs-icons';
 import { DIAGRAM_EDIT_VIEWS, hasDocEditor } from '../docs.views';
 import { DocPageSectionsComponent } from '../page/doc-page-sections.component';
@@ -76,10 +77,15 @@ export class DiagramView {
   private readonly registry = inject(ViewRegistry);
   private readonly toast = inject(ToastService);
   private readonly theme = inject(ThemeService).theme;
+  private readonly store = inject(DocStore);
   private readonly viewport = viewChild(DiagramViewportComponent);
 
   readonly doc = input.required<Doc>();
 
+  /// False when the history shows an older version through this view (read-only, no sections).
+  protected readonly latest = computed(
+    () => (this.store.doc()?.version ?? this.doc().version) === this.doc().version,
+  );
   private readonly mode = toSignal(this.route.queryParamMap.pipe(map((q) => q.get('mode'))), {
     initialValue: null,
   });

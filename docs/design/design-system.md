@@ -50,7 +50,7 @@ Iris indigo (`--tk-iris-600` `#4f55c9` light, `--tk-iris-500` `#6169db` dark). U
 
 ### Semantic intents
 
-`success` (green), `warning` (amber), `danger` (red), `info` (blue). Each has `--tk-{intent}` (solid), `-fg` (text on tint), `-bg` (tint) and `-border`. Text on a solid is `--tk-text-on-solid` (white), except warning, which uses `--tk-warning-on-solid` (near black).
+`success` (green), `warning` (amber), `danger` (red), `info` (blue). Each has `--tk-{intent}` (solid), `-fg` (text on tint), `-bg` (tint) and `-border`. Text on a solid is `--tk-text-on-solid` (white), except warning, which uses `--tk-warning-on-solid` (near black). The success, danger and info solids are the deeper `--tk-{green,red,blue}-solid` shades, so white text reaches 4.5:1 in both themes (D-92); status icons, chart series and tints keep the brighter hues.
 
 ## 3. Typography
 

@@ -2,19 +2,12 @@
   padding-bottom: 32px;
 }
 
+.cols,
 .row {
-  height: 40px;
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 0 20px 0 24px;
-  border-bottom: 1px solid var(--tk-border-subtle);
-  color: var(--tk-text);
-  text-decoration: none;
-
-  &:hover {
-    background: var(--tk-bg-hover);
-  }
 
   .badge {
     width: 96px;
@@ -23,14 +16,63 @@
 
   .key {
     width: 88px;
-    white-space: nowrap;
     flex: none;
-    color: var(--tk-text-muted);
   }
 
   .name {
     flex: 1;
     min-width: 0;
+  }
+
+  .prog {
+    width: 240px;
+    flex: none;
+  }
+
+  .failed {
+    width: 64px;
+    flex: none;
+  }
+
+  .rate {
+    width: 64px;
+    flex: none;
+    text-align: right;
+  }
+
+  .by {
+    width: 200px;
+    flex: none;
+    text-align: right;
+  }
+}
+
+.cols {
+  height: 30px;
+  border-bottom: 1px solid var(--tk-border);
+  background: var(--tk-bg-subtle);
+  color: var(--tk-text-subtle);
+  font-size: var(--tk-text-xs);
+  font-weight: var(--tk-weight-medium);
+  white-space: nowrap;
+}
+
+.row {
+  height: 40px;
+  border-bottom: 1px solid var(--tk-border-subtle);
+  color: var(--tk-text);
+  text-decoration: none;
+
+  &:hover {
+    background: var(--tk-bg-hover);
+  }
+
+  .key {
+    white-space: nowrap;
+    color: var(--tk-text-muted);
+  }
+
+  .name {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -54,8 +96,6 @@
   }
 
   .prog {
-    width: 240px;
-    flex: none;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -72,8 +112,6 @@
   }
 
   .failed {
-    width: 64px;
-    flex: none;
     font-size: var(--tk-text-sm);
 
     &.has {
@@ -83,20 +121,14 @@
   }
 
   .rate {
-    width: 44px;
-    flex: none;
-    text-align: right;
     color: var(--tk-text-muted);
     font-size: var(--tk-text-sm);
   }
 
   .by {
-    width: 200px;
-    flex: none;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    text-align: right;
     color: var(--tk-text-subtle);
     font-size: var(--tk-text-sm);
   }

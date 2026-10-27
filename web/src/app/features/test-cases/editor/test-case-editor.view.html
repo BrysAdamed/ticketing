@@ -7,6 +7,22 @@
   @if (testCase()?.archivedAt) {
     <span class="arch" data-testid="tc-editor-archived">Archived</span>
   }
+  @if (store.canEdit() && saveState(); as state) {
+    <span
+      class="save-state"
+      role="status"
+      data-testid="tc-save-state"
+      [class]="'save-state ' + state.tone"
+      [attr.data-state]="store.autosave()"
+    >
+      <tk-icon [name]="state.icon" [size]="14" />{{ state.label }}
+      @if (store.autosave() === 'failed') {
+        <button type="button" class="retry" data-testid="tc-save-retry" (click)="flush()">
+          Retry
+        </button>
+      }
+    </span>
+  }
   <span class="right">
     @if (testCase(); as tc) {
       @if (tc.permissions.canEdit) {
@@ -65,7 +81,16 @@
 } @else if (store.status() !== 'loaded') {
   <tk-skeleton-rows [count]="8" />
 } @else {
-  <div class="form" [class.readonly]="!store.canEdit()">
+  @if (store.restoredDraft()) {
+    <div class="tk-callout tk-callout-warning draft" data-testid="tc-draft-restored">
+      <tk-icon name="tablerAlertTriangle" [size]="16" />
+      <span>Restored your unsaved changes.</span>
+      <button mat-button type="button" data-testid="tc-draft-discard" (click)="store.discard()">
+        Discard them
+      </button>
+    </div>
+  }
+  <div class="form" [class.readonly]="!store.canEdit()" (focusout)="flush()">
     <textarea
       class="title"
       rows="1"
@@ -158,7 +183,7 @@
         <tk-markdown-editor
           ariaLabel="Preconditions"
           placeholder="State before the first step (markdown)…"
-          submitHint="to save"
+          submitHint="to save now"
           data-testid="tc-preconditions"
           [minRows]="2"
           [maxLength]="markdownMax"
@@ -191,7 +216,7 @@
         <tk-markdown-editor
           ariaLabel="Expected result"
           placeholder="What should happen (markdown)…"
-          submitHint="to save"
+          submitHint="to save now"
           data-testid="tc-expected"
           [minRows]="2"
           [maxLength]="markdownMax"
@@ -252,26 +277,18 @@
     }
   </div>
 
-  @if (store.canEdit()) {
+  @if (store.isNew()) {
     <footer class="foot">
       <button
         mat-flat-button
         type="button"
         data-testid="tc-save"
-        [disabled]="store.saving() || (!store.isNew() && !store.dirty())"
+        [disabled]="store.saving()"
         (click)="save()"
       >
-        {{ store.isNew() ? 'Create test case' : 'Save'
-        }}<tk-kbd tone="on-solid">{{ saveKeys }}</tk-kbd>
+        Create test case<tk-kbd tone="on-solid">{{ saveKeys }}</tk-kbd>
       </button>
-      @if (!store.isNew() && store.dirty()) {
-        <button mat-button type="button" data-testid="tc-revert" (click)="store.revert()">
-          Revert
-        </button>
-      }
-      @if (store.dirty()) {
-        <span class="dirty tk-subtle">Unsaved changes</span>
-      }
+      <span class="dirty tk-subtle">Changes save automatically once it’s created</span>
     </footer>
   }
 }

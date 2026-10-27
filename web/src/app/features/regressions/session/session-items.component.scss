@@ -1,0 +1,125 @@
+:host {
+  display: block;
+}
+
+.ghead {
+  height: 30px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  background: var(--tk-bg-subtle);
+  border-bottom: 1px solid var(--tk-border-subtle);
+  font-size: var(--tk-text-sm);
+  font-weight: var(--tk-weight-medium);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+
+  .n {
+    color: var(--tk-text-subtle);
+  }
+}
+
+.irow {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--tk-border-subtle);
+  color: var(--tk-text);
+  position: relative;
+
+  &:hover {
+    background: var(--tk-bg-hover);
+  }
+
+  &.busy .st {
+    animation: tk-pulse 900ms ease-in-out infinite alternate;
+
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
+  }
+
+  &.focused {
+    background: var(--tk-selection);
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: var(--tk-accent);
+    }
+  }
+
+  .hit {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+
+    &::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+    }
+  }
+
+  .key {
+    flex: none;
+    white-space: nowrap;
+    color: var(--tk-text-subtle);
+    font-size: var(--tk-text-sm);
+  }
+
+  .bug {
+    flex: none;
+    position: relative;
+    z-index: 1;
+    padding: 0 5px;
+    border: 1px solid var(--tk-danger-border);
+    border-radius: var(--tk-radius-sm);
+    color: var(--tk-danger-fg);
+    font-size: var(--tk-text-sm);
+    line-height: 18px;
+    text-decoration: none;
+
+    &:hover {
+      background: var(--tk-danger-bg);
+      text-decoration: underline;
+    }
+
+    &.deleted {
+      text-decoration: line-through;
+    }
+  }
+
+  .noav {
+    width: 20px;
+    flex: none;
+  }
+}
+
+.none {
+  padding: 16px;
+}
+
+@keyframes tk-pulse {
+  to {
+    opacity: 0.35;
+  }
+}

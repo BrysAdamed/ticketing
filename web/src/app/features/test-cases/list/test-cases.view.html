@@ -3,8 +3,8 @@
   <span class="tk-page-count" data-testid="tc-count">{{ store.counts().active }}</span>
   <div class="tk-page-actions">
     @if (canWrite()) {
-      <button mat-flat-button type="button" data-testid="tc-new" (click)="openNew()">
-        <tk-icon name="tablerPlus" [size]="14" />New test case<tk-kbd tone="on-solid">N</tk-kbd>
+      <button mat-stroked-button type="button" data-testid="tc-new" (click)="openNew()">
+        <tk-icon name="tablerPlus" [size]="14" />New test case<tk-kbd>N</tk-kbd>
       </button>
     }
   </div>
@@ -90,13 +90,24 @@
           description="Write the first one; Manual and Automatic cases join every regression session."
         >
           @if (canWrite()) {
-            <button mat-flat-button type="button" (click)="openNew()">
-              New test case <tk-kbd tone="on-solid">N</tk-kbd>
+            <button mat-stroked-button type="button" (click)="openNew()">
+              New test case <tk-kbd>N</tk-kbd>
             </button>
           }
         </tk-empty-state>
       }
     } @else {
+      <div class="cols" role="row" data-testid="tc-columns">
+        <span class="st" role="columnheader">Status</span>
+        <span class="key" role="columnheader">Key</span>
+        <span class="t" role="columnheader">Title</span>
+        <span class="tk" role="columnheader">Ticket</span>
+        <span class="steps" role="columnheader">Steps</span>
+        <span class="run" role="columnheader" matTooltip="Last regression result">
+          <span aria-hidden="true">Last</span><span class="tk-sr-only">Last result</span>
+        </span>
+        <span class="upd" role="columnheader">Updated</span>
+      </div>
       @for (row of store.items(); track row.id; let i = $index) {
         <div
           class="row"

@@ -29,6 +29,65 @@
   }
 }
 
+.save-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 4px;
+  font-size: var(--tk-text-sm);
+  color: var(--tk-text-subtle);
+  white-space: nowrap;
+
+  &.success tk-icon {
+    color: var(--tk-success-fg);
+  }
+
+  &.danger {
+    color: var(--tk-danger-fg);
+  }
+
+  &[data-state='saving'] tk-icon {
+    animation: tk-spin 1s linear infinite;
+  }
+
+  .retry {
+    padding: 0 4px;
+    border: 0;
+    background: none;
+    color: var(--tk-accent-fg);
+    font: inherit;
+    font-weight: var(--tk-weight-medium);
+    cursor: pointer;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+@keyframes tk-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .save-state[data-state='saving'] tk-icon {
+    animation: none;
+  }
+}
+
+.draft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 20px 0;
+
+  span {
+    flex: 1;
+  }
+}
+
 .arch {
   padding: 0 6px;
   border-radius: var(--tk-radius-sm);

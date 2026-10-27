@@ -102,7 +102,7 @@
         <tk-icon name="tablerLayersSubtract" [size]="14" />Swimlanes: <b>{{ swimlaneLabel() }}</b>
       </button>
       <mat-menu #laneMenu="matMenu">
-        @for (option of swimlaneOptions; track option.value) {
+        @for (option of swimlaneOptions(); track option.value) {
           <button
             mat-menu-item
             type="button"
@@ -196,6 +196,11 @@
               } @else if (lane.epic; as epic) {
                 <tk-type-icon [type]="epic.type" [size]="14" />
                 <span class="lane-key tnum">{{ epic.key }}</span>
+              } @else if (lane.projectKey; as projectKey) {
+                <tk-project-tile [projectKey]="projectKey" />
+                <span class="lane-key tnum">{{ projectKey }}</span>
+              } @else if (lane.priority; as priority) {
+                <tk-priority-icon [priority]="priority" />
               }
               <span class="lane-name">{{ lane.label }}</span>
               <span class="n"
@@ -277,7 +282,7 @@
           "
         >
           @if (store.canAddTickets()) {
-            <button mat-flat-button type="button" (click)="openAddTickets()">
+            <button mat-stroked-button type="button" (click)="openAddTickets()">
               Add tickets from backlog
             </button>
           }
@@ -316,7 +321,7 @@
       #kbAssigneePicker="tkSearchPicker"
       [tkSearchPicker]="assigneeSearch"
       pickerPlaceholder="Assign to…"
-      pickerShortcut="I"
+      pickerShortcut="A"
       (picked)="pickAssignee($event)"
     ></button>
   </div>

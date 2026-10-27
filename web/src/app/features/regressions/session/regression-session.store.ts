@@ -2,6 +2,7 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { ApiError, toApiError } from '@core/api/api-error';
 import { AuthService } from '@core/auth/auth.service';
+import { PeekService } from '@core/layout/peek/peek';
 import { ToastService } from '@core/notify/toast.service';
 import { LoadStatus } from '@core/projects/project-directory';
 import { RegressionsApi } from '@core/testing/testing.api';
@@ -16,6 +17,7 @@ import { TicketCreator } from '@core/tickets/create-ticket';
 import { NewTicket, TicketSummary, UserRef } from '@core/tickets/ticket.models';
 import { RegressionItemStatus } from '@shared/domain/enums';
 import {
+  adjustSummary,
   buildRows,
   filterCounts,
   ItemFilter,
@@ -26,13 +28,15 @@ import {
 } from './session-logic';
 
 /// State of the regression execution view (spec 6.11, layout-and-screens §3.8). Results are applied
-/// optimistically and rolled back on failure; every server answer carries the refreshed summary.
+/// optimistically (item and summary) and rolled back with a toast on failure. Calls for one item run
+/// in order; different items run in parallel, and the server's summary is taken once none is pending.
 @Injectable()
 export class RegressionSessionStore {
   private readonly api = inject(RegressionsApi);
   private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
   private readonly creator = inject(TicketCreator);
+  private readonly peek = inject(PeekService);
 
   readonly sessionKey = signal('');
   readonly status = signal<LoadStatus>('idle');
@@ -43,7 +47,8 @@ export class RegressionSessionStore {
   readonly filter = signal<ItemFilter>('all');
   readonly text = signal('');
   readonly focusedKey = signal<string | null>(null);
-  readonly busyKey = signal<string | null>(null);
+  readonly pending = signal<ReadonlyMap<string, number>>(new Map());
+  private readonly queues = new Map<string, Promise<unknown>>();
 
   readonly meId = computed(() => this.auth.currentUser()?.id ?? null);
   readonly hasData = computed(() => this.session() !== null);
@@ -66,6 +71,11 @@ export class RegressionSessionStore {
   readonly focused = computed(
     () => this.items().find((i) => i.testCaseKey === this.focusedKey()) ?? null,
   );
+  readonly busy = computed(() => this.pending().size > 0);
+
+  isBusy(testCaseKey: string): boolean {
+    return this.pending().has(testCaseKey);
+  }
 
   async load(sessionKey: string, focusKey: string | null): Promise<void> {
     const key = sessionKey.toUpperCase();
@@ -136,7 +146,8 @@ export class RegressionSessionStore {
     );
   }
 
-  /// Records a result (taking an item someone else holds first, when `takeOver` is set).
+  /// Records a result (taking an item someone else holds first, when `takeOver` is set). The item and
+  /// summary change at once; resolves with the server's item, or null after a rollback.
   async record(
     item: RegressionItem,
     status: RegressionItemStatus,
@@ -183,10 +194,18 @@ export class RegressionSessionStore {
         );
         this.apply(change);
         if (!change.createdBug) throw new Error('The bug was not created.');
-        this.toast.success(`${change.createdBug.key} created in the backlog.`);
+        const bugKey = change.createdBug.key;
+        this.toast.success(`${bugKey} created in the backlog.`, {
+          action: { label: 'Open', run: () => this.peek.open(bugKey) },
+        });
         return change.createdBug;
       },
     });
+  }
+
+  /// Resolves once every result in flight has been answered.
+  async settled(): Promise<void> {
+    while (this.queues.size > 0) await Promise.all(this.queues.values());
   }
 
   async complete(skipRemaining: boolean): Promise<boolean> {
@@ -213,27 +232,57 @@ export class RegressionSessionStore {
     }
   }
 
-  private async run(
+  private run(
     item: RegressionItem,
     call: () => ReturnType<RegressionsApi['take']>,
     optimistic: Partial<RegressionItem>,
   ): Promise<boolean> {
-    const before = this.items();
-    this.items.set(replaceItem(before, { ...item, ...optimistic }));
-    this.busyKey.set(item.testCaseKey);
-    try {
-      this.apply(await firstValueFrom(call()));
-      return true;
-    } catch (error) {
-      this.items.set(before);
-      const apiError = toApiError(error);
-      this.toast.error(apiError);
-      if (apiError.code === 'regression.notInProgress' || apiError.code === 'concurrency.conflict')
-        await this.reload();
-      return false;
-    } finally {
-      this.busyKey.set(null);
-    }
+    const key = item.testCaseKey;
+    const before = this.items().find((i) => i.id === item.id) ?? item;
+    const after = { ...before, ...optimistic };
+    this.items.update((items) => replaceItem(items, after));
+    this.summary.update((s) => s && adjustSummary(s, before, after));
+    this.track(key, 1);
+    const send = async (): Promise<boolean> => {
+      try {
+        const change = await firstValueFrom(call());
+        this.track(key, -1);
+        if (!this.isBusy(key)) this.items.update((items) => replaceItem(items, change.item));
+        if (!this.busy()) this.summary.set(change.summary);
+        return true;
+      } catch (error) {
+        this.track(key, -1);
+        if (this.items().find((i) => i.id === item.id) === after) {
+          this.items.update((items) => replaceItem(items, before));
+          this.summary.update((s) => s && adjustSummary(s, after, before));
+        }
+        const apiError = toApiError(error);
+        this.toast.error(`${key}: ${apiError.title}`);
+        if (
+          apiError.code === 'regression.notInProgress' ||
+          apiError.code === 'concurrency.conflict'
+        )
+          await this.reload();
+        return false;
+      }
+    };
+    const previous = this.queues.get(key);
+    const result = previous ? previous.then(send) : send();
+    this.queues.set(key, result);
+    void result.then(() => {
+      if (this.queues.get(key) === result) this.queues.delete(key);
+    });
+    return result;
+  }
+
+  private track(key: string, delta: number): void {
+    this.pending.update((pending) => {
+      const next = new Map(pending);
+      const count = (next.get(key) ?? 0) + delta;
+      if (count > 0) next.set(key, count);
+      else next.delete(key);
+      return next;
+    });
   }
 
   private apply(change: RegressionItemChange): void {

@@ -44,18 +44,26 @@ export class TestCasesPage {
         await this.editor.getByTestId('tc-save').click();
         const key = this.editor.getByTestId('tc-editor-key');
         await expect(key).toBeVisible();
-        await expect(this.editor.getByTestId('tc-save')).toBeDisabled();
+        await expect(this.editor.getByTestId('tc-save')).toHaveCount(0);
         return (await key.textContent())!.trim();
     }
 
-    /// Links the open test case to a ticket through the picker and saves.
+    /// The editor's autosave indicator; `data-state` is pending, saving, saved, invalid or failed.
+    get saveState(): Locator {
+        return this.editor.getByTestId('tc-save-state');
+    }
+
+    async expectSaved(): Promise<void> {
+        await expect(this.saveState).toHaveAttribute('data-state', 'saved');
+    }
+
+    /// Links the open test case to a ticket through the picker; the link saves right away.
     async linkTicket(ticketKey: string): Promise<void> {
         await this.editor.getByTestId('tc-ticket-picker').click();
         await this.page.getByTestId('search-picker-input').fill(ticketKey);
         await this.page.getByRole('option', { name: new RegExp(ticketKey) }).click();
         await expect(this.editor.getByTestId('tc-ticket')).toContainText(ticketKey);
-        await this.editor.getByTestId('tc-save').click();
-        await expect(this.editor.getByTestId('tc-save')).toBeDisabled();
+        await this.expectSaved();
     }
 }
 

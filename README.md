@@ -22,6 +22,8 @@ docker compose up --build     # http://localhost:8080
 
 Sign in with `TICKETING_BOOTSTRAP_ADMIN_EMAIL` / `TICKETING_BOOTSTRAP_ADMIN_PASSWORD` from `.env`. The first admin is created on startup while the user table is empty; create further users under **Admin → Users** (each gets a one-time set-password link).
 
+**Try it with demo data:** on an empty database, set `TICKETING_SEED_DEMO=true` and `TICKETING_DEMO_PASSWORD=<12+ characters>` in `.env` before `docker compose up --build`. It creates 6 users, 3 projects (one private), ~180 tickets, two boards, test cases and regression sessions spread over the last 12 weeks. Sign in as `maya.kowalczyk@example.com` (or any other `@example.com` demo user) with that password. Seeding is a no-op once any project exists; one-off alternative: `docker compose run --rm api seed-demo`. For development and demos only.
+
 `docker-compose.override.yml` is loaded automatically in development and additionally publishes the API on `:5080` (for `ng serve`) and PostgreSQL on `:5433`.
 
 ## Production (internal VM)

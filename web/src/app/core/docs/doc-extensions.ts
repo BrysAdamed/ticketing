@@ -1,6 +1,7 @@
 import {
   EnvironmentProviders,
   InjectionToken,
+  Injector,
   makeEnvironmentProviders,
   Type,
 } from '@angular/core';
@@ -67,6 +68,8 @@ export function provideDocMarkdownEnhancer(enhancer: DocMarkdownEnhancer): Envir
 export interface DocEditorCommandContext {
   readonly docKey: string;
   readonly projectKey: string;
+  /// The editor's injector (the docs layout's stores included), for dialogs a plugin opens.
+  readonly injector: Injector;
   /// The selected text (empty when the selection is a caret).
   selectedText(): string;
   /// Replaces the selection with `text`; the caret goes to its end, or selects `select` inside it.

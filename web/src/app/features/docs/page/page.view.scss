@@ -42,27 +42,6 @@
   box-sizing: border-box;
 }
 
-.draft-banner {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: -12px 0 20px;
-  padding: 4px 4px 4px 12px;
-  border: 1px solid var(--tk-warning-border);
-  border-radius: var(--tk-radius-lg);
-  background: var(--tk-warning-bg);
-  font-size: var(--tk-text-base);
-
-  tk-icon {
-    color: var(--tk-warning-fg);
-  }
-
-  .msg {
-    flex: 1;
-    min-width: 0;
-  }
-}
-
 .ptitle {
   margin: 0 0 8px;
   font-size: var(--tk-text-2xl);

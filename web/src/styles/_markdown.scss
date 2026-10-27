@@ -334,6 +334,90 @@ $icon-octagon: tabler-icon(
     }
   }
 
+  .tk-mermaid,
+  pre.tk-mermaid-pending {
+    box-sizing: border-box;
+    margin: 4px 0 16px;
+    border: 1px solid var(--tk-border);
+    border-radius: var(--tk-radius-lg);
+  }
+
+  .tk-mermaid {
+    display: grid;
+    place-items: center;
+    padding: 16px 12px;
+    overflow-x: auto;
+    background: var(--tk-surface);
+
+    svg {
+      display: block;
+      max-width: 100%;
+      height: auto;
+    }
+  }
+
+  .tk-mermaid-stale {
+    opacity: 0.55;
+  }
+
+  pre.tk-mermaid-pending {
+    overflow: hidden;
+    padding: 0;
+    border-color: var(--tk-border-subtle);
+    background: linear-gradient(
+      90deg,
+      var(--tk-skeleton) 0%,
+      var(--tk-skeleton-shine) 50%,
+      var(--tk-skeleton) 100%
+    );
+    background-size: 200% 100%;
+    animation: tk-diagram-shimmer 1.4s linear infinite;
+
+    code {
+      visibility: hidden;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
+  }
+
+  .tk-mermaid-error {
+    margin: -8px 0 16px;
+    padding: 10px 14px;
+    border: 1px solid var(--tk-danger-border);
+    border-radius: var(--tk-radius-lg);
+    background: var(--tk-danger-bg);
+    font-size: var(--tk-text-base);
+    line-height: var(--tk-leading-base);
+  }
+
+  .tk-mermaid-error-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 4px;
+    color: var(--tk-danger-fg);
+    font-weight: var(--tk-weight-semibold);
+
+    &::before {
+      content: '';
+      flex: none;
+      width: 16px;
+      height: 16px;
+      background: currentColor;
+      mask: #{$icon-triangle} center / contain no-repeat;
+    }
+  }
+
+  .tk-mermaid-error-message {
+    font-family: var(--tk-font-mono);
+    font-size: 12.5px;
+    line-height: 18px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
   .hljs-keyword,
   .hljs-selector-tag,
   .hljs-literal,
@@ -472,5 +556,14 @@ $icon-octagon: tabler-icon(
 
   hr {
     margin: 24px 0;
+  }
+}
+
+@keyframes tk-diagram-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
   }
 }

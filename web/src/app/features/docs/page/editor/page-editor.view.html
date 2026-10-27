@@ -1,54 +1,6 @@
 @let status = session.status();
 <div class="ebar">
-  <div class="l" data-testid="doc-editor-status">
-    @switch (status) {
-      @case ('saving') {
-        <tk-icon class="st" name="tablerCloud" [size]="16" />
-        <span>Saving draft…</span>
-      }
-      @case ('saved') {
-        <tk-icon class="st ok" name="tablerCloudCheck" [size]="16" />
-        <span>Draft saved</span>
-      }
-      @case ('error') {
-        <tk-icon class="st bad" name="tablerCloudOff" [size]="16" />
-        <span class="bad">Couldn't save draft</span>
-        <span class="sep">·</span>
-        <button type="button" class="link" data-testid="doc-editor-retry" (click)="retrySave()">
-          Retry
-        </button>
-      }
-      @case ('publishing') {
-        <tk-icon class="st" name="tablerCloud" [size]="16" />
-        <span>Publishing…</span>
-      }
-      @case ('published') {
-        <tk-icon class="st ok" name="tablerCheck" [size]="16" />
-        <span>Published v{{ session.publishedVersion() }}</span>
-      }
-      @case ('pending') {
-        <tk-icon class="st" name="tablerCloud" [size]="16" />
-        <span>Unsaved changes</span>
-      }
-      @case ('conflict') {
-        <tk-icon class="st bad" name="tablerAlertTriangle" [size]="16" />
-        <span class="bad">Conflicting changes</span>
-      }
-      @default {
-        <tk-icon class="st" name="tablerPencil" [size]="16" />
-        <span>Editing</span>
-      }
-    }
-    <span class="sep">·</span>
-    <span class="tnum" data-testid="doc-editor-base">based on v{{ session.baseVersion() }}</span>
-    @if (session.newerVersion(); as newer) {
-      <span class="sep">·</span>
-      <span class="newer" data-testid="doc-editor-newer"
-        >{{ newer.updatedBy.displayName }} published v{{ newer.version }}</span
-      >
-    }
-    <tk-doc-presence class="presence" [editors]="presence()" />
-  </div>
+  <tk-doc-edit-status [editors]="presence()" />
   <div class="seg" role="radiogroup" aria-label="Editor layout">
     @for (option of layouts; track option) {
       <button

@@ -22,6 +22,7 @@ public sealed class DocTools
     private const string Position = "Top or Bottom (default) of the folder; or use beforeKey/afterKey.";
     private const string DocOutput = "Returns the doc: key, kind, diagramFormat, title, path, parentKey, version (send it back as baseVersion), "
         + "rowVersion, content, updatedAt, updatedBy and url.";
+    private const string MermaidTypes = "supported types: flowchart, sequenceDiagram, classDiagram, stateDiagram-v2, erDiagram, gantt, mindmap";
 
     [McpServerTool(Name = "list_docs", ReadOnly = true, Idempotent = true, Title = "List docs")]
     [Description("The docs tree of a project as a flat list, depth-first in each folder's manual order: key, kind (" + Kinds + "), diagramFormat, "
@@ -36,7 +37,8 @@ public sealed class DocTools
         handler.HandleAsync(new GetDocTree.Query(projectKey, folder, depth, kinds), cancellationToken);
 
     [McpServerTool(Name = "get_doc", ReadOnly = true, Idempotent = true, Title = "Get doc")]
-    [Description("Gets a doc by docKey, or by projectKey and path. Pages return their markdown in content; diagrams their source; folders "
+    [Description("Gets a doc by docKey, or by projectKey and path. Pages return their markdown in content; diagrams their source in content "
+        + "(diagramFormat Mermaid: Mermaid text; Canvas: Excalidraw JSON); folders "
         + "list their children. Also: breadcrumb, editors (others with an unpublished draft changed in the last 10 minutes) and permissions. "
         + "Use version as baseVersion for update_doc.")]
     public static Task<DocDto> GetDoc(
@@ -78,8 +80,8 @@ public sealed class DocTools
     [Authorize(Policy = AuthPolicies.CanWrite)]
     [McpServerTool(Name = "create_page", Destructive = false, Title = "Create docs page")]
     [Description("Creates a markdown page (version 1) in a project's docs. Markdown is CommonMark + GFM; ticket keys (WEB-42) and doc keys "
-        + "(WEB-D-12) become links, [text](WEB-D-12) links with custom text, ```mermaid blocks render as diagrams, GFM alerts (> [!NOTE]) "
-        + "render as callouts. " + DocOutput)]
+        + "(WEB-D-12) become links, [text](WEB-D-12) links with custom text, ```mermaid blocks render as diagrams (" + MermaidTypes + "), "
+        + "![caption](WEB-D-12) embeds a diagram doc, GFM alerts (> [!NOTE]) render as callouts. " + DocOutput)]
     public static Task<DocDto> CreatePage(
         CreateDoc.Handler handler,
         [Description("Project key, for example WEB.")] string projectKey,
@@ -99,11 +101,36 @@ public sealed class DocTools
             cancellationToken);
 
     [Authorize(Policy = AuthPolicies.CanWrite)]
+    [McpServerTool(Name = "create_diagram", Destructive = false, Title = "Create docs diagram")]
+    [Description("Creates a diagram doc (version 1) in a project's docs. Prefer format Mermaid for diagrams you write: the source is Mermaid "
+        + "text (" + MermaidTypes + "), rendered in the browser with strict security (no click handlers, no HTML labels). Canvas source is the "
+        + "visual editor's native Excalidraw JSON, meant for people drawing in the web app. Mermaid source is not validated on the server: check "
+        + "the syntax before sending. Pages embed a diagram with ![caption](WEB-D-12). " + DocOutput)]
+    public static Task<DocDto> CreateDiagram(
+        CreateDoc.Handler handler,
+        [Description("Project key, for example WEB.")] string projectKey,
+        [Description("Single-line title, at most 200 characters, unique within the folder (ignoring case).")] string title,
+        [Description("Mermaid (default) or Canvas.")] DiagramFormat? format = null,
+        [Description("The diagram source: Mermaid text (at most 20000 characters) or Canvas JSON. Empty for a blank diagram.")] string? source = null,
+        [Description("Parent: " + Parent + " Default: root.")] string? parent = null,
+        [Description(Position)] DocPosition? position = null,
+        [Description("Place right before this sibling (key or path).")] string? beforeKey = null,
+        [Description("Place right after this sibling (key or path).")] string? afterKey = null,
+        [Description("Optional 'what changed' note for the version, at most 200 characters.")] string? changeNote = null,
+        [Description("Optional key that makes retries safe: a repeat within 24 hours returns the original result.")] string? idempotencyKey = null,
+        CancellationToken cancellationToken = default) =>
+        handler.HandleAsync(
+            new CreateDoc.Command(
+                DocKind.Diagram, title, parent, position, beforeKey, afterKey, source, format ?? DiagramFormat.Mermaid, changeNote,
+                ProjectKeyOrId: projectKey, IdempotencyKey: idempotencyKey),
+            cancellationToken);
+
+    [Authorize(Policy = AuthPolicies.CanWrite)]
     [McpServerTool(Name = "update_doc", Destructive = false, Title = "Update doc")]
-    [Description("Renames a doc and/or replaces its whole content (page markdown or diagram source) as a new version. Replacing content "
-        + "needs baseVersion = the version you read; if someone published since, it fails with doc.version.conflict (currentVersion, updatedBy, "
-        + "updatedAt): re-read with get_doc and merge. For small changes to long pages prefer edit_doc. A rename alone creates no version. "
-        + DocOutput)]
+    [Description("Renames a doc and/or replaces its whole content (page markdown, or a diagram's source: Mermaid text for " + MermaidTypes
+        + ") as a new version. Replacing content needs baseVersion = the version you read; if someone published since, it fails with "
+        + "doc.version.conflict (currentVersion, updatedBy, updatedAt): re-read with get_doc and merge. For small changes to long pages or "
+        + "Mermaid diagrams prefer edit_doc. A rename alone creates no version. " + DocOutput)]
     public static Task<DocDto> UpdateDoc(
         UpdateDoc.Handler handler,
         [Description(DocKey)] string docKey,

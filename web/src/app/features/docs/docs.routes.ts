@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { provideDocPageSection } from '@core/docs/doc-extensions';
 import { viewRoute } from '@core/views/view-registry';
+import { provideDocsDiagrams } from './diagram/docs-diagrams.providers';
 import { DOCS_DOC_VIEW, DOCS_HOME_VIEW, DOCS_LAYOUT_VIEW, DOCS_TRASH_VIEW } from './docs.views';
 
 /// `/projects/:projectKey/docs`: the tree layout around the home, the trash and one doc
@@ -19,6 +20,7 @@ export default [
             (m) => m.DocAttachmentsSectionComponent,
           ),
       }),
+      provideDocsDiagrams(),
     ],
     children: [
       viewRoute(DOCS_HOME_VIEW, { path: '' }),

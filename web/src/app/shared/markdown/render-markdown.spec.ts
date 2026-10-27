@@ -1,4 +1,4 @@
-import { INTERNAL_LINK_ATTR, renderMarkdown } from './render-markdown';
+import { headingSlug, INTERNAL_LINK_ATTR, renderMarkdown } from './render-markdown';
 
 const parse = (html: string) => {
   const container = document.createElement('div');
@@ -175,5 +175,65 @@ describe('renderMarkdown', () => {
   it('returns an empty string for empty input', () => {
     expect(renderMarkdown(null)).toBe('');
     expect(renderMarkdown('')).toBe('');
+  });
+
+  describe('GFM alerts', () => {
+    it('turns > [!KIND] blockquotes into callouts with a title', () => {
+      // Act
+      const dom = parse(
+        renderMarkdown('> [!WARNING]\n> Rotate the key\n> before Friday.\n\n> [!tip] Inline tip'),
+      );
+      const callouts = [...dom.querySelectorAll('.tk-md-callout')];
+
+      // Assert
+      expect(dom.querySelector('blockquote')).toBeNull();
+      expect(callouts.map((c) => c.className)).toEqual([
+        'tk-md-callout tk-md-callout-warning',
+        'tk-md-callout tk-md-callout-tip',
+      ]);
+      expect(callouts[0].querySelector('.tk-md-callout-title')?.textContent).toBe('Warning');
+      expect(callouts[0].textContent).not.toContain('[!WARNING]');
+      expect(callouts[0].querySelector('p:not(.tk-md-callout-title)')?.textContent).toContain(
+        'Rotate the key',
+      );
+      expect(callouts[1].textContent).toContain('Inline tip');
+    });
+
+    it('leaves ordinary quotes and unknown markers alone', () => {
+      // Act
+      const dom = parse(renderMarkdown('> [!DANGER] no\n\n> plain quote'));
+
+      // Assert
+      expect(dom.querySelectorAll('blockquote').length).toBe(2);
+      expect(dom.querySelector('.tk-md-callout')).toBeNull();
+    });
+  });
+
+  describe('heading anchors', () => {
+    it('gives headings stable, de-duplicated ids and an anchor link only when asked', () => {
+      // Arrange
+      const source = '# Payment flow\n\n## Overview\n\n### Overview\n\n## Ünïcode & *stuff*!';
+
+      // Act
+      const dom = parse(renderMarkdown(source, { headingAnchors: true }));
+      const plain = parse(renderMarkdown(source));
+
+      // Assert
+      expect([...dom.querySelectorAll('h1, h2, h3')].map((h) => h.id)).toEqual([
+        'payment-flow',
+        'overview',
+        'overview-2',
+        'ünïcode--stuff',
+      ]);
+      expect(dom.querySelector('h2 a.tk-anchor')?.getAttribute('href')).toBe('#overview');
+      expect(dom.querySelector('h2')?.textContent).toBe('Overview');
+      expect(plain.querySelector('[id]')).toBeNull();
+      expect(plain.querySelector('.tk-anchor')).toBeNull();
+    });
+
+    it('falls back to "section" for a heading without letters', () => {
+      expect(headingSlug('!!!')).toBe('section');
+      expect(headingSlug('  Use Postgres 18 ')).toBe('use-postgres-18');
+    });
   });
 });

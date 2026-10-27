@@ -3,6 +3,24 @@
   min-height: 100%;
 }
 
+:host(.editing) {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.edit {
+  margin-left: 6px;
+
+  tk-icon {
+    margin-right: 6px;
+  }
+
+  tk-kbd {
+    margin-left: 6px;
+  }
+}
+
 .pbar {
   position: sticky;
   top: 0;

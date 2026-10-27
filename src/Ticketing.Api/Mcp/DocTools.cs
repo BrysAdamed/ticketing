@@ -2,6 +2,7 @@ using System.ComponentModel;
 using Microsoft.AspNetCore.Authorization;
 using ModelContextProtocol.Server;
 using Ticketing.Api.Auth;
+using Ticketing.Application.Attachments;
 using Ticketing.Application.Docs;
 using Ticketing.Domain.Docs;
 
@@ -45,6 +46,16 @@ public sealed class DocTools
         [Description(Path)] string? path = null,
         CancellationToken cancellationToken = default) =>
         handler.HandleAsync(new GetDoc.Query(docKey, projectKey, path), cancellationToken);
+
+    [McpServerTool(Name = "list_doc_attachments", ReadOnly = true, Idempotent = true, Title = "List doc attachments")]
+    [Description("Lists a page's attachments (images and files embedded in its markdown as ![name](url)), oldest first: id, fileName, "
+        + "contentType, sizeBytes, uploadedBy, uploadedAt and the download url (relative to the server, needs the same bearer token). "
+        + "Read text, CSV and JSON files with get_attachment_text.")]
+    public static Task<IReadOnlyList<DocAttachmentDto>> ListDocAttachments(
+        ListDocAttachments.Handler handler,
+        [Description(DocKey)] string docKey,
+        CancellationToken cancellationToken = default) =>
+        handler.HandleAsync(new ListDocAttachments.Query(docKey), cancellationToken);
 
     [Authorize(Policy = AuthPolicies.CanWrite)]
     [McpServerTool(Name = "create_folder", Destructive = false, Title = "Create docs folder")]

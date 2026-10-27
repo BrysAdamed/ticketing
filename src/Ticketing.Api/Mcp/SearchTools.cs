@@ -136,7 +136,7 @@ public sealed class SearchTools
         + "Images, PDF and ZIP files cannot be read this way.")]
     public static Task<AttachmentTextDto> GetAttachmentText(
         GetAttachmentText.Handler handler,
-        [Description("Attachment id from list_attachments.")] Guid attachmentId,
+        [Description("Attachment id from list_attachments or list_doc_attachments.")] Guid attachmentId,
         CancellationToken cancellationToken = default) =>
         handler.HandleAsync(new GetAttachmentText.Query(attachmentId), cancellationToken);
 }

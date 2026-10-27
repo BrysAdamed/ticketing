@@ -17,6 +17,7 @@ public static class DocErrors
     public const string BaseVersionRequired = "doc.baseVersion.required";
     public const string BaseVersionInvalid = "doc.baseVersion.invalid";
     public const string VersionConflict = "doc.version.conflict";
+    public const string VersionNotFound = "doc.version.notFound";
     public const string EditNoMatch = "doc.edit.noMatch";
     public const string EditAmbiguous = "doc.edit.ambiguous";
     public const string RankAnchorInvalid = "doc.rank.anchor";

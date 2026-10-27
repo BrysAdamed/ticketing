@@ -722,7 +722,7 @@ Comments
 | `update_comment` | `commentId`, `body` | Updated comment. Own only. |
 | `delete_comment` | `commentId` | Confirmation. Own, or Owner. |
 
-Attachments: `list_attachments` (`key`) returns metadata and download URLs. `get_attachment_text` (`attachmentId`) returns the content of `text/*` and `application/json` attachments up to 200 KB. Uploading through MCP is LATER.
+Attachments: `list_attachments` (`key`) returns metadata and download URLs; `list_doc_attachments` (Docs, below) does the same for a page. `get_attachment_text` (`attachmentId`) returns the content of `text/*` and `application/json` attachments of tickets and pages up to 200 KB. Uploading through MCP is LATER.
 
 Test cases
 
@@ -769,6 +769,7 @@ Docs (12)
 | --- | --- | --- |
 | `list_docs` | `projectKey`, optional `folder` (key or path), `depth` (1..6), `kinds` | The tree, flat and depth-first in manual order: key, kind, diagramFormat, title, parentKey, depth, version, childCount, updatedAt. No content. |
 | `get_doc` | `docKey`, or `projectKey` + `path` | The doc (12.6) with raw `content`; folders also list `children`. |
+| `list_doc_attachments` | `docKey` | The page's attachments, oldest first (12.6). Read text ones with `get_attachment_text`. |
 | `create_folder` | `projectKey`, `title`, optional `parent` (key, path or `root`), `position` (`Top`, `Bottom`) or `beforeKey`/`afterKey`, `idempotencyKey` | The folder. |
 | `create_page` | as `create_folder`, plus `content` (markdown), `changeNote` | The page at version 1. |
 | `update_doc` | `docKey`, any of `title`, `content` (needs `baseVersion`), `changeNote` | The doc. Stale `baseVersion`: `doc.version.conflict` with `currentVersion`, `updatedBy`, `updatedAt`. |
@@ -777,7 +778,7 @@ Docs (12)
 | `delete_doc` | `docKey` | `{ id, key, deletedCount, deletedAt, undoUntil }`. Destructive. |
 | `search_docs` | optional `text`, `projectKeys`, `kinds`, `folder` (key or id), `mentions` (ticket key), `updatedFrom`/`updatedTo`, `sort` (`Relevance`, `Updated`), `limit`, `cursor` | `{ items, nextCursor, total, totalCapped, sort }` (12.7); each item has key, kind, title, path, folderPath, version, updatedBy, updatedAt, url and a plain-text `snippet` with highlight ranges. |
 
-Diagram tools (`create_diagram`), history (`get_doc_history`, `restore_doc_version`) and the export link come with their stories (TKT-15, TKT-17, TKT-20). Restoring deleted docs stays REST and UI only (D-82).
+Diagram tools (`create_diagram`), history (`get_doc_history`, `restore_doc_version`, reading one version) and the export link come with their stories (TKT-15, TKT-17, TKT-20). Restoring deleted docs stays REST and UI only (D-82).
 
 Out of MCP in v1: user administration, PAT management, feature flags, project deletion, board deletion. These stay in the web UI.
 
@@ -830,7 +831,11 @@ Section [1.5 of the refinement](03-docs-refinement.md#15-permissions-mapped-to-5
 - Replacing content requires `baseVersion` (`doc.baseVersion.required`); a stale one is 409 `doc.version.conflict` with `currentVersion`, `updatedBy` (the latest version's author) and `updatedAt`. Content equal to the current one creates no version. A rename creates no version; the next version snapshots the new title.
 - Find/replace edits (`POST /docs/{key}/edits`, MCP `edit_doc`) apply to the latest version without `baseVersion`, 1..50 per call, in order, all or nothing; pages and Mermaid only.
 - Publishing deletes the publisher's own draft. A draft (`baseVersion` 1..current, title may be empty while typing, same size limits) is never visible to others; `GET /docs/{key}` lists as `editors` the other users whose draft changed in the last 10 minutes.
-- Activity (`EntityType = Doc`, with channel): `doc.created`, `doc.updated` (new version number), `doc.renamed` (title), `doc.moved` (parent key; parent changes only), `doc.deleted` (`deletedRootId`, `count`), `doc.restored`.
+- `GET /docs/{key}/versions/{n}` returns one version with its full content (the base of the web editor's 3-way merge); a number the doc does not have is 404 `doc.version.notFound`.
+- Activity (`EntityType = Doc`, with channel): `doc.created`, `doc.updated` (new version number), `doc.renamed` (title), `doc.moved` (parent key; parent changes only), `doc.deleted` (`deletedRootId`, `count`), `doc.restored`, `doc.attachment.added` and `doc.attachment.deleted` (`attachmentId`, `fileName`).
+- Pages (not folders or diagrams: `doc.kind.unsupported`, 409) take attachments with the ticket rules of 4.8 and D-63: the same store, allow-list, content sniffing, 1 byte..10 MiB and `/api/v1/attachments/{id}` download URL, at most 200 per page (`attachment.limitReached`, counted under the page's row lock). Writers upload; the uploader or an Owner deletes (`attachment.forbidden`); archived projects answer 409 `project.archived`.
+- An upload or delete creates no version and leaves the page's `updatedAt` as it is. Attachments of a deleted page answer 404 `attachment.notFound`, like those of an unreadable project.
+- `GET /docs/{key}/export.md` downloads the latest page markdown: `text/markdown; charset=utf-8`, `Content-Disposition: attachment` with the title as file name (path and reserved characters dropped; the key when nothing is left), `nosniff`. Every reader can export, Viewers and archived projects included. Pages only.
 
 ### 12.5 Delete and restore
 
@@ -854,6 +859,12 @@ Section [1.5 of the refinement](03-docs-refinement.md#15-permissions-mapped-to-5
 | `DELETE /docs/{key}` | `{ id, key, deletedCount, deletedAt, undoUntil }` |
 | `POST /docs/{key}/restore` | Restore the delete group |
 | `GET`, `PUT`, `DELETE /docs/{key}/draft` | My draft: `{ baseVersion, title, content }`; 404 `doc.draft.notFound` when none |
+| `GET /docs/{key}/versions/{n}` | One version: `{ docKey, number, title, content, changeNote, author, channel, createdAt, restoredFrom }`; 404 `doc.version.notFound` |
+| `GET /docs/{key}/attachments` | The page's attachments, oldest first, unpaged: `{ id, docKey, fileName, contentType, sizeBytes, sha256, isImage, uploadedAt, uploadedBy, url, canDelete }` |
+| `POST /docs/{key}/attachments` | Upload one file (multipart field `file`); 201 with the attachment, `Location` = its `url` |
+| `GET /docs/{key}/export.md` | The latest markdown as a `{title}.md` download |
+
+Downloading (`GET /attachments/{id}`) and deleting (`DELETE /attachments/{id}`) a page attachment use the ticket attachment endpoints.
 
 The doc URL in the SPA is `/projects/{PK}/docs/{KEY}/{slug}`; the slug is cosmetic and replaced when stale. `/docs/{KEY}` and the `/p/{PK}/docs/{KEY}/{slug}` form that the API returns as `url` redirect to it (D-102).
 
@@ -866,3 +877,14 @@ The doc URL in the SPA is `/projects/{PK}/docs/{KEY}/{slug}`; the slug is cosmet
 - Quick jump (`GET /quick-jump`, 6.8) also answers doc keys (exact match first) and lists up to 5 docs by relevance after the tickets, each with `docKind`, `diagramFormat`, `folderPath` and `snippet`.
 - `scope=Docs` keeps only docs (an exact doc key, then up to 20 by relevance) and `scope=Tickets` only tickets (an exact ticket key, then up to 20 by title); any other value is 400. In the command palette the prefixes `p:` and `t:` set these scopes: only the Docs or the Tickets group (and its "Search … for" row) is shown, commands are hidden, `p:` alone lists the recent docs, and the palette footer shows both hints (D-104).
 - p95 under 150 ms with 20 000 docs and 200 000 tickets (`DocSearchPerformanceTests`, D-103).
+
+
+### 12.8 Reading and editing pages (web)
+
+- **Reader** (`docs.page`): title, a meta line (key, `vN`, "Edited by X, 2 h ago", path, and who else is editing), the rendered markdown, "On this page" (h1–h3, scroll spy) in a 220 px right rail from 1440 px, and the page sections (attachments; later backlinks and comments). Headings get stable ids (`#heading-slug`, duplicates `-2`, `-3`); hovering one shows `#`, which scrolls there and copies the link. GFM alerts (`> [!NOTE]`, `TIP`, `IMPORTANT`, `WARNING`, `CAUTION`) render as callouts everywhere markdown renders. Fenced code with a known language is highlighted (highlight.js, loaded lazily, tickets included); doc pages add a header with the language and Copy. The page bar has Download .md and Edit (`E`). The open doc is refetched every 30 s, so "Jane is editing" appears within 30 s of her first autosave and disappears 10 minutes after her last one.
+- **Draft banner**: when I have a draft, the reader shows "You have unpublished changes from 10:42" with Continue editing and Discard (confirmed); the tree shows the pencil dot.
+- **Editor** (`?mode=edit`, writers only; `docs.page.edit`, a lazy chunk): edit bar (draft status, base version, "Jane published v8", presence, Write / Split / Preview with `Mod+Shift+P`, Discard, Close `Esc`, Publish `Mod+S`), toolbar (heading, bold, italic, code, link, lists, task list, code block, table, callout, image), inline title, optional change note, a CodeMirror 6 markdown source and a live preview (the reader's renderer, 150 ms after typing stops, scroll synced through the headings). `/` at the start of a line opens the block menu. `Mod+Enter` publishes and closes; `Esc` closes and keeps the draft.
+- **Draft autosave**: 1 s after the last change, on blur, when the tab is hidden, before leaving the editor and on unload (a keepalive request). Status: Editing, Unsaved changes, Saving draft…, Draft saved, Couldn't save draft · Retry, Publishing…, Published vN, Conflicting changes.
+- **Publishing** sends `content`, `baseVersion` and `changeNote`, and the title only when it differs from the base version's title, so a concurrent rename survives. On 409 `doc.version.conflict` the client loads the latest doc and the base version (`GET /docs/{key}/versions/{n}`) and merges line by line: changes to different parts (at least one unchanged line between them) merge and are published with the toast "Merged with Jane's changes (v8)"; the same change on both sides counts once; overlapping or touching changes open the conflict view with "Theirs (vN)" and "Mine" side by side, clashing lines marked, and Keep editing on latest (my text stays in a side panel), Overwrite with mine, Discard mine (D-105).
+- **Images**: pasting, dropping or picking files uploads them to the page and inserts `![name](/api/v1/attachments/{id})` (other types a download link) in place of an "Uploading…" placeholder.
+- Budgets (e2e `docs-pages.perf.spec.ts`, run alone: `E2E_PERF=1 npx playwright test --project=perf`): a 100 000-character page renders in under 500 ms; typing in it costs under 16 ms of main-thread CPU time per keystroke. Measured on the reference laptop: render 100–130 ms, editor open about 200 ms, typing 9–12 ms per keystroke, longest key handler 2–5 ms.

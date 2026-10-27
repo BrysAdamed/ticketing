@@ -52,6 +52,8 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Comment**: Markdown text on a ticket, listed oldest first. Authors edit or delete their own; Owners delete any; a deleted comment leaves a placeholder. [§4.7](product/01-refined-spec.md#47-comment), [§6.9](product/01-refined-spec.md#69-comments)
 
+**Conflict view (docs)**: What the page editor shows when my edit and a version published meanwhile change the same or touching lines: theirs and mine side by side, with Keep editing on latest, Overwrite with mine and Discard mine. Edits to different parts merge on their own (D-105). [§12.8](product/01-refined-spec.md#128-reading-and-editing-pages-web)
+
 **Container**: Where a ticket sits: its project backlog or exactly one board. Rank orders tickets within a container. [§6.4](product/01-refined-spec.md#64-backlog-and-boards), [§6.6](product/01-refined-spec.md#66-ranking)
 
 **Critical path**: In the sub-tickets graph, the longest chain of open tickets connected by `Blocks` links, counted in tickets. Links that close a cycle are ignored. [D-95](decisions.md)
@@ -115,6 +117,8 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 **Parent / child**: Hierarchy between tickets of the same project via `ParentId`: at most 3 levels, no cycles, epics have no parent. Children are independent of their parent's status and placement. [§6.3](product/01-refined-spec.md#63-parent-and-child)
 
 **PAT (personal access token)**: A secret (`tkt_` + 40 base62 characters) a user creates to call REST or MCP as themselves. It has a scope and a mandatory expiry; only its SHA-256 hash is stored and it is shown once. [§4.2](product/01-refined-spec.md#42-personalaccesstoken), [§6.12](product/01-refined-spec.md#612-pat-lifecycle), [ADR 0003](adr/0003-authentication-cookie-and-pat.md)
+
+**Presence (docs)**: "Jane is editing": the other users whose draft of a doc changed in the last 10 minutes, shown in the reader and the editor and refreshed every 30 s. It never reveals the draft itself. [§12.8](product/01-refined-spec.md#128-reading-and-editing-pages-web)
 
 **Print bundle**: The offline page the PDF renderer prints: the SPA's markdown and Mermaid renderer built into one script, print styles from the design tokens, and a JSON block with the documents the exporting user may read. It needs no network and calls nothing back (D-100). [ADR 0013](adr/0013-diagram-editor-and-pdf-pipeline.md)
 

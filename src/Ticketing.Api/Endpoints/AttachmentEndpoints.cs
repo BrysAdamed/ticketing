@@ -6,8 +6,8 @@ using Ticketing.Domain.Attachments;
 namespace Ticketing.Api.Endpoints;
 
 /// <summary>
-/// Ticket attachments (spec 4.8). Downloads send <c>nosniff</c> and a sandboxing CSP; images are inline, everything else
-/// is a download. Content is immutable per id, so browsers may cache it privately.
+/// Ticket and page attachments (spec 4.8, docs refinement 1.3). Downloads send <c>nosniff</c> and a sandboxing CSP; images
+/// are inline, everything else is a download. Content is immutable per id, so browsers may cache it privately.
 /// </summary>
 public sealed class AttachmentEndpoints : IEndpointModule
 {
@@ -22,22 +22,35 @@ public sealed class AttachmentEndpoints : IEndpointModule
 
         ticket.MapPost("", async (string keyOrId, HttpRequest request, UploadAttachment.Handler handler, CancellationToken ct) =>
             {
-                if (!request.HasFormContentType)
-                    throw AppException.Invalid("file", "Send the file as multipart/form-data in a field named 'file'.");
-                var form = await request.ReadFormAsync(ct);
-                var file = form.Files.GetFile("file") ?? throw AppException.Invalid("file", "Send the file in a multipart field named 'file'.");
-                if (file.Length > Attachment.MaxSizeBytes)
-                    throw new AppException(ErrorKind.Validation, AttachmentErrors.SizeInvalid, "Files must be between 1 byte and 10 MiB.");
-
-                using var buffer = new MemoryStream((int)file.Length);
-                await file.CopyToAsync(buffer, ct);
-                var attachment = await handler.HandleAsync(
-                    new UploadAttachment.Command(keyOrId, file.FileName, file.ContentType, buffer.GetBuffer().AsMemory(0, (int)buffer.Length)), ct);
+                var file = await ReadFileAsync(request, ct);
+                var attachment = await handler.HandleAsync(new UploadAttachment.Command(keyOrId, file.FileName, file.ContentType, file.Content), ct);
                 return TypedResults.Created(attachment.Url, attachment);
             })
             .DisableAntiforgery()
             .Accepts<IFormFile>("multipart/form-data")
             .WithSummary("Uploads one file (multipart field 'file'): PNG, JPEG, GIF, WebP, PDF, text, CSV, JSON or ZIP, up to 10 MiB, 50 per ticket.")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
+
+        var doc = api.MapGroup("/docs/{keyOrId}/attachments").WithTags("Attachments");
+
+        doc.MapGet("", async (string keyOrId, ListDocAttachments.Handler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.HandleAsync(new ListDocAttachments.Query(keyOrId), ct)))
+            .WithSummary("Attachments of a page, oldest first.")
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        doc.MapPost("", async (string keyOrId, HttpRequest request, UploadDocAttachment.Handler handler, CancellationToken ct) =>
+            {
+                var file = await ReadFileAsync(request, ct);
+                var attachment = await handler.HandleAsync(new UploadDocAttachment.Command(keyOrId, file.FileName, file.ContentType, file.Content), ct);
+                return TypedResults.Created(attachment.Url, attachment);
+            })
+            .DisableAntiforgery()
+            .Accepts<IFormFile>("multipart/form-data")
+            .WithSummary("Uploads one file to a page (multipart field 'file'): the ticket attachment types, up to 10 MiB, 200 per page. "
+                + "Creates no version.")
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
@@ -72,4 +85,21 @@ public sealed class AttachmentEndpoints : IEndpointModule
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict);
     }
+
+    private static async Task<UploadedFile> ReadFileAsync(HttpRequest request, CancellationToken cancellationToken)
+    {
+        if (!request.HasFormContentType)
+            throw AppException.Invalid("file", "Send the file as multipart/form-data in a field named 'file'.");
+        var form = await request.ReadFormAsync(cancellationToken);
+        var file = form.Files.GetFile("file") ?? throw AppException.Invalid("file", "Send the file in a multipart field named 'file'.");
+        if (file.Length > Attachment.MaxSizeBytes)
+            throw new AppException(ErrorKind.Validation, AttachmentErrors.SizeInvalid, "Files must be between 1 byte and 10 MiB.");
+
+        var content = new byte[file.Length];
+        await using var stream = file.OpenReadStream();
+        await stream.ReadExactlyAsync(content, cancellationToken);
+        return new UploadedFile(file.FileName, file.ContentType, content);
+    }
+
+    private sealed record UploadedFile(string FileName, string? ContentType, byte[] Content);
 }

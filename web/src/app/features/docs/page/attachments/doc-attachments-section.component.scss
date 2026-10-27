@@ -1,0 +1,153 @@
+:host {
+  display: block;
+  position: relative;
+}
+
+.sec-h {
+  height: 28px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+
+  h2 {
+    margin: 0;
+    font-size: var(--tk-text-md);
+    font-weight: var(--tk-weight-semibold);
+  }
+
+  .n {
+    color: var(--tk-text-subtle);
+    font-weight: var(--tk-weight-medium);
+  }
+
+  .right {
+    margin-left: auto;
+    display: flex;
+    gap: 2px;
+  }
+}
+
+.add {
+  margin-left: auto;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--tk-radius-md);
+  background: none;
+  color: var(--tk-text-muted);
+  font: inherit;
+  font-size: var(--tk-text-sm);
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: var(--tk-bg-hover);
+    color: var(--tk-text);
+  }
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.5;
+  }
+}
+
+.box {
+  border: 1px solid var(--tk-border);
+  border-radius: var(--tk-radius-lg);
+  overflow: hidden;
+  background: var(--tk-surface);
+}
+
+.arow {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 8px 0 8px;
+  border-bottom: 1px solid var(--tk-border-subtle);
+
+  &:last-child {
+    border-bottom: 0;
+  }
+
+  &:hover {
+    background: var(--tk-bg-hover);
+  }
+
+  &:hover .actions,
+  .actions:focus-within {
+    opacity: 1;
+  }
+}
+
+.thumb {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--tk-border-subtle);
+  border-radius: var(--tk-radius-md);
+  background: var(--tk-bg-muted);
+  color: var(--tk-text-muted);
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--tk-text);
+  text-decoration: none;
+  font-weight: var(--tk-weight-medium);
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.sub {
+  color: var(--tk-text-subtle);
+  font-size: var(--tk-text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.actions {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity var(--tk-duration-instant);
+}
+
+.pending .name {
+  color: var(--tk-text-muted);
+}
+
+.none {
+  margin: 0;
+  color: var(--tk-text-subtle);
+  font-size: var(--tk-text-sm);
+}
+
+:host(.over) {
+  outline: 2px dashed var(--tk-accent);
+  outline-offset: 6px;
+  border-radius: var(--tk-radius-lg);
+}

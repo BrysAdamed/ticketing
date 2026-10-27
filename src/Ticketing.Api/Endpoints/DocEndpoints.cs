@@ -1,3 +1,4 @@
+using Microsoft.Net.Http.Headers;
 using Ticketing.Api.Http;
 using Ticketing.Application.Common;
 using Ticketing.Application.Docs;
@@ -5,7 +6,7 @@ using Ticketing.Domain.Docs;
 
 namespace Ticketing.Api.Endpoints;
 
-/// <summary>Project docs (spec 1.14): tree, recent, trash and create per project; one doc by key (<c>WEB-D-12</c>) or id; my draft.</summary>
+/// <summary>Project docs (spec 1.14): tree, recent, trash and create per project; one doc by key (<c>WEB-D-12</c>) or id; a version; markdown export; my draft.</summary>
 public sealed class DocEndpoints : IEndpointModule
 {
     public void MapEndpoints(RouteGroupBuilder api)
@@ -125,6 +126,25 @@ public sealed class DocEndpoints : IEndpointModule
             .WithSummary($"Restores a deleted doc with everything deleted with it: the deleter within {DocNode.RestoreWindowMinutes} minutes, "
                 + "Owners at any time. A title clash appends \" (restored)\".")
             .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status409Conflict);
+
+        doc.MapGet("/versions/{number:int}", async (string keyOrId, int number, GetDocVersion.Handler handler, CancellationToken ct) =>
+            TypedResults.Ok(await handler.HandleAsync(new GetDocVersion.Query(keyOrId, number), ct)))
+            .WithSummary("One published version with its full content; 404 doc.version.notFound when the doc has no such version.")
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        doc.MapGet("/export.md", async (string keyOrId, ExportDocMarkdown.Handler handler, HttpResponse response, CancellationToken ct) =>
+            {
+                var file = await handler.HandleAsync(new ExportDocMarkdown.Query(keyOrId), ct);
+                var disposition = new ContentDispositionHeaderValue("attachment");
+                disposition.SetHttpFileName(file.FileName);
+                response.Headers.ContentDisposition = disposition.ToString();
+                response.Headers.XContentTypeOptions = "nosniff";
+                return TypedResults.Text(file.Content, "text/markdown; charset=utf-8");
+            })
+            .WithSummary("Downloads the latest markdown of a page as '{title}.md'. Readers can export, archived projects included.")
+            .Produces<string>(StatusCodes.Status200OK, "text/markdown")
+            .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict);
 
         doc.MapGet("/draft", async (string keyOrId, GetMyDocDraft.Handler handler, CancellationToken ct) =>

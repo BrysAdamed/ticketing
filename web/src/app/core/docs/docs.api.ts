@@ -5,11 +5,15 @@ import { Page, PageRequest } from '../api/page';
 import {
   DeletedDoc,
   Doc,
+  DocDraft,
   DocPlacement,
   DocSummary,
   DocTrashItem,
   DocTree,
+  DocVersion,
   NewDoc,
+  SaveDocDraft,
+  UpdateDoc,
 } from './doc.models';
 
 /// Typed client for the Docs REST API (spec 12.6). Tree reads are project-scoped; everything
@@ -57,4 +61,45 @@ export class DocsApi {
   restore(key: string): Observable<Doc> {
     return this.api.post<Doc>(`/docs/${encodeURIComponent(key)}/restore`);
   }
+
+  update(key: string, changes: UpdateDoc): Observable<Doc> {
+    return this.api.patch<Doc>(`/docs/${encodeURIComponent(key)}`, changes);
+  }
+
+  version(key: string, number: number): Observable<DocVersion> {
+    return this.api.get<DocVersion>(`/docs/${encodeURIComponent(key)}/versions/${number}`);
+  }
+
+  draft(key: string): Observable<DocDraft> {
+    return this.api.get<DocDraft>(`/docs/${encodeURIComponent(key)}/draft`);
+  }
+
+  saveDraft(key: string, draft: SaveDocDraft): Observable<DocDraft> {
+    return this.api.put<DocDraft>(`/docs/${encodeURIComponent(key)}/draft`, draft);
+  }
+
+  /// Saves the draft from `beforeunload`/`pagehide`: a keepalive request that outlives the page.
+  saveDraftOnUnload(key: string, draft: SaveDocDraft): void {
+    void fetch(this.api.url(`/docs/${encodeURIComponent(key)}/draft`), {
+      method: 'PUT',
+      keepalive: true,
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'X-XSRF-TOKEN': xsrfToken() },
+      body: JSON.stringify(draft),
+    }).catch(() => undefined);
+  }
+
+  discardDraft(key: string): Observable<void> {
+    return this.api.delete(`/docs/${encodeURIComponent(key)}/draft`);
+  }
+
+  /// `GET /docs/{key}/export.md`: the raw markdown as a download.
+  markdownExportUrl(key: string): string {
+    return this.api.url(`/docs/${encodeURIComponent(key)}/export.md`);
+  }
+}
+
+function xsrfToken(): string {
+  const match = /(?:^|;\s*)XSRF-TOKEN=([^;]*)/.exec(globalThis.document?.cookie ?? '');
+  return match ? decodeURIComponent(match[1]) : '';
 }

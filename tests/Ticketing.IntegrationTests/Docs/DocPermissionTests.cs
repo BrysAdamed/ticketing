@@ -53,6 +53,13 @@ public sealed class DocPermissionTests(TicketingApiFactory api)
         // Act
         var read = await viewer.GetDocAsync(page.Key);
         var tree = await viewer.GetTreeAsync("VIEW");
+        var otherReads = new[]
+        {
+            await viewer.GetAsync($"/api/v1/docs/{page.Key}/versions/1", _ct),
+            await viewer.GetAsync($"/api/v1/docs/{page.Key}/export.md", _ct),
+            await viewer.GetAsync($"/api/v1/docs/{page.Key}/attachments", _ct),
+            await readOnly.GetAsync($"/api/v1/docs/{page.Key}/export.md", _ct),
+        };
         var writes = new[]
         {
             await viewer.PostAsJsonAsync("/api/v1/projects/VIEW/docs", new { kind = "Page", title = "Nope" }, _ct),
@@ -75,6 +82,8 @@ public sealed class DocPermissionTests(TicketingApiFactory api)
             await write.ShouldBeProblemAsync(HttpStatusCode.Forbidden, ProjectErrors.Forbidden);
         await tokenWrite.ShouldBeProblemAsync(HttpStatusCode.Forbidden, AppErrors.ReadOnlyToken);
         await tokenRead.ShouldHaveStatusAsync(HttpStatusCode.OK);
+        foreach (var other in otherReads)
+            await other.ShouldHaveStatusAsync(HttpStatusCode.OK);
     }
 
     [Fact]
@@ -122,6 +131,12 @@ public sealed class DocPermissionTests(TicketingApiFactory api)
         var read = await owner.GetDocAsync(page.Key);
         var tree = await owner.GetTreeAsync("ARC");
         var draft = await owner.GetAsync($"/api/v1/docs/{page.Key}/draft", _ct);
+        var otherReads = new[]
+        {
+            await owner.GetAsync($"/api/v1/docs/{page.Key}/versions/1", _ct),
+            await owner.GetAsync($"/api/v1/docs/{page.Key}/export.md", _ct),
+            await owner.GetAsync($"/api/v1/docs/{page.Key}/attachments", _ct),
+        };
         var writes = new[]
         {
             await owner.PostAsJsonAsync("/api/v1/projects/ARC/docs", new { kind = "Page", title = "Nope" }, _ct),
@@ -135,6 +150,8 @@ public sealed class DocPermissionTests(TicketingApiFactory api)
         Assert.False(read.Permissions.CanEdit);
         Assert.Equal((false, false), (tree.CanWrite, tree.CanManageTrash));
         await draft.ShouldHaveStatusAsync(HttpStatusCode.OK);
+        foreach (var other in otherReads)
+            await other.ShouldHaveStatusAsync(HttpStatusCode.OK);
         foreach (var write in writes)
             await write.ShouldBeProblemAsync(HttpStatusCode.Conflict, ProjectErrors.Archived);
         Assert.Equal(1, await api.WithDbAsync(db => db.DocVersions.CountAsync(_ct)));

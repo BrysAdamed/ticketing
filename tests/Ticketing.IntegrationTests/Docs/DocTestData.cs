@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Ticketing.Application.Docs;
 using Ticketing.IntegrationTests.Infrastructure;
@@ -34,6 +35,15 @@ public static class DocTestData
 
     public static Task<HttpResponseMessage> MoveDocAsync(this HttpClient client, string key, object body) =>
         client.PostAsJsonAsync($"/api/v1/docs/{key}/move", body, HttpAssertions.Json);
+
+    public static Task<HttpResponseMessage> UploadDocAttachmentAsync(this HttpClient client, string docKey, string fileName, string contentType, byte[] content)
+    {
+        var form = new MultipartFormDataContent();
+        var file = new ByteArrayContent(content);
+        file.Headers.ContentType = MediaTypeHeaderValue.Parse(contentType);
+        form.Add(file, "file", fileName);
+        return client.PostAsync($"/api/v1/docs/{docKey}/attachments", form);
+    }
 
     public static IReadOnlyList<string> Titles(this DocTreeDto tree) => [.. tree.Items.Select(i => $"{new string('>', i.Depth - 1)}{i.Title}")];
 }

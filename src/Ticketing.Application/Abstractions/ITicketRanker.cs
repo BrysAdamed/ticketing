@@ -25,6 +25,13 @@ public interface ITicketRanker
     /// </summary>
     Task<IReadOnlyList<string>> PlaceManyAsync(
         RankContainer container, RankAnchor anchor, int count, IReadOnlyCollection<Guid> movingTicketIds, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Returns <paramref name="rank"/> when no other ticket of the container holds it (checked under the container lock), so a
+    /// ticket can go back to where it was; otherwise a rank at <paramref name="fallback"/>, as <see cref="PlaceManyAsync"/> gives.
+    /// </summary>
+    Task<string> ReuseOrPlaceAsync(
+        RankContainer container, string rank, RankAnchor fallback, IReadOnlyCollection<Guid> movingTicketIds, CancellationToken cancellationToken);
 }
 
 /// <summary>Where a block of tickets goes inside its container: the top, the bottom, or right before or after another ticket.</summary>

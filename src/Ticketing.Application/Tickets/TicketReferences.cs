@@ -43,6 +43,15 @@ public static class TicketLookup
         return new TicketTarget(row.Id, row.ProjectId, row.Number, grant);
     }
 
+    /// <summary>Like <see cref="OwnerAsync"/>, but a deleted ticket resolves too (restore is its only use).</summary>
+    public static async Task<TicketTarget> OwnerIncludingDeletedAsync(
+        ITicketingDbContext db, IProjectAccess access, string keyOrId, CancellationToken cancellationToken)
+    {
+        var (row, _) = await FindAsync(db, access, keyOrId, cancellationToken, includeDeleted: true);
+        var grant = await access.EnsureOwnerAsync(row.ProjectId, cancellationToken);
+        return new TicketTarget(row.Id, row.ProjectId, row.Number, grant);
+    }
+
     /// <summary>Resolves a reference that must be in <paramref name="projectId"/> (for example a parent or a rank anchor).</summary>
     public static async Task<Guid> InProjectAsync(ITicketingDbContext db, Guid projectId, string projectKey, string keyOrId, CancellationToken cancellationToken)
     {
@@ -59,12 +68,12 @@ public static class TicketLookup
         AppException.NotFound(TicketErrors.NotFound, $"Ticket '{keyOrId.Trim()}' was not found.");
 
     private static async Task<(Row Row, ProjectAccessGrant Grant)> FindAsync(
-        ITicketingDbContext db, IProjectAccess access, string keyOrId, CancellationToken cancellationToken)
+        ITicketingDbContext db, IProjectAccess access, string keyOrId, CancellationToken cancellationToken, bool includeDeleted = false)
     {
         var query = Rows(db, keyOrId) ?? throw NotFound(keyOrId);
         var row = await query.SingleOrDefaultAsync(cancellationToken) ?? throw NotFound(keyOrId);
         var grant = await access.FindAsync(row.ProjectId, cancellationToken) ?? throw NotFound(keyOrId);
-        if (row.DeletedAt is not null)
+        if (row.DeletedAt is not null && !includeDeleted)
             throw Deleted(grant.ProjectKey, row);
         return (row, grant);
     }

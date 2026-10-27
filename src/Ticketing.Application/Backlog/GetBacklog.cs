@@ -32,6 +32,7 @@ public sealed record BacklogItemDto(
 public sealed record BacklogParentDto(Guid Id, string Key, string Title, TicketType Type);
 
 /// <param name="Truncated">True when more than <see cref="GetBacklog.MaxItems"/> tickets matched; narrow the filters.</param>
+/// <param name="OnBoardsCount">Tickets of the project that match the same filters but sit on a board (the "N more on boards" footer).</param>
 public sealed record BacklogDto(
     Guid ProjectId,
     string ProjectKey,
@@ -39,7 +40,8 @@ public sealed record BacklogDto(
     IReadOnlyList<BacklogItemDto> Items,
     IReadOnlyList<UserRefDto> Users,
     IReadOnlyList<BacklogParentDto> Parents,
-    bool Truncated);
+    bool Truncated,
+    int OnBoardsCount);
 
 /// <summary>
 /// The project backlog (spec 6.4): tickets with no board, in rank order, Done hidden unless requested. Returned in one
@@ -66,7 +68,10 @@ public static class GetBacklog
         {
             var grant = await access.EnsureCanReadAsync(request.ProjectKeyOrId, cancellationToken);
             var projectId = grant.ProjectId;
-            var tickets = Filter(db.Tickets.AsNoTracking().Where(t => t.ProjectId == projectId && t.BoardId == null && t.DeletedAt == null), request);
+            var readable = access.ReadableProjects();
+            var projectTickets = db.Tickets.AsNoTracking().Where(t => t.ProjectId == projectId && t.DeletedAt == null && readable.Any(p => p.Id == t.ProjectId));
+            var tickets = Filter(projectTickets.Where(t => t.BoardId == null), request);
+            var onBoardsCount = await Filter(projectTickets.Where(t => t.BoardId != null), request).CountAsync(cancellationToken);
 
             var rows = await tickets
                 .OrderBy(t => t.Rank).ThenBy(t => t.Id)
@@ -107,7 +112,7 @@ public static class GetBacklog
                 .ToList();
 
             var canWrite = grant.CanWrite && !grant.IsArchived && currentUser.PatScope != Domain.Tokens.PatScope.ReadOnly;
-            return new BacklogDto(projectId, key, canWrite, items, users, parents, truncated);
+            return new BacklogDto(projectId, key, canWrite, items, users, parents, truncated, onBoardsCount);
         }
 
         private IQueryable<Ticket> Filter(IQueryable<Ticket> tickets, Query request)

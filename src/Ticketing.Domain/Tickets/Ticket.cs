@@ -9,6 +9,10 @@ public sealed class Ticket
     public const int DescriptionMaxLength = 50_000;
     public const int VersionMaxLength = 50;
     public const int MaxStoryPoints = 100;
+    public const int RestoreWindowMinutes = 10;
+
+    /// <summary>How long after deletion a ticket can still be restored (the UI's undo).</summary>
+    public static readonly TimeSpan RestoreWindow = TimeSpan.FromMinutes(RestoreWindowMinutes);
 
     private Ticket()
     {
@@ -186,6 +190,23 @@ public sealed class Ticket
         DeletedAt = now;
         DeletedById = actorId;
         BoardId = null;
+    }
+
+    /// <summary>
+    /// Undoes <see cref="Delete"/> within <see cref="RestoreWindow"/>. The ticket stays in its project backlog; the caller
+    /// places it, decides whether the parent is kept and re-creates what the deletion removed.
+    /// </summary>
+    public void Restore(DateTimeOffset now)
+    {
+        if (DeletedAt is not { } deletedAt)
+            throw DomainException.Conflict(TicketErrors.NotDeleted, "The ticket is not deleted.");
+        if (now - deletedAt > RestoreWindow)
+            throw DomainException.Conflict(
+                TicketErrors.RestoreExpired,
+                $"A deleted ticket can only be restored within {RestoreWindowMinutes} minutes of its deletion.",
+                "Create the ticket again instead.");
+        DeletedAt = null;
+        DeletedById = null;
     }
 }
 

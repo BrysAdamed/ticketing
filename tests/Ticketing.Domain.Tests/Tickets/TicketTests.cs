@@ -144,6 +144,49 @@ public sealed class TicketTests
         Assert.True(ticket.IsInBacklog);
     }
 
+    [Fact]
+    public void Restore_within_the_window_clears_the_deletion()
+    {
+        // Arrange
+        var ticket = NewTicket();
+        ticket.Delete(Guid.CreateVersion7(), Later);
+
+        // Act
+        ticket.Restore(Later + Ticket.RestoreWindow);
+
+        // Assert
+        Assert.False(ticket.IsDeleted);
+        Assert.Null(ticket.DeletedById);
+    }
+
+    [Fact]
+    public void Restore_after_the_window_is_rejected()
+    {
+        // Arrange
+        var ticket = NewTicket();
+        ticket.Delete(Guid.CreateVersion7(), Later);
+
+        // Act
+        var error = Assert.Throws<DomainException>(() => ticket.Restore(Later + Ticket.RestoreWindow + TimeSpan.FromSeconds(1)));
+
+        // Assert
+        Assert.Equal((TicketErrors.RestoreExpired, DomainErrorKind.Conflict), (error.Code, error.Kind));
+        Assert.True(ticket.IsDeleted);
+    }
+
+    [Fact]
+    public void Restore_of_a_ticket_that_is_not_deleted_is_rejected()
+    {
+        // Arrange
+        var ticket = NewTicket();
+
+        // Act
+        var error = Assert.Throws<DomainException>(() => ticket.Restore(Later));
+
+        // Assert
+        Assert.Equal((TicketErrors.NotDeleted, DomainErrorKind.Conflict), (error.Code, error.Kind));
+    }
+
     internal static Ticket NewTicket(TicketType type = TicketType.UserStory, Guid? projectId = null) =>
         Ticket.Create(projectId ?? ProjectId, 7, "Fix login", type, Guid.CreateVersion7(), "a0", Created);
 }

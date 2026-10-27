@@ -10,7 +10,8 @@ namespace Ticketing.Application.Tickets;
 /// <summary>
 /// A ticket's activity entries, newest first (spec 4.14). Entries of one operation share <c>occurredAt</c>, so the UI
 /// groups them. Assignee and reporter values are user ids, resolved in <see cref="TicketHistoryPage.Users"/>. Link entries
-/// whose other ticket the caller cannot read are left out (spec 4.6).
+/// whose other ticket the caller cannot read are left out (spec 4.6). A <c>ticket.deleted</c> entry shows only its key and
+/// board; what the deletion removed is kept for restore only.
 /// </summary>
 public static class GetTicketHistory
 {
@@ -41,7 +42,7 @@ public static class GetTicketHistory
 
             var items = rows.Items.Select(r => new ActivityEntryDto(
                 r.Id, r.OccurredAt, TicketQueries.User(r.ActorId, r.ActorEmail, r.ActorName, r.ActorActive), r.Channel, r.Action, r.Field,
-                Parse(r.OldValue), Parse(r.NewValue))).ToList();
+                Parse(r.OldValue), r.Action == DeleteTicket.Action ? Deletion(r.NewValue) : Parse(r.NewValue))).ToList();
 
             items = await HideUnreadableLinksAsync(items, cancellationToken);
             var users = await ReferencedUsersAsync(items, cancellationToken);
@@ -91,6 +92,15 @@ public static class GetTicketHistory
             && Guid.TryParse(ticketId.GetString(), out var id)
                 ? id
                 : null;
+
+        private static JsonElement? Deletion(string? json)
+        {
+            if (Parse(json) is not { ValueKind: JsonValueKind.Object } value)
+                return null;
+            var key = value.TryGetProperty("key", out var k) && k.ValueKind == JsonValueKind.String ? k.GetString() : null;
+            Guid? boardId = value.TryGetProperty("boardId", out var b) && b.ValueKind == JsonValueKind.String && b.TryGetGuid(out var board) ? board : null;
+            return JsonSerializer.SerializeToElement(new { key, boardId }, JsonSerializerOptions.Web);
+        }
 
         private static JsonElement? Parse(string? json)
         {

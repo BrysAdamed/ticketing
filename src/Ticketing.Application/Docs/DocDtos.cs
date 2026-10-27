@@ -63,6 +63,12 @@ public sealed record DocDto(
 {
     /// <summary>Set when an older version was asked for: <see cref="Content"/> is then that version's; everything else describes the doc now.</summary>
     public DocVersionInfoDto? AtVersion { get; init; }
+
+    /// <summary>Canvas only: the labels and connector relations of <see cref="Content"/>, one per line (<c>API → DB</c>).</summary>
+    public string? Outline { get; init; }
+
+    /// <summary>Canvas only: where the SVG picture of the shown version is served; null while that version has none.</summary>
+    public string? SnapshotUrl { get; init; }
 }
 
 /// <summary>What the latest content mentions, resolved for the reader: tickets and docs the reader cannot read are left out.</summary>
@@ -80,9 +86,13 @@ public sealed record DocLinkReferenceDto(
 
 /// <summary>
 /// A diagram embedded with <c>![caption](KEY)</c> that the reader can read: <see cref="Content"/> is the Mermaid source
-/// (null for Canvas, whose snapshot is fetched by key and version).
+/// (null for Canvas, which embeds the picture at <see cref="SnapshotUrl"/>).
 /// </summary>
-public sealed record DocEmbedDto(Guid Id, string Key, string ProjectKey, string Title, DiagramFormat DiagramFormat, int Version, string? Content, string Url);
+public sealed record DocEmbedDto(Guid Id, string Key, string ProjectKey, string Title, DiagramFormat DiagramFormat, int Version, string? Content, string Url)
+{
+    /// <summary>Canvas only: the SVG picture of the latest version; null while it has none ("Preview not rendered yet").</summary>
+    public string? SnapshotUrl { get; init; }
+}
 
 /// <summary>Docs that mention a ticket or link to a doc, newest first; <see cref="Total"/> counts all of them, beyond the page.</summary>
 public sealed record DocMentionsDto(int Total, IReadOnlyList<DocSummaryDto> Items)
@@ -134,7 +144,11 @@ public sealed record DocVersionDto(
     UserRefDto Author,
     WriteChannel Channel,
     DateTimeOffset CreatedAt,
-    int? RestoredFrom);
+    int? RestoredFrom)
+{
+    /// <summary>Canvas only: where the SVG picture of this version is served; null while it has none.</summary>
+    public string? SnapshotUrl { get; init; }
+}
 
 public sealed record DocDraftDto(string DocKey, int BaseVersion, int CurrentVersion, string Title, string Content, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
 

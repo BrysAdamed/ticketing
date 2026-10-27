@@ -72,6 +72,8 @@ public sealed class DocNode
 
     public bool IsFolder => Kind == DocKind.Folder;
 
+    public bool IsCanvas => Kind == DocKind.Diagram && DiagramFormat == Docs.DiagramFormat.Canvas;
+
     public static DocNode CreateFolder(Guid projectId, int number, Guid? parentId, string rank, string title, Guid actorId, DateTimeOffset now) =>
         New(projectId, number, DocKind.Folder, null, parentId, rank, title, actorId, now);
 

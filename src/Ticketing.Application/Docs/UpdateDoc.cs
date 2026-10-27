@@ -30,6 +30,9 @@ public static class UpdateDoc
 
         public string? ChangeNote { get; init; }
 
+        /// <summary>Canvas only: the SVG picture of <see cref="Content"/>, stored with the version it publishes.</summary>
+        public string? Snapshot { get; init; }
+
         [JsonIgnore]
         public uint? ExpectedVersion { get; init; }
 
@@ -39,7 +42,9 @@ public static class UpdateDoc
                 validator
                     .Required("title", Title, DocNode.TitleMaxLength)
                     .Must(!Title.Contains('\n', StringComparison.Ordinal), "title", "title must be a single line.");
-            validator.MaxLength("changeNote", ChangeNote, DocNode.ChangeNoteMaxLength);
+            validator
+                .MaxLength("changeNote", ChangeNote, DocNode.ChangeNoteMaxLength)
+                .Must(Snapshot is null || Content is not null, "snapshot", "snapshot is only sent together with content.");
         }
     }
 
@@ -81,9 +86,15 @@ public static class UpdateDoc
             {
                 var content = DocContent.Normalize(command.Content, node.Kind, node.DiagramFormat);
                 if (string.Equals(content, node.Content, StringComparison.Ordinal))
+                {
                     await publisher.DiscardMyDraftAsync(node.Id, cancellationToken);
+                    if (command.Snapshot is not null && node.IsCanvas)
+                        await publisher.AttachSnapshotAsync(node.Id, node.CurrentVersion, command.Snapshot, cancellationToken);
+                }
                 else
-                    await publisher.PublishAsync(node, content, command.ChangeNote, null, cancellationToken);
+                {
+                    await publisher.PublishAsync(node, content, command.ChangeNote, null, command.Snapshot, cancellationToken);
+                }
             }
 
             await DocTree.SaveAsync(db, node.Title, cancellationToken);

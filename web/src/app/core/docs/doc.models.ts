@@ -94,6 +94,10 @@ export interface Doc {
   references: DocReferences;
   embeds: DocEmbed[];
   backlinks: DocMentions;
+  /// Canvas only: labels and arrows of the content, one per line (`API → DB`).
+  outline?: string | null;
+  /// Canvas only: the SVG picture of the shown version; null while it has none (written over MCP).
+  snapshotUrl?: string | null;
 }
 
 /// A mentioned ticket the reader may see (what a ticket chip shows).
@@ -125,7 +129,7 @@ export interface DocReferences {
 }
 
 /// A diagram embedded with `![caption](KEY)` that the reader may see; `content` is the Mermaid
-/// source (null for Canvas, whose snapshot is fetched by key and version).
+/// source (null for Canvas, which shows the picture at `snapshotUrl`, null until it is rendered).
 export interface DocEmbed {
   id: string;
   key: string;
@@ -135,6 +139,7 @@ export interface DocEmbed {
   version: number;
   content: string | null;
   url: string;
+  snapshotUrl?: string | null;
 }
 
 /// Docs that mention a ticket or link to a doc, newest first; `total` counts beyond the page.
@@ -230,6 +235,8 @@ export interface UpdateDoc {
   content?: string;
   baseVersion?: number;
   changeNote?: string | null;
+  /// Canvas only, with `content`: its SVG picture, stored with the version.
+  snapshot?: string;
 }
 
 export type WriteChannel = 'Web' | 'Api' | 'Mcp';
@@ -245,7 +252,21 @@ export interface DocVersion {
   channel: WriteChannel;
   createdAt: string;
   restoredFrom: number | null;
+  /// Canvas only: the SVG picture of this version; null while it has none.
+  snapshotUrl?: string | null;
 }
+
+/// `PUT /docs/{key}/versions/{n}/snapshot`: `stored` is false when the version already had one.
+export interface StoredDocSnapshot {
+  docKey: string;
+  version: number;
+  stored: boolean;
+  snapshotUrl: string;
+}
+
+/// Most characters a Canvas diagram's source may hold, and most elements (spec 12.2, 1.8).
+export const CANVAS_SOURCE_MAX_LENGTH = 2_000_000;
+export const CANVAS_MAX_ELEMENTS = 10_000;
 
 /// A file attached to a page (`GET /docs/{key}/attachments`); pasted images embed `url`.
 export interface DocAttachment {

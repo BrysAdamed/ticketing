@@ -39,9 +39,19 @@ public sealed class DocVersion
     /// <summary>Lines removed compared with the previous version; null like <see cref="LinesAdded"/>.</summary>
     public int? LinesRemoved { get; private set; }
 
-    /// <summary>Snapshots <paramref name="node"/>'s current version, title and content; <paramref name="previousContent"/> is the content of the version before it (null for version 1).</summary>
+    /// <summary>
+    /// Canvas only: the light SVG picture of this version (<see cref="CanvasSnapshot"/>). Null until a client exported it, for
+    /// example for versions written over MCP; it is filled once and never replaced.
+    /// </summary>
+    public string? SnapshotSvg { get; private set; }
+
+    /// <summary>
+    /// Snapshots <paramref name="node"/>'s current version, title and content (and the Canvas picture, if any);
+    /// <paramref name="previousContent"/> is the content of the version before it (null for version 1).
+    /// </summary>
     public static DocVersion Snapshot(
-        DocNode node, string? previousContent, string? changeNote, Guid authorId, WriteChannel channel, DateTimeOffset now, int? restoredFrom = null)
+        DocNode node, string? previousContent, string? changeNote, Guid authorId, WriteChannel channel, DateTimeOffset now, int? restoredFrom = null,
+        string? snapshotSvg = null)
     {
         node.EnsureHasContent();
         DocLineChanges? changes = node.DiagramFormat == DiagramFormat.Canvas ? null : DocLineDiff.Count(previousContent, node.Content);
@@ -59,6 +69,7 @@ public sealed class DocVersion
             RestoredFrom = restoredFrom,
             LinesAdded = changes?.Added,
             LinesRemoved = changes?.Removed,
+            SnapshotSvg = snapshotSvg,
         };
     }
 }

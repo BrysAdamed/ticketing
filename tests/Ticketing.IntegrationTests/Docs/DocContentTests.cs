@@ -94,7 +94,7 @@ public sealed class DocContentTests(TicketingApiFactory api)
         var client = await api.LoginAsync(await api.CreateUserAsync());
         await client.CreateProjectAsync("EDT");
         var page = await client.CreatePageAsync("EDT", "Page", content: "alpha beta\r\nbeta gamma");
-        var canvas = await client.CreateDocAsync("EDT", new { kind = "Diagram", diagramFormat = "Canvas", title = "Board", content = "{}" });
+        var canvas = await client.CreateDocAsync("EDT", new { kind = "Diagram", diagramFormat = "Canvas", title = "Board", content = """{"type":"excalidraw","elements":[]}""" });
 
         // Act
         var noMatch = await Edits(client, page.Key, new { oldText = "alpha", newText = "A" }, new { oldText = "delta", newText = "D" });

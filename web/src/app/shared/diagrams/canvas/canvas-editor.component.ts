@@ -22,11 +22,14 @@ import { ExcalidrawRuntime, loadExcalidraw } from './excalidraw-loader';
 import { exportSceneSvg } from './canvas-export';
 
 type InitialData = NonNullable<ExcalidrawProps['initialData']>;
+type ClipboardData = Parameters<NonNullable<ExcalidrawProps['onPaste']>>[0];
 
 /// The Canvas editor: Excalidraw mounted as a lazily loaded React island (ADR 0013). `source` is
 /// the scene to load; setting a different value reloads the editor (load a version, discard), so
 /// do not feed the editor's own output back into it. `changed` fires when the drawing changes;
-/// read the result with `serialize()` and the light SVG snapshot with `exportSvg()`.
+/// read the result with `serialize()` and the light SVG snapshot with `exportSvg()`. Images are
+/// not allowed in v1: pasting or dropping one is refused and reported by `imageRefused`. App
+/// shortcuts stay quiet while focus is inside (Excalidraw owns single-key tools).
 @Component({
   selector: 'tk-canvas-editor',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -42,7 +45,10 @@ type InitialData = NonNullable<ExcalidrawProps['initialData']>;
       inset: 0;
     }
   `,
-  host: { '[attr.aria-busy]': '!ready()' },
+  host: {
+    '[attr.aria-busy]': '!ready()',
+    'data-own-keys': '',
+  },
 })
 export class CanvasEditorComponent {
   private readonly document = inject(DOCUMENT);
@@ -54,6 +60,7 @@ export class CanvasEditorComponent {
   readonly readOnly = input(false);
   readonly changed = output<void>();
   readonly loadFailed = output<unknown>();
+  readonly imageRefused = output<void>();
 
   readonly ready = signal(false);
 
@@ -95,7 +102,26 @@ export class CanvasEditorComponent {
     });
   }
 
+  private refuseFileDrop(event: DragEvent): void {
+    if (!event.dataTransfer?.types.includes('Files')) return;
+    event.preventDefault();
+    event.stopPropagation();
+    this.imageRefused.emit();
+  }
+
+  private refusePaste(data: ClipboardData, event: ClipboardEvent | null): boolean {
+    const files = event?.clipboardData?.files.length ?? 0;
+    const pastedFiles = Object.keys(data.files ?? {}).length;
+    const images = (data.elements ?? []).some((element) => element.type === 'image');
+    if (files === 0 && pastedFiles === 0 && !images) return true;
+    this.imageRefused.emit();
+    return false;
+  }
+
   private async mount(): Promise<void> {
+    this.host().nativeElement.addEventListener('drop', (event) => this.refuseFileDrop(event), {
+      capture: true,
+    });
     try {
       this.runtime = await loadExcalidraw(this.document);
       if (this.destroyed) return;
@@ -132,6 +158,7 @@ export class CanvasEditorComponent {
       viewModeEnabled: readOnly,
       aiEnabled: false,
       validateEmbeddable: () => false,
+      onPaste: (data, event) => this.refusePaste(data, event),
       UIOptions: {
         canvasActions: {
           loadScene: false,

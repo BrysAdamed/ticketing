@@ -27,6 +27,7 @@ public static class CreateDoc
         string? Content = null,
         DiagramFormat? DiagramFormat = null,
         string? ChangeNote = null,
+        string? Snapshot = null,
         [property: JsonIgnore] string ProjectKeyOrId = "",
         [property: JsonIgnore] string? IdempotencyKey = null) : IValidatable
     {
@@ -41,7 +42,8 @@ public static class CreateDoc
                 .MaxLength("changeNote", ChangeNote, DocNode.ChangeNoteMaxLength)
                 .Must(Kind != DocKind.Folder || Content is null, "content", "Folders have no content.")
                 .Must(Kind != DocKind.Diagram || DiagramFormat is not null, "diagramFormat", "diagramFormat is required for diagrams (Mermaid or Canvas).")
-                .Must(Kind == DocKind.Diagram || DiagramFormat is null, "diagramFormat", "diagramFormat is only allowed for diagrams.");
+                .Must(Kind == DocKind.Diagram || DiagramFormat is null, "diagramFormat", "diagramFormat is only allowed for diagrams.")
+                .Must(Snapshot is null || DiagramFormat == Domain.Docs.DiagramFormat.Canvas, "snapshot", "snapshot is only for Canvas diagrams.");
             Placement.Validate(validator);
         }
     }
@@ -90,7 +92,7 @@ public static class CreateDoc
                 : DocNode.CreateDocument(grant.ProjectId, number, kind, command.DiagramFormat, parentId, rank, title, command.Content, currentUser.Id, now);
             db.DocNodes.Add(node);
             if (!node.IsFolder)
-                await publisher.AddInitialVersionAsync(node, command.ChangeNote, cancellationToken);
+                await publisher.AddInitialVersionAsync(node, command.ChangeNote, command.Snapshot, cancellationToken);
             activity.Record(ActivityEntityType.Doc, node.Id, grant.ProjectId, Action, new
             {
                 key = node.KeyIn(grant.ProjectKey),

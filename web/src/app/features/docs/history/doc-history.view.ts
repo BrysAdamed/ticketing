@@ -41,6 +41,8 @@ import {
   SegmentedControlComponent,
   SegmentOption,
 } from '@shared/ui/segmented/segmented-control.component';
+import { CanvasPictureComponent } from '../diagram/canvas/canvas-picture.component';
+import { DiagramSource } from '../diagram/diagram-renderers';
 import { DOCS_ICONS } from '../docs-icons';
 import { DiffFold, DiffLine, diffDocs, DocDiff, toSplitRows } from './doc-diff';
 import { DocHistoryStore } from './doc-history.store';
@@ -80,6 +82,7 @@ export const DOC_DIFF_MEASURE = 'tk-doc-diff';
     AbsoluteTimePipe,
     SegmentedControlComponent,
     DocVersionContentComponent,
+    CanvasPictureComponent,
   ],
   providers: [DocHistoryStore, DocRestoreAction],
   viewProviders: [
@@ -214,6 +217,9 @@ export class DocHistoryView {
     });
   }
 
+  protected readonly fromPicture = computed(() => pictureOf(this.from()));
+  protected readonly toPicture = computed(() => pictureOf(this.to()));
+
   protected isSelected(item: DocHistoryItem): boolean {
     return item.version === this.selected();
   }
@@ -296,6 +302,17 @@ export class DocHistoryView {
       this.versionError.set(true);
     }
   }
+}
+
+function pictureOf(version: DocVersion | null): DiagramSource | null {
+  return version
+    ? {
+        key: version.docKey,
+        version: version.number,
+        content: version.content,
+        snapshotUrl: version.snapshotUrl,
+      }
+    : null;
 }
 
 function readLayout(): DiffLayout {

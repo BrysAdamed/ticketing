@@ -71,6 +71,7 @@ export class DocVersionContentComponent {
       ...this.doc(),
       title: version.title,
       content: version.content,
+      snapshotUrl: version.snapshotUrl ?? null,
       version: version.number,
       updatedBy: version.author,
       updatedAt: version.createdAt,

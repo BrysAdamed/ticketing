@@ -1,4 +1,3 @@
-using System.Text;
 using System.Text.Json;
 
 namespace Ticketing.Domain.Docs;
@@ -39,17 +38,9 @@ public sealed record CanvasOutline(IReadOnlyList<string> Labels, IReadOnlyList<C
     }
 
     /// <summary>Labels, then relations, one per line: the plain-text form used for the search index.</summary>
-    public string ToText()
-    {
-        var text = new StringBuilder();
-        foreach (var label in Labels)
-            text.AppendLine(label);
-        foreach (var relation in Relations)
-            text.AppendLine(relation.ToString());
-        return text.ToString().TrimEnd();
-    }
+    public string ToText() => string.Join('\n', Labels.Concat(Relations.Select(r => r.ToString())));
 
-    private static CanvasOutline FromElements(JsonElement elements)
+    internal static CanvasOutline FromElements(JsonElement elements)
     {
         var live = elements.EnumerateArray()
             .Where(e => e.ValueKind == JsonValueKind.Object && !Bool(e, "isDeleted") && Str(e, "id") is not null)

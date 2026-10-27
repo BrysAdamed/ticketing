@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Ticketing.Application.Abstractions;
 using Ticketing.Domain.Activity;
+using Ticketing.Domain.Common;
 using Ticketing.Domain.Docs;
 
 namespace Ticketing.Application.Docs;
@@ -17,12 +18,18 @@ public sealed class DocPublisher(ITicketingDbContext db, ICurrentUser currentUse
     public const string UpdatedAction = "doc.updated";
     public const string VersionRestoredAction = "doc.version.restored";
 
-    /// <summary>Publishes <paramref name="content"/> as the next version of a tracked, row-locked node.</summary>
-    public async Task PublishAsync(DocNode node, string? content, string? changeNote, int? restoredFrom, CancellationToken cancellationToken)
+    /// <summary>
+    /// Publishes <paramref name="content"/> as the next version of a tracked, row-locked node. A Canvas source is validated
+    /// (<see cref="CanvasSource"/>) and its outline stored; <paramref name="snapshotSvg"/> is the Canvas picture of exactly this
+    /// content (Canvas only, optional).
+    /// </summary>
+    public async Task PublishAsync(
+        DocNode node, string? content, string? changeNote, int? restoredFrom, string? snapshotSvg, CancellationToken cancellationToken)
     {
         var previousContent = node.Content;
         node.Publish(content, currentUser.Id, clock.Now);
-        db.DocVersions.Add(DocVersion.Snapshot(node, previousContent, changeNote, currentUser.Id, currentUser.Channel, clock.Now, restoredFrom));
+        var snapshot = ApplyDiagramRules(node, snapshotSvg);
+        db.DocVersions.Add(DocVersion.Snapshot(node, previousContent, changeNote, currentUser.Id, currentUser.Channel, clock.Now, restoredFrom, snapshot));
         await IndexReferencesAsync(node, isNew: false, cancellationToken);
         if (restoredFrom is null)
         {
@@ -35,11 +42,38 @@ public sealed class DocPublisher(ITicketingDbContext db, ICurrentUser currentUse
         }
     }
 
-    /// <summary>Snapshots version 1 of a node just created with its content and indexes its references.</summary>
-    public async Task AddInitialVersionAsync(DocNode node, string? changeNote, CancellationToken cancellationToken)
+    /// <summary>Snapshots version 1 of a node just created with its content (Canvas: validated, with outline and optional picture) and indexes its references.</summary>
+    public async Task AddInitialVersionAsync(DocNode node, string? changeNote, string? snapshotSvg, CancellationToken cancellationToken)
     {
-        db.DocVersions.Add(DocVersion.Snapshot(node, null, changeNote, currentUser.Id, currentUser.Channel, clock.Now));
+        var snapshot = ApplyDiagramRules(node, snapshotSvg);
+        db.DocVersions.Add(DocVersion.Snapshot(node, null, changeNote, currentUser.Id, currentUser.Channel, clock.Now, snapshotSvg: snapshot));
         await IndexReferencesAsync(node, isNew: true, cancellationToken);
+    }
+
+    /// <summary>
+    /// Stores the Canvas picture of version <paramref name="number"/> when it has none yet (versions written over MCP), without
+    /// creating a version; the first picture stored wins. Returns false when the version already had one.
+    /// </summary>
+    public async Task<bool> AttachSnapshotAsync(Guid nodeId, int number, string snapshotSvg, CancellationToken cancellationToken)
+    {
+        var svg = CanvasSnapshot.Normalize(snapshotSvg);
+        var updated = await db.DocVersions
+            .Where(v => v.NodeId == nodeId && v.Number == number && v.SnapshotSvg == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(v => v.SnapshotSvg, svg), cancellationToken);
+        return updated > 0;
+    }
+
+    /// <summary>Canvas: validates the source, stores the outline and checks the picture. Other kinds take no picture.</summary>
+    private static string? ApplyDiagramRules(DocNode node, string? snapshotSvg)
+    {
+        if (!node.IsCanvas)
+        {
+            if (snapshotSvg is not null)
+                throw DomainException.Invalid("snapshot", DocErrors.KindUnsupported, "Only Canvas diagrams have a snapshot.");
+            return null;
+        }
+        node.SetOutline(CanvasSource.Validate(node.Content).ToText());
+        return snapshotSvg is null ? null : CanvasSnapshot.Normalize(snapshotSvg);
     }
 
     public Task<int> DiscardMyDraftAsync(Guid nodeId, CancellationToken cancellationToken)

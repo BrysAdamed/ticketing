@@ -12,7 +12,7 @@ interface ConflictLine {
 }
 
 /// Overlapping concurrent edits (spec 1.7): the latest published text ("Theirs") and mine side by
-/// side with the clashing lines marked, and the three ways out.
+/// side with the clashing lines marked, and the three ways out (two for drawings).
 @Component({
   selector: 'tk-doc-conflict',
   imports: [MatButtonModule, IconComponent, RelativeTimePipe],
@@ -26,14 +26,26 @@ interface ConflictLine {
         <p>
           {{ conflict().theirs.updatedBy.displayName }} published
           {{ conflict().theirs.updatedAt | relativeTime }} while you were editing.
-          {{ conflict().regions.length }}
-          {{ conflict().regions.length === 1 ? 'part clashes' : 'parts clash' }}; nothing is lost.
+          @if (textual()) {
+            {{ conflict().regions.length }}
+            {{ conflict().regions.length === 1 ? 'part clashes' : 'parts clash' }}; nothing is lost.
+          } @else {
+            Drawings can't be merged: publish yours over theirs (theirs stays in history) or discard
+            yours.
+          }
         </p>
       </div>
       <div class="actions">
-        <button mat-stroked-button type="button" data-testid="conflict-keep" (click)="keep.emit()">
-          Keep editing on latest
-        </button>
+        @if (textual()) {
+          <button
+            mat-stroked-button
+            type="button"
+            data-testid="conflict-keep"
+            (click)="keep.emit()"
+          >
+            Keep editing on latest
+          </button>
+        }
         <button
           mat-stroked-button
           type="button"
@@ -51,17 +63,25 @@ interface ConflictLine {
     <div class="panes">
       <section aria-label="Theirs">
         <div class="label">Theirs (v{{ conflict().theirs.version }})</div>
-        <pre
-          data-testid="conflict-theirs"
-        >@for (line of theirs(); track line.number) {<span class="ln" [class.clash]="line.clash"><i>{{ line.number }}</i>{{ line.text }}
+        @if (textual()) {
+          <pre
+            data-testid="conflict-theirs"
+          >@for (line of theirs(); track line.number) {<span class="ln" [class.clash]="line.clash"><i>{{ line.number }}</i>{{ line.text }}
 </span>}</pre>
+        } @else {
+          <div class="rendered" data-testid="conflict-theirs"><ng-content select="[theirs]" /></div>
+        }
       </section>
       <section aria-label="Mine">
         <div class="label">Mine</div>
-        <pre
-          data-testid="conflict-mine"
-        >@for (line of mine(); track line.number) {<span class="ln" [class.clash]="line.clash"><i>{{ line.number }}</i>{{ line.text }}
+        @if (textual()) {
+          <pre
+            data-testid="conflict-mine"
+          >@for (line of mine(); track line.number) {<span class="ln" [class.clash]="line.clash"><i>{{ line.number }}</i>{{ line.text }}
 </span>}</pre>
+        } @else {
+          <div class="rendered" data-testid="conflict-mine"><ng-content select="[mine]" /></div>
+        }
       </section>
     </div>
   `,
@@ -142,6 +162,12 @@ interface ConflictLine {
       white-space: pre-wrap;
       word-break: break-word;
     }
+    .rendered {
+      flex: 1;
+      min-height: 0;
+      position: relative;
+      background: var(--tk-bg-subtle);
+    }
     .ln {
       display: block;
       padding: 0 16px 0 52px;
@@ -165,6 +191,9 @@ interface ConflictLine {
 export class DocConflictComponent {
   readonly conflict = input.required<EditConflict>();
   readonly busy = input(false);
+  /// False for formats without a text merge (Canvas): no "Keep editing on latest", and the panes
+  /// show the projected `[theirs]` and `[mine]` renderings instead of numbered lines.
+  readonly textual = input(true);
 
   readonly keep = output();
   readonly overwrite = output();

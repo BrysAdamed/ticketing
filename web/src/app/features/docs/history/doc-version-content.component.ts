@@ -30,6 +30,8 @@ import { DocMarkdownComponent } from '../page/doc-markdown.component';
           data-testid="doc-version-content"
           [source]="version().content"
           [docKey]="doc().key"
+          [references]="version().references"
+          [embeds]="version().embeds"
         />
       } @else {
         <p class="empty">This version is empty.</p>
@@ -78,6 +80,8 @@ export class DocVersionContentComponent {
       permissions: { canEdit: false, canDelete: false },
       editors: [],
       myDraft: null,
+      references: version.references,
+      embeds: version.embeds,
     };
   });
 

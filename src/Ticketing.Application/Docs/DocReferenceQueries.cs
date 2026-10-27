@@ -4,6 +4,7 @@ using Ticketing.Application.Access;
 using Ticketing.Application.Tickets;
 using Ticketing.Domain.Common;
 using Ticketing.Domain.Docs;
+using Ticketing.Domain.Tickets;
 
 namespace Ticketing.Application.Docs;
 
@@ -16,6 +17,7 @@ public static class DocReferenceQueries
 {
     public const int DocBacklinksLimit = 50;
 
+    /// <summary>What the latest content of a doc mentions and embeds, read from the index.</summary>
     public static async Task<(DocReferencesDto References, IReadOnlyList<DocEmbedDto> Embeds)> ReferencesAsync(
         ITicketingDbContext db, IProjectAccess access, Guid nodeId, string? content, DocKind kind, DiagramFormat? format, CancellationToken cancellationToken)
     {
@@ -30,7 +32,7 @@ public static class DocReferenceQueries
                 where t.DeletedAt == null && readable.Any(p => p.Id == t.ProjectId)
                 join p in db.Projects on t.ProjectId equals p.Id
                 orderby p.Key, t.Number
-                select new { t.Id, ProjectKey = p.Key, t.Number, t.Title, t.Type, t.Status })
+                select new TicketRow(t.Id, p.Key, t.Number, t.Title, t.Type, t.Status))
             .ToListAsync(cancellationToken);
         var docs = await (
                 from r in db.DocReferences.AsNoTracking()
@@ -39,10 +41,60 @@ public static class DocReferenceQueries
                 where readable.Any(p => p.Id == n.ProjectId)
                 join p in db.Projects on n.ProjectId equals p.Id
                 orderby p.Key, n.Number
-                select new { n.Id, ProjectKey = p.Key, n.Number, n.Kind, n.DiagramFormat, n.Title, n.CurrentVersion, Deleted = n.DeletedAt != null })
+                select new DocRow(n.Id, p.Key, n.Number, n.Kind, n.DiagramFormat, n.Title, n.CurrentVersion, n.DeletedAt != null))
             .ToListAsync(cancellationToken);
+        return await BuildAsync(db, tickets, docs, DocReferenceParser.Parse(content, kind, format).Embeds, cancellationToken);
+    }
 
-        var references = new DocReferencesDto(
+    /// <summary>
+    /// What some content of a doc mentions and embeds, resolved from the content itself rather than the index (which covers only
+    /// the latest version): the references of an older version. Same rules as the index and the same readable-project filter.
+    /// </summary>
+    public static async Task<(DocReferencesDto References, IReadOnlyList<DocEmbedDto> Embeds)> ReferencesOfContentAsync(
+        ITicketingDbContext db, IProjectAccess access, Guid nodeId, string? content, DocKind kind, DiagramFormat? format, CancellationToken cancellationToken)
+    {
+        var keys = DocReferenceParser.Parse(content, kind, format);
+        if (keys.Tickets.Count == 0 && keys.Docs.Count == 0)
+            return (DocReferencesDto.Empty, []);
+
+        var readable = access.ReadableProjects();
+        var projectKeys = keys.Tickets.Concat(keys.Docs).Select(k => k.ProjectKey).Distinct().ToList();
+        List<TicketRow> tickets = [];
+        if (keys.Tickets.Count > 0)
+        {
+            var numbers = keys.Tickets.Select(k => k.Number).Distinct().ToList();
+            var wanted = keys.Tickets.ToHashSet();
+            tickets = [.. (await (
+                    from t in db.Tickets.AsNoTracking()
+                    where t.DeletedAt == null && numbers.Contains(t.Number)
+                    join p in db.Projects on t.ProjectId equals p.Id
+                    where projectKeys.Contains(p.Key) && readable.Any(r => r.Id == p.Id)
+                    orderby p.Key, t.Number
+                    select new TicketRow(t.Id, p.Key, t.Number, t.Title, t.Type, t.Status))
+                .ToListAsync(cancellationToken))
+                .Where(t => wanted.Contains(new DocKeyReference(t.ProjectKey, t.Number)))];
+        }
+        List<DocRow> docs = [];
+        if (keys.Docs.Count > 0)
+        {
+            var numbers = keys.Docs.Select(k => k.Number).Distinct().ToList();
+            var wanted = keys.Docs.ToHashSet();
+            docs = [.. (await (
+                    from n in db.DocNodes.AsNoTracking()
+                    where n.Id != nodeId && numbers.Contains(n.Number)
+                    join p in db.Projects on n.ProjectId equals p.Id
+                    where projectKeys.Contains(p.Key) && readable.Any(r => r.Id == p.Id)
+                    orderby p.Key, n.Number
+                    select new DocRow(n.Id, p.Key, n.Number, n.Kind, n.DiagramFormat, n.Title, n.CurrentVersion, n.DeletedAt != null))
+                .ToListAsync(cancellationToken))
+                .Where(d => wanted.Contains(new DocKeyReference(d.ProjectKey, d.Number)))];
+        }
+        return await BuildAsync(db, tickets, docs, keys.Embeds, cancellationToken);
+    }
+
+    private static async Task<(DocReferencesDto References, IReadOnlyList<DocEmbedDto> Embeds)> BuildAsync(
+        ITicketingDbContext db, List<TicketRow> tickets, List<DocRow> docs, IReadOnlyList<DocKeyReference> embedKeys, CancellationToken cancellationToken)
+    {        var references = new DocReferencesDto(
             [.. tickets.Select(t =>
             {
                 var key = HumanKeys.Ticket(t.ProjectKey, t.Number);
@@ -56,7 +108,6 @@ public static class DocReferenceQueries
                     : new DocLinkReferenceDto(d.Id, key, d.ProjectKey, d.Kind, d.DiagramFormat, d.Title, false, DocQueries.Url(d.ProjectKey, key, d.Title));
             })]);
 
-        var embedKeys = DocReferenceParser.Parse(content, kind, format).Embeds;
         if (embedKeys.Count == 0)
             return (references, []);
         var diagrams = docs
@@ -131,4 +182,9 @@ public static class DocReferenceQueries
                 new UserRefDto(r.UserId, r.Email, r.DisplayName, r.IsActive), r.UpdatedAt, DocQueries.Url(r.ProjectKey, key, r.Title));
         })]);
     }
+
+    private sealed record TicketRow(Guid Id, string ProjectKey, int Number, string Title, TicketType Type, TicketStatus Status);
+
+    private sealed record DocRow(
+        Guid Id, string ProjectKey, int Number, DocKind Kind, DiagramFormat? DiagramFormat, string Title, int CurrentVersion, bool Deleted);
 }

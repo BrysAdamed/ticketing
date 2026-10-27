@@ -8,7 +8,10 @@ using Ticketing.Domain.Docs;
 
 namespace Ticketing.Application.Docs;
 
-/// <summary>One published version of a page or diagram with its full content (the base of a 3-way merge, history views).</summary>
+/// <summary>
+/// One published version of a page or diagram with its full content (the base of a 3-way merge, history views) and what that
+/// content mentions and embeds, resolved for the reader.
+/// </summary>
 public static class GetDocVersion
 {
     public sealed record Query(string KeyOrId, int Number);
@@ -18,7 +21,12 @@ public static class GetDocVersion
         public async Task<DocVersionDto> HandleAsync(Query request, CancellationToken cancellationToken)
         {
             var target = await DocLookup.ReadAsync(db, access, request.KeyOrId, cancellationToken);
-            return await LoadAsync(db, target, request.Number, cancellationToken);
+            var version = await LoadAsync(db, target, request.Number, cancellationToken);
+            var nodeId = target.Id;
+            var format = await db.DocNodes.AsNoTracking().Where(n => n.Id == nodeId).Select(n => n.DiagramFormat).SingleAsync(cancellationToken);
+            var (references, embeds) = await DocReferenceQueries.ReferencesOfContentAsync(
+                db, access, nodeId, version.Content, target.Kind, format, cancellationToken);
+            return version with { References = references, Embeds = embeds };
         }
     }
 

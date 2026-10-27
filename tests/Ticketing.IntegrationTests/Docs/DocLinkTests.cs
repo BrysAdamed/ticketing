@@ -186,6 +186,79 @@ public sealed class DocLinkTests(TicketingApiFactory api)
     }
 
     [Fact]
+    public async Task An_older_version_resolves_its_own_references_and_embeds_not_the_latest_ones()
+    {
+        // Arrange
+        var client = await api.LoginAsync(await api.CreateUserAsync());
+        await client.CreateProjectAsync("LNV");
+        var oldTicket = await client.CreateTicketAsync("LNV", "First approach");
+        var newTicket = await client.CreateTicketAsync("LNV", "Second approach");
+        var flow = await client.CreateDiagramAsync("LNV", "Old flow", "Mermaid", "flowchart LR\n  A --> B");
+        var page = await client.CreatePageAsync("LNV", "Design", content: $"Tracked in {oldTicket.Key}.\n\n![Flow]({flow.Key})\n\n`{newTicket.Key}` is code.");
+        (await client.PatchDocAsync(page.Key, new { content = $"Now tracked in {newTicket.Key} and {page.Key}.", baseVersion = 1 })).EnsureSuccessStatusCode();
+
+        // Act
+        var latest = await client.GetDocAsync(page.Key);
+        var atV1 = await (await client.GetAsync($"/api/v1/docs/{page.Key}?version=1", _ct)).ReadAsync<DocDto>();
+        var v1 = await (await client.GetAsync($"/api/v1/docs/{page.Key}/versions/1", _ct)).ReadAsync<DocVersionDto>();
+        var v2 = await (await client.GetAsync($"/api/v1/docs/{page.Key}/versions/2", _ct)).ReadAsync<DocVersionDto>();
+
+        // Assert
+        Assert.Equal([newTicket.Key], latest.References.Tickets.Select(t => t.Key));
+        Assert.Empty(latest.Embeds);
+        foreach (var (references, embeds) in new[] { (atV1.References, atV1.Embeds), (v1.References, v1.Embeds) })
+        {
+            Assert.Equal([oldTicket.Key], references.Tickets.Select(t => t.Key));
+            Assert.Equal([flow.Key], references.Docs.Select(d => d.Key));
+            var embed = Assert.Single(embeds);
+            Assert.Equal((flow.Key, "flowchart LR\n  A --> B"), (embed.Key, embed.Content));
+        }
+        Assert.Equal([newTicket.Key], v2.References.Tickets.Select(t => t.Key));
+        Assert.Empty(v2.References.Docs);
+        Assert.Equal(1, await api.WithDbAsync(db => db.DocReferences.CountAsync(r => r.SourceNodeId == page.Id, _ct)));
+    }
+
+    [Fact]
+    public async Task Outsiders_never_see_private_references_or_embeds_of_an_older_version()
+    {
+        // Arrange
+        var ownerUser = await api.CreateUserAsync();
+        var outsiderUser = await api.CreateUserAsync();
+        var owner = await api.LoginAsync(ownerUser);
+        await owner.CreateProjectAsync("LNVP", ProjectVisibility.Public);
+        await owner.CreateProjectAsync("LNVS");
+        var publicTicket = await owner.CreateTicketAsync("LNVP", "Open ticket");
+        var privateTicket = await owner.CreateTicketAsync("LNVS", "Confidential merger");
+        var privateDiagram = await owner.CreateDiagramAsync("LNVS", "Secret topology", "Mermaid", "flowchart LR\n  Vault --> Bank");
+        var page = await owner.CreatePageAsync("LNVP", "Public notes", content:
+            $"Mentions {publicTicket.Key} and {privateTicket.Key}.\n\n![Topology]({privateDiagram.Key})");
+        (await owner.PatchDocAsync(page.Key, new { content = "Nothing to see.", baseVersion = 1 })).EnsureSuccessStatusCode();
+        var outsider = await api.LoginAsync(outsiderUser);
+        await using var mcp = await api.CreateMcpClientAsync(await api.CreatePatAsync(outsiderUser));
+
+        // Act
+        var rawDoc = await (await outsider.GetAsync($"/api/v1/docs/{page.Key}?version=1", _ct)).Content.ReadAsStringAsync(_ct);
+        var version = await (await outsider.GetAsync($"/api/v1/docs/{page.Key}/versions/1", _ct)).ReadAsync<DocVersionDto>();
+        var rawVersion = await (await outsider.GetAsync($"/api/v1/docs/{page.Key}/versions/1", _ct)).Content.ReadAsStringAsync(_ct);
+        var mcpDoc = await CallAsync(mcp, "get_doc", new() { ["docKey"] = page.Key, ["version"] = 1 });
+        var asOwner = await (await owner.GetAsync($"/api/v1/docs/{page.Key}/versions/1", _ct)).ReadAsync<DocVersionDto>();
+
+        // Assert
+        Assert.Equal([publicTicket.Key], version.References.Tickets.Select(t => t.Key));
+        Assert.Empty(version.References.Docs);
+        Assert.Empty(version.Embeds);
+        foreach (var raw in new[] { rawDoc, rawVersion, mcpDoc.GetRawText() })
+        {
+            Assert.DoesNotContain("Confidential", raw, StringComparison.Ordinal);
+            Assert.DoesNotContain("Secret", raw, StringComparison.Ordinal);
+            Assert.DoesNotContain("Vault", raw, StringComparison.Ordinal);
+        }
+        Assert.Equal([publicTicket.Key], mcpDoc.GetProperty("references").GetProperty("tickets").EnumerateArray().Select(t => t.GetProperty("key").GetString()));
+        Assert.Equal(new[] { publicTicket.Key, privateTicket.Key }.Order(StringComparer.Ordinal), asOwner.References.Tickets.Select(t => t.Key).Order(StringComparer.Ordinal));
+        Assert.Equal([privateDiagram.Key], asOwner.Embeds.Select(e => e.Key));
+    }
+
+    [Fact]
     public async Task The_rest_ticket_read_leaves_docs_out_unless_asked()
     {
         // Arrange

@@ -8,6 +8,8 @@ import {
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { Router, RouterLink } from '@angular/router';
+import { provideIcons } from '@ng-icons/core';
+import { tablerEye } from '@ng-icons/tabler-icons';
 import { PeekService } from '@core/layout/peek/peek';
 import { ShortcutService } from '@core/shortcuts/shortcut.service';
 import { TicketCache } from '@core/tickets/ticket-cache';
@@ -17,7 +19,7 @@ import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.componen
 import { IconComponent } from '@shared/ui/icon/icon.component';
 import { SkeletonRowsComponent } from '@shared/ui/skeleton/skeleton-rows.component';
 import { TicketRowComponent } from '@shared/ui/ticket-row/ticket-row.component';
-import { MyWorkStore, REGRESSIONS_GROUP } from './my-work.store';
+import { MyWorkStore, REGRESSIONS_GROUP, WATCHING_GROUP } from './my-work.store';
 
 const PEEK_FOLLOW_MS = 120;
 
@@ -35,6 +37,7 @@ const PEEK_FOLLOW_MS = 120;
     TicketRowComponent,
   ],
   providers: [MyWorkStore],
+  viewProviders: [provideIcons({ tablerEye })],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'tk-page', 'data-testid': 'view-my-work.list' },
   template: `
@@ -72,7 +75,7 @@ const PEEK_FOLLOW_MS = 120;
       <tk-empty-state
         icon="tablerInbox"
         title="Nothing assigned to you"
-        description="Open tickets assigned to you and your waiting regression tests show up here."
+        description="Open tickets assigned to you or watched by you, and your waiting regression tests show up here."
       >
         <a mat-stroked-button routerLink="/projects">Browse projects</a>
       </tk-empty-state>
@@ -171,6 +174,39 @@ const PEEK_FOLLOW_MS = 120;
             }
           }
         }
+
+        @if (store.watching().length) {
+          <div class="ghead" role="row" data-testid="my-work-watching">
+            <button
+              type="button"
+              class="chev"
+              [attr.aria-expanded]="!store.collapsed().has(watching)"
+              aria-label="Toggle watched tickets"
+              (click)="store.toggle(watching)"
+            >
+              <tk-icon
+                [name]="
+                  store.collapsed().has(watching) ? 'tablerChevronRight' : 'tablerChevronDown'
+                "
+                [size]="14"
+              />
+            </button>
+            <tk-icon name="tablerEye" [size]="14" />
+            <a class="glabel" routerLink="/search" [queryParams]="watchingParams">Watching</a>
+            <span class="gcount tnum">{{ store.watching().length }}</span>
+          </div>
+          @if (!store.collapsed().has(watching)) {
+            @for (ticket of store.watching(); track ticket.id) {
+              <tk-ticket-row
+                testIdPrefix="my-work-watching-row-"
+                [ticket]="ticket"
+                [focused]="focusedId() === ticket.id"
+                (click)="openTicket(ticket.key, $event)"
+                (mouseenter)="cache.prefetch(ticket.key)"
+              />
+            }
+          }
+        }
       </div>
     }
   `,
@@ -183,6 +219,11 @@ export class MyWorkView {
   private readonly router = inject(Router);
 
   protected readonly regressions = REGRESSIONS_GROUP;
+  protected readonly watching = WATCHING_GROUP;
+  protected readonly watchingParams = {
+    watching: 'true',
+    category: 'ToDo,InProgress',
+  };
   protected readonly modeLabels = EXECUTION_MODE_LABELS;
   protected readonly searchParams = {
     assignee: 'me',

@@ -312,6 +312,17 @@ interface ExtraChip {
     <button
       type="button"
       class="fchip"
+      data-testid="filter-watching"
+      [class.on]="f().watching"
+      [attr.aria-pressed]="f().watching"
+      (click)="patch({ watching: !f().watching })"
+    >
+      <tk-icon name="tablerEye" [size]="14" />Watching
+    </button>
+
+    <button
+      type="button"
+      class="fchip"
       [class.on]="f().label.length"
       [matMenuTriggerFor]="labelMenu"
       data-testid="filter-label"

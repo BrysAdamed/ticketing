@@ -40,6 +40,7 @@ describe('search URL format', () => {
       severity: ['none'],
       version: '1.4.0',
       fromRegression: true,
+      watching: true,
       sort: 'priority' as const,
       order: 'desc' as const,
     };
@@ -50,9 +51,21 @@ describe('search URL format', () => {
 
     // Assert
     expect(query).toBe(
-      'project=WEB&category=ToDo%2CInProgress&severity=none&assignee=me&version=1.4.0&fromRegression=true&sort=priority&order=desc',
+      'project=WEB&category=ToDo%2CInProgress&severity=none&assignee=me&version=1.4.0&fromRegression=true&watching=true&sort=priority&order=desc',
     );
     expect(parsed).toEqual(filters);
+  });
+
+  it('reads the watching flag case-insensitively and counts it as a filter', () => {
+    // Act
+    const on = parseSearchParams({ watching: ['false', 'TRUE'] });
+    const off = parseSearchParams({ watching: 'yes' });
+
+    // Assert
+    expect(on.watching).toBe(true);
+    expect(off.watching).toBe(false);
+    expect(toSearchParams(off)).toEqual({});
+    expect(hasFilters(on)).toBe(true);
   });
 
   it('omits defaults and empty values', () => {

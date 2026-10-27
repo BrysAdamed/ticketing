@@ -69,7 +69,7 @@ ESLint enforces the boundaries: `core` and `shared` may not import `@features/*`
 
 Route params arrive as component inputs (`withComponentInputBinding`, `paramsInheritanceStrategy: 'always'`), so a project tab can declare `projectKey = input.required<string>()`.
 
-**Ticket side panel.** We chose a query parameter over a named outlet: `?peek=PAY-128` (`PeekService.open(key)` / `close()`), as `layout-and-screens.md` specifies. It survives reloads, can be shared, and keeps the list route untouched. The shell renders the view registered through `providePeekView(TICKET_DETAIL_VIEW)` with inputs `ticketKey` and `presentation: 'peek'`. Esc or the × button closes it. At 1440 px and wider the panel pushes the content; below that it overlays it.
+**Ticket side panel.** We chose a query parameter over a named outlet: `?peek=PAY-128` (`PeekService.open(key)` / `close()`), as `layout-and-screens.md` specifies. It survives reloads, can be shared, and keeps the list route untouched. The shell renders the view registered through `providePeekView(TICKET_DETAIL_VIEW)` with inputs `ticketKey` and `presentation: 'peek'`. Esc or the × button closes it. At 1440 px and wider the panel pushes the content; below that it overlays it. While a peek is open over a ticket page, the ticket shortcuts (`e`, `s`, `w`, …) act on the peeked ticket only; the page takes them back when the peek closes.
 
 ## Adding or building a page
 
@@ -134,7 +134,7 @@ The tickets slice (`features/tickets`, `features/backlog`) keeps everything othe
 
 | Need | Use |
 | --- | --- |
-| Ticket REST calls | `TicketsApi` (`get`, `create`, `update(key, patch, rowVersion?)`, `backlog`, `move`, `find`, `hints`, comments, links, history). Wire types are in `ticket.models.ts`. |
+| Ticket REST calls | `TicketsApi` (`get`, `create`, `update(key, patch, rowVersion?)`, `backlog`, `move`, `find`, `hints`, comments, links, history, `watchers` / `watch` / `unwatch`). Wire types are in `ticket.models.ts`. |
 | Instant ticket views | `TicketCache.peek/fetch/prefetch(key)`. Lists call `prefetch` after a 150 ms hover, so the peek opens with data already loaded. |
 | Keep lists in sync | `TicketEvents.events` emits `created`, `updated` (with the full ticket), `deleted` and `restored`. Emit them after your own ticket writes, and subscribe in list stores (backlog, boards) to patch rows without a refetch. |
 | Delete a ticket | `TicketDeletion.delete(keys)`: no confirm dialog; emits `deleted` at once, runs the DELETEs, and shows a toast whose Undo calls `POST /tickets/{key}/restore` (10 minutes, D-82) and emits `restored`. |

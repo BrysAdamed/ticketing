@@ -23,7 +23,7 @@ import { TicketEvents } from '@core/tickets/ticket-events';
 import { PeekService } from '@core/layout/peek/peek';
 import { ConfirmService } from '@core/notify/confirm.service';
 import { ToastService } from '@core/notify/toast.service';
-import { ShortcutService } from '@core/shortcuts/shortcut.service';
+import { Shortcut, ShortcutService } from '@core/shortcuts/shortcut.service';
 import { TicketAttachments } from '@core/tickets/ticket-attachments';
 import { TICKET_DETAIL_SECTIONS } from '@core/tickets/ticket-sections';
 import { TicketLink, TicketRef } from '@core/tickets/ticket.models';
@@ -42,6 +42,7 @@ import { NewLink, TicketLinksComponent } from './ticket-links.component';
 import { TicketSectionsHostComponent } from './ticket-sections-host.component';
 import { TicketDetailStore } from './ticket-detail.store';
 import { TicketDescriptionComponent, TicketTitleComponent } from './ticket-text.component';
+import { TicketWatchComponent } from './ticket-watch.component';
 
 export type TicketPresentation = 'page' | 'peek';
 
@@ -67,6 +68,7 @@ export type TicketPresentation = 'page' | 'peek';
     TicketSectionsHostComponent,
     TicketTitleComponent,
     TicketDescriptionComponent,
+    TicketWatchComponent,
   ],
   providers: [TicketDetailStore],
   viewProviders: [provideIcons(TICKET_ICONS)],
@@ -160,7 +162,7 @@ export class TicketDetailView {
       else void this.router.navigate(['/projects', projectKey, 'backlog']);
     });
 
-    inject(ShortcutService).registerScoped([
+    const shortcuts: Shortcut[] = [
       {
         keys: 'e',
         section: 'Ticket',
@@ -204,6 +206,12 @@ export class TicketDetailView {
         handler: () => this.assignToMe(),
       },
       {
+        keys: 'w',
+        section: 'Ticket',
+        description: 'Watch / unwatch',
+        handler: () => void this.store.toggleWatch(),
+      },
+      {
         keys: 'l',
         section: 'Ticket',
         description: 'Change labels',
@@ -235,7 +243,13 @@ export class TicketDetailView {
         description: 'Copy link',
         handler: () => this.copyLink(),
       },
-    ]);
+    ];
+    const shortcutService = inject(ShortcutService);
+    effect((onCleanup) => {
+      if (this.presentation() === 'page' && this.peek.isOpen()) return;
+      const removers = untracked(() => shortcuts.map((s) => shortcutService.register(s)));
+      onCleanup(() => removers.forEach((remove) => remove()));
+    });
   }
 
   protected onFieldChange(edit: FieldEdit): void {

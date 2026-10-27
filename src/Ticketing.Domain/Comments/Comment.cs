@@ -54,9 +54,14 @@ public sealed class Comment
     /// <summary>Only the author edits a comment (spec 6.9).</summary>
     public string EditBy(Guid actorId, string body, DateTimeOffset now)
     {
+        EnsureEditableBy(actorId);
+        return Edit(body, now);
+    }
+
+    public void EnsureEditableBy(Guid actorId)
+    {
         if (actorId != AuthorId)
             throw DomainException.Forbidden(CommentErrors.NotAuthor, "Only the author can edit a comment.");
-        return Edit(body, now);
     }
 
     /// <summary>The author deletes their own comment; project Owners delete any comment (spec 6.9).</summary>

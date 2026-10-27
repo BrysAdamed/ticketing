@@ -29,6 +29,7 @@ public static class UpdateComment
         {
             command.EnsureValid();
             var (comment, target) = await CommentLookup.WriteAsync(db, access, command.CommentId, cancellationToken);
+            comment.EnsureEditableBy(currentUser.Id);
             var body = await mentions.NormalizeAsync(target.Grant, comment.Body, command.Body, "body", cancellationToken);
             var previous = comment.EditBy(currentUser.Id, body!, clock.Now);
             activity.RecordChange(

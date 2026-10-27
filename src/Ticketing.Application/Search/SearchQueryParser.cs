@@ -46,6 +46,7 @@ public static class SearchQueryParser
             Updated = Range(v, "updated", parameters.Single("updatedFrom"), parameters.Single("updatedTo")),
             Resolved = Range(v, "resolved", parameters.Single("resolvedFrom"), parameters.Single("resolvedTo")),
             FromRegression = Flag(v, "fromRegression", parameters.Single("fromRegression")),
+            Watching = Flag(v, "watching", parameters.Single("watching")),
             Sort = Sort(v, parameters.Single("sort")),
             Order = Order(v, parameters.Single("order")),
         };

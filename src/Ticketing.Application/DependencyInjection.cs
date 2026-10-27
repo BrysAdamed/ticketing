@@ -2,6 +2,7 @@ using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Ticketing.Application.Abstractions;
 using Ticketing.Application.Access;
+using Ticketing.Application.Collaboration;
 using Ticketing.Application.FeatureFlags;
 
 namespace Ticketing.Application;
@@ -12,6 +13,7 @@ public static class DependencyInjection
     {
         services.AddScoped<IProjectAccess, ProjectAccess>();
         services.AddScoped<IFeatureFlags, FeatureFlagEvaluator>();
+        services.AddScoped<IActivityObserver, CollaborationProjector>();
         services.AddHandlers(typeof(DependencyInjection).Assembly);
         return services;
     }

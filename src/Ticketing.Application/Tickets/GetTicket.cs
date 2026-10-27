@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Ticketing.Application.Abstractions;
 using Ticketing.Application.Access;
 using Ticketing.Application.Comments;
+using Ticketing.Application.Watchers;
 using Ticketing.Domain.Common;
 using Ticketing.Domain.Tickets;
 using Ticketing.Domain.Tokens;
@@ -16,7 +17,8 @@ public enum TicketIncludes
     Children = 2,
     Links = 4,
     TestCases = 8,
-    All = Comments | Children | Links | TestCases,
+    Watchers = 16,
+    All = Comments | Children | Links | TestCases | Watchers,
 }
 
 /// <summary>A ticket with its fields and, on request, its children (with progress), links, latest comments and test cases.</summary>
@@ -34,7 +36,7 @@ public static class GetTicket
             return await LoadAsync(db, access, currentUser, target, request.Include, cancellationToken);
         }
 
-        /// <summary>Parses <c>comments,children,links,testCases</c> (case-insensitive); null or empty means all. Unknown names are ignored.</summary>
+        /// <summary>Parses <c>comments,children,links,testCases,watchers</c> (case-insensitive); null or empty means all. Unknown names are ignored.</summary>
         public static TicketIncludes ParseIncludes(IEnumerable<string>? names)
         {
             var list = names?.SelectMany(n => n.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)).ToList();
@@ -116,6 +118,7 @@ public static class GetTicket
             }
 
             var testCases = include.HasFlag(TicketIncludes.TestCases) ? await TestCasesAsync(db, projectKey, id, cancellationToken) : null;
+            var watchers = include.HasFlag(TicketIncludes.Watchers) ? await WatcherQueries.LoadAsync(db, currentUser, target, cancellationToken) : null;
 
             var canWrite = target.Grant.CanWrite && !target.Grant.IsArchived && currentUser.PatScope != PatScope.ReadOnly;
             var permissions = new TicketPermissionsDto(canWrite, canWrite && target.Grant.IsOwner, canWrite);
@@ -126,7 +129,7 @@ public static class GetTicket
                 TicketQueries.Location(ticket.BoardId, row.BoardName),
                 TicketQueries.User(row.AssigneeId, row.AssigneeEmail, row.AssigneeName, row.AssigneeActive), row.Reporter, row.CreatedBy,
                 ticket.CreatedAt, ticket.UpdatedAt, ticket.StatusChangedAt, ticket.ResolvedAt, target.Grant.Role, permissions, TicketQueries.Url(key), ticket.RowVersion,
-                children, progress, links, comments, commentCount, testCases);
+                children, progress, links, comments, commentCount, testCases, watchers);
         }
 
         private static async Task<IReadOnlyList<TicketRefDto>> ChildrenAsync(ITicketingDbContext db, string projectKey, Guid id, CancellationToken cancellationToken)

@@ -21,7 +21,9 @@ public static class DependencyInjection
         var connectionString = configuration.GetConnectionString("Db")
             ?? throw new InvalidOperationException("Connection string 'Db' is not configured (ConnectionStrings__Db).");
 
-        services.AddDbContext<TicketingDbContext>(options => TicketingDbContext.Configure(options, connectionString));
+        services.AddScoped<ActivityObserverInterceptor>();
+        services.AddDbContext<TicketingDbContext>((sp, options) =>
+            TicketingDbContext.Configure(options, connectionString).AddInterceptors(sp.GetRequiredService<ActivityObserverInterceptor>()));
         services.AddScoped<ITicketingDbContext>(sp => sp.GetRequiredService<TicketingDbContext>());
         services.AddOptions<DatabaseOptions>().Bind(configuration.GetSection(DatabaseOptions.Section));
         services.AddScoped<DatabaseInitializer>();

@@ -10,13 +10,14 @@ namespace Ticketing.Application.Search;
 
 /// <summary>
 /// "My work" (spec 6.8, I-08): open tickets assigned to the caller across readable projects, grouped by project, plus
-/// the caller's waiting items in running regression sessions. Bounded; the full list is the search
-/// <c>assignee=me&amp;category=ToDo,InProgress</c>.
+/// the caller's waiting items in running regression sessions, and open tickets the caller watches without being assigned
+/// (I-32). Bounded; the full lists are the searches <c>assignee=me&amp;category=ToDo,InProgress</c> and <c>watching=true</c>.
 /// </summary>
 public static class GetMyWork
 {
     public const int MaxTickets = 500;
     public const int MaxRegressionItems = 200;
+    public const int MaxWatching = 100;
 
     public sealed record Query;
 
@@ -55,6 +56,16 @@ public static class GetMyWork
                 .Take(MaxRegressionItems)
                 .ToListAsync(cancellationToken);
 
+            var watchingIds = await (
+                    from t in db.Tickets.AsNoTracking()
+                    join p in readable on t.ProjectId equals p.Id
+                    where t.DeletedAt == null && t.Status != TicketStatus.Done && (t.AssigneeId == null || t.AssigneeId != me)
+                        && db.TicketWatchers.Any(w => w.TicketId == t.Id && w.UserId == me)
+                    orderby t.UpdatedAt descending, t.Id
+                    select t.Id)
+                .Take(MaxWatching)
+                .ToListAsync(cancellationToken);
+
             return new MyWorkDto(
                 groups,
                 ticketRows.Count,
@@ -65,14 +76,21 @@ public static class GetMyWork
                     return new MyRegressionItemDto(
                         i.ItemId, i.TestCaseKey, i.Title, i.ExecutionMode, i.SessionId, sessionKey, i.Name, i.Version, i.ProjectKey,
                         SearchUrls.RegressionItem(i.ProjectKey, sessionKey, i.TestCaseKey));
-                })]);
+                })],
+                await TicketQueries.SummariesAsync(db, watchingIds, cancellationToken));
         }
     }
 }
 
 /// <param name="TicketCount">Tickets returned (at most 500).</param>
 /// <param name="Truncated">More open tickets are assigned than returned; link to the search instead.</param>
-public sealed record MyWorkDto(IReadOnlyList<MyWorkProjectDto> Projects, int TicketCount, bool Truncated, IReadOnlyList<MyRegressionItemDto> RegressionItems);
+/// <param name="Watching">Open tickets I watch but am not assigned to, most recently updated first (at most 100; the full list is the search <c>watching=true</c>).</param>
+public sealed record MyWorkDto(
+    IReadOnlyList<MyWorkProjectDto> Projects,
+    int TicketCount,
+    bool Truncated,
+    IReadOnlyList<MyRegressionItemDto> RegressionItems,
+    IReadOnlyList<TicketSummaryDto> Watching);
 
 public sealed record MyWorkProjectDto(string ProjectKey, string ProjectName, IReadOnlyList<TicketSummaryDto> Tickets);
 

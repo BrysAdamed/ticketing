@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Ticketing.Application.Abstractions;
 using Ticketing.Application.Access;
+using Ticketing.Application.Boards;
 using Ticketing.Domain.Activity;
 using Ticketing.Domain.Projects;
 
@@ -60,7 +61,7 @@ public static class ArchiveProject
                 var fromBoard = ticket.BoardId;
                 ticket.MoveToBacklog(ranks[i]);
                 ticket.Touch(clock.Now);
-                activity.RecordChange(ActivityEntityType.Ticket, ticket.Id, projectId, "ticket.moved", "boardId", fromBoard, (Guid?)null);
+                activity.RecordChange(ActivityEntityType.Ticket, ticket.Id, projectId, BoardRelocation.MovedAction, BoardRelocation.MovedField, fromBoard, (Guid?)null);
             }
             return tickets.Count;
         }

@@ -16,6 +16,7 @@ Every write described below runs inside one application handler, in one database
 8. [Feature flag evaluation and view variants](#8-feature-flag-evaluation-and-view-variants)
 9. [MCP request flow](#9-mcp-request-flow)
 10. [Attachment upload](#10-attachment-upload)
+11. [Watching tickets](#11-watching-tickets)
 
 ## 1. Ticket lifecycle and status side effects
 
@@ -616,3 +617,37 @@ sequenceDiagram
 
 - Delete: the uploader (with write access) or a project Owner. It removes the metadata and the content and records `attachment.removed`.
 - Read: anyone who can read the ticket. Attachments of deleted tickets answer 404 like the ticket.
+
+## 11. Watching tickets
+
+Spec [§6.15](../product/01-refined-spec.md#615-watchers-i-32-d-93), D-93. Automatic watching is derived from the activity entries of the write itself: a save interceptor hands the entries pending in the unit of work to the `CollaborationProjector`, which adds watcher rows to the same save. Every write path (REST, MCP, batch create, bugs from regressions) is covered without the handlers knowing.
+
+```mermaid
+sequenceDiagram
+    participant C as Client (web, REST or MCP)
+    participant H as Handler (CreateTicket, UpdateTicket, AddComment)
+    participant I as ActivityObserverInterceptor
+    participant P as CollaborationProjector
+    participant DB as PostgreSQL
+    C->>H: create / assign / comment
+    H->>H: change entities, record activity (ticket.created, ticket.field.changed assignee, comment.added)
+    H->>I: SaveChangesAsync
+    I->>P: activity entries added since the last save
+    P->>P: read events, WatchingRules: reporter + assignee, new assignee, commenter
+    P->>DB: who of them can read the project (active; Admin, public or member), who already watches
+    P->>I: add TicketWatcher rows for the rest
+    I->>DB: one transaction: entities, activity, watchers
+    H-->>C: result
+```
+
+```mermaid
+stateDiagram-v2
+    [*] --> NotWatching
+    NotWatching --> Watching: watch (PUT watchers/me) / created as reporter or assignee / assigned / comments
+    Watching --> NotWatching: unwatch (DELETE watchers/me)
+    Watching --> Hidden: loses read access or is deactivated
+    Hidden --> Watching: access returns
+```
+
+- Watch and unwatch need read access only and a write-scoped token; both are idempotent and record no history.
+- A hidden watcher keeps the row but is left out of the watcher list, the `watching=true` search, My work and (later) notifications, because every reader re-checks access.

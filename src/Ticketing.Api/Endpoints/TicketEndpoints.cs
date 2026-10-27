@@ -84,7 +84,7 @@ public sealed class TicketEndpoints : IEndpointModule
                 response.SetRowVersion(dto.RowVersion);
                 return TypedResults.Ok(dto);
             })
-            .WithSummary("A ticket with children and progress, links, the latest 50 comments and test cases (include= narrows them).")
+            .WithSummary("A ticket with children and progress, links, the latest 50 comments, test cases and watchers (include= narrows them).")
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         ticket.MapPatch("", async (string keyOrId, UpdateTicket.Command command, UpdateTicket.Handler handler, HttpRequest request, CancellationToken ct) =>

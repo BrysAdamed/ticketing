@@ -52,7 +52,7 @@ public static class RecordRegressionResult
                     var (previousStatus, previousAssignee) = (item.Status, item.AssigneeId);
                     item.RecordResult(command.Status!.Value, command.Note, currentUser.Id, clock.Now);
                     if (previousAssignee != item.AssigneeId)
-                        activity.Record(ActivityEntityType.RegressionSession, target.Id, target.ProjectId, "regression.item.assigned",
+                        activity.Record(ActivityEntityType.RegressionSession, target.Id, target.ProjectId, RegressionItemWrites.AssignedAction,
                             new { testCaseKey = item.TestCaseKey, from = previousAssignee, to = item.AssigneeId });
                     activity.Record(ActivityEntityType.RegressionSession, target.Id, target.ProjectId, "regression.item.result",
                         new { testCaseKey = item.TestCaseKey, from = previousStatus, to = item.Status, note = item.ResultNote });

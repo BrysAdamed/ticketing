@@ -13,6 +13,9 @@ namespace Ticketing.Application.Boards;
 /// </summary>
 internal static class BoardRelocation
 {
+    public const string MovedAction = "ticket.moved";
+    public const string MovedField = "boardId";
+
     public static async Task<IReadOnlyList<BoardTicket>> TicketsAsync(
         ITicketingDbContext db, Guid boardId, Guid? projectId, CancellationToken cancellationToken)
     {
@@ -55,7 +58,7 @@ internal static class BoardRelocation
     }
 
     public static void RecordMove(IActivityLog activity, Ticket ticket, Guid? fromBoardId) =>
-        activity.RecordChange(ActivityEntityType.Ticket, ticket.Id, ticket.ProjectId, "ticket.moved", "boardId", fromBoardId, ticket.BoardId);
+        activity.RecordChange(ActivityEntityType.Ticket, ticket.Id, ticket.ProjectId, MovedAction, MovedField, fromBoardId, ticket.BoardId);
 
     private static void Move(IActivityLog activity, Ticket ticket, Guid? boardId, string rank, DateTimeOffset now)
     {

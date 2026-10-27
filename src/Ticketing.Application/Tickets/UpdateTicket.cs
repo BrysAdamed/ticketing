@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using Ticketing.Application.Abstractions;
 using Ticketing.Application.Access;
+using Ticketing.Application.Boards;
 using Ticketing.Application.Common;
 using Ticketing.Domain.Activity;
 using Ticketing.Domain.Common;
@@ -190,7 +191,7 @@ public static class UpdateTicket
             {
                 var rank = await ranker.TopAsync(RankContainer.Backlog(target.ProjectId), [ticket.Id], cancellationToken);
                 ticket.MoveToBacklog(rank);
-                activity.RecordChange(ActivityEntityType.Ticket, ticket.Id, target.ProjectId, "ticket.moved", "boardId", (Guid?)boardId, (Guid?)null);
+                activity.RecordChange(ActivityEntityType.Ticket, ticket.Id, target.ProjectId, BoardRelocation.MovedAction, BoardRelocation.MovedField, (Guid?)boardId, (Guid?)null);
             }
         }
     }

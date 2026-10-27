@@ -23,7 +23,7 @@ public static class TakeRegressionItem
                     var previous = item.AssigneeId;
                     item.Take(currentUser.Id);
                     if (previous != item.AssigneeId)
-                        activity.Record(ActivityEntityType.RegressionSession, target.Id, target.ProjectId, "regression.item.assigned",
+                        activity.Record(ActivityEntityType.RegressionSession, target.Id, target.ProjectId, RegressionItemWrites.AssignedAction,
                             new { testCaseKey = item.TestCaseKey, from = previous, to = item.AssigneeId, takeOver = previous is not null });
                     return await db.SaveChangesAsync(ct);
                 },

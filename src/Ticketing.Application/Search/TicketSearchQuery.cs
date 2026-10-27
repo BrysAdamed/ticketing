@@ -60,6 +60,11 @@ internal sealed class TicketSearchQuery(ITicketingDbContext db, IProjectAccess a
         tickets = ApplyResolved(tickets, criteria.Resolved);
         if (criteria.FromRegression)
             tickets = tickets.Where(t => db.RegressionSessionItems.Any(i => i.BugTicketId == t.Id));
+        if (criteria.Watching)
+        {
+            var me = currentUser.Id;
+            tickets = tickets.Where(t => db.TicketWatchers.Any(w => w.TicketId == t.Id && w.UserId == me));
+        }
 
         return from t in tickets
                join p in db.Projects on t.ProjectId equals p.Id

@@ -78,7 +78,7 @@ describe('ShortcutService', () => {
     input.remove();
   });
 
-  it('leaves the keys inside an element that owns its keyboard to it, like an input', () => {
+  it('leaves the keys inside an element that owns its keyboard, and on the body while it is shown, to it', () => {
     // Arrange
     const owner = document.createElement('div');
     owner.setAttribute(OWN_KEYS_ATTR, '');
@@ -98,13 +98,14 @@ describe('ShortcutService', () => {
 
     // Act
     press('h', {}, canvas);
+    press('h');
     press('s', { ctrlKey: true, metaKey: true }, canvas);
+    owner.remove();
     press('h');
 
     // Assert
     expect(history).toBe(1);
     expect(publish).toBe(1);
-    owner.remove();
   });
 
   it('lets the latest registration override and restores the previous one on removal', () => {

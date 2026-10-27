@@ -216,12 +216,18 @@ export function normalizeKeys(keys: string): string {
 }
 
 /// Marks an element whose keyboard belongs to an embedded editor (the Canvas editor's single-key
-/// tools): inside it only `allowInInputs` shortcuts fire, as in a text field.
+/// tools): inside it, and on the page body while it is shown (the editor listens on the document
+/// and leaves focus there), only `allowInInputs` shortcuts fire, as in a text field.
 export const OWN_KEYS_ATTR = 'data-own-keys';
 
 export function isEditableTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   if (target.isContentEditable || target.closest(`[${OWN_KEYS_ATTR}]`)) return true;
+  if (
+    target === target.ownerDocument.body &&
+    target.ownerDocument.querySelector(`[${OWN_KEYS_ATTR}]`)
+  )
+    return true;
   const tag = target.tagName;
   if (tag === 'TEXTAREA' || tag === 'SELECT') return true;
   if (tag !== 'INPUT') return false;

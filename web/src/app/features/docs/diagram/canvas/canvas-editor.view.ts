@@ -22,26 +22,22 @@ import { KbdComponent } from '@shared/ui/kbd/kbd.component';
 import { DocEditSession, EditConflict } from '../../editing/doc-edit-session';
 import { DocEditStatusComponent } from '../../editing/doc-edit-status.component';
 import { DocConflictComponent } from '../../page/editor/doc-conflict.component';
-import { DiagramViewportComponent, ViewportContent } from '../diagram-viewport.component';
-import { loadPicture, renderCanvas, svgDataUrl } from './canvas-renderer';
+import { DiagramSource } from '../diagram-renderers';
+import { CanvasPictureComponent } from './canvas-picture.component';
+import { svgDataUrl } from './canvas-renderer';
 
 /// The drawing is serialized into the draft this long after the last change; autosave follows.
 const SERIALIZE_DELAY_MS = 400;
 /// Performance entry measured from opening the editor until Excalidraw shows the scene.
 export const CANVAS_OPEN_MEASURE = 'tk-canvas-open';
 
-interface ConflictPictures {
-  theirs: ViewportContent | null;
-  mine: ViewportContent | null;
-}
-
 /// The Canvas editor (`docs.diagram.canvas.edit`, a lazy chunk; Excalidraw loads on top): the edit
 /// bar with draft status, presence and Publish, the title and change note, and Excalidraw filling
 /// the rest. Drafts and publishing go through `DocEditSession` like pages, without a text merge: a
 /// concurrent publish opens the conflict view with both drawings (Overwrite with mine / Discard
 /// mine). Publishing sends the source with its light SVG picture. `Mod-s` publishes, `Mod-Enter`
-/// publishes and closes, `Esc` outside the drawing closes (the draft is kept); inside it,
-/// Excalidraw's own keys win.
+/// publishes and closes; every other key belongs to Excalidraw (`Esc` and the single-key tools),
+/// so Close is a button only (the draft is kept).
 @Component({
   selector: 'tk-canvas-editor-view',
   imports: [
@@ -50,7 +46,7 @@ interface ConflictPictures {
     CanvasEditorComponent,
     DocEditStatusComponent,
     DocConflictComponent,
-    DiagramViewportComponent,
+    CanvasPictureComponent,
   ],
   providers: [DocEditSession],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -81,7 +77,18 @@ export class CanvasEditorView {
   protected readonly loadFailed = signal(false);
   protected readonly changeNote = signal('');
   protected readonly presence = computed(() => this.doc().editors);
-  protected readonly pictures = signal<ConflictPictures>({ theirs: null, mine: null });
+  protected readonly minePicture = signal<DiagramSource | null>(null);
+  protected readonly theirsPicture = computed<DiagramSource | null>(() => {
+    const theirs = this.session.conflict()?.theirs;
+    return theirs
+      ? {
+          key: theirs.key,
+          version: theirs.version,
+          content: theirs.content,
+          snapshotUrl: theirs.snapshotUrl,
+        }
+      : null;
+  });
   protected readonly canvasReady = computed(() => this.editor()?.ready() ?? false);
 
   private appliedRevision = -1;
@@ -118,7 +125,7 @@ export class CanvasEditorView {
 
     effect(() => {
       const conflict = this.session.conflict();
-      untracked(() => void this.drawConflict(conflict));
+      untracked(() => void this.drawMine(conflict));
     });
 
     this.shortcuts.registerScoped([
@@ -135,14 +142,6 @@ export class CanvasEditorView {
         section: 'Canvas editor',
         allowInInputs: true,
         handler: () => void this.publish(true),
-      },
-      {
-        keys: 'escape',
-        description: 'Close the editor (the draft is kept)',
-        section: 'Canvas editor',
-        handler: () => {
-          if (!this.session.conflict()) void this.close();
-        },
       },
     ]);
 
@@ -251,25 +250,18 @@ export class CanvasEditorView {
     }
   }
 
-  private async drawConflict(conflict: EditConflict | null): Promise<void> {
-    this.pictures.set({ theirs: null, mine: null });
+  /// My drawing as it is in the editor, exported once when the conflict view opens.
+  private async drawMine(conflict: EditConflict | null): Promise<void> {
+    this.minePicture.set(null);
     if (!conflict) return;
-    const theme = this.theme();
-    const { theirs } = conflict;
-    const [theirsRender, mine] = await Promise.all([
-      renderCanvas(
-        {
-          key: theirs.key,
-          version: theirs.version,
-          content: theirs.content,
-          snapshotUrl: theirs.snapshotUrl,
-        },
-        theme,
-      ),
-      this.snapshot().then((s) => (s.snapshot ? loadPicture(svgDataUrl(s.snapshot), theme) : null)),
-    ]);
-    if (this.session.conflict() !== conflict) return;
-    this.pictures.set({ theirs: 'error' in theirsRender ? null : theirsRender, mine });
+    const { snapshot } = await this.snapshot();
+    if (this.session.conflict() !== conflict || !snapshot) return;
+    this.minePicture.set({
+      key: conflict.theirs.key,
+      version: 0,
+      content: null,
+      snapshotUrl: svgDataUrl(snapshot),
+    });
   }
 
   private clearTimer(): void {

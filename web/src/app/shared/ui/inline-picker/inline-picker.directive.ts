@@ -58,10 +58,11 @@ export class InlinePickerDirective<T> {
     else this.open();
   }
 
-  open(): void {
+  /// Opens the picker under the host, or under `origin` (for example a focused card) when given.
+  open(origin?: Element): void {
     if (this.isOpen() || this.pickerDisabled()) return;
     const overlayRef = createOverlayRef(this.injector, {
-      positionStrategy: createFlexibleConnectedPositionStrategy(this.injector, this.host)
+      positionStrategy: createFlexibleConnectedPositionStrategy(this.injector, origin ?? this.host)
         .withPositions([
           { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: 4 },
           { originX: 'start', originY: 'top', overlayX: 'start', overlayY: 'bottom', offsetY: -4 },

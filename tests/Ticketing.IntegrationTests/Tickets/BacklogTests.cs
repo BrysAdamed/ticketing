@@ -88,27 +88,31 @@ public sealed class BacklogTests(TicketingApiFactory api)
     }
 
     [Fact]
-    public async Task Rank_moves_one_ticket_before_or_after_another()
+    public async Task Reorder_moves_one_ticket_before_or_after_another_without_history_or_updated_at()
     {
         // Arrange
         var client = await api.LoginAsync(await api.CreateUserAsync());
         await client.CreateProjectAsync("WEB");
         for (var i = 1; i <= 4; i++)
             await client.CreateTicketAsync("WEB", $"Ticket {i}");
+        var updatedBefore = (await client.GetTicketAsync("WEB-4")).UpdatedAt;
+        var entriesBefore = await api.WithDbAsync(db => db.ActivityEntries.CountAsync(_ct));
 
         // Act
-        await Rank(client, new { tickets = new[] { "WEB-4" }, beforeKey = "WEB-2" });
+        await Rank(client, new { keys = new[] { "WEB-4" }, beforeKey = "WEB-2" });
         var afterFirst = await OrderAsync(client);
-        await Rank(client, new { tickets = new[] { "WEB-1" }, afterKey = "WEB-3" });
+        await Rank(client, new { keys = new[] { "WEB-1" }, afterKey = "WEB-3" });
         var afterSecond = await OrderAsync(client);
 
         // Assert
         Assert.Equal(["WEB-1", "WEB-4", "WEB-2", "WEB-3"], afterFirst);
         Assert.Equal(["WEB-4", "WEB-2", "WEB-3", "WEB-1"], afterSecond);
+        Assert.Equal(updatedBefore, (await client.GetTicketAsync("WEB-4")).UpdatedAt);
+        Assert.Equal(entriesBefore, await api.WithDbAsync(db => db.ActivityEntries.CountAsync(_ct)));
     }
 
     [Fact]
-    public async Task Rank_moves_a_multi_selection_as_a_block_to_the_top_or_bottom_in_the_given_order()
+    public async Task Reorder_moves_a_multi_selection_as_a_block_to_the_top_or_bottom_in_the_given_order()
     {
         // Arrange
         var client = await api.LoginAsync(await api.CreateUserAsync());
@@ -117,11 +121,11 @@ public sealed class BacklogTests(TicketingApiFactory api)
             await client.CreateTicketAsync("WEB", $"Ticket {i}");
 
         // Act
-        await Rank(client, new { tickets = new[] { "WEB-3", "WEB-5" }, position = "Top" });
+        await Rank(client, new { keys = new[] { "WEB-3", "WEB-5" }, position = "Top" });
         var top = await OrderAsync(client);
-        await Rank(client, new { tickets = new[] { "WEB-1", "WEB-3" }, position = "Bottom" });
+        await Rank(client, new { keys = new[] { "WEB-1", "WEB-3" }, position = "Bottom" });
         var bottom = await OrderAsync(client);
-        await Rank(client, new { tickets = new[] { "WEB-1", "WEB-2" }, beforeKey = "WEB-4" });
+        await Rank(client, new { keys = new[] { "WEB-1", "WEB-2" }, beforeKey = "WEB-4" });
         var between = await OrderAsync(client);
 
         // Assert
@@ -131,7 +135,7 @@ public sealed class BacklogTests(TicketingApiFactory api)
     }
 
     [Fact]
-    public async Task Rank_rejects_bad_requests_tickets_on_boards_and_viewers()
+    public async Task Reorder_rejects_bad_requests_stale_board_tickets_and_viewers()
     {
         // Arrange
         var owner = await api.CreateUserAsync();
@@ -145,18 +149,21 @@ public sealed class BacklogTests(TicketingApiFactory api)
         var viewer = await api.LoginAsync(viewerUser);
 
         // Act
-        var noAnchor = await client.PostAsJsonAsync("/api/v1/projects/WEB/backlog/rank", new { tickets = new[] { "WEB-1" } }, _ct);
-        var selfAnchor = await client.PostAsJsonAsync("/api/v1/projects/WEB/backlog/rank", new { tickets = new[] { "WEB-1" }, beforeKey = "WEB-1" }, _ct);
-        var boardTicket = await client.PostAsJsonAsync("/api/v1/projects/WEB/backlog/rank", new { tickets = new[] { "WEB-2" }, position = "Top" }, _ct);
-        var boardAnchor = await client.PostAsJsonAsync("/api/v1/projects/WEB/backlog/rank", new { tickets = new[] { "WEB-1" }, afterKey = "WEB-2" }, _ct);
-        var byViewer = await viewer.PostAsJsonAsync("/api/v1/projects/WEB/backlog/rank", new { tickets = new[] { "WEB-1" }, position = "Top" }, _ct);
+        var twoAnchors = await client.PostAsJsonAsync(MovePath, Backlog(new { keys = new[] { "WEB-1" }, afterKey = "WEB-2", position = "Top" }), _ct);
+        var badSource = await client.PostAsJsonAsync(MovePath, new { keys = new[] { "WEB-1" }, target = "backlog", from = "nowhere" }, _ct);
+        var selfAnchor = await client.PostAsJsonAsync(MovePath, Backlog(new { keys = new[] { "WEB-1" }, beforeKey = "WEB-1" }), _ct);
+        var boardTicket = await client.PostAsJsonAsync(MovePath, Backlog(new { keys = new[] { "WEB-2" }, position = "Top" }), _ct);
+        var boardAnchor = await client.PostAsJsonAsync(MovePath, Backlog(new { keys = new[] { "WEB-1" }, afterKey = "WEB-2" }), _ct);
+        var byViewer = await viewer.PostAsJsonAsync(MovePath, Backlog(new { keys = new[] { "WEB-1" }, position = "Top" }), _ct);
 
         // Assert
-        await noAnchor.ShouldBeProblemAsync(HttpStatusCode.BadRequest, "validation");
+        await twoAnchors.ShouldBeProblemAsync(HttpStatusCode.BadRequest, "validation");
+        await badSource.ShouldBeProblemAsync(HttpStatusCode.BadRequest, "validation");
         await selfAnchor.ShouldBeProblemAsync(HttpStatusCode.BadRequest, "validation");
-        await boardTicket.ShouldBeProblemAsync(HttpStatusCode.Conflict, TicketErrors.NotInBacklog);
-        await boardAnchor.ShouldBeProblemAsync(HttpStatusCode.Conflict, TicketErrors.NotInBacklog);
+        await boardTicket.ShouldBeProblemAsync(HttpStatusCode.Conflict, TicketErrors.NotInSource);
+        await boardAnchor.ShouldBeProblemAsync(HttpStatusCode.Conflict, TicketErrors.RankAnchorInvalid);
         await byViewer.ShouldBeProblemAsync(HttpStatusCode.Forbidden, ProjectErrors.Forbidden);
+        Assert.Equal(TicketLocationKind.Board, (await client.GetTicketAsync("WEB-2")).Location.Kind);
     }
 
     [Fact]
@@ -241,8 +248,19 @@ public sealed class BacklogTests(TicketingApiFactory api)
         await hidden.ShouldBeProblemAsync(HttpStatusCode.NotFound, ProjectErrors.NotFound);
     }
 
+    private const string MovePath = "/api/v1/tickets/move";
+
+    private static Dictionary<string, object?> Backlog(object body)
+    {
+        var json = System.Text.Json.JsonSerializer.SerializeToElement(body);
+        var result = json.EnumerateObject().ToDictionary(p => p.Name, object? (p) => p.Value);
+        result["target"] = "backlog";
+        result["from"] = "backlog";
+        return result;
+    }
+
     private async Task Rank(HttpClient client, object body) =>
-        await (await client.PostAsJsonAsync("/api/v1/projects/WEB/backlog/rank", body, _ct)).ShouldHaveStatusAsync(HttpStatusCode.NoContent);
+        await (await client.PostAsJsonAsync(MovePath, Backlog(body), _ct)).ShouldHaveStatusAsync(HttpStatusCode.OK);
 
     private async Task<List<string>> OrderAsync(HttpClient client) =>
         [.. (await (await client.GetAsync("/api/v1/projects/WEB/backlog", _ct)).ReadAsync<BacklogDto>()).Items.Select(i => i.Key)];

@@ -1,7 +1,7 @@
 import { Priority, Severity, StatusCategory, TicketStatus, TicketType } from '@shared/domain/enums';
 import { UserRef } from '../tickets/ticket.models';
 
-/// Wire types of the boards slice (`/api/v1/boards`, `/api/v1/tickets/move`).
+/// Wire types of the boards slice (`/api/v1/boards`). Moves use `TicketsApi.move`.
 
 export interface StatusCategoryCounts {
   toDo: number;
@@ -50,6 +50,9 @@ export interface BoardCard {
   labels: string[];
   assigneeId: string | null;
   parentId: string | null;
+  /// Non-deleted children wherever they are; 0 for cards without children.
+  childCount: number;
+  childDoneCount: number;
 }
 
 export interface BoardColumn {
@@ -106,15 +109,6 @@ export interface ArchiveBoardResult {
   movedToBoard: number;
   movedToBacklog: number;
   stayedDone: number;
-}
-
-/// `POST /tickets/move`: keys in their final order, `backlog` or a board id, optional column and anchor.
-export interface MoveTicketsRequest {
-  keys: string[];
-  target: 'backlog' | string;
-  status?: TicketStatus;
-  beforeKey?: string;
-  afterKey?: string;
 }
 
 export interface BoardListQuery {

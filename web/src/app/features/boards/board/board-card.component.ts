@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, inject, input } from '@angular/core';
 import { MatTooltip } from '@angular/material/tooltip';
 import { BoardCard, BoardParent } from '@core/boards/board.models';
 import { UserRef } from '@core/tickets/ticket.models';
@@ -10,7 +10,7 @@ import { TypeIconComponent } from '@shared/ui/domain/type-icon.component';
 import { IconComponent } from '@shared/ui/icon/icon.component';
 
 /// A compact board card (board.html): type, key, parent and avatar; a two-line title; priority, severity
-/// (Blocker, Critical, Major), up to two labels and points.
+/// (Blocker, Critical, Major), up to two labels, sub-ticket progress for parents and points.
 @Component({
   selector: 'tk-board-card',
   imports: [
@@ -72,6 +72,19 @@ import { IconComponent } from '@shared/ui/icon/icon.component';
         }
       </span>
       <span class="end">
+        @if (card().childCount > 0) {
+          <span
+            class="sub tnum"
+            data-testid="card-progress"
+            matTooltip="Sub-tickets done"
+            [attr.aria-label]="
+              card().childDoneCount + ' of ' + card().childCount + ' sub-tickets done'
+            "
+            ><tk-icon name="tablerSubtask" [size]="12" />{{ card().childDoneCount }}/{{
+              card().childCount
+            }}</span
+          >
+        }
         @if (card().storyPoints !== null) {
           <span class="pts tnum" [attr.aria-label]="card().storyPoints + ' story points'">{{
             card().storyPoints
@@ -184,6 +197,13 @@ import { IconComponent } from '@shared/ui/icon/icon.component';
       text-overflow: ellipsis;
       white-space: nowrap;
     }
+    .sub {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      color: var(--tk-text-subtle);
+      font-size: var(--tk-text-xs);
+    }
     .pts {
       min-width: 20px;
       height: 18px;
@@ -201,6 +221,7 @@ import { IconComponent } from '@shared/ui/icon/icon.component';
   `,
 })
 export class BoardCardComponent {
+  readonly element = inject<ElementRef<HTMLElement>>(ElementRef);
   readonly card = input.required<BoardCard>();
   readonly assignee = input<UserRef | null>(null);
   readonly parent = input<BoardParent | null>(null);

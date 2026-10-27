@@ -1,6 +1,15 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  input,
+  output,
+  viewChild,
+} from '@angular/core';
 import { MatTooltip } from '@angular/material/tooltip';
 import { FieldHints } from '@core/tickets/field-hints';
+import { ProjectPeople } from '@core/tickets/project-people';
 import { Ticket, TicketPatch, TicketRef, UserRef } from '@core/tickets/ticket.models';
 import { TicketsApi } from '@core/tickets/tickets.api';
 import {
@@ -22,7 +31,6 @@ import {
   STORY_POINT_OPTIONS,
   TICKET_STATUS_OPTIONS,
   TICKET_TYPE_OPTIONS,
-  userOptions,
 } from '@shared/domain/picker-options';
 import { AbsoluteTimePipe, RelativeTimePipe } from '@shared/pipes/relative-time.pipe';
 import { SeverityBadgeComponent } from '@shared/ui/domain/domain-badges';
@@ -86,7 +94,7 @@ const RESOLUTION_OPTIONS: PickerOption<Resolution>[] = RESOLUTIONS.map((r) => ({
           data-testid="assign-to-me"
           (click)="assignToMe.emit()"
         >
-          <tk-icon name="tablerUser" [size]="14" />Assign to me<tk-kbd>I</tk-kbd>
+          <tk-icon name="tablerUser" [size]="14" />Assign to me<tk-kbd>A</tk-kbd>
         </button>
       </div>
     }
@@ -98,6 +106,7 @@ const RESOLUTION_OPTIONS: PickerOption<Resolution>[] = RESOLUTIONS.map((r) => ({
           class="fv"
           data-testid="field-status"
           [disabled]="!canEdit()"
+          #statusPicker="tkInlinePicker"
           [tkInlinePicker]="statusOptions"
           [pickerValue]="t.status"
           pickerPlaceholder="Change status…"
@@ -131,6 +140,7 @@ const RESOLUTION_OPTIONS: PickerOption<Resolution>[] = RESOLUTIONS.map((r) => ({
           class="fv"
           data-testid="field-priority"
           [disabled]="!canEdit()"
+          #priorityPicker="tkInlinePicker"
           [tkInlinePicker]="priorityOptions"
           [pickerValue]="t.priority"
           pickerPlaceholder="Change priority…"
@@ -183,10 +193,10 @@ const RESOLUTION_OPTIONS: PickerOption<Resolution>[] = RESOLUTIONS.map((r) => ({
           class="fv"
           data-testid="field-assignee"
           [disabled]="!canEdit()"
-          [tkInlinePicker]="assigneeOptions()"
-          [pickerValue]="t.assignee?.id ?? null"
+          #assigneePicker="tkSearchPicker"
+          [tkSearchPicker]="assigneeSearch()"
           pickerPlaceholder="Assign to…"
-          pickerShortcut="A"
+          pickerShortcut="I"
           (picked)="setAssignee($event)"
         >
           <tk-user [user]="t.assignee" />
@@ -199,8 +209,7 @@ const RESOLUTION_OPTIONS: PickerOption<Resolution>[] = RESOLUTIONS.map((r) => ({
           class="fv"
           data-testid="field-reporter"
           [disabled]="!canEdit()"
-          [tkInlinePicker]="reporterOptions()"
-          [pickerValue]="t.reporter.id"
+          [tkSearchPicker]="reporterSearch()"
           pickerPlaceholder="Reporter…"
           (picked)="setReporter($event)"
         >
@@ -329,10 +338,10 @@ const RESOLUTION_OPTIONS: PickerOption<Resolution>[] = RESOLUTIONS.map((r) => ({
 export class TicketFieldsComponent {
   private readonly api = inject(TicketsApi);
   private readonly hints = inject(FieldHints);
+  private readonly people = inject(ProjectPeople);
 
   readonly ticket = input.required<Ticket>();
   readonly canEdit = input(false);
-  readonly assignable = input<readonly UserRef[]>([]);
   readonly layout = input<'column' | 'grid'>('column');
 
   readonly changed = output<FieldEdit>();
@@ -349,15 +358,21 @@ export class TicketFieldsComponent {
   protected readonly typeLabels: Record<TicketType, string> = TICKET_TYPE_LABELS;
   protected readonly resolutionLabels = RESOLUTION_LABELS;
 
-  private readonly people = computed(() => {
-    const users = new Map(this.assignable().map((u) => [u.id, u]));
-    const t = this.ticket();
-    for (const user of [t.assignee, t.reporter])
-      if (user && !users.has(user.id)) users.set(user.id, user);
-    return [...users.values()];
+  private readonly statusPicker =
+    viewChild.required<InlinePickerDirective<TicketStatus>>('statusPicker');
+  private readonly priorityPicker =
+    viewChild.required<InlinePickerDirective<Priority>>('priorityPicker');
+  private readonly assigneePicker =
+    viewChild.required<SearchPickerDirective<UserRef | null>>('assigneePicker');
+
+  protected readonly assigneeSearch = computed(() => {
+    const projectKey = this.ticket().projectKey;
+    return this.people.picker(() => projectKey);
   });
-  protected readonly assigneeOptions = computed(() => userOptions(this.people()));
-  protected readonly reporterOptions = computed(() => userOptions(this.people(), false));
+  protected readonly reporterSearch = computed(() => {
+    const projectKey = this.ticket().projectKey;
+    return this.people.picker(() => projectKey, false);
+  });
 
   protected readonly labelSuggestions = computed(() => {
     const projectKey = this.ticket().projectKey;
@@ -388,6 +403,14 @@ export class TicketFieldsComponent {
     };
   });
 
+  /// Opens a field picker from the keyboard (s, p, i in the ticket view).
+  openPicker(field: 'status' | 'priority' | 'assignee'): void {
+    if (!this.canEdit()) return;
+    if (field === 'status') this.statusPicker().open();
+    else if (field === 'priority') this.priorityPicker().open();
+    else this.assigneePicker().open();
+  }
+
   protected edit(patch: TicketPatch, optimistic: Partial<Ticket>): void {
     this.changed.emit({ patch, optimistic });
   }
@@ -398,14 +421,14 @@ export class TicketFieldsComponent {
     this.edit({ status }, { status, resolution });
   }
 
-  protected setAssignee(id: string | null): void {
-    const user = id ? (this.people().find((u) => u.id === id) ?? null) : null;
-    this.edit({ assignee: id }, { assignee: user });
+  protected setAssignee(user: UserRef | null): void {
+    if (user?.id === this.ticket().assignee?.id) return;
+    this.edit({ assignee: user?.id ?? null }, { assignee: user });
   }
 
-  protected setReporter(id: string | null): void {
-    const user = this.people().find((u) => u.id === id);
-    if (user) this.edit({ reporter: user.id }, { reporter: user });
+  protected setReporter(user: UserRef | null): void {
+    if (user && user.id !== this.ticket().reporter.id)
+      this.edit({ reporter: user.id }, { reporter: user });
   }
 
   protected toggleLabel(toggle: LabelToggle): void {

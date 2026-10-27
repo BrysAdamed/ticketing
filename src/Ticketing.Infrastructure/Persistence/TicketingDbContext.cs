@@ -23,6 +23,10 @@ public sealed class TicketingDbContext(DbContextOptions<TicketingDbContext> opti
 
     public DbSet<User> Users => Set<User>();
 
+    public DbSet<LoginThrottle> LoginThrottles => Set<LoginThrottle>();
+
+    public DbSet<UserSession> UserSessions => Set<UserSession>();
+
     public DbSet<PersonalAccessToken> PersonalAccessTokens => Set<PersonalAccessToken>();
 
     public DbSet<Project> Projects => Set<Project>();

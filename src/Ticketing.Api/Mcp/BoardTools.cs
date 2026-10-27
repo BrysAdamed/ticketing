@@ -95,17 +95,18 @@ public sealed class BoardTools
 
     [Authorize(Policy = AuthPolicies.CanWrite)]
     [McpServerTool(Name = "move_ticket", Destructive = false, Title = "Move tickets")]
-    [Description("Moves 1..50 tickets as one block, in the order given: to 'backlog' (each to its own project backlog, top by default) or to a board id "
+    [Description("Moves 1..100 tickets as one block, in the order given: to 'backlog' (each to its own project backlog, top by default) or to a board id "
         + "(bottom of the status column by default). Optional status sets the column (" + Statuses + "), with the usual status rules (entering Done "
-        + "sets resolution Done). beforeKey or afterKey places the block next to another ticket in the target; use it with target 'backlog' to "
+        + "sets resolution Done). beforeKey, afterKey or position (Top or Bottom) places the block in the target; use it with target 'backlog' to "
         + "reorder a backlog. Returns the moved ticket summaries.")]
     public static Task<IReadOnlyList<TicketSummaryDto>> MoveTicket(
         MoveTickets.Handler handler,
-        [Description("Ticket keys (for example [\"WEB-42\"]) or ids, 1..50.")] string[] keys,
+        [Description("Ticket keys (for example [\"WEB-42\"]) or ids, 1..100.")] string[] keys,
         [Description("'backlog' or a board id.")] string target,
         [Description("Target column: " + Statuses + ". Omit to keep each ticket's status.")] TicketStatus? status = null,
         [Description("Place the tickets right before this ticket.")] string? beforeKey = null,
         [Description("Place the tickets right after this ticket.")] string? afterKey = null,
+        [Description("Top or Bottom of the target, instead of beforeKey/afterKey.")] RankPosition? position = null,
         CancellationToken cancellationToken = default) =>
-        handler.HandleAsync(new MoveTickets.Command(keys, target, status, beforeKey, afterKey), cancellationToken);
+        handler.HandleAsync(new MoveTickets.Command(keys, target, status, beforeKey, afterKey, position), cancellationToken);
 }

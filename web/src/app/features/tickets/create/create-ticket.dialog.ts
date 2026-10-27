@@ -35,7 +35,6 @@ import {
   PRIORITY_OPTIONS,
   SEVERITY_OPTIONS,
   TICKET_TYPE_OPTIONS,
-  userOptions,
 } from '@shared/domain/picker-options';
 import { MarkdownEditorComponent } from '@shared/markdown/markdown-editor.component';
 import { LabelChipComponent } from '@shared/ui/domain/label-chip.component';
@@ -115,12 +114,11 @@ export class CreateTicketDialog {
   protected readonly parent = signal<TicketRef | null>(null);
   protected readonly parentKey = signal<string | null>(this.data.parentKey ?? null);
   protected readonly assignee = signal<UserRef | null>(null);
-  protected readonly assignable = signal<readonly UserRef[]>([]);
   protected readonly saving = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly fieldErrors = signal<Record<string, string>>({});
 
-  protected readonly assigneeOptions = computed(() => userOptions(this.assignable()));
+  protected readonly assigneeSearch = this.people.picker(() => this.projectKey());
   protected readonly canSubmit = computed(
     () => !!this.projectKey() && !!this.title().trim() && !this.saving(),
   );
@@ -145,19 +143,15 @@ export class CreateTicketDialog {
     });
     effect(() => {
       const key = this.projectKey();
-      if (!key) return;
+      const wanted = this.data.assignee;
+      if (!key || !wanted) return;
       untracked(() => {
         void this.people
-          .assignable(key)
-          .then((users) => {
-            this.assignable.set(users);
-            if (this.data.assignee)
-              this.assignee.set(
-                users.find((u) => u.id === this.data.assignee || u.email === this.data.assignee) ??
-                  null,
-              );
-          })
-          .catch(() => this.assignable.set([]));
+          .search(key, wanted)
+          .then((users) =>
+            this.assignee.set(users.find((u) => u.id === wanted || u.email === wanted) ?? null),
+          )
+          .catch(() => undefined);
       });
     });
   }
@@ -175,8 +169,8 @@ export class CreateTicketDialog {
     this.parentKey.set(parent?.key ?? null);
   }
 
-  protected setAssignee(id: string | null): void {
-    this.assignee.set(id ? (this.assignable().find((u) => u.id === id) ?? null) : null);
+  protected setAssignee(user: UserRef | null): void {
+    this.assignee.set(user);
   }
 
   protected toggleLabel(toggle: LabelToggle): void {
@@ -210,6 +204,8 @@ export class CreateTicketDialog {
       assignee: this.assignee()?.id ?? null,
       storyPoints: this.data.storyPoints ?? null,
       version: this.data.version ?? null,
+      ...(this.data.status ? { status: this.data.status } : {}),
+      ...(this.data.boardId ? { boardId: this.data.boardId } : {}),
     };
     try {
       const created = this.data.submit

@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  input,
+  output,
+  viewChild,
+} from '@angular/core';
 import { MatTooltip } from '@angular/material/tooltip';
 import { BacklogItem, BacklogParent, UserRef } from '@core/tickets/ticket.models';
 import {
@@ -21,15 +28,15 @@ import { StatusIconComponent } from '@shared/ui/domain/status-icon.component';
 import { TypeIconComponent } from '@shared/ui/domain/type-icon.component';
 import { IconComponent } from '@shared/ui/icon/icon.component';
 import { InlinePickerDirective } from '@shared/ui/inline-picker/inline-picker.directive';
-import { PickerOption } from '@shared/ui/inline-picker/picker-option';
 import { LabelsPickerDirective } from '@shared/ui/labels-picker/labels-picker.directive';
 import { LabelToggle } from '@shared/ui/labels-picker/labels-picker-panel.component';
+import { SearchFn, SearchPickerDirective } from '@shared/ui/search-picker/search-picker.directive';
 
 export type RowEdit =
   | { field: 'status'; value: TicketStatus }
   | { field: 'priority'; value: Priority }
   | { field: 'storyPoints'; value: number | null }
-  | { field: 'assignee'; value: string | null }
+  | { field: 'assignee'; value: UserRef | null }
   | { field: 'label'; value: LabelToggle };
 
 /// One dense backlog row (backlog.html): checkbox, priority, key, type, status, title, severity,
@@ -50,6 +57,7 @@ export type RowEdit =
     IconComponent,
     InlinePickerDirective,
     LabelsPickerDirective,
+    SearchPickerDirective,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
@@ -81,6 +89,7 @@ export type RowEdit =
       type="button"
       class="cell-btn"
       [disabled]="!canWrite()"
+      #priorityPicker="tkInlinePicker"
       [tkInlinePicker]="priorityOptions"
       [pickerValue]="item().priority"
       pickerPlaceholder="Change priority…"
@@ -98,6 +107,7 @@ export type RowEdit =
       type="button"
       class="cell-btn"
       [disabled]="!canWrite()"
+      #statusPicker="tkInlinePicker"
       [tkInlinePicker]="statusOptions"
       [pickerValue]="item().status"
       pickerPlaceholder="Change status…"
@@ -182,13 +192,13 @@ export type RowEdit =
       type="button"
       class="cell-btn"
       [disabled]="!canWrite()"
-      [tkInlinePicker]="assigneeOptions()"
-      [pickerValue]="item().assigneeId"
+      #assigneePicker="tkSearchPicker"
+      [tkSearchPicker]="assigneeSearch()"
       pickerPlaceholder="Assign to…"
-      pickerShortcut="A"
+      pickerShortcut="I"
       [attr.aria-label]="'Assignee: ' + (assignee()?.displayName ?? 'Unassigned')"
       data-testid="row-assignee"
-      (click)="$event.stopPropagation(); assigneeOpened.emit()"
+      (click)="$event.stopPropagation()"
       (picked)="edit.emit({ field: 'assignee', value: $event })"
     >
       <tk-avatar [userId]="assignee()?.id" [name]="assignee()?.displayName" />
@@ -207,14 +217,20 @@ export class BacklogRowComponent {
   readonly focused = input(false);
   readonly flash = input(false);
   readonly canWrite = input(false);
-  readonly assigneeOptions = input<readonly PickerOption<string | null>[]>([]);
+  readonly assigneeSearch = input<SearchFn<UserRef | null>>(() => Promise.resolve([]));
   readonly labelSuggestions = input<(prefix: string) => Promise<readonly string[]>>(() =>
     Promise.resolve([]),
   );
 
   readonly edit = output<RowEdit>();
   readonly toggleSelect = output<void>();
-  readonly assigneeOpened = output<void>();
+
+  private readonly statusPicker =
+    viewChild.required<InlinePickerDirective<TicketStatus>>('statusPicker');
+  private readonly priorityPicker =
+    viewChild.required<InlinePickerDirective<Priority>>('priorityPicker');
+  private readonly assigneePicker =
+    viewChild.required<SearchPickerDirective<UserRef | null>>('assigneePicker');
 
   protected readonly statusOptions = TICKET_STATUS_OPTIONS;
   protected readonly priorityOptions = PRIORITY_OPTIONS;
@@ -222,4 +238,12 @@ export class BacklogRowComponent {
   protected readonly shownLabels = computed(() => this.item().labels.slice(0, 2));
   protected readonly statusLabel = computed(() => TICKET_STATUS_LABELS[this.item().status]);
   protected readonly priorityLabel = computed(() => PRIORITY_LABELS[this.item().priority]);
+
+  /// Opens a field picker from the keyboard (s, p, i on the focused row).
+  openPicker(field: 'status' | 'priority' | 'assignee'): void {
+    if (!this.canWrite()) return;
+    if (field === 'status') this.statusPicker().open();
+    else if (field === 'priority') this.priorityPicker().open();
+    else this.assigneePicker().open();
+  }
 }

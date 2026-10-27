@@ -78,8 +78,6 @@ Types: `uuid`, `text(n)` = string of at most n characters, `md(n)` = markdown st
 | PasswordHash | text? | ASP.NET Core Identity `PasswordHasher` format. Null until the user sets a password. |
 | SetPasswordTokenHash | text? | SHA-256 of a one-time token. |
 | SetPasswordTokenExpiresAt | timestamptz? | |
-| FailedLoginCount | int | Reset on success. |
-| LockedUntil | timestamptz? | |
 | CreatedAt, CreatedById | timestamptz, uuid? | CreatedById null for the bootstrap admin. |
 | LastLoginAt | timestamptz? | |
 | DeactivatedAt, DeactivatedById | timestamptz?, uuid? | |
@@ -88,6 +86,7 @@ Invariants:
 
 - At least one active `Admin` exists at all times. Demoting or deactivating the last active Admin fails with `user.lastAdmin`.
 - A user cannot change their own `GlobalRole` or deactivate themselves.
+- Failed sign-ins are counted per account and client address (`LoginThrottle`: UserId, ClientAddress, FailedCount reset on success, LockedUntil, LastFailedAt; D-74). Web sessions are stored server-side (`UserSession`: Id, UserId, CreatedAt, LastSeenAt; D-75).
 - Users are never deleted (D-12). Deactivation blocks login, rejects all PATs (they are revoked), and removes the user from pickers. Existing references (assignee, reporter, comments, history) stay and render as "Name (deactivated)".
 - A deactivated user cannot become a new assignee or project member. Reactivation restores login. Revoked PATs stay revoked.
 - Deactivating a user who is the last `Owner` of any non-archived project fails with `user.lastProjectOwner` and lists the projects. The Admin first adds another owner (Admins can manage any project).
@@ -570,8 +569,8 @@ Flag changes write ActivityEntries. Admin UI: list, create, edit, delete; shows 
 - Admin creates a user with email, display name and global role. The system returns a one-time set-password link valid 72 hours, which the Admin passes on. No email is sent in v1. The Admin never sees or sets the password.
 - Forgotten password: an Admin issues a new set-password link (valid 24 hours). Issuing one invalidates the old password only when the link is used.
 - Password policy: 12..128 characters, not equal to the email, checked against a bundled list of the 10 000 most common passwords. No composition rules.
-- Lockout: 5 failed logins lock the account for 15 minutes.
-- Web session: HttpOnly, Secure, SameSite=Lax cookie with 12 hour sliding expiry, plus anti-forgery protection on cookie-authenticated writes.
+- Lockout: 5 failed logins in a row from one client address lock the account for that address for 15 minutes; other addresses can still sign in (D-74). A locked account, an unknown email and a wrong password all get the same answer, `401 auth.invalidCredentials`, after the same password-hashing work, so sign-in reveals neither which accounts exist nor which are locked. Sign-in is also rate limited per client address (20 per minute). The client address is the TCP peer unless the request came through a trusted proxy (D-73). Setting a password through a link lifts the account's lockouts.
+- Web session: HttpOnly, Secure, SameSite=Lax cookie with 12 hour sliding expiry, plus anti-forgery protection on cookie-authenticated writes. The session is also stored on the server; signing out deletes it, so a copied cookie stops working (D-75).
 - Users change their own display name and password (current password required).
 - Deactivate and reactivate per 4.1. No hard delete.
 
@@ -598,7 +597,7 @@ Every count links to the search that produces it. Target: dashboard loads in und
 
 ## 8. REST API
 
-- Base path `/api/v1`. JSON. OpenAPI document at `/api/v1/openapi.json` (I-19).
+- Base path `/api/v1`. JSON. OpenAPI document at `/api/v1/openapi.json` (I-19); in Production it needs a signed-in caller, cookie or PAT (D-76).
 - The REST API and the MCP server call the same application-layer commands and queries. No business rule lives in either transport.
 - Tickets are addressable by key: `/api/v1/tickets/WEB-42`.
 - Create endpoints accept an optional `Idempotency-Key` header. A repeat within 24 hours with the same key and user returns the original result (I-25).
@@ -650,7 +649,7 @@ Tickets
 | `create_ticket` | `projectKey`, `title`, `type`, optional `description`, `status`, `priority`, `severity`, `storyPoints`, `version`, `labels`, `parentKey`, `assignee`, `boardId`, `idempotencyKey` | Created ticket (summary + rowVersion). |
 | `create_tickets` | `projectKey`, `tickets` (1..50 objects with the `create_ticket` fields except `projectKey`; `parentKey` may also reference an earlier item in the batch as `#index`) | Created ticket summaries in input order. All-or-nothing (I-26). |
 | `update_ticket` | `key`, any of `title`, `description`, `type`, `status`, `resolution`, `priority`, `severity`, `storyPoints`, `version`, `labels` (replace), `addLabels`, `removeLabels`, `parentKey` (null to clear), `assignee` (null to clear), `reporter`, optional `expectedVersion` | Updated ticket. Null clears an optional field; omitted leaves it. |
-| `move_ticket` | `keys` (1..50), `target` (`backlog` or a board id), optional `status` (target column), optional `beforeKey` or `afterKey` | Moved ticket summaries. |
+| `move_ticket` | `keys` (1..100), `target` (`backlog` or a board id), optional `status` (target column), optional `beforeKey`, `afterKey` or `position` (`Top`/`Bottom`) | Moved ticket summaries. |
 | `delete_ticket` | `key` | Confirmation. Owner only. |
 | `get_ticket_history` | `key`, `limit`, `cursor` | Activity entries: when, actor, channel, action, field, old, new. |
 | `link_tickets` | `sourceKey`, `targetKey`, `type` | Created link. |
@@ -708,7 +707,7 @@ Out of MCP in v1: user administration, PAT management, feature flags, project de
 | Scale assumption | Up to 500 users, 200 projects, 200 000 tickets in total, 50 000 in one project, 500 cards on one board (D-04). |
 | API latency | p95 under 150 ms for reads and under 250 ms for writes at the scale above, measured at the API. |
 | UI | Ticket view opens in under 300 ms after navigation (data cached or fetched). Board with 500 cards renders in under 1 s. Drag and drop updates optimistically and rolls back on error. Initial JS bundle under 500 KB gzipped. |
-| Keyboard | `c` create, `/` or Ctrl+K quick jump, `j`/`k` next/previous in lists, `Enter` open, `e` edit, `a` assign to me, `m` move, `?` shortcut help (I-04). |
+| Keyboard | `c` create, `/` or Ctrl+K quick jump, `j`/`k` next/previous in lists, `Enter` open, `e` edit, `a` assign to me, `s`/`p`/`i` status, priority and assignee picker (D-78), `m` move, `?` shortcut help (I-04). |
 | Browsers | Latest Chrome, Edge and Firefox. Desktop first, minimum width 1280 px. |
 | Accessibility | All actions reachable by keyboard; visible focus; WCAG 2.1 AA colour contrast. |
 | Operations | Docker Compose with `api`, `web` and `db` services. `/health/live` and `/health/ready` endpoints. Structured JSON logs. Database migrations applied on API start. Documented `pg_dump` backup procedure, attachments included. |

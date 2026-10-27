@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.AspNetCore.Hosting;
 using Ticketing.IntegrationTests.Infrastructure;
 
 namespace Ticketing.IntegrationTests;
@@ -33,6 +34,38 @@ public sealed class ApiSurfaceTests(TicketingApiFactory api)
         var visibility = document.GetProperty("components").GetProperty("schemas").GetProperty("ProjectVisibility");
         Assert.Equal(["Private", "Public"], visibility.GetProperty("enum").EnumerateArray().Select(e => e.GetString()));
     }
+
+    [Fact]
+    public async Task OpenApi_document_needs_a_signed_in_caller_in_production()
+    {
+        // Arrange
+        await using var production = api.WithWebHostBuilder(b => b.UseEnvironment("Production"));
+        var user = await api.CreateUserAsync();
+        var anonymous = production.CreateDefaultClient(new Uri("https://localhost"));
+        var withToken = production.CreateDefaultClient(new Uri("https://localhost"));
+        withToken.DefaultRequestHeaders.Authorization = new("Bearer", await api.CreatePatAsync(user));
+
+        // Act
+        var anonymousResponse = await anonymous.GetAsync("/api/v1/openapi.json", _ct);
+        var tokenResponse = await withToken.GetAsync("/api/v1/openapi.json", _ct);
+        var scalar = await anonymous.GetAsync("/scalar", _ct);
+
+        // Assert
+        await anonymousResponse.ShouldHaveStatusAsync(HttpStatusCode.Unauthorized);
+        await tokenResponse.ShouldHaveStatusAsync(HttpStatusCode.OK);
+        Assert.NotEqual(HttpStatusCode.OK, scalar.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("=1+1", "'=1+1")]
+    [InlineData("  =HYPERLINK(\"x\")", "\"'  =HYPERLINK(\"\"x\"\")\"")]
+    [InlineData("\t=cmd", "'\t=cmd")]
+    [InlineData("\r\n@SUM(A1)", "\"'\r\n@SUM(A1)\"")]
+    [InlineData(" -2", "' -2")]
+    [InlineData("plain text", "plain text")]
+    [InlineData("a=b", "a=b")]
+    public void Csv_cells_that_a_spreadsheet_would_evaluate_are_neutralised(string value, string expected) =>
+        Assert.Equal(expected, Ticketing.Api.Http.Csv.Escape(value));
 
     [Fact]
     public async Task Timestamps_are_utc_iso_8601_with_z()

@@ -57,7 +57,6 @@ const FALLBACK_TITLES: Record<number, string> = {
   403: "You don't have permission to do that.",
   404: "It doesn't exist or was moved.",
   409: 'Someone else changed this in the meantime. Reload and try again.',
-  423: 'The account is locked.',
   429: 'Too many requests. Wait a moment and try again.',
 };
 

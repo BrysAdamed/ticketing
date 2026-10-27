@@ -17,6 +17,7 @@ builder.Services
     .AddInfrastructure(builder.Configuration)
     .AddHostedService<DatabaseStartup>()
     .AddDemoData(builder.Configuration)
+    .AddTicketingForwardedHeaders(builder.Configuration)
     .AddTicketingAuth(builder.Configuration)
     .AddTicketingRateLimiting(builder.Configuration)
     .AddTicketingMcp()
@@ -27,6 +28,8 @@ builder.Services
     .Configure<JsonOptions>(o => JsonSetup.Apply(o.SerializerOptions))
     .Configure<RouteHandlerOptions>(o => o.ThrowOnBadRequest = true);
 
+builder.WebHost.ConfigureKestrel(o => o.Limits.MaxRequestBodySize = RequestLimits.MaxBodyBytes);
+
 var app = builder.Build();
 
 if (DemoDataSetup.IsSeedCommand(args))
@@ -35,15 +38,23 @@ if (DemoDataSetup.IsSeedCommand(args))
     return;
 }
 
+app.UseForwardedHeaders();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseAuthentication();
 app.UseRateLimiter();
 app.UseAuthorization();
 
-app.MapOpenApi("/api/{documentName}/openapi.json").AllowAnonymous();
-if (!app.Environment.IsProduction())
+var openApi = app.MapOpenApi("/api/{documentName}/openapi.json");
+if (app.Environment.IsProduction())
+{
+    openApi.RequireAuthorization();
+}
+else
+{
+    openApi.AllowAnonymous();
     app.MapScalarApiReference("/scalar", o => o.WithOpenApiRoutePattern("/api/{documentName}/openapi.json")).AllowAnonymous();
+}
 
 app.MapTicketingHealth();
 app.MapTicketingApi();

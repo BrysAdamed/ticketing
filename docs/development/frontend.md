@@ -15,13 +15,13 @@ The Angular 22 SPA lives in `web/`. It uses standalone components, zoneless chan
 
 Node 24 (`.nvmrc`). TypeScript must stay on 6.0.x (Angular 22 requirement).
 
-Docker: `docker build -t ticketing-web web` builds the app with Node, then serves it with `nginx-unprivileged` on port 8080 (`web/nginx/`). nginx serves the SPA with an `index.html` fallback. It proxies `/api`, `/mcp` (no buffering, 1 h timeouts), `/openapi`, `/scalar` and `/health` to `${API_UPSTREAM}` (default `api:8080`, resolved at request time, so the container starts even when the API isn't up yet). Hashed assets are cached for a year and `index.html` is `no-cache`. Responses are gzipped and carry security headers, including a CSP: `script-src 'self'` (no inline scripts; the theme bootstrap is `public/theme-init.js`), and `style-src 'self' 'unsafe-inline'` because Angular injects component styles at runtime. In compose, the `web` service publishes host port 8080.
+Docker: `docker build -t ticketing-web web` builds the app with Node, then serves it with `nginx-unprivileged` on port 8080 (`web/nginx/`). nginx serves the SPA with an `index.html` fallback. It proxies `/api`, `/mcp` (no buffering, 1 h timeouts), `/scalar` and `/health` to `${API_UPSTREAM}` (default `api:8080`, resolved at request time, so the container starts even when the API isn't up yet). Hashed assets are cached for a year and `index.html` is `no-cache`. Responses are gzipped and carry security headers, including a CSP: `script-src 'self'` (no inline scripts; the theme bootstrap is `public/theme-init.js`), and `style-src 'self' 'unsafe-inline'` because Angular injects component styles at runtime. In compose, the `web` service publishes host port 8080; the API port 5080 that `ng serve` proxies to is published only by `docker-compose.override.yml` (development). Access logs omit the `/set-password` query string and Referer query strings, and HSTS is sent only over HTTPS (D-76).
 
 ## Structure
 
 ```
 web/src/
-  styles/               tokens (_tokens.scss = copy of docs/design/tokens.scss), Material theme + overrides, base, markdown
+  styles/               tokens (_tokens.scss, the single source of truth for design tokens), Material theme + overrides, base, markdown
   app/
     app.routes.ts       top-level routes only (login, set-password, shell + one lazy entry per feature)
     app.config.ts       providers: router, HTTP (XSRF, error interceptor), app initializer, icons, peek view, Material defaults
@@ -132,12 +132,12 @@ The tickets slice (`features/tickets`, `features/backlog`) keeps everything othe
 
 | Need | Use |
 | --- | --- |
-| Ticket REST calls | `TicketsApi` (`get`, `create`, `update(key, patch, rowVersion?)`, `backlog`, `rank`, `find`, `hints`, comments, links, history). Wire types are in `ticket.models.ts`. |
+| Ticket REST calls | `TicketsApi` (`get`, `create`, `update(key, patch, rowVersion?)`, `backlog`, `move`, `find`, `hints`, comments, links, history). Wire types are in `ticket.models.ts`. |
 | Instant ticket views | `TicketCache.peek/fetch/prefetch(key)`. Lists call `prefetch` after a 150 ms hover, so the peek opens with data already loaded. |
 | Keep lists in sync | `TicketEvents.events` emits `created`, `updated` (with the full ticket) and `deleted`. Emit them after your own ticket writes, and subscribe in list stores (backlog, boards) to patch rows without a refetch. |
 | Open a ticket | `PeekService.open(key)` for the side panel, or route to `/tickets/:key`. |
 | Create a ticket | `TicketCreator.open(prefill)` opens the create dialog with any `NewTicket` fields pre-filled, plus `heading` and an optional `submit(projectKey, ticket)` that replaces the default `POST /projects/{key}/tickets`. The regressions slice uses it for "Create bug" with its own endpoint. It resolves with the created `TicketSummary`, or `null`. The global `C` and the top bar button run the `ticket.create` command registered by `provideTicketCreation` in `app.config.ts`. In the backlog, `C` opens the inline quick-create row instead. |
-| Assignee / label / version pickers | `ProjectPeople.assignable(projectKey)` (active Owners and Members), `FieldHints.get(projectKey, 'labels' \| 'version', prefix)`. |
+| Assignee / label / version pickers | `ProjectPeople.picker(() => projectKey)` for a type-ahead `tkSearchPicker` over `GET /users?projectKey=` (any active user on public projects, Admins and Owner/Member members on private ones; never a members-only list), `FieldHints.get(projectKey, 'labels' \| 'version', prefix)`. |
 
 **Ticket view sections (extension point).** Other features add sections to the ticket view (page and peek) without touching the tickets feature. Register one in `app.config.ts`:
 
@@ -182,12 +182,12 @@ Global CSS helpers (`styles/`): `.tk-page`, `.tk-page-header` (+ `.tk-page-count
 
 ## Theming
 
-`styles/_tokens.scss` is a verbatim copy of `docs/design/tokens.scss`; when the design tokens change, copy the file again. `_material-theme.scss` maps every M3 system token to a `--tk-*` variable (`mat.theme` + `mat.theme-overrides`, verified against the installed Material 22.2). `_material-overrides.scss` pins component sizes: 32 px controls, 28 px icon buttons, 32 px table rows, no ripples. Wrap toolbars in `.tk-dense` for 28 px controls. Components use semantic tokens only (`--tk-bg`, `--tk-text-muted`, `--tk-status-*`), never primitives, so dark mode works without extra code. Buttons: `mat-flat-button` is primary (at most one per view), `mat-stroked-button` secondary, `mat-button` ghost.
+`styles/_tokens.scss` is the single source of truth for design tokens; the design docs link to it and there is no copy to keep in sync. The HTML mockups embed an older snapshot and are visual reference only. `_material-theme.scss` maps every M3 system token to a `--tk-*` variable (`mat.theme` + `mat.theme-overrides`, verified against the installed Material 22.2). `_material-overrides.scss` pins component sizes: 32 px controls, 28 px icon buttons, 32 px table rows, no ripples. Wrap toolbars in `.tk-dense` for 28 px controls. Components use semantic tokens only (`--tk-bg`, `--tk-text-muted`, `--tk-status-*`), never primitives, so dark mode works without extra code. Buttons: `mat-flat-button` is primary (at most one per view), `mat-stroked-button` secondary, `mat-button` ghost.
 
 ## Testing
 
 - **Unit (Vitest + TestBed, zoneless)**: `*.spec.ts` next to the code. Write them Arrange / Act / Assert. The current suite covers flag bucketing (shared vectors), view registry resolution and fallback, markdown sanitizing and key autolinks, auth guards, ApiError mapping and shortcuts.
-- **E2E (`e2e/`, Playwright 1.64)**: `npm install && npx playwright install chromium`, then `npm test`. It runs against an already running stack (`E2E_BASE_URL`, default `http://localhost:8080`, i.e. docker compose web → api; use `http://localhost:4200` with `ng serve`). The `setup` project signs in as the bootstrap admin (`E2E_ADMIN_EMAIL` / `E2E_ADMIN_PASSWORD`, falling back to `TICKETING_BOOTSTRAP_ADMIN_*`, default `admin@ticketing.local` / `ChangeMe-Admin-2026!`) and saves `.auth/admin.json`, so specs start signed in. To test anonymously, use `test.use({ storageState: { cookies: [], origins: [] } })`.
+- **E2E (`e2e/`, Playwright 1.64)**: `npm install && npx playwright install chromium`, then `npm run typecheck` (`tsc --noEmit`; Playwright only strips types, so type errors would otherwise go unnoticed) and `npm test`. It runs against an already running stack (`E2E_BASE_URL`, default `http://localhost:8080`, i.e. docker compose web → api; use `http://localhost:4200` with `ng serve`). The `setup` project signs in as the bootstrap admin (`E2E_ADMIN_EMAIL` / `E2E_ADMIN_PASSWORD`, falling back to `TICKETING_BOOTSTRAP_ADMIN_*`, default `admin@ticketing.local` / `ChangeMe-Admin-2026!`) and saves `.auth/admin.json`, so specs start signed in. To test anonymously, use `test.use({ storageState: { cookies: [], origins: [] } })`.
   - Import `test` and `expect` from `e2e/support/fixtures.ts`. It provides page objects (`loginPage`, `shell`) and `api`.
   - `api` (`e2e/support/api.ts`) uses the admin cookie session and handles XSRF itself (it reads the `XSRF-TOKEN` cookie and echoes it as `X-XSRF-TOKEN`). Seed data through it (`api.createProject()`, `api.post(...)`), never through the UI. Use `uniqueProjectKey()` so parallel tests don't collide.
   - Page objects live in `e2e/pages/*.page.ts`. They expose locators and intent-level methods, never assertions about business rules.

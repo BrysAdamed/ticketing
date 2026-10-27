@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { Observable, of, Subject, throwError } from 'rxjs';
 import { AuthService } from '@core/auth/auth.service';
 import { ToastService } from '@core/notify/toast.service';
-import { Backlog, BacklogItem, Ticket } from '@core/tickets/ticket.models';
+import { Backlog, BacklogItem, Ticket, TicketSummary } from '@core/tickets/ticket.models';
 import { TicketsApi } from '@core/tickets/tickets.api';
 import { BacklogStore } from './backlog.store';
 
@@ -41,7 +41,7 @@ class FakeApi {
     truncated: false,
   };
   update = vi.fn<(key: string) => Observable<Ticket>>();
-  rank = vi.fn<() => Observable<void>>();
+  move = vi.fn<() => Observable<TicketSummary[]>>();
   backlog = () => of(this.backlogResult);
 }
 
@@ -103,8 +103,8 @@ describe('BacklogStore', () => {
 
   it('reorders optimistically and restores the order when ranking fails', async () => {
     // Arrange
-    const response = new Subject<void>();
-    api.rank.mockReturnValue(response);
+    const response = new Subject<TicketSummary[]>();
+    api.move.mockReturnValue(response);
 
     // Act
     const pending = store.rank(['id-3'], { beforeKey: 'WEB-1' }, { beforeId: 'id-1' });

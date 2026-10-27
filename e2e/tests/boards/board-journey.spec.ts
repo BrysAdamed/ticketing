@@ -96,7 +96,7 @@ test.describe('boards', () => {
             name: `Multi ${key}`,
             projectKeys: [key],
         });
-        const tickets = [];
+        const tickets: TicketSummary[] = [];
         for (const title of ['One', 'Two', 'Three'])
             tickets.push(await createTicket(api, key, title));
         await api.post('/tickets/move', { keys: tickets.map((t) => t.key), target: created.id });
@@ -134,5 +134,40 @@ test.describe('boards', () => {
 
         // Assert
         await expect(page.getByTestId(`nav-board-${created.id}`)).toContainText(`Visit ${key}`);
+    });
+
+    test('a parent card shows sub-ticket progress and p changes the focused card priority', async ({
+        page,
+        api,
+    }) => {
+        // Arrange
+        const key = (await api.createProject({ visibility: 'Public' })).key;
+        const created = await api.post<{ id: string }>('/boards', {
+            name: `Progress ${key}`,
+            projectKeys: [key],
+        });
+        const epic = await createTicket(api, key, 'Payments', { type: 'Epic' });
+        await createTicket(api, key, 'Card form', { parentKey: epic.key, status: 'Done' });
+        await createTicket(api, key, 'Refunds', { parentKey: epic.key });
+        await api.post('/tickets/move', { keys: [epic.key], target: created.id });
+        const board = new BoardPage(page);
+
+        // Act
+        await board.goto(created.id);
+        await expect(board.card(epic.key)).toBeVisible();
+        await page.keyboard.press('j');
+        await page.keyboard.press('p');
+        await page
+            .getByTestId('inline-picker')
+            .getByRole('option', { name: /^Highest/ })
+            .click();
+
+        // Assert
+        await expect(board.card(epic.key).getByTestId('card-progress')).toHaveText('1/2');
+        await expect
+            .poll(
+                async () => (await api.get<{ priority: string }>(`/tickets/${epic.key}`)).priority,
+            )
+            .toBe('Highest');
     });
 });

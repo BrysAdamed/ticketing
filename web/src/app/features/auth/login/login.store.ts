@@ -6,8 +6,8 @@ import { AuthService } from '@core/auth/auth.service';
 import { LoginRequest } from '@core/auth/current-user';
 
 const MESSAGES: Record<string, string> = {
-  'auth.invalidCredentials': 'Email or password is incorrect.',
-  'auth.lockedOut': 'Too many failed attempts. The account is locked for 15 minutes.',
+  'auth.invalidCredentials':
+    'Email or password is incorrect. After 5 failed attempts, sign-in from this network pauses for 15 minutes.',
   rateLimited: 'Too many sign-in attempts. Wait a minute and try again.',
   'xsrf.invalid': 'Your session expired. Reload the page and try again.',
   network: 'Cannot reach the server. Check your connection and try again.',
@@ -33,14 +33,14 @@ export class LoginStore {
     } catch (error) {
       const apiError = toApiError(error);
       this.fieldErrors.set(apiError.fieldErrors);
-      this.error.set(messageFor(apiError));
+      this.error.set(loginErrorMessage(apiError));
     } finally {
       this.submitting.set(false);
     }
   }
 }
 
-function messageFor(error: ApiError): string {
+export function loginErrorMessage(error: ApiError): string {
   if (error.isValidation) return 'Check the highlighted fields.';
   return MESSAGES[error.code] ?? error.title;
 }

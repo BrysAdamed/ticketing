@@ -36,8 +36,6 @@ public sealed class AppException : Exception
 
     public static AppException Unauthenticated(string code, string message) => new(ErrorKind.Unauthenticated, code, message);
 
-    public static AppException Locked(string code, string message) => new(ErrorKind.Locked, code, message);
-
     public static AppException Validation(IReadOnlyDictionary<string, string[]> errors) =>
         new(ErrorKind.Validation, AppErrors.Validation, "One or more fields are invalid.", errors: errors);
 
@@ -64,7 +62,6 @@ public enum ErrorKind
     Forbidden,
     NotFound,
     Conflict,
-    Locked,
     TooManyRequests,
 }
 
@@ -74,7 +71,6 @@ public static class AppErrors
     public const string Validation = "validation";
     public const string Unauthenticated = "auth.unauthenticated";
     public const string InvalidCredentials = "auth.invalidCredentials";
-    public const string LockedOut = "auth.lockedOut";
     public const string CookieSessionRequired = "auth.cookieSessionRequired";
     public const string Forbidden = "forbidden";
     public const string NotFound = "notFound";

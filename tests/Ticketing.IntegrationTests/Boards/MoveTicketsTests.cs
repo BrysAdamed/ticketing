@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using Ticketing.Application.Backlog;
 using Ticketing.Application.Common;
@@ -149,6 +150,33 @@ public sealed class MoveTicketsTests(TicketingApiFactory api)
         await anchorElsewhere.ShouldBeProblemAsync(HttpStatusCode.Conflict, TicketErrors.RankAnchorInvalid);
         await unknownTicket.ShouldBeProblemAsync(HttpStatusCode.NotFound, TicketErrors.NotFound);
         Assert.Equal(["ToDo: WEB-1"], (await client.GetBoardAsync(board)).Layout());
+    }
+
+    [Fact]
+    public async Task A_source_guard_rejects_moves_from_stale_views_and_position_places_at_the_edges()
+    {
+        // Arrange
+        var (client, board, keys) = await SetUpAsync(4);
+        var other = (await client.CreateBoardAsync("Other", "WEB")).Id;
+        await client.MoveOkAsync(board.ToString(), [keys[0], keys[1], keys[2]]);
+        await client.MoveOkAsync(other.ToString(), [keys[2]]);
+
+        // Act
+        var staleBoard = await client.PostAsJsonAsync(
+            "/api/v1/tickets/move", new { keys = new[] { keys[2] }, target = board.ToString(), from = board.ToString() }, HttpAssertions.Json, _ct);
+        var staleBacklog = await client.PostAsJsonAsync(
+            "/api/v1/tickets/move", new { keys = new[] { keys[0] }, target = "backlog", from = "backlog" }, HttpAssertions.Json, _ct);
+        var top = await client.PostAsJsonAsync(
+            "/api/v1/tickets/move", new { keys = new[] { keys[1] }, target = board.ToString(), from = board.ToString(), position = "Top" }, HttpAssertions.Json, _ct);
+        var tooMany = await client.MoveAsync("backlog", [.. Enumerable.Range(1, MoveTickets.MaxTickets + 1).Select(i => $"WEB-{i}")]);
+
+        // Assert
+        await staleBoard.ShouldBeProblemAsync(HttpStatusCode.Conflict, TicketErrors.NotInSource);
+        await staleBacklog.ShouldBeProblemAsync(HttpStatusCode.Conflict, TicketErrors.NotInSource);
+        await top.ShouldHaveStatusAsync(HttpStatusCode.OK);
+        await tooMany.ShouldBeProblemAsync(HttpStatusCode.BadRequest, AppErrors.Validation);
+        Assert.Equal(["ToDo: WEB-2, WEB-1"], (await client.GetBoardAsync(board)).Layout());
+        Assert.Equal(["ToDo: WEB-3"], (await client.GetBoardAsync(other)).Layout());
     }
 
     [Fact]

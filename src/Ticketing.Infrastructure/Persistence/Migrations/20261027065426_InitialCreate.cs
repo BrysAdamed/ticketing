@@ -86,8 +86,6 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                     set_password_token_hash = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true),
                     set_password_token_expires_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
                     security_stamp = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
-                    failed_login_count = table.Column<int>(type: "integer", nullable: false),
-                    locked_until = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
                     created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     created_by_id = table.Column<Guid>(type: "uuid", nullable: true),
                     last_login_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
@@ -150,6 +148,27 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "login_throttles",
+                columns: table => new
+                {
+                    user_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    client_address = table.Column<string>(type: "character varying(45)", maxLength: 45, nullable: false),
+                    failed_count = table.Column<int>(type: "integer", nullable: false),
+                    locked_until = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    last_failed_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("pk_login_throttles", x => new { x.user_id, x.client_address });
+                    table.ForeignKey(
+                        name: "fk_login_throttles_users_user_id",
+                        column: x => x.user_id,
+                        principalTable: "users",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "personal_access_tokens",
                 columns: table => new
                 {
@@ -204,6 +223,26 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                         principalTable: "users",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "user_sessions",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    user_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    last_seen_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("pk_user_sessions", x => x.id);
+                    table.ForeignKey(
+                        name: "fk_user_sessions_users_user_id",
+                        column: x => x.user_id,
+                        principalTable: "users",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -659,6 +698,11 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                 column: "expires_at");
 
             migrationBuilder.CreateIndex(
+                name: "ix_login_throttles_last_failed_at",
+                table: "login_throttles",
+                column: "last_failed_at");
+
+            migrationBuilder.CreateIndex(
                 name: "ix_personal_access_tokens_token_hash",
                 table: "personal_access_tokens",
                 column: "token_hash",
@@ -895,6 +939,16 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                 filter: "deleted_at IS NULL");
 
             migrationBuilder.CreateIndex(
+                name: "ix_user_sessions_last_seen_at",
+                table: "user_sessions",
+                column: "last_seen_at");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_user_sessions_user_id",
+                table: "user_sessions",
+                column: "user_id");
+
+            migrationBuilder.CreateIndex(
                 name: "ix_users_email",
                 table: "users",
                 column: "email",
@@ -933,6 +987,9 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                 name: "idempotency_records");
 
             migrationBuilder.DropTable(
+                name: "login_throttles");
+
+            migrationBuilder.DropTable(
                 name: "personal_access_tokens");
 
             migrationBuilder.DropTable(
@@ -946,6 +1003,9 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
 
             migrationBuilder.DropTable(
                 name: "ticket_links");
+
+            migrationBuilder.DropTable(
+                name: "user_sessions");
 
             migrationBuilder.DropTable(
                 name: "attachments");

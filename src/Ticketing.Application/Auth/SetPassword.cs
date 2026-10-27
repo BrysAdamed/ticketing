@@ -9,7 +9,7 @@ namespace Ticketing.Application.Auth;
 
 /// <summary>
 /// Public (anonymous) redemption of a set-password link, used for onboarding and resets (spec 6.14). The link is single
-/// use; setting the password ends every existing session of the user. Unknown, used and expired links all give the same
+/// use; setting the password ends every existing session of the user and lifts its sign-in lockouts. Unknown, used and expired links all give the same
 /// 404 <c>user.setPasswordToken.invalid</c>.
 /// </summary>
 public static class SetPassword
@@ -39,6 +39,7 @@ public static class SetPassword
             db.ActivityEntries.Add(ActivityEntry.Create(
                 ActivityEntityType.User, user.Id, null, user.Id, WriteChannel.Web, clock.Now, isNewUser ? "user.password.set" : "user.password.reset"));
             await db.SaveChangesAsync(cancellationToken);
+            await db.LoginThrottles.Where(t => t.UserId == user.Id).ExecuteDeleteAsync(cancellationToken);
             return true;
         }
     }

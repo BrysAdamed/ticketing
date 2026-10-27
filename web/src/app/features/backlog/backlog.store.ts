@@ -368,8 +368,10 @@ export class BacklogStore {
     this.items.set(moveBlock(snapshot, block, local));
     try {
       await firstValueFrom(
-        this.api.rank(this.projectKey(), {
-          tickets: block.map((id) => this.item(id)!.key),
+        this.api.move({
+          keys: block.map((id) => this.item(id)!.key),
+          target: 'backlog',
+          from: 'backlog',
           ...anchor,
         }),
       );
@@ -430,8 +432,10 @@ export class BacklogStore {
       this.events.emit({ kind: 'created', ticket: created });
       if (firstInGroup?.kind === 'ticket' && this.sortBy() === 'rank') {
         void firstValueFrom(
-          this.api.rank(this.projectKey(), {
-            tickets: [created.key],
+          this.api.move({
+            keys: [created.key],
+            target: 'backlog',
+            from: 'backlog',
             beforeKey: firstInGroup.item.key,
           }),
         ).catch(() => undefined);

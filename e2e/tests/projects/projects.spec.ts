@@ -53,11 +53,13 @@ test.describe('projects', () => {
         await expect(shell.navLink(`nav-project-${key}`)).toHaveCount(0);
         await project.tab('backlog').click();
         await expect(project.archivedBanner).toBeVisible();
+        await expect(project.archivedBanner).toContainText('unlinked from every board');
 
         // Act: unarchive from the banner
         await project.unarchiveButton.click();
 
-        // Assert
+        // Assert: boards are not relinked, and the user is told so
+        await expect(page.getByText('Its former boards are not linked again')).toBeVisible();
         await expect(project.archivedBanner).toBeHidden();
         await expect(shell.navLink(`nav-project-${key}`)).toBeVisible();
     });

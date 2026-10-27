@@ -16,8 +16,9 @@ import { BoardsApi } from '@core/boards/boards.api';
 import { ToastService } from '@core/notify/toast.service';
 import { LoadStatus } from '@core/projects/project-directory';
 import { TicketEvents } from '@core/tickets/ticket-events';
-import { Ticket } from '@core/tickets/ticket.models';
-import { TICKET_STATUSES, TicketStatus } from '@shared/domain/enums';
+import { TicketsApi } from '@core/tickets/tickets.api';
+import { Ticket, TicketPatch, UserRef } from '@core/tickets/ticket.models';
+import { Priority, TICKET_STATUSES, TicketStatus } from '@shared/domain/enums';
 import {
   applyMove,
   buildLanes,
@@ -36,6 +37,7 @@ const COLLAPSED_KEY = 'tk-board-collapsed';
 @Injectable()
 export class BoardStore {
   private readonly api = inject(BoardsApi);
+  private readonly ticketsApi = inject(TicketsApi);
   private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
   private readonly directory = inject(BoardDirectory);
@@ -162,11 +164,29 @@ export class BoardStore {
     const keys = ids.map((id) => findCard(before, id)?.key).filter((k): k is string => !!k);
     const beforeKey = anchor.beforeId ? findCard(before, anchor.beforeId)?.key : undefined;
     const afterKey = anchor.afterId ? findCard(before, anchor.afterId)?.key : undefined;
+    const parentProgressChanges = ids.some((id) => {
+      const parentId = findCard(before, id)?.parentId;
+      return (
+        !!parentId &&
+        !!findCard(before, parentId) &&
+        (statusOf(before, id) === 'Done') !== (status === 'Done')
+      );
+    });
     const seq = ++this.moveSeq;
     this.board.set({ ...board, columns: applyMove(before, ids, status, anchor) });
     this.moving.set(true);
     try {
-      await firstValueFrom(this.api.move({ keys, target: board.id, status, beforeKey, afterKey }));
+      await firstValueFrom(
+        this.ticketsApi.move({
+          keys,
+          target: board.id,
+          from: board.id,
+          status,
+          beforeKey,
+          afterKey,
+        }),
+      );
+      if (parentProgressChanges) void this.reload(true);
       return true;
     } catch (error) {
       if (seq === this.moveSeq && this.board())
@@ -193,6 +213,70 @@ export class BoardStore {
     if (ids.length) await this.move(ids, next, {});
   }
 
+  /// The cards a keyboard edit (`s`, `p`, `i`) applies to: the editable selection, else the focused card.
+  editTargets(): string[] {
+    const selection = this.selection();
+    const ids = selection.size ? inBoardOrder(this.columns(), selection) : [this.focusId() ?? ''];
+    const columns = this.columns();
+    return ids.filter((id) => {
+      const card = findCard(columns, id);
+      return !!card && this.canDrag(card);
+    });
+  }
+
+  setPriority(ids: readonly string[], priority: Priority): Promise<void> {
+    return this.patchCards(ids, { priority }, { priority });
+  }
+
+  setAssignee(ids: readonly string[], user: UserRef | null): Promise<void> {
+    const board = this.board();
+    if (board && user && !board.users.some((u) => u.id === user.id))
+      this.board.set({ ...board, users: [...board.users, user] });
+    return this.patchCards(ids, { assignee: user?.id ?? null }, { assigneeId: user?.id ?? null });
+  }
+
+  /// Optimistic field edit of several cards: one PATCH per ticket, rollback of the cards that failed.
+  private async patchCards(
+    ids: readonly string[],
+    patch: TicketPatch,
+    local: Partial<BoardCard>,
+  ): Promise<void> {
+    const board = this.board();
+    if (!board || ids.length === 0) return;
+    const before = new Map(
+      ids
+        .map((id) => [id, findCard(board.columns, id)])
+        .filter((e): e is [string, BoardCard] => !!e[1]),
+    );
+    this.replaceCards((card) => (before.has(card.id) ? { ...card, ...local } : card));
+    const cards = [...before.values()];
+    const results = await Promise.allSettled(
+      cards.map(async (card) => {
+        const ticket = await firstValueFrom(this.ticketsApi.update(card.key, patch));
+        this.events.emit({ kind: 'updated', ticket });
+      }),
+    );
+    const failed = cards.filter((_, i) => results[i].status === 'rejected');
+    if (failed.length === 0) return;
+    const failedIds = new Set(failed.map((c) => c.id));
+    this.replaceCards((card) => (failedIds.has(card.id) ? (before.get(card.id) ?? card) : card));
+    const reason = (results.find((r) => r.status === 'rejected') as PromiseRejectedResult).reason;
+    this.toast.error(
+      failed.length === 1
+        ? `${failed[0].key}: ${toApiError(reason).title}`
+        : `${failed.length} tickets were not updated: ${toApiError(reason).title}`,
+    );
+  }
+
+  private replaceCards(map: (card: BoardCard) => BoardCard): void {
+    const board = this.board();
+    if (!board) return;
+    this.board.set({
+      ...board,
+      columns: board.columns.map((c) => ({ ...c, cards: c.cards.map(map) })),
+    });
+  }
+
   async sendToBacklog(ids: readonly string[]): Promise<void> {
     const board = this.board();
     if (!board || ids.length === 0) return;
@@ -205,7 +289,7 @@ export class BoardStore {
     });
     this.selection.set(new Set());
     try {
-      await firstValueFrom(this.api.move({ keys, target: 'backlog' }));
+      await firstValueFrom(this.ticketsApi.move({ keys, target: 'backlog', from: board.id }));
       this.toast.success(
         keys.length === 1
           ? `${keys[0]} moved to the backlog`
@@ -222,7 +306,9 @@ export class BoardStore {
     const board = this.board();
     if (!board || keys.length === 0) return false;
     try {
-      await firstValueFrom(this.api.move({ keys: [...keys], target: board.id }));
+      await firstValueFrom(
+        this.ticketsApi.move({ keys: [...keys], target: board.id, from: 'backlog' }),
+      );
       this.toast.success(
         keys.length === 1
           ? `${keys[0]} added to the board`

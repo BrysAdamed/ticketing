@@ -146,19 +146,21 @@ public sealed class ProjectAndUserTests
     }
 
     [Fact]
-    public void Fifth_failed_login_locks_the_user_for_15_minutes()
+    public void Fifth_failed_login_from_one_address_locks_that_pair_for_15_minutes()
     {
         // Arrange
         var user = User.Create("Jane@Example.com", "Jane", GlobalRole.User, null, Now);
+        var throttle = LoginThrottle.Create(user.Id, "203.0.113.7");
 
         // Act
-        var locked = Enumerable.Range(0, User.MaxFailedLogins).Select(_ => user.RegisterFailedLogin(Now)).ToList();
+        var locked = Enumerable.Range(0, LoginThrottle.MaxFailedLogins).Select(_ => throttle.RegisterFailure(Now)).ToList();
 
         // Assert
         Assert.Equal("jane@example.com", user.Email);
         Assert.Equal([false, false, false, false, true], locked);
-        Assert.True(user.IsLockedOut(Now.AddMinutes(14)));
-        Assert.False(user.IsLockedOut(Now.AddMinutes(15)));
+        Assert.True(throttle.IsLockedOut(Now.AddMinutes(14)));
+        Assert.False(throttle.IsLockedOut(Now.AddMinutes(15)));
+        Assert.Equal(0, throttle.FailedCount);
     }
 
     [Fact]

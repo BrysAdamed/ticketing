@@ -12,6 +12,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { IconComponent } from '../icon/icon.component';
+import { KbdComponent } from '../kbd/kbd.component';
 import { PickerOption, PickerOptionTemplate } from '../inline-picker/picker-option';
 
 const DEBOUNCE_MS = 150;
@@ -19,7 +20,7 @@ let nextPanelId = 0;
 
 @Component({
   selector: 'tk-search-picker-panel',
-  imports: [NgTemplateOutlet, IconComponent],
+  imports: [NgTemplateOutlet, IconComponent, KbdComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'tk-popover', 'data-testid': 'search-picker' },
   template: `
@@ -38,6 +39,9 @@ let nextPanelId = 0;
         (input)="onQuery(input.value)"
         (keydown)="onKeydown($event)"
       />
+      @if (shortcut()) {
+        <tk-kbd>{{ shortcut() }}</tk-kbd>
+      }
     </div>
     <div
       class="list"
@@ -134,6 +138,7 @@ let nextPanelId = 0;
 export class SearchPickerPanelComponent<T> {
   readonly search = input.required<(query: string) => Promise<readonly PickerOption<T>[]>>();
   readonly placeholder = input('Search…');
+  readonly shortcut = input<string | null>(null);
   readonly optionTemplate = input<PickerOptionTemplate<T> | null>(null);
 
   readonly picked = output<T>();

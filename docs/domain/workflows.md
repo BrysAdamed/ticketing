@@ -183,9 +183,10 @@ sequenceDiagram
 ```
 
 - Status changes on a move only when the move targets a specific column.
-- Reordering inside the backlog (D-48) moves the selected tickets as one block, in the order sent, right before or after another backlog ticket or to the top or bottom. The neighbours are read under the container lock, and the block gets consecutive ranks; a too-long key rebalances the backlog with free slots. Rank changes write no history.
+- Reordering inside the backlog (D-48) is the same call with target `backlog`: the selected tickets move as one block, in the order sent, right before or after another backlog ticket or to the top or bottom. The neighbours are read under the container lock, and the block gets consecutive ranks; a too-long key rebalances the backlog with free slots. Rank changes write no history.
 - Placing on a board requires: the board links the ticket's project, the board is not archived, and the actor can write to the project.
-- Every move is one call, `POST /tickets/move` or MCP `move_ticket` (D-66): 1..50 keys in their final order, a target (`backlog` or a board id), an optional status (the column) and an optional `beforeKey` / `afterKey`. Without an anchor, tickets go to the bottom of the board (so the bottom of their column) or to the top of their own project backlog. With target `backlog`, tickets of several projects each go to their own backlog; an anchor then requires them all to be in the anchor's project.
+- Every placement change is one call, `POST /tickets/move` or MCP `move_ticket` (D-66, D-77): backlog reorder, backlog to board, board to backlog, board to board and column changes. It takes 1..100 keys in their final order, a target (`backlog` or a board id), an optional status (the column) and at most one anchor: `beforeKey`, `afterKey` or `position` (`Top` / `Bottom`). Without an anchor, tickets go to the bottom of the board (so the bottom of their column) or to the top of their own project backlog. With target `backlog`, tickets of several projects each go to their own backlog; an anchor then requires them all to be in the anchor's project.
+- The web UI also sends `from` (`backlog` or the board id it shows). If another user moved one of the tickets meanwhile, the call fails with 409 `ticket.notInSource` instead of pulling the ticket out of its new container, and the UI rolls back.
 - On a board, a column is the board order filtered by status, so "before WEB-7" in the Review column means right before WEB-7 in board order; cards of other columns in between do not matter.
 - Tickets on an archived board cannot be moved by users (the board is read-only). They only leave it when they leave `Done` (backlog top), when the board is deleted, or when their project is archived.
 - History: a container change writes `ticket.moved` (field `boardId`, old and new board id, null for the backlog); a status change writes the usual `ticket.field.changed` entries for `status` and `resolution`; a reorder inside the same container writes nothing and does not bump `UpdatedAt`.
@@ -463,11 +464,11 @@ sequenceDiagram
         API-->>N: Link no longer valid, ask the Admin for a new one
     else Valid
         API->>API: Policy: 12 to 128 chars, not the email, not in the 10 000 most common
-        API->>DB: PasswordHash set, token cleared, lockout lifted, SecurityStamp rotated (other sessions end)
+        API->>DB: PasswordHash set, token cleared, lockouts lifted, SecurityStamp rotated (other sessions end)
         API-->>N: Password set
         N->>API: Sign in (email, password)
-        API->>DB: Not locked, active, password verifies?
-        API->>DB: FailedLoginCount = 0, LastLoginAt = now
+        API->>DB: Active, password verifies, this address not locked?
+        API->>DB: Address throttle cleared, LastLoginAt = now, session row inserted
         API-->>N: tkt_session cookie, XSRF-TOKEN cookie
     end
 ```
@@ -480,8 +481,8 @@ stateDiagram-v2
     [*] --> AwaitingPassword: Admin creates user (72 h link)
     AwaitingPassword --> AwaitingPassword: Admin issues a new link
     AwaitingPassword --> Active: set password via link
-    Active --> Locked: 5 failed logins
-    Locked --> Active: 15 minutes pass
+    Active --> Locked: 5 failed logins from one address
+    Locked --> Active: 15 minutes pass (other addresses unaffected)
     Active --> Active: reset link used (24 h link), old password valid until then
     Active --> Deactivated: Admin deactivates
     AwaitingPassword --> Deactivated: Admin deactivates
@@ -494,7 +495,7 @@ stateDiagram-v2
     end note
 ```
 
-`AwaitingPassword` and `Locked` are not stored states: they follow from `PasswordHash` being null and from `LockedUntil` being in the future. A reactivated user who never set a password still needs a set-password link: deactivation clears a pending one.
+`AwaitingPassword` and `Locked` are not stored states: they follow from `PasswordHash` being null and from a `LoginThrottle` of the user with `LockedUntil` in the future. `Locked` applies per client address only, and sign-in answers it exactly like a wrong password (D-74). A reactivated user who never set a password still needs a set-password link: deactivation clears a pending one.
 
 Users change their own password with the current one. That rotates the security stamp: every other cookie session ends at its next request, and the current session is re-issued with the new stamp (D-55). Unknown, used, expired and deactivated users' links all give the same 404 (D-56).
 

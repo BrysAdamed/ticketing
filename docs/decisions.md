@@ -440,6 +440,12 @@ Format: question, options considered, decision, rationale. "PO" marks decisions 
 - Decision: new primitives `--tk-green-solid`, `--tk-red-solid` and `--tk-blue-solid` (light `#18794e` / `#ce2c31` / `#1f63c4`, dark `#268356` / `#d93036` / `#2f6fd6`) back `--tk-success`, `--tk-danger` and `--tk-info`. White on them is 4.6:1 or more in both themes, and as icon colours they keep at least 3.3:1 on dark surfaces. The bright hues (`--tk-green`, `--tk-red`, `--tk-blue`) stay for status and run icons, chart series, dots and tints. Warning keeps its near-black `--tk-warning-on-solid` (8.8:1 or more).
 - Rationale: the semantic solid is a fill for text (Material's `error`/`on-error`, danger buttons, Pass/Fail); deeper shades of the same hues keep the palette while meeting AA.
 
+### D-85 Demo data through the use cases
+
+- Question: how to give a fresh install a realistic workspace for demos and screenshots without risking real data or duplicating domain rules.
+- Decision: an opt-in seeder (`TICKETING_SEED_DEMO=true` at startup, or the `seed-demo` command) that runs only while no project exists, under a PostgreSQL advisory lock. It replays a planned twelve-week history (fixed random seed, dates relative to the time of seeding) through the application handlers as the demo users. It builds its own service provider from the normal registrations with a settable `TimeProvider` and an `ICurrentUser` for the acting user, so timestamps are backdated without touching production wiring. Never on by default; documented as development and demo only.
+- Rationale: going through the handlers keeps keys, ranks, hierarchy, activity history, board moves and regression snapshots genuine and follows every later rule change for free; raw SQL inserts would drift from the domain. The "no project" guard makes it impossible to mix demo data into a real workspace.
+
 ## Needs product owner
 
 None of these block v1. The implementation follows each recommendation provisionally; the product owner confirms or overrides them at the v1 review.

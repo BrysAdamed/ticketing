@@ -48,8 +48,40 @@ Configuration (environment variables override `appsettings*.json`):
 | `RateLimiting__LoginPermitsPerMinute` | `POST /auth/login` attempts per client IP (default 20) |
 | `ForwardedHeaders__KnownNetworks` | Comma-separated CIDR ranges of proxies whose `X-Forwarded-For`/`-Proto` are believed (compose: `TICKETING_TRUSTED_PROXIES`, default Docker's private pools). Loopback is always trusted. |
 | `ForwardedHeaders__ForwardLimit` | Proxy hops to unwrap (default 1 = nginx; 2 with a TLS proxy in front, whose address must then be trusted too) |
+| `TICKETING_SEED_DEMO` | `true` seeds [demo data](#demo-data) at startup into a workspace without projects (default false; development and demos only) |
+| `TICKETING_DEMO_PASSWORD` | Password of the demo users (12+ characters, not a common password); without it their set-password links are logged |
 
 Logs are JSON on the console (`simple` in Development).
+
+## Demo data
+
+For development, screenshots and demos only, never on a real installation. The seeder fills an empty workspace with a believable twelve-week history:
+
+- 6 users (`maya.kowalczyk`, `daniel.okafor`, `sofia.lindqvist`, `tomasz.nowak`, `priya.raman`, `lucas.moreau`, all `@example.com`).
+- 3 projects with members: `PAY` Payments (public), `WEB` Web App (public) and `OPS` Platform Ops (private; Tomasz is not a member, Priya is a viewer).
+- 180 tickets: 17 epics with stories, technical tasks, bugs and spikes (up to 3 levels), markdown descriptions, labels, versions 1.3.0 to 1.6.0, priorities, severities, points, assignees, comments and links (including cross-project ones). Every status is used; Done tickets carry resolutions.
+- Boards `Sprint 42` (PAY + WEB) and `Ops Kanban` (OPS).
+- 26 test cases (Manual, Automatic and New) and two PAY regression sessions: `Release 1.4.0` (completed, one failed item with its bug) and `Release 1.5.0` (in progress).
+- 3 feature flags.
+
+Trigger it explicitly, in either way:
+
+```bash
+# At startup (compose: set it in .env and pass it to the api service)
+TICKETING_SEED_DEMO=true TICKETING_DEMO_PASSWORD='Demo-Password-2026' dotnet run --project src/Ticketing.Api
+
+# One-off command: migrates, creates the bootstrap admin if needed, seeds and exits
+dotnet Ticketing.Api.dll seed-demo                      # published API
+docker compose run --rm api seed-demo                  # in compose
+```
+
+Rules:
+
+- It runs only while the database has **no project** (deleted ones included), so it never touches real data and a second run is a no-op. It takes a PostgreSQL advisory lock, so several instances starting together seed once.
+- It needs an active Admin (the bootstrap admin) and acts as the demo users through the real use cases (`DemoData/DemoWorkspace.cs`): ticket keys, ranks, hierarchy rules, activity history, board moves and regression snapshots are all genuine.
+- Timestamps are backdated over the last 12 weeks (working hours, weekdays) by a controllable clock. The seeder builds its own service provider with the application and infrastructure registrations, a `TimeProvider` it sets before each call and an `ICurrentUser` for the acting user. The plan uses a fixed random seed (`DemoScript.RandomSeed`); dates are relative to the moment of seeding, so dashboards always show recent activity.
+- Without `TICKETING_DEMO_PASSWORD` each demo user gets a set-password link (valid 24 hours) written to the log as a warning; open `<web origin>/set-password?token=...`.
+- Content lives in `src/Ticketing.Api/DemoData/DemoContent.cs` (titles, hand-written descriptions, test cases, cross links) and `DemoTexts.cs` (generated descriptions and comments). `tests/Ticketing.IntegrationTests/DemoData` checks the counts, idempotency and the PAY dashboard.
 
 ## Where things live
 

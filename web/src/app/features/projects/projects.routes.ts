@@ -41,6 +41,12 @@ export default [
         loadChildren: () => import('@features/regressions/regressions.routes'),
       },
       {
+        path: 'docs',
+        title: 'Docs',
+        data: { breadcrumb: 'Docs' },
+        loadChildren: () => import('@features/docs/docs.routes'),
+      },
+      {
         path: 'settings',
         title: 'Settings',
         data: { breadcrumb: 'Settings' },

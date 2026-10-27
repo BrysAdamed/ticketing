@@ -1,0 +1,368 @@
+<div class="tree-h">
+  <a class="t" [routerLink]="homeUrl()" data-testid="doc-tree-home">Docs</a>
+  @if (store.canWrite()) {
+    <button
+      type="button"
+      class="tk-icon-btn"
+      aria-label="New…"
+      title="New…"
+      data-testid="doc-tree-new"
+      [matMenuTriggerFor]="newMenu"
+    >
+      <tk-icon name="tablerPlus" [size]="16" />
+    </button>
+  }
+</div>
+
+<div class="tree-f">
+  <tk-icon class="f-icon" name="tablerSearch" [size]="14" />
+  <input
+    #filterInput
+    type="search"
+    class="filter"
+    placeholder="Filter docs"
+    aria-label="Filter docs"
+    data-testid="doc-tree-filter"
+    [value]="store.filter()"
+    (input)="store.setFilter(filterInput.value)"
+    (keydown.escape)="store.setFilter(''); filterInput.blur()"
+    (keydown.enter)="focusTree()"
+  />
+  @if (!store.filter()) {
+    <tk-kbd class="f-kbd">/</tk-kbd>
+  }
+</div>
+
+<div class="tree-body">
+  @switch (store.status()) {
+    @case ('error') {
+      <div class="tree-msg danger" data-testid="doc-tree-error">
+        Couldn't load the tree.
+        <button mat-button type="button" (click)="store.reload()">Retry</button>
+      </div>
+    }
+    @case ('loaded') {
+      @if (store.rows().length === 0 && store.filter()) {
+        <div class="tree-msg" data-testid="doc-tree-no-match">No docs match</div>
+      }
+      <cdk-virtual-scroll-viewport
+        class="tree-scroll"
+        role="tree"
+        aria-label="Docs"
+        tabindex="0"
+        data-testid="doc-tree-list"
+        cdkDropList
+        cdkDropListSortingDisabled
+        [cdkDropListDisabled]="!store.canWrite()"
+        [itemSize]="rowHeight"
+        [minBufferPx]="rowHeight * 20"
+        [maxBufferPx]="rowHeight * 40"
+        [attr.aria-activedescendant]="activeDescendant()"
+        (keydown)="onTreeKeydown($event)"
+      >
+        <ng-container *cdkVirtualFor="let row of store.rows(); trackBy: trackRow">
+          @if (isNode(row)) {
+            <div
+              class="tr"
+              role="treeitem"
+              tabindex="-1"
+              cdkDrag
+              cdkDragLockAxis="y"
+              [cdkDragDisabled]="
+                !store.canWrite() || isPending(row.item.key) || store.renamingKey() === row.item.key
+              "
+              [attr.id]="'doc-node-' + row.item.key"
+              [attr.aria-level]="row.depth"
+              [attr.aria-expanded]="row.item.kind === 'Folder' ? row.expanded : null"
+              [attr.aria-selected]="store.cursorKey() === row.item.key"
+              [attr.aria-current]="store.activeKey() === row.item.key ? 'page' : null"
+              [attr.data-testid]="'doc-row-' + row.item.key"
+              [attr.data-kind]="row.item.kind"
+              [class.active]="store.activeKey() === row.item.key"
+              [class.cursor]="store.cursorKey() === row.item.key"
+              [class.ctx]="menuItem()?.key === row.item.key"
+              [class.drop-into]="dropTarget()?.folderKey === row.item.key"
+              [class.invalid]="dropInvalid()"
+              [class.pending]="isPending(row.item.key)"
+              [style.--d]="row.depth - 1"
+              (click)="open(row.item)"
+              (keydown.enter)="open(row.item)"
+              (contextmenu)="openMenu($event, row.item)"
+              (cdkDragStarted)="dragStarted($event, row.item)"
+              (cdkDragMoved)="dragMoved($event)"
+              (cdkDragEnded)="dragEnded($event)"
+            >
+              @if (row.item.kind === 'Folder') {
+                <button
+                  type="button"
+                  class="tw"
+                  tabindex="-1"
+                  [attr.aria-label]="row.expanded ? 'Collapse' : 'Expand'"
+                  [attr.data-testid]="'doc-toggle-' + row.item.key"
+                  (click)="toggle($event, row.item)"
+                >
+                  <tk-icon
+                    [name]="row.expanded ? 'tablerChevronDown' : 'tablerChevronRight'"
+                    [size]="12"
+                  />
+                </button>
+              } @else {
+                <span class="tw"></span>
+              }
+              <tk-icon
+                class="ic"
+                [name]="docIcon(row.item.kind, row.item.diagramFormat, row.expanded)"
+                [size]="16"
+              />
+              @if (store.renamingKey() === row.item.key) {
+                <input
+                  #renameInput
+                  class="inline-input"
+                  aria-label="Title"
+                  data-testid="doc-rename-input"
+                  maxlength="200"
+                  [value]="row.item.title"
+                  (click)="$event.stopPropagation()"
+                  (keydown)="onRenameKeydown($event, row.item, renameInput)"
+                  (blur)="submitRename(row.item, renameInput)"
+                  [tkAutofocusSelect]="true"
+                />
+              } @else {
+                <span class="nm" [attr.title]="row.item.title">{{ row.item.title }}</span>
+                @if (row.item.hasMyDraft) {
+                  <span
+                    class="draft-dot"
+                    title="You have unpublished changes"
+                    aria-label="Unpublished changes"
+                  ></span>
+                }
+                @if (row.item.kind === 'Folder' && row.item.childCount > 0) {
+                  <span class="n tnum">{{ row.item.childCount }}</span>
+                }
+                @if (!isPending(row.item.key)) {
+                  <span class="acts">
+                    @if (store.canWrite() && row.item.kind === 'Folder') {
+                      <button
+                        type="button"
+                        class="act"
+                        title="New page here"
+                        aria-label="New page here"
+                        (click)="$event.stopPropagation(); startCreate('Page', row.item.key)"
+                      >
+                        <tk-icon name="tablerPlus" [size]="12" />
+                      </button>
+                    }
+                    <button
+                      type="button"
+                      class="act"
+                      title="More"
+                      aria-label="More actions"
+                      [attr.data-testid]="'doc-more-' + row.item.key"
+                      (click)="openMenu($event, row.item)"
+                    >
+                      <tk-icon name="tablerDots" [size]="12" />
+                    </button>
+                  </span>
+                }
+              }
+              <div *cdkDragPreview class="drag-preview" data-testid="doc-drag-preview">
+                <tk-icon [name]="docIcon(row.item.kind, row.item.diagramFormat)" [size]="14" />
+                <span>{{ row.item.title }}</span>
+              </div>
+              <div *cdkDragPlaceholder class="drag-placeholder"></div>
+            </div>
+          } @else {
+            <div
+              #createRow
+              class="tr create"
+              data-testid="doc-create-row"
+              [style.--d]="asCreate(row).depth - 1"
+              (focusout)="onCreateFocusOut($event, createRow)"
+            >
+              <span class="tw"></span>
+              <tk-icon
+                class="ic"
+                [name]="docIcon(asCreate(row).kind, store.creating()?.diagramFormat ?? null)"
+                [size]="16"
+              />
+              <input
+                class="inline-input"
+                data-testid="doc-create-input"
+                maxlength="200"
+                [class.problem]="!!createProblem()"
+                [attr.aria-invalid]="!!createProblem()"
+                [attr.title]="createProblem()"
+                [attr.aria-label]="'New ' + kindLabels[asCreate(row).kind] + ' title'"
+                [attr.placeholder]="'New ' + kindLabels[asCreate(row).kind]"
+                [value]="createTitle()"
+                (input)="createTitle.set($any($event.target).value)"
+                (keydown)="onCreateKeydown($event)"
+                [tkAutofocusSelect]="true"
+              />
+              @if (asCreate(row).kind === 'Diagram') {
+                <span class="formats" role="group" aria-label="Diagram format">
+                  <button
+                    type="button"
+                    data-testid="doc-create-format-Mermaid"
+                    [attr.aria-pressed]="store.creating()?.diagramFormat === 'Mermaid'"
+                    (mousedown)="setFormat($event, 'Mermaid')"
+                  >
+                    Mermaid
+                  </button>
+                  <button
+                    type="button"
+                    data-testid="doc-create-format-Canvas"
+                    [attr.aria-pressed]="store.creating()?.diagramFormat === 'Canvas'"
+                    (mousedown)="setFormat($event, 'Canvas')"
+                  >
+                    Canvas
+                  </button>
+                </span>
+              }
+            </div>
+          }
+        </ng-container>
+      </cdk-virtual-scroll-viewport>
+      @if (dropTarget(); as target) {
+        @if (target.lineIndex !== null) {
+          <div
+            class="drop-line"
+            data-testid="doc-drop-indicator"
+            [class.invalid]="dropInvalid()"
+            [style.top.px]="dropLineTop()"
+            [style.left.px]="8 + (target.lineDepth - 1) * 16 + 20"
+          ></div>
+        }
+      }
+    }
+    @default {
+      <div class="skeleton" role="status" aria-label="Loading" data-testid="doc-tree-skeleton">
+        @for (bone of skeleton; track $index) {
+          <div class="sk-row" [style.--d]="bone.depth">
+            <span class="sk sk-ic"></span>
+            <span class="sk sk-bar" [style.width.%]="bone.width"></span>
+          </div>
+        }
+      </div>
+    }
+  }
+</div>
+
+@if (store.canManageTrash()) {
+  <div class="tree-foot">
+    <a class="foot-link" [routerLink]="trashUrl()" data-testid="doc-tree-trash">
+      <tk-icon name="tablerTrash" [size]="16" />
+      Trash
+    </a>
+  </div>
+}
+
+<span
+  class="menu-anchor"
+  #menuTrigger="matMenuTrigger"
+  [matMenuTriggerFor]="rowMenu"
+  [style.left.px]="menuPosition().x"
+  [style.top.px]="menuPosition().y"
+  (menuClosed)="menuItem.set(null)"
+></span>
+
+<mat-menu #rowMenu="matMenu" class="tk-doc-menu">
+  @if (menuItem(); as item) {
+    @if (store.canWrite() && item.kind === 'Folder') {
+      <button mat-menu-item data-testid="doc-menu-new-page" (click)="startCreate('Page', item.key)">
+        <tk-icon name="tablerFilePlus" [size]="16" />
+        New page here
+      </button>
+      <button
+        mat-menu-item
+        data-testid="doc-menu-new-folder"
+        (click)="startCreate('Folder', item.key)"
+      >
+        <tk-icon name="tablerFolderPlus" [size]="16" />
+        New folder here
+      </button>
+      <button
+        mat-menu-item
+        data-testid="doc-menu-new-diagram"
+        (click)="startCreate('Diagram', item.key)"
+      >
+        <tk-icon name="tablerSitemap" [size]="16" />
+        New diagram here
+      </button>
+      <hr class="menu-sep" />
+    }
+    @if (store.canWrite()) {
+      <button mat-menu-item data-testid="doc-menu-rename" (click)="rename(item)">
+        <tk-icon name="tablerPencil" [size]="16" />
+        <span class="mi-label">Rename</span>
+        <tk-kbd>F2</tk-kbd>
+      </button>
+      @if (item.kind !== 'Folder') {
+        <button mat-menu-item data-testid="doc-menu-duplicate" (click)="duplicate(item)">
+          <tk-icon name="tablerCopy" [size]="16" />
+          Duplicate
+        </button>
+      }
+      <button mat-menu-item data-testid="doc-menu-move" (click)="openMove(item)">
+        <tk-icon name="tablerFolderSymlink" [size]="16" />
+        <span class="mi-label">Move to…</span>
+        <tk-kbd>M</tk-kbd>
+      </button>
+    }
+    <button mat-menu-item data-testid="doc-menu-copy-link" (click)="copyLink(item)">
+      <tk-icon name="tablerLink" [size]="16" />
+      Copy link
+    </button>
+    @if (store.canWrite()) {
+      <hr class="menu-sep" />
+      <button
+        mat-menu-item
+        class="danger"
+        data-testid="doc-menu-delete"
+        [disabled]="!store.canDelete(item.key)"
+        [attr.title]="
+          store.canDelete(item.key)
+            ? null
+            : item.kind === 'Folder'
+              ? 'Only owners can delete folders with docs or folders created by others'
+              : 'Only owners can delete docs created by others'
+        "
+        (click)="delete(item)"
+      >
+        <tk-icon name="tablerTrash" [size]="16" />
+        <span class="mi-label">Delete</span>
+        <tk-kbd>Del</tk-kbd>
+      </button>
+    }
+  }
+</mat-menu>
+
+<mat-menu #newMenu="matMenu" class="tk-doc-menu">
+  <button mat-menu-item data-testid="doc-new-page" (click)="startCreate('Page')">
+    <tk-icon name="tablerFilePlus" [size]="16" />
+    <span class="mi-label">New page</span>
+    <tk-kbd>N</tk-kbd>
+  </button>
+  <button mat-menu-item data-testid="doc-new-folder" (click)="startCreate('Folder')">
+    <tk-icon name="tablerFolderPlus" [size]="16" />
+    <span class="mi-label">New folder</span>
+    <tk-kbd>⇧N</tk-kbd>
+  </button>
+  <button mat-menu-item data-testid="doc-new-diagram" (click)="startCreate('Diagram')">
+    <tk-icon name="tablerSitemap" [size]="16" />
+    <span class="mi-label">New diagram</span>
+    <tk-kbd>⇧D</tk-kbd>
+  </button>
+</mat-menu>
+
+<button
+  type="button"
+  class="move-anchor"
+  tabindex="-1"
+  aria-hidden="true"
+  #movePicker="tkInlinePicker"
+  [tkInlinePicker]="[]"
+  pickerPlaceholder="Move to…"
+  pickerShortcut="M"
+  (picked)="moveTo($event)"
+></button>

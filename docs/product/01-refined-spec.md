@@ -854,4 +854,4 @@ Section [1.5 of the refinement](03-docs-refinement.md#15-permissions-mapped-to-5
 | `POST /docs/{key}/restore` | Restore the delete group |
 | `GET`, `PUT`, `DELETE /docs/{key}/draft` | My draft: `{ baseVersion, title, content }`; 404 `doc.draft.notFound` when none |
 
-The doc URL in the SPA is `/p/{PK}/docs/{KEY}/{slug}`; the slug is cosmetic.
+The doc URL in the SPA is `/projects/{PK}/docs/{KEY}/{slug}`; the slug is cosmetic and replaced when stale. `/docs/{KEY}` and the `/p/{PK}/docs/{KEY}/{slug}` form that the API returns as `url` redirect to it (D-102).

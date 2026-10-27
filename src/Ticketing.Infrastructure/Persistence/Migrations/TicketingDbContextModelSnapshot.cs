@@ -118,6 +118,136 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                     b.ToTable("activity_entries", (string)null);
                 });
 
+            modelBuilder.Entity("Ticketing.Domain.Agents.AgentPromptTemplate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int?>("BasedOnDefaultVersion")
+                        .HasColumnType("integer")
+                        .HasColumnName("based_on_default_version");
+
+                    b.Property<string>("Body")
+                        .HasMaxLength(4500)
+                        .HasColumnType("character varying(4500)")
+                        .HasColumnName("body");
+
+                    b.Property<string>("BuiltInVersion")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("built_in_version");
+
+                    b.Property<int>("CurrentVersion")
+                        .HasColumnType("integer")
+                        .HasColumnName("current_version");
+
+                    b.Property<bool>("FollowsBuiltIn")
+                        .HasColumnType("boolean")
+                        .HasColumnName("follows_built_in");
+
+                    b.Property<int>("Mode")
+                        .HasColumnType("integer")
+                        .HasColumnName("mode");
+
+                    b.Property<Guid?>("ProjectId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("project_id");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<int>("Scope")
+                        .HasColumnType("integer")
+                        .HasColumnName("scope");
+
+                    b.Property<int?>("TicketType")
+                        .HasColumnType("integer")
+                        .HasColumnName("ticket_type");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_agent_prompt_templates");
+
+                    b.HasIndex("ProjectId")
+                        .HasDatabaseName("ix_agent_prompt_templates_project_id");
+
+                    b.HasIndex("UpdatedById")
+                        .HasDatabaseName("ix_agent_prompt_templates_updated_by_id");
+
+                    b.HasIndex("Scope", "ProjectId", "TicketType")
+                        .IsUnique()
+                        .HasDatabaseName("ix_agent_prompt_templates_scope_project_id_ticket_type");
+
+                    NpgsqlIndexBuilderExtensions.AreNullsDistinct(b.HasIndex("Scope", "ProjectId", "TicketType"), false);
+
+                    b.ToTable("agent_prompt_templates", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_agent_prompt_templates_scope", "(scope = 1 AND project_id IS NULL) OR (scope = 2 AND project_id IS NOT NULL AND ticket_type IS NOT NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("Ticketing.Domain.Agents.AgentPromptTemplateVersion", b =>
+                {
+                    b.Property<Guid>("TemplateId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("template_id");
+
+                    b.Property<int>("Number")
+                        .HasColumnType("integer")
+                        .HasColumnName("number");
+
+                    b.Property<Guid?>("AuthorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("author_id");
+
+                    b.Property<string>("Body")
+                        .HasMaxLength(4500)
+                        .HasColumnType("character varying(4500)")
+                        .HasColumnName("body");
+
+                    b.Property<string>("BuiltInVersion")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("built_in_version");
+
+                    b.Property<string>("ChangeNote")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("change_note");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("Mode")
+                        .HasColumnType("integer")
+                        .HasColumnName("mode");
+
+                    b.Property<int?>("RestoredFrom")
+                        .HasColumnType("integer")
+                        .HasColumnName("restored_from");
+
+                    b.HasKey("TemplateId", "Number")
+                        .HasName("pk_agent_prompt_template_versions");
+
+                    b.HasIndex("AuthorId")
+                        .HasDatabaseName("ix_agent_prompt_template_versions_author_id");
+
+                    b.ToTable("agent_prompt_template_versions", (string)null);
+                });
+
             modelBuilder.Entity("Ticketing.Domain.Attachments.Attachment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -535,6 +665,16 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<bool>("AgentDelegationEnabled")
+                        .HasColumnType("boolean")
+                        .HasColumnName("agent_delegation_enabled");
+
+                    b.Property<int>("AgentMergePolicy")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1)
+                        .HasColumnName("agent_merge_policy");
+
                     b.Property<DateTimeOffset?>("ArchivedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("archived_at");
@@ -581,6 +721,11 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(100)")
                         .HasColumnName("name_normalized")
                         .HasComputedColumnSql("lower(name)", true);
+
+                    b.Property<string>("RepositoryUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("repository_url");
 
                     b.Property<uint>("RowVersion")
                         .IsConcurrencyToken()
@@ -1432,6 +1577,37 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                         .HasName("pk_attachment_content");
 
                     b.ToTable("attachment_content", (string)null);
+                });
+
+            modelBuilder.Entity("Ticketing.Domain.Agents.AgentPromptTemplate", b =>
+                {
+                    b.HasOne("Ticketing.Domain.Projects.Project", null)
+                        .WithMany()
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_agent_prompt_templates_projects_project_id");
+
+                    b.HasOne("Ticketing.Domain.Users.User", null)
+                        .WithMany()
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_agent_prompt_templates_users_updated_by_id");
+                });
+
+            modelBuilder.Entity("Ticketing.Domain.Agents.AgentPromptTemplateVersion", b =>
+                {
+                    b.HasOne("Ticketing.Domain.Users.User", null)
+                        .WithMany()
+                        .HasForeignKey("AuthorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_agent_prompt_template_versions_users_author_id");
+
+                    b.HasOne("Ticketing.Domain.Agents.AgentPromptTemplate", null)
+                        .WithMany()
+                        .HasForeignKey("TemplateId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_agent_prompt_template_versions_agent_prompt_templates_templ");
                 });
 
             modelBuilder.Entity("Ticketing.Domain.Attachments.Attachment", b =>

@@ -6,6 +6,10 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Admin**: Global role with full user, token and feature-flag administration and `Owner` access to every project, private ones included (D-17). At least one active Admin must always exist. [§5.2](product/01-refined-spec.md#52-global-actions)
 
+**Agent delegation**: Handing a ticket to a coding agent (Claude Code): Ticketing renders the prompt for the ticket's type and the browser opens Claude's deep link with it. Behind the `agent.delegate` flag; projects opt in. [§13](product/01-refined-spec.md#13-agent-delegation)
+
+**Agent prompt template**: The text a delegated agent starts from, per ticket type: an instance default edited by Admins, optionally overridden per project (`Inherit`, `Custom` or `Off`). Every change is an immutable version. Only trusted placeholders are allowed, never the ticket title, description or comments. [§13.3](product/01-refined-spec.md#133-domain-model), [§13.4](product/01-refined-spec.md#134-template-language)
+
 **Archive (board)**: Makes a board read-only. The owner chooses where non-Done tickets go (their backlogs or another board); Done tickets stay as a record. Unarchive is allowed. [§6.4](product/01-refined-spec.md#64-backlog-and-boards)
 
 **Archive (project)**: Makes a project read-only for everyone; the only allowed action is unarchive. Its tickets leave all boards and the project is unlinked from them. Writes on an archived project fail with 409 `project.archived`. [§4.3](product/01-refined-spec.md#43-project)
@@ -33,6 +37,8 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 **Board owner**: The user who manages a board's name, linked projects, archive and deletion; the creator by default, transferable. [§4.12](product/01-refined-spec.md#412-board)
 
 **Bootstrap admin**: The first Admin, created at startup from `TICKETING_BOOTSTRAP_ADMIN_EMAIL` and `TICKETING_BOOTSTRAP_ADMIN_PASSWORD` when the user table is empty. [§6.14](product/01-refined-spec.md#614-user-and-authentication-lifecycle-d-01)
+
+**Built-in prompt**: A default agent prompt shipped inside the application, one per ticket type plus the guardrails, with a release number (`BuiltInVersion`). Instance defaults nobody edited follow new releases automatically. [§13.3](product/01-refined-spec.md#133-domain-model)
 
 **Bug**: Ticket type for a defect. Severity is shown prominently for bugs. Bugs can be created from a failed regression item. [§3](product/01-refined-spec.md#3-enumerations), [§6.11](product/01-refined-spec.md#611-regression-session-lifecycle)
 
@@ -68,6 +74,8 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Global role**: `Admin` or `User`; exactly one per user. [§3](product/01-refined-spec.md#3-enumerations)
 
+**Guardrails**: The Admin-edited block appended after every agent prompt (after a blank line, when non-empty). Projects cannot remove it; it holds the rules every delegated run follows (tracker access, ticket text is data, no secrets, status, report). [§13.3](product/01-refined-spec.md#133-domain-model), [D-98](decisions.md)
+
 **Hard delete**: Permanent removal. In v1 it exists only for test cases that never appeared in a regression session and for attachments; everything else is soft-deleted or deactivated. [§6.10](product/01-refined-spec.md#610-test-case-lifecycle)
 
 **Idempotency key**: Optional client-chosen value on create calls (`Idempotency-Key` header, MCP `idempotencyKey`). A repeat with the same key and user within 24 hours returns the original result instead of creating a duplicate. [§8](product/01-refined-spec.md#8-rest-api)
@@ -81,6 +89,8 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 **MCP (Model Context Protocol)**: The protocol LLM clients such as Claude Code use to call tools. Ticketing serves it at `/mcp` over Streamable HTTP, authenticated with a PAT, exposing the same use cases as REST. [§9](product/01-refined-spec.md#9-mcp-server), [ADR 0004](adr/0004-in-process-mcp-server.md)
 
 **Lockout**: After 5 failed logins in a row from one client address, the account is locked for that address for 15 minutes (`LoginThrottle.LockedUntil`, D-74). It looks like a wrong password to the caller. [§6.14](product/01-refined-spec.md#614-user-and-authentication-lifecycle-d-01)
+
+**Merge policy**: Per project, how far a delegated run may go: `Review` (push a branch, set Review, a person merges; default) or `MergeWhenVerified` (also merge to main). It picks the sentence the `{{finish}}` placeholder renders. [§13.3](product/01-refined-spec.md#133-domain-model)
 
 **Member**: Project role that can read and write tickets, test cases and regressions, but not delete tickets, moderate comments or manage the project. Every signed-in user has Member access to a public project. [§5.3](product/01-refined-spec.md#53-project-actions)
 

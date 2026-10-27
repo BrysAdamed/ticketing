@@ -100,6 +100,9 @@ This file is the pool of unscheduled ideas. Once an idea is scheduled it becomes
 | I-49 | Outgoing webhooks | Lets other tools react to ticket changes. | M |
 | I-50 | Git integration by ticket key | Shows commits and pull requests on the ticket. | M |
 | I-48 | Built-in Jira importer | Not planned: the PO decided against migrating Jira data (Q-01). Revisit only if that changes. | L |
+| I-124 | Our own agent helper app: auto-start, background (headless) runs, enforced launch options (permission mode, model) and run reporting | v1 launches through Claude's deep link, which can carry only a folder and a prompt (D-98); the launch options of the helper design were dropped with it. | L |
+| - | Richer agent prompt templates: `else`, nesting, a sanitised `ticket.title` | v1 keeps a flat `if` and trusted placeholders only (D-98); per-type templates already remove most branching. | S |
+| - | Editable merge-policy sentences | The two `{{finish}}` sentences ship fixed with the built-ins (D-98); an Admin may want to word them for the company's forge and review flow. | S |
 
 ## Experiments and UI
 

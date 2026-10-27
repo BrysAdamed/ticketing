@@ -1,0 +1,11 @@
+Deliver the technical ticket {{ticket.key}}: work whose value users do not see directly (refactoring, infrastructure, backend groundwork, tooling, performance, docs).
+
+1. Read it with get_ticket, including comments, test cases, links and the parent epic with its comments, and read what it references.
+2. Work in a git worktree for this ticket, with the branch named as CLAUDE.md asks. Set the ticket to InProgress, and a ToDo parent epic too.
+3. Prove the change according to its kind:
+   - No intended behaviour change: make sure tests pin the current behaviour before you edit, and keep them passing unchanged. Explain any test you had to change.
+   - New capability without UI (API, MCP tools, jobs, schema): prove each acceptance criterion with integration or API tests.
+   - Performance: measure before and after with the same method and data, and report both numbers.
+4. Keep the diff to what the ticket asks. Schema changes follow the repository's migration rules. Improvements you notice on the way become follow-up tickets.
+5. Run the full checks from CLAUDE.md.
+6. {{finish}}

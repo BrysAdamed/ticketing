@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Ticketing.Application.Projects;
+using Ticketing.Domain.Agents;
 using Ticketing.Domain.Projects;
 using Ticketing.Domain.Users;
 
@@ -15,6 +16,8 @@ internal sealed class ProjectConfiguration : IEntityTypeConfiguration<Project>
         builder.Property(p => p.Name).HasMaxLength(Project.NameMaxLength);
         builder.Property<string>(ProjectSchema.NameNormalized).HasMaxLength(Project.NameMaxLength).HasComputedColumnSql("lower(name)", stored: true);
         builder.Property(p => p.RowVersion).IsXminRowVersion();
+        builder.Property(p => p.RepositoryUrl).HasMaxLength(Project.RepositoryUrlMaxLength);
+        builder.Property(p => p.AgentMergePolicy).HasDefaultValue(AgentMergePolicy.Review).HasSentinel(default(AgentMergePolicy));
         builder.Ignore(p => p.IsArchived);
         builder.Ignore(p => p.IsDeleted);
 

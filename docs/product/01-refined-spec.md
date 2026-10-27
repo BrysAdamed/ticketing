@@ -58,7 +58,7 @@ Deployment target: Docker Compose on an internal VM (API + Angular static files 
 | `ExecutionMode` | `Manual`, `Automatic` | Snapshot of the test case status at session start. |
 | `WriteChannel` | `Web`, `Api`, `Mcp` | |
 | `PatScope` | `ReadOnly`, `ReadWrite` | (I-10) |
-| `ActivityEntityType` | `Ticket`, `TestCase`, `RegressionSession`, `Project`, `Board`, `User`, `PersonalAccessToken`, `FeatureFlag` | |
+| `ActivityEntityType` | `Ticket`, `TestCase`, `RegressionSession`, `Project`, `Board`, `User`, `PersonalAccessToken`, `FeatureFlag`, `AgentPrompt` | `AgentPrompt`: section 13. |
 | `NotificationKind` | `Assigned`, `Mentioned`, `Commented`, `StatusChanged`, `PriorityRaised`, `Moved`, `Deleted`, `RegressionItemAssigned` | Headline rank when merged (6.16): Mentioned > Assigned > RegressionItemAssigned > Deleted > StatusChanged > PriorityRaised > Commented > Moved. |
 
 There is no `Role` table. Global and project roles are fixed enums and the permission rules are code (section 5). Custom roles are out of scope (D-08).
@@ -777,3 +777,119 @@ Out of MCP in v1: user administration, PAT management, feature flags, project de
 | Accessibility | All actions reachable by keyboard; visible focus; WCAG 2.1 AA colour contrast. |
 | Operations | Docker Compose with `api`, `web` and `db` services. `/health/live` and `/health/ready` endpoints. Structured JSON logs. Database migrations applied on API start. Documented `pg_dump` backup procedure, attachments included. |
 | Security | All writes authorised server-side. Private-project data never leaks through search, boards, links, hints, dashboards or MCP. Tests cover each of these paths. |
+
+## 13. Agent delegation
+
+A developer hands a ticket to Claude Code: Ticketing renders a short prompt for the ticket's type and the developer's browser opens Claude's own deep link with it. The design and its history are in [04-delegate-to-agent-refinement.md](04-delegate-to-agent-refinement.md) (its section 6 overrides section 4); this section is the normative summary and grows with each part of epic TKT-25. Decisions: D-98.
+
+### 13.1 Parts
+
+| Part | Ticket |
+| --- | --- |
+| Prompt templates: model, renderer, versions, built-ins, REST (13.2 to 13.8) | TKT-27 |
+| Project agent setup (`PATCH /projects/{pk}/agent`), `TICKETING_PUBLIC_URL`, resolved prompt over REST and MCP `get_agent_prompt` | TKT-28 |
+| Delegate button, deep link, folder mapping, Copy prompt | TKT-29 |
+| Agent tab in project settings, Admin page | TKT-30, TKT-31 |
+| Final default prompts | TKT-32 |
+
+### 13.2 Feature flag
+
+`agent.delegate` is an ordinary string-variant flag (6.13): `on` or `off`, targeted at users, roles (Admins first) or a percentage. While it is off for the caller, every agent endpoint returns 404 `agent.disabled` and nothing about agents is shown. Stored templates stay untouched. The server checks it on every request (`AgentGate`).
+
+### 13.3 Domain model
+
+| Enum | Values | Notes |
+| --- | --- | --- |
+| `AgentPromptScope` | `Instance`, `Project` | |
+| `AgentPromptMode` | `Inherit`, `Custom`, `Off` | Project rows only; instance rows are always `Custom`. |
+| `AgentPromptSource` | `Default`, `Custom` | Where a resolved prompt's type template came from. |
+| `AgentMergePolicy` | `Review`, `MergeWhenVerified` | Picks the sentence `{{finish}}` renders. |
+
+**Project** gains `AgentDelegationEnabled` (bool, default false; enabling needs a repository URL, `agent.project.repositoryRequired`), `RepositoryUrl` (text(500)?) and `AgentMergePolicy` (default `Review`). TKT-28 adds the endpoint that sets them, URL validation and the remaining setup fields.
+
+**AgentPromptTemplate** (`agent_prompt_templates`), one row per slot:
+
+| Field | Type | Constraints |
+| --- | --- | --- |
+| Id | uuid | |
+| Scope | AgentPromptScope | |
+| ProjectId | uuid? | Set if and only if Scope = `Project`. |
+| TicketType | TicketType? | Null is the guardrails block, instance only. |
+| Mode | AgentPromptMode | |
+| Body | text(4500)? | `Custom` rows; null for `Inherit` and `Off`, and for empty guardrails. |
+| CurrentVersion | int | 1..n (a project slot that never left `Inherit` has no row; it reads as version 0). |
+| BasedOnDefaultVersion | int? | Project `Custom` rows: the instance default version the override was written against. Newer default: `defaultChanged`. |
+| BuiltInVersion | text(20)? | Instance rows: the built-in release the row last took its text from. |
+| FollowsBuiltIn | bool | Instance rows: the current text is a verbatim built-in. |
+| UpdatedAt, UpdatedById | timestamptz, uuid? | Null user for system (built-in) versions. |
+
+Unique (Scope, ProjectId, TicketType) with nulls not distinct. Six instance rows always exist: the five types and the guardrails.
+
+**AgentPromptTemplateVersion** (`agent_prompt_template_versions`), immutable and never deleted: (TemplateId, Number) key, Mode, Body, BuiltInVersion (set for verbatim built-ins), ChangeNote text(200)?, AuthorId (null for system versions), CreatedAt, RestoredFrom.
+
+**Built-ins** are embedded in `Ticketing.Application` (`Agents/BuiltIns/*.txt`) with one release number (`EmbeddedAgentPrompts.Release`, for example `2026.10.1`; dotted numbers compared numerically). At startup, and before any agent prompt use case, missing instance rows are created from them, and rows that still follow the built-ins take a newer release as a new system version (activity with no actor). Rows an Admin edited are left alone and report `newerBuiltInAvailable`; "Reset to built-in" adopts the shipped text and makes the row follow later releases again. The two `{{finish}}` sentences ship with the built-ins and are not editable.
+
+### 13.4 Template language
+
+Plain text; Markdown is shown as written.
+
+- `{{name}}`, spaces inside the braces allowed, replaced verbatim; a null value renders empty. Values are inserted in one pass and never interpreted.
+- `{{#if name}}…{{/if}}` keeps its content when the value is non-empty. No `else`, nesting, loops or filters.
+- `\{{` renders a literal `{{`.
+- Errors, each with a 1-based line and column: `agent.template.unknownPlaceholder`, `agent.template.unclosedPlaceholder`, `agent.template.unbalancedIf`, `agent.template.nestedIf`; also `agent.template.empty` (a `Custom` type template without a body) and `agent.template.tooLong` (body over 4 500 characters).
+- The composed prompt is the rendered type template, then a blank line and the rendered guardrails when they are non-empty. It must stay **below 4 500 characters** (`agent.prompt.tooLong`), so it fits Claude's 5 000-character deep link with room for the folder. Saves check it for a sample ticket; resolution checks the real one.
+
+Placeholders, deliberately only trusted values (D-98): there is **no** title, description or comment placeholder; the agent reads the ticket over MCP.
+
+| Placeholder | Value |
+| --- | --- |
+| `ticket.key`, `ticket.type` | `TKT-42`, `Bug` |
+| `ticket.url` | `{TICKETING_PUBLIC_URL}/tickets/{KEY}`; empty while the variable is unset |
+| `project.key`, `project.repositoryUrl` | |
+| `instance.url` | `TICKETING_PUBLIC_URL` without a trailing slash |
+| `finish` | The finish sentence for the project's merge policy |
+| `template.id` | `<TicketType> v<n> / <D\|C>` (D = instance default, C = project custom) |
+
+### 13.5 Resolving the prompt for a ticket
+
+`ResolveAgentPrompt`, in order:
+
+1. Flag off for the caller: 404 `agent.disabled`.
+2. Ticket not readable: 404 `ticket.notFound`; deleted ticket: `ticket.deleted` (as every ticket read). Archived project: 409 `agent.unavailable`.
+3. Project `AgentDelegationEnabled = false`: 409 `agent.project.disabled`.
+4. The project row for the ticket's type: `Off` gives 409 `agent.type.off`; `Custom` uses its body; `Inherit` or no row uses the instance default.
+5. Render it with the trusted values, append the guardrails when non-empty, and enforce the limit (409 `agent.prompt.tooLong`).
+
+The result carries the prompt, the ticket key and type, the template's source, version and last editor, and the guardrails version. Anyone who can read the project may resolve, including Viewers and read-only tokens; nothing is written.
+
+### 13.6 Permissions
+
+| Action | Owner/Admin | Member | Viewer | No access |
+| --- | --- | --- | --- | --- |
+| Read a project's templates, versions; preview | Yes | Yes | Yes | 404 |
+| Change a project's templates (save, restore, reset to default) | Yes | No (403) | No (403) | 404 |
+| Instance defaults and guardrails (read, change, preview) | Admin only | 403 | 403 | 403 |
+
+All of it requires the flag. Template writes and previews accept the **cookie session only**: a PAT of any scope gets 403 `auth.cookieSessionRequired` (a read-only PAT may already be stopped by `pat.readOnlyScope`), so an agent session cannot rewrite the prompts its teammates' sessions will run. Project reads accept a PAT. On an archived project everything is read-only (`project.archived`).
+
+### 13.7 REST
+
+Project templates, under `/api/v1/projects/{projectKeyOrId}/agent/prompts` (`{type}` is a ticket type name, case-insensitive):
+
+| Method and path | Purpose |
+| --- | --- |
+| `GET` | The five types: mode, version, effective source and version, default version, `defaultChanged`, last change |
+| `GET /{type}` | The slot with its body, the effective body, the instance default and the guardrails |
+| `PUT /{type}` | `{ mode, body?, changeNote?, baseVersion }`; a stale `baseVersion` is 409 `agent.prompt.versionConflict` |
+| `POST /{type}/reset` | `{ baseVersion, changeNote? }`: back to `Inherit` as a new version |
+| `GET /{type}/versions`, `GET /{type}/versions/{n}` | History, newest first; one version with its body (`agent.prompt.versionNotFound`) |
+| `POST /{type}/versions/{n}/restore` | `{ baseVersion, changeNote? }`: version n becomes current as a new version |
+| `POST /{type}/preview` | `{ body?, ticketKey? }` returns `{ prompt, length, lengthLimit, ticketKey, errors[] }`; stores nothing. A null body previews the instance default; the ticket must be in the project. |
+
+Instance templates, Admins only, under `/api/v1/admin/agent/prompts` (`{slot}` is a ticket type or `guardrails`): `GET`, `GET /{slot}`, `PUT /{slot}` (`{ body, changeNote?, baseVersion }`; an empty guardrails body removes them), `POST /{slot}/reset-built-in`, the same `versions`, `restore` and `preview` routes. Instance responses add `builtInVersion`, `followsBuiltIn`, `latestBuiltInVersion`, `newerBuiltInAvailable`, `builtInBody` and `overridingProjects` (live projects with `Custom` or `Off` for the type).
+
+`GET /api/v1/agent/prompt-placeholders` lists the placeholders for the editor.
+
+### 13.8 Activity and audit
+
+Every template change writes `agent.prompt.updated` with EntityType `AgentPrompt`, `ProjectId` set for project rows, `Field` the type name or `Guardrails`, and old and new values `{ version, mode }`. The body is never in activity; bodies live in the versions. The Admin audit trail (I-13) lists `AgentPrompt` entries, labelled `Bug` or `TKT Bug`.

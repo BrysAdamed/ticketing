@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Ticketing.Application.Abstractions;
+using Ticketing.Application.Agents;
 using Ticketing.Infrastructure.Activity;
 using Ticketing.Infrastructure.Attachments;
 using Ticketing.Infrastructure.Auth;
@@ -44,6 +45,7 @@ public static class DependencyInjection
         services.AddScoped<IIdempotency, IdempotencyService>();
         services.AddSingleton<IFeatureFlagStore, FeatureFlagStore>();
 
+        services.AddOptions<AgentOptions>().Configure(o => o.PublicUrl = configuration[AgentOptions.PublicUrlVariable]);
         services.AddOptions<MaintenanceOptions>().Bind(configuration.GetSection(MaintenanceOptions.Section));
         services.AddScoped<DataRetention>();
         services.AddHostedService<DataRetentionService>();

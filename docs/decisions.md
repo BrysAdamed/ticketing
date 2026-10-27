@@ -657,6 +657,16 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
   - `ShortcutService` first tries the physical-key form of a shifted symbol (`mod+shift+.` from `event.code` `Period`), then the reported character (`?`), so both notations work on any layout that has the key.
 - Rationale: the bracket keys are taken by the two other panels, and a modifier keeps the tree toggle from firing while reading. Matching shifted symbols by physical key fixes the ticket shortcut as well without per-layout tables.
 
+### D-110 "On this page" is a rail from 1440 px that `]` hides, otherwise a popover in the page bar; content views add page bar actions through `DocBarSlot` (TKT-45)
+
+- Question: the reader shows "On this page" only from 1440 px (refinement 1.1). screens.md 3 wants a popover button in the page bar on narrower screens and `]` to toggle the rail, but the page bar belongs to the `docs.doc` frame while the outline lives in the page view.
+- Decision:
+  - From 1440 px the 220 px rail shows unless the reader hid it with `]` or its hide button; that choice is remembered per browser (`tk-docs-rail-hidden`). Whenever the rail is not shown, the page bar has an "On this page" button that opens a popover with the same outline (scroll spy, smooth scroll, closes on a pick or `Esc`) and the registered rail sections; below 1440 px `]` opens and closes the popover. Pages without headings or rail sections show neither.
+  - The rail and the popover render rail sections only while visible, so a section component exists once.
+  - The frame provides `DocBarSlot`; a content view puts a template into it (`set(template)` returns the remover) and the frame renders it first on the bar's right side. The editor and the history replace the bar, so the page view clears the slot in edit mode.
+  - The button shows below 900 px too (the ticket names 900–1439 px); narrow screens are best effort and lose nothing by it.
+- Rationale: one rule ("the button shows when the rail does not") covers both the laptop width and a hidden rail. A template slot keeps the outline state in the page view, with no outline service shared between the frame and the content view.
+
 ## Product owner answers (v1 review, 2026-10-27)
 
 These were open questions (Q-01..Q-05); the product owner resolved them as follows.

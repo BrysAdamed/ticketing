@@ -1,4 +1,4 @@
-import { NgComponentOutlet } from '@angular/common';
+import { NgComponentOutlet, NgTemplateOutlet } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -40,6 +40,7 @@ import {
   DOCS_VERSION_VIEW,
 } from '../docs.views';
 import { DocTreeStore } from '../tree/doc-tree.store';
+import { DocBarSlot } from './doc-bar-slot';
 import { DocStore } from './doc.store';
 
 /// Presence ("Jane is editing") and newer versions are picked up this often while a doc is open.
@@ -47,13 +48,14 @@ const PRESENCE_REFRESH_MS = 30_000;
 
 /// One doc (`docs.doc`): loads it (cached per key), replaces a stale or missing slug, selects it in
 /// the tree, sets the title and breadcrumbs, and renders the page bar plus the content view of its
-/// kind (`docs.page`, `docs.diagram`, `docs.folder`) with the input `doc`. The bar holds Download
-/// .md (pages) and Edit (`E`, `?mode=edit`; in edit mode the content view's editor bar replaces
+/// kind (`docs.page`, `docs.diagram`, `docs.folder`) with the input `doc`. The bar holds the content
+/// view's actions (`DocBarSlot`), Download .md (pages) and Edit (`E`, `?mode=edit`; in edit mode the content view's editor bar replaces
 /// it). The doc is refetched every 30 s for presence and newer versions.
 @Component({
   selector: 'tk-doc-view',
   imports: [
     NgComponentOutlet,
+    NgTemplateOutlet,
     RouterLink,
     MatButtonModule,
     IconComponent,
@@ -62,7 +64,7 @@ const PRESENCE_REFRESH_MS = 30_000;
     KbdComponent,
     RelativeTimePipe,
   ],
-  providers: [DocStore],
+  providers: [DocStore, DocBarSlot],
   viewProviders: [provideIcons({ ...DOCS_ICONS, tablerDownload, tablerHistory })],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
@@ -111,6 +113,9 @@ const PRESENCE_REFRESH_MS = 30_000;
             }
           </span>
           <div class="right">
+            @if (barSlot.actions(); as actions) {
+              <ng-container *ngTemplateOutlet="actions" />
+            }
             @if (doc.kind === 'Page') {
               <a
                 class="tk-icon-btn"
@@ -214,6 +219,7 @@ const PRESENCE_REFRESH_MS = 30_000;
 export class DocView {
   protected readonly store = inject(DocStore);
   protected readonly tree = inject(DocTreeStore);
+  protected readonly barSlot = inject(DocBarSlot);
   private readonly router = inject(Router);
   private readonly registry = inject(ViewRegistry);
   private readonly breadcrumbs = inject(Breadcrumbs);

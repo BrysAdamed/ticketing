@@ -251,4 +251,58 @@ test.describe('docs pages', () => {
         await expect(view.content.locator('img[alt="login screen.png"]')).toBeVisible();
         await expect(view.attachments).toContainText('login screen.png');
     });
+
+    test('"On this page": ] hides the rail and keeps it hidden; below 1440 px it is a popover in the page bar', async ({
+        page,
+        api,
+    }) => {
+        // Arrange
+        const projectKey = (await api.createProject()).key;
+        const sections = ['Overview', 'Checkout', 'Authorization', 'Settlement'];
+        const content = sections.map((s) => `## ${s}\n\n${'Text. '.repeat(400)}\n`).join('\n');
+        const doc = await createPage(api, projectKey, 'Payment flow', content);
+        const view = new DocPagePage(page);
+        await view.goto(projectKey, doc.key);
+        const rail = page.getByTestId('doc-rail');
+        const button = page.getByTestId('doc-outline-button');
+
+        // Assert: at 1440 px the rail shows and the bar has no button
+        await expect(rail.getByTestId('doc-outline')).toContainText('Settlement');
+        await expect(button).toBeHidden();
+
+        // Act: ] hides the rail, also after a reload
+        await page.locator('body').press(']');
+        await expect(rail).toBeHidden();
+        await page.reload();
+        await expect(view.title).toBeVisible();
+
+        // Assert
+        await expect(rail).toBeHidden();
+        await expect(button).toBeVisible();
+        await page.locator('body').press(']');
+        await expect(rail).toBeVisible();
+
+        // Act: a laptop width shows the popover button
+        await page.setViewportSize({ width: 1280, height: 800 });
+        await expect(rail).toBeHidden();
+        await button.click();
+        const popover = page.getByTestId('doc-outline-popover');
+        await popover.getByRole('link', { name: 'Settlement' }).click();
+
+        // Assert: it scrolls to the heading and closes
+        await expect(popover).toBeHidden();
+        await expect(page).toHaveURL(/#settlement$/);
+        await expect(page.locator('[id="settlement"]')).toBeInViewport();
+
+        // Act: ] toggles the popover at this width
+        await page.locator('body').press(']');
+
+        // Assert
+        await expect(popover.getByRole('link', { name: 'Settlement' })).toHaveAttribute(
+            'aria-current',
+            'location',
+        );
+        await page.keyboard.press('Escape');
+        await expect(popover).toBeHidden();
+    });
 });

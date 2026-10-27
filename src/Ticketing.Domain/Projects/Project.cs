@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Ticketing.Domain.Agents;
 using Ticketing.Domain.Common;
 
 namespace Ticketing.Domain.Projects;
@@ -8,6 +9,7 @@ public sealed partial class Project
     public const int KeyMaxLength = 10;
     public const int NameMaxLength = 100;
     public const int DescriptionMaxLength = 10_000;
+    public const int RepositoryUrlMaxLength = 500;
 
     private readonly List<ProjectMember> _members = [];
 
@@ -40,6 +42,13 @@ public sealed partial class Project
     public Guid CreatedById { get; private set; }
 
     public uint RowVersion { get; private set; }
+
+    /// <summary>Owners opt a project in to agent delegation (spec 13.3); it needs a <see cref="RepositoryUrl"/>.</summary>
+    public bool AgentDelegationEnabled { get; private set; }
+
+    public string? RepositoryUrl { get; private set; }
+
+    public AgentMergePolicy AgentMergePolicy { get; private set; } = AgentMergePolicy.Review;
 
     public IReadOnlyList<ProjectMember> Members => _members;
 
@@ -79,6 +88,18 @@ public sealed partial class Project
         Description = Text.Optional(description, "description", DescriptionMaxLength);
 
     public void ChangeVisibility(ProjectVisibility visibility) => Visibility = visibility;
+
+    public void ConfigureAgentDelegation(bool enabled, string? repositoryUrl, AgentMergePolicy mergePolicy)
+    {
+        var url = Text.Optional(repositoryUrl, "repositoryUrl", RepositoryUrlMaxLength);
+        if (enabled && url is null)
+            throw DomainException.Invalid(
+                "agentDelegationEnabled", AgentErrors.RepositoryRequired, "Set the repository URL before enabling agent delegation.",
+                "Agents check their local clone against it.");
+        AgentDelegationEnabled = enabled;
+        RepositoryUrl = url;
+        AgentMergePolicy = mergePolicy;
+    }
 
     public void EnsureWritable()
     {

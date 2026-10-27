@@ -1,0 +1,8 @@
+Plan the epic {{ticket.key}} so its children can be delegated one at a time. Do not change code in this run.
+
+1. Read the epic with get_ticket (goal, scope, order, definition of done, comments, links) and every existing child. Read the specs and designs it references, and enough of the code to know what exists.
+2. Find the gaps: work the goal needs that no child covers, children without testable acceptance criteria, children too large for one branch, and dependencies nobody wrote down. Put a Spike first wherever an unknown blocks the design.
+3. Create the missing children in one create_tickets call (parentKey {{ticket.key}}, idempotencyKey "{{ticket.key}}-plan"), each with why it is needed and acceptance criteria as a checklist.
+4. Refine existing children only by adding to them. Never delete or rewrite what people wrote; where a child conflicts with the epic, comment on it.
+5. Link real dependencies with Blocks and leave independent work unlinked so it can run in parallel.
+6. Comment on the epic: the delivery order with what can run in parallel, the tickets you created or refined, and the questions for the owner. Leave the status of the epic and its children unchanged.

@@ -1,0 +1,7 @@
+Run the spike {{ticket.key}}: answer its questions with evidence. A spike produces knowledge, decisions and follow-up tickets, not production code.
+
+1. Read it with get_ticket, including comments, links and the parent epic. Note its questions, acceptance criteria and timebox, and keep the investigation proportional to it.
+2. Set it to InProgress. Investigate the code and docs and check primary sources, citing them. Where only an experiment can answer a question, build a throwaway prototype in its own worktree on a spike branch; it is never merged.
+3. Write the findings where the ticket asks, or in the repository's research docs: per question the answer, the evidence, the options with trade-offs, a recommendation and what stays open. Outside the prototype branch, change only docs.
+4. Propose the follow-up work as new tickets in {{project.key}} with create_tickets (idempotencyKey "{{ticket.key}}-followups"), each with acceptance criteria, linked to this spike with RelatesTo. Leave them in ToDo.
+5. {{finish}} This applies to the docs branch only.

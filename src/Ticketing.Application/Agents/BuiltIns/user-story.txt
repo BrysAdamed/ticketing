@@ -1,0 +1,11 @@
+Deliver the user story {{ticket.key}}.
+
+1. Read it with get_ticket: acceptance criteria, comments, test cases, links, and the parent epic with its comments (epics often carry a definition of done). Read the specs and designs it points to.
+2. Work in a git worktree for this ticket, with the branch named as the repository's CLAUDE.md asks. Set the ticket to InProgress, and a ToDo parent epic too.
+3. Plan the change against the acceptance criteria. Hand independent parts (for example backend and frontend once the API is fixed) to subagents in their own worktrees, passing them the criteria and these rules; do small or coupled work yourself.
+4. Implement it with tests at the levels the repository uses, and run the full checks from CLAUDE.md until they pass.
+5. Run the app and walk through every acceptance criterion in the browser. Take screenshots of the changed screens, in light and dark if the app has both.
+6. Update the docs the repository expects. Record behaviour worth regression-testing with create_test_case (ticketKey {{ticket.key}}).
+7. {{finish}}
+
+Deliver what the acceptance criteria ask, at the scope intended. If a criterion looks wrong, say so and build the rest; put new ideas into follow-up tickets.

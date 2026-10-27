@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Ticketing.Application.Abstractions;
 using Ticketing.Domain.Activity;
+using Ticketing.Domain.Agents;
 using Ticketing.Domain.Attachments;
 using Ticketing.Domain.Boards;
 using Ticketing.Domain.Collaboration;
@@ -63,6 +64,10 @@ public sealed class TicketingDbContext(DbContextOptions<TicketingDbContext> opti
     public DbSet<FeatureFlag> FeatureFlags => Set<FeatureFlag>();
 
     public DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();
+
+    public DbSet<AgentPromptTemplate> AgentPromptTemplates => Set<AgentPromptTemplate>();
+
+    public DbSet<AgentPromptTemplateVersion> AgentPromptTemplateVersions => Set<AgentPromptTemplateVersion>();
 
     public static DbContextOptionsBuilder Configure(DbContextOptionsBuilder options, string connectionString) =>
         options

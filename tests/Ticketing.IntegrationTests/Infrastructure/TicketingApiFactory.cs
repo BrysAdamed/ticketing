@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Npgsql;
 using Respawn;
 using Ticketing.Application.Abstractions;
+using Ticketing.Application.Agents;
 using Ticketing.Infrastructure.Persistence;
 using Xunit.v3;
 
@@ -20,6 +21,7 @@ public sealed class TicketingApiFactory : WebApplicationFactory<Program>, IAsync
     public const string BootstrapAdminEmail = "bootstrap-admin@ticketing.test";
     public const string BootstrapAdminPassword = "Bootstrap-Admin-Password-1";
     public const string RemoteAddressHeader = "X-Test-Remote-Address";
+    public const string PublicUrl = "https://ticketing.test";
 
     private Respawner _respawner = null!;
 
@@ -56,6 +58,7 @@ public sealed class TicketingApiFactory : WebApplicationFactory<Program>, IAsync
         builder.UseSetting("ConnectionStrings:Db", ConnectionString);
         builder.UseSetting(DatabaseInitializer.AdminEmailVariable, BootstrapAdminEmail);
         builder.UseSetting(DatabaseInitializer.AdminPasswordVariable, BootstrapAdminPassword);
+        builder.UseSetting(AgentOptions.PublicUrlVariable, PublicUrl);
         builder.UseSetting("Auth:CookieSecurePolicy", "Always");
         builder.UseSetting("RateLimiting:LoginPermitsPerMinute", "100000");
         builder.UseSetting("Logging:Console:FormatterName", "simple");

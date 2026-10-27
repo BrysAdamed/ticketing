@@ -1,0 +1,1 @@
+Finish: commit with messages that start with the ticket key, bring the latest main into your branch the way CLAUDE.md says and re-run the checks. Push the branch, open a pull request if the repository has a forge CLI, and set the ticket to Review. Do not merge to main: a person reviews and merges.

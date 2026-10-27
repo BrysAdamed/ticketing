@@ -50,6 +50,9 @@ export interface BoardCard {
   labels: string[];
   assigneeId: string | null;
   parentId: string | null;
+  /// Non-deleted children wherever they are; 0 for cards without children.
+  childCount: number;
+  childDoneCount: number;
 }
 
 export interface BoardColumn {

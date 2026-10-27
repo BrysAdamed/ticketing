@@ -429,6 +429,54 @@ public sealed class BoardEndpointTests(TicketingApiFactory api)
     }
 
     [Fact]
+    public async Task A_500_card_board_loads_in_one_lean_response_with_child_progress_for_parents()
+    {
+        // Arrange
+        var owner = await api.CreateUserAsync();
+        var client = await api.LoginAsync(owner);
+        var project = await client.CreateProjectAsync("BIG");
+        var board = await client.CreateBoardAsync("Big", "BIG");
+        await api.WithDbAsync(async db =>
+        {
+            var now = DateTimeOffset.UtcNow;
+            var ranks = Domain.Ordering.FractionalIndex.NKeysBetween(null, null, 500);
+            var epics = new List<Ticket>();
+            for (var i = 0; i < ranks.Count; i++)
+            {
+                var ticket = Ticket.Create(project.Id, i + 1, $"Ticket {i + 1}", i < 50 ? TicketType.Epic : TicketType.UserStory, owner.Id, ranks[i], now);
+                ticket.PlaceOnBoard(board.Id, ranks[i]);
+                if (i < 50)
+                    epics.Add(ticket);
+                else
+                    ticket.SetParent(epics[i % 50], [], 0);
+                if (i >= 50 && i % 3 == 0)
+                    ticket.ChangeStatus(TicketStatus.Done, null, now);
+                db.Tickets.Add(ticket);
+            }
+            var outside = Ticket.Create(project.Id, 501, "Backlog child", TicketType.UserStory, owner.Id, "a0", now);
+            outside.SetParent(epics[0], [], 0);
+            db.Tickets.Add(outside);
+            return await db.SaveChangesAsync(_ct);
+        });
+        await client.GetBoardAsync(board.Id);
+
+        // Act
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        var loaded = await client.GetBoardAsync(board.Id);
+        watch.Stop();
+
+        // Assert
+        var cards = loaded.Columns.SelectMany(c => c.Cards).ToList();
+        Assert.Equal(500, cards.Count);
+        var firstEpic = cards.Single(c => c.Key == "BIG-1");
+        Assert.Equal((10, 3), (firstEpic.ChildCount, firstEpic.ChildDoneCount));
+        Assert.Equal((0, 0), (cards.Single(c => c.Key == "BIG-51").ChildCount, cards.Single(c => c.Key == "BIG-51").ChildDoneCount));
+        Assert.Equal(450, cards.Where(c => c.Type == TicketType.Epic).Sum(c => c.ChildCount) - 1);
+        TestContext.Current.TestOutputHelper?.WriteLine($"500-card board: {watch.ElapsedMilliseconds} ms");
+        Assert.True(watch.ElapsedMilliseconds < 1000, $"Board took {watch.ElapsedMilliseconds} ms");
+    }
+
+    [Fact]
     public async Task Read_only_tokens_can_read_boards_but_not_manage_them()
     {
         // Arrange

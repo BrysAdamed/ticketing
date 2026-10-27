@@ -164,6 +164,14 @@ export class BoardStore {
     const keys = ids.map((id) => findCard(before, id)?.key).filter((k): k is string => !!k);
     const beforeKey = anchor.beforeId ? findCard(before, anchor.beforeId)?.key : undefined;
     const afterKey = anchor.afterId ? findCard(before, anchor.afterId)?.key : undefined;
+    const parentProgressChanges = ids.some((id) => {
+      const parentId = findCard(before, id)?.parentId;
+      return (
+        !!parentId &&
+        !!findCard(before, parentId) &&
+        (statusOf(before, id) === 'Done') !== (status === 'Done')
+      );
+    });
     const seq = ++this.moveSeq;
     this.board.set({ ...board, columns: applyMove(before, ids, status, anchor) });
     this.moving.set(true);
@@ -171,6 +179,7 @@ export class BoardStore {
       await firstValueFrom(
         this.ticketsApi.move({ keys, target: board.id, from: board.id, status, beforeKey, afterKey }),
       );
+      if (parentProgressChanges) void this.reload(true);
       return true;
     } catch (error) {
       if (seq === this.moveSeq && this.board())

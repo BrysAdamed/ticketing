@@ -36,7 +36,9 @@ public sealed record BoardCardDto(
     int? StoryPoints,
     IReadOnlyList<string> Labels,
     Guid? AssigneeId,
-    Guid? ParentId);
+    Guid? ParentId,
+    int ChildCount,
+    int ChildDoneCount);
 
 public sealed record BoardColumnDto(TicketStatus Status, StatusCategory Category, IReadOnlyList<BoardCardDto> Cards);
 

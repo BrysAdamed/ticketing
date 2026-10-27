@@ -15,6 +15,7 @@ import {
   TicketPatch,
   TicketRef,
   TicketSummary,
+  Watchers,
 } from './ticket.models';
 
 export interface BacklogQuery {
@@ -110,5 +111,18 @@ export class TicketsApi {
 
   unlink(key: string, linkId: string): Observable<void> {
     return this.api.delete(`/tickets/${encodeURIComponent(key)}/links/${linkId}`);
+  }
+
+  watchers(key: string): Observable<Watchers> {
+    return this.api.get<Watchers>(`/tickets/${encodeURIComponent(key)}/watchers`);
+  }
+
+  /// Idempotent; read access is enough (viewers can watch).
+  watch(key: string): Observable<Watchers> {
+    return this.api.put<Watchers>(`/tickets/${encodeURIComponent(key)}/watchers/me`, null);
+  }
+
+  unwatch(key: string): Observable<Watchers> {
+    return this.api.delete<Watchers>(`/tickets/${encodeURIComponent(key)}/watchers/me`);
   }
 }

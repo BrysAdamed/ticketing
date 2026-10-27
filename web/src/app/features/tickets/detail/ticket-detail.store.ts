@@ -19,10 +19,12 @@ import {
   TicketPatch,
   TicketRef,
   UserRef,
+  Watchers,
 } from '@core/tickets/ticket.models';
 import { TicketsApi } from '@core/tickets/tickets.api';
 import { Page } from '@core/api/page';
 import { TicketLinkType } from '@shared/domain/enums';
+import { NO_WATCHERS, withoutWatcher, withWatcher } from './watchers';
 
 export type SaveResult = 'saved' | 'conflict' | 'failed';
 
@@ -59,13 +61,15 @@ export class TicketDetailStore {
   readonly me = computed(() => this.auth.currentUser());
 
   private loadToken = 0;
+  private watchToken = 0;
 
   constructor() {
     this.events.events.pipe(takeUntilDestroyed(inject(DestroyRef))).subscribe((event) => {
       const current = this.ticket();
-      if (!current) return;
-      if (event.kind === 'updated' && event.ticket.id !== current.id)
-        this.refreshRelated(event.ticket);
+      if (!current || event.kind !== 'updated') return;
+      if (event.ticket.id !== current.id) this.refreshRelated(event.ticket);
+      else if (event.ticket.watchers && event.ticket.watchers !== current.watchers)
+        this.ticket.set({ ...current, watchers: event.ticket.watchers });
     });
     this.attachments.changes.pipe(takeUntilDestroyed(inject(DestroyRef))).subscribe((change) => {
       if (change.ticketKey === this.ticket()?.key.toUpperCase()) void this.refreshMeta();
@@ -131,6 +135,7 @@ export class TicketDetailStore {
       this.applyServer(updated);
       if (patch.labels || patch.addLabels || patch.version !== undefined)
         this.hints.invalidate(before.projectKey);
+      if (patch.assignee !== undefined && !updated.watchers) void this.refreshWatchers();
       if (this.historyStatus() !== 'idle') void this.loadHistory();
       return 'saved';
     } catch (error) {
@@ -190,6 +195,41 @@ export class TicketDetailStore {
       if (this.historyStatus() !== 'idle') void this.loadHistory();
     } catch (error) {
       this.toast.error(`Couldn't move ${ticket.key}: ${toApiError(error).title}`);
+    }
+  }
+
+  // Watchers
+
+  /// `w`: watches or unwatches at once and rolls back with an error toast if the server refuses.
+  /// Only the latest of several quick toggles applies its response.
+  async toggleWatch(): Promise<void> {
+    const ticket = this.ticket();
+    const me = this.me();
+    if (!ticket || !me) return;
+    const before = ticket.watchers ?? NO_WATCHERS;
+    const watch = !before.watching;
+    const token = ++this.watchToken;
+    this.setWatchers(
+      ticket.id,
+      watch
+        ? withWatcher(before, {
+            id: me.id,
+            email: me.email,
+            displayName: me.displayName,
+            isActive: true,
+          })
+        : withoutWatcher(before, me.id),
+    );
+    try {
+      const fresh = await firstValueFrom(
+        watch ? this.api.watch(ticket.key) : this.api.unwatch(ticket.key),
+      );
+      if (token === this.watchToken) this.publishWatchers(ticket.id, fresh);
+    } catch (error) {
+      if (token === this.watchToken) this.setWatchers(ticket.id, before);
+      this.toast.error(
+        `Couldn't ${watch ? 'watch' : 'unwatch'} ${ticket.key}: ${toApiError(error).title}`,
+      );
     }
   }
 
@@ -378,6 +418,7 @@ export class TicketDetailStore {
         ...current,
         updatedAt: fresh.updatedAt,
         rowVersion: fresh.rowVersion,
+        watchers: fresh.watchers ?? current.watchers,
       };
       this.ticket.set(merged);
       this.cache.put(merged);
@@ -407,7 +448,35 @@ export class TicketDetailStore {
       comments: ticket.comments ?? current.comments,
       commentCount: ticket.commentCount ?? current.commentCount,
       testCases: ticket.testCases ?? current.testCases,
+      watchers: ticket.watchers ?? current.watchers,
     };
+  }
+
+  private setWatchers(ticketId: string, watchers: Watchers): void {
+    const current = this.ticket();
+    if (current?.id === ticketId) this.ticket.set({ ...current, watchers });
+  }
+
+  /// Server truth: into this view, the ticket cache and every other open view of the ticket.
+  private publishWatchers(ticketId: string, watchers: Watchers): void {
+    this.setWatchers(ticketId, watchers);
+    const current = this.ticket();
+    if (current?.id !== ticketId) return;
+    this.cache.put(current);
+    this.events.emit({ kind: 'updated', ticket: current });
+  }
+
+  /// Assigning someone makes them a watcher on the server (D-93).
+  private async refreshWatchers(): Promise<void> {
+    const ticket = this.ticket();
+    if (!ticket) return;
+    const token = this.watchToken;
+    try {
+      const watchers = await firstValueFrom(this.api.watchers(ticket.key));
+      if (token === this.watchToken) this.publishWatchers(ticket.id, watchers);
+    } catch {
+      // The next load brings the current watchers.
+    }
   }
 
   private setTicket(ticket: Ticket | null): void {

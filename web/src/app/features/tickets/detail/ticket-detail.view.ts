@@ -42,6 +42,7 @@ import { NewLink, TicketLinksComponent } from './ticket-links.component';
 import { TicketSectionsHostComponent } from './ticket-sections-host.component';
 import { TicketDetailStore } from './ticket-detail.store';
 import { TicketDescriptionComponent, TicketTitleComponent } from './ticket-text.component';
+import { TicketWatchComponent } from './ticket-watch.component';
 
 export type TicketPresentation = 'page' | 'peek';
 
@@ -67,6 +68,7 @@ export type TicketPresentation = 'page' | 'peek';
     TicketSectionsHostComponent,
     TicketTitleComponent,
     TicketDescriptionComponent,
+    TicketWatchComponent,
   ],
   providers: [TicketDetailStore],
   viewProviders: [provideIcons(TICKET_ICONS)],
@@ -202,6 +204,12 @@ export class TicketDetailView {
         section: 'Ticket',
         description: 'Assign to me',
         handler: () => this.assignToMe(),
+      },
+      {
+        keys: 'w',
+        section: 'Ticket',
+        description: 'Watch / unwatch',
+        handler: () => void this.store.toggleWatch(),
       },
       {
         keys: 'l',

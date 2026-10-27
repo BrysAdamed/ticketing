@@ -148,6 +148,12 @@ public sealed record DocVersionDto(
 {
     /// <summary>Canvas only: where the SVG picture of this version is served; null while it has none.</summary>
     public string? SnapshotUrl { get; init; }
+
+    /// <summary>What this version's content mentions, filtered by what the reader can read (like <see cref="DocDto.References"/>).</summary>
+    public DocReferencesDto References { get; init; } = DocReferencesDto.Empty;
+
+    /// <summary>The diagrams this version's content embeds that the reader can read.</summary>
+    public IReadOnlyList<DocEmbedDto> Embeds { get; init; } = [];
 }
 
 public sealed record DocDraftDto(string DocKey, int BaseVersion, int CurrentVersion, string Title, string Content, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);

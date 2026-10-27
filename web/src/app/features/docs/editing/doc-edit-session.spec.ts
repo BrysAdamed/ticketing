@@ -62,7 +62,7 @@ const conflict = () => new ApiError(409, 'doc.version.conflict', 'Stale');
 class FakeApi {
   draft = vi.fn(() => of(draft()));
   saveDraft = vi.fn((_key: string, body: SaveDocDraft) => of(draft({ ...body })));
-  saveDraftOnUnload = vi.fn();
+  saveDraftOnUnload = vi.fn((_key: string, _draft: SaveDocDraft) => true);
   discardDraft = vi.fn(() => of(undefined));
   update = vi.fn((_key: string, body: UpdateDoc) =>
     of(doc({ content: body.content ?? '', title: body.title ?? 'Payment flow', version: 4 })),
@@ -79,6 +79,8 @@ class FakeApi {
       channel: 'Web',
       createdAt: '2026-10-27T10:00:00Z',
       restoredFrom: null,
+      references: { tickets: [], docs: [] },
+      embeds: [],
     } satisfies DocVersion),
   );
 }
@@ -198,6 +200,27 @@ describe('DocEditSession', () => {
       title: 'Payment flow',
       content: 'typed',
     });
+  });
+
+  it('saves a draft too large for keepalive normally and asks the browser to confirm leaving', async () => {
+    // Arrange
+    await session.open(doc());
+    session.edit({ content: 'a big drawing' });
+    api.saveDraftOnUnload.mockReturnValue(false);
+    const event = new Event('beforeunload', { cancelable: true }) as BeforeUnloadEvent;
+
+    // Act
+    session.saveOnUnload(event);
+    await session.flush();
+
+    // Assert
+    expect(event.defaultPrevented).toBe(true);
+    expect(api.saveDraft).toHaveBeenCalledWith('WEB-D-1', {
+      baseVersion: 3,
+      title: 'Payment flow',
+      content: 'a big drawing',
+    });
+    expect(session.hasUnsavedChanges()).toBe(false);
   });
 
   it('publishes against the base version and sends the title only when it changed', async () => {

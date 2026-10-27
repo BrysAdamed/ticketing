@@ -254,6 +254,9 @@ export interface DocVersion {
   restoredFrom: number | null;
   /// Canvas only: the SVG picture of this version; null while it has none.
   snapshotUrl?: string | null;
+  /// What this version's content mentions and embeds, as the reader may see them.
+  references: DocReferences;
+  embeds: DocEmbed[];
 }
 
 /// `PUT /docs/{key}/versions/{n}/snapshot`: `stored` is false when the version already had one.

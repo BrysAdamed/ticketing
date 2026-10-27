@@ -23,6 +23,7 @@ import { provideIcons } from '@ng-icons/core';
 import { tablerLayoutSidebarRightCollapse, tablerListDetails } from '@ng-icons/tabler-icons';
 import { map } from 'rxjs';
 import { DOC_PAGE_SECTIONS } from '@core/docs/doc-extensions';
+import { mentionedTicketKey } from '@core/docs/doc-links';
 import { Doc } from '@core/docs/doc.models';
 import { ShortcutService } from '@core/shortcuts/shortcut.service';
 import { ViewRegistry } from '@core/views/view-registry';
@@ -192,10 +193,20 @@ export class PageView {
     this.spy();
     if (this.scrolledToHash || !location.hash) return;
     this.scrolledToHash = true;
-    const target = root.querySelector(
-      `[id="${CSS.escape(decodeURIComponent(location.hash.slice(1)))}"]`,
-    );
-    target?.scrollIntoView();
+    const fragment = decodeURIComponent(location.hash.slice(1));
+    const ticketKey = mentionedTicketKey(fragment);
+    const mention = ticketKey
+      ? root.querySelector<HTMLElement>(`a.tk-tref[data-ticket-key="${CSS.escape(ticketKey)}"]`)
+      : null;
+    if (mention) {
+      mention.scrollIntoView({ block: 'center' });
+      mention.classList.add('tk-flash');
+      mention.addEventListener('animationend', () => mention.classList.remove('tk-flash'), {
+        once: true,
+      });
+      return;
+    }
+    root.querySelector(`[id="${CSS.escape(fragment)}"]`)?.scrollIntoView();
   }
 
   protected goTo(event: MouseEvent, entry: OutlineEntry): void {

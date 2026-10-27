@@ -122,11 +122,15 @@ export class DocEditSession {
     else if (this.saving) await this.saving;
   }
 
-  /// Saves unsaved changes with a request that survives the page being unloaded.
-  saveOnUnload(): void {
+  /// Saves unsaved changes with a request that survives the page being unloaded. A draft too large
+  /// for that (over 64 KB, e.g. a big drawing) is saved with a normal request instead, and the
+  /// `beforeunload` event is cancelled so the browser asks before leaving while it is in flight.
+  saveOnUnload(event?: BeforeUnloadEvent): void {
     if (!this.dirty || !this.key()) return;
     this.clearTimer();
-    this.api.saveDraftOnUnload(this.key(), this.snapshot());
+    if (this.api.saveDraftOnUnload(this.key(), this.snapshot())) return;
+    void this.save();
+    event?.preventDefault();
   }
 
   hasUnsavedChanges(): boolean {

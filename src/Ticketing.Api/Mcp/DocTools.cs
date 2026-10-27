@@ -45,7 +45,7 @@ public sealed class DocTools
         + "references (tickets with key, title, type and status, and docs, that the content mentions), embeds (diagrams embedded with "
         + "![caption](KEY), Mermaid with its source) and backlinks (docs whose content links here: { total, items }). Tickets and docs you "
         + "cannot read are left out. Use version as baseVersion for update_doc. With version (a number from get_doc_history), content is that older version's "
-        + "and atVersion describes it (number, title, changeNote, author, createdAt, restoredFrom); every other field (references included) is the doc now.")]
+        + "and atVersion describes it (number, title, changeNote, author, createdAt, restoredFrom), and references and embeds are that version's; every other field (backlinks included) is the doc now.")]
     public static Task<DocDto> GetDoc(
         GetDoc.Handler handler,
         [Description(DocKey + " Leave empty when giving projectKey and path.")] string? docKey = null,

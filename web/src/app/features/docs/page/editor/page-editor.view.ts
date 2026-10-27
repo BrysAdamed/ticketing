@@ -121,7 +121,7 @@ interface ToolbarItem {
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     'data-testid': 'view-docs.page.edit',
-    '(window:beforeunload)': 'session.saveOnUnload()',
+    '(window:beforeunload)': 'session.saveOnUnload($event)',
     '(document:visibilitychange)': 'onVisibilityChange()',
   },
   templateUrl: './page-editor.view.html',

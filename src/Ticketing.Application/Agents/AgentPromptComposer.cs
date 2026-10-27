@@ -34,7 +34,7 @@ public sealed class AgentPromptComposer(IBuiltInAgentPrompts builtIns, IOptions<
     {
         var key = HumanKeys.Ticket(project.Key, ticketNumber);
         var instanceUrl = options.Value.InstanceUrl;
-        return new AgentPromptContext(
+        var context = new AgentPromptContext(
             key,
             type,
             instanceUrl is null ? null : $"{instanceUrl}/tickets/{key}",
@@ -42,8 +42,9 @@ public sealed class AgentPromptComposer(IBuiltInAgentPrompts builtIns, IOptions<
             project.RepositoryUrl,
             project.DefaultBranch,
             instanceUrl,
-            builtIns.FinishSentence(project.MergePolicy),
+            string.Empty,
             templateId);
+        return context with { Finish = Render(builtIns.FinishSentence(project.MergePolicy), context) };
     }
 
     /// <summary>Renders the type template and the guardrails; throws a validation error on template syntax.</summary>

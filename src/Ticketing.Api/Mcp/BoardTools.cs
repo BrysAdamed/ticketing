@@ -78,6 +78,7 @@ public sealed class BoardTools
             cancellationToken));
 
     [Authorize(Policy = AuthPolicies.CanWrite)]
+    [McpMeta(McpToolMeta.RequiresUserInteraction, true)]
     [McpServerTool(Name = "archive_board", Destructive = true, Title = "Archive board")]
     [Description("Archives a board (owner or Admin); it becomes read-only. Done tickets stay on it. The others go to carryOverTo: 'backlog' "
         + "(top of each ticket's project backlog) or another active board's id (bottom; tickets whose project it does not link go to the backlog). "

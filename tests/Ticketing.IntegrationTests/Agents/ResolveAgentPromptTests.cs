@@ -47,8 +47,8 @@ public sealed class ResolveAgentPromptTests(TicketingApiFactory api)
 
         // Assert
         Assert.StartsWith($"Fix the bug {ticket}. Reproduce it before you change anything.", resolved.Prompt, StringComparison.Ordinal);
-        Assert.Contains($"\n\n<delegation_rules>\nYou were started from the Ticketing tracker at {TicketingApiFactory.PublicUrl} to work on {ticket} (Bug, project TKT): {TicketingApiFactory.PublicUrl}/tickets/{ticket}", resolved.Prompt, StringComparison.Ordinal);
-        Assert.Contains($"matches {AgentTestData.RepositoryUrl}", resolved.Prompt, StringComparison.Ordinal);
+        Assert.Contains($"\n\n<delegation_rules>\nYou were started from the Ticketing tracker to work on {ticket} (Bug, project TKT): {TicketingApiFactory.PublicUrl}/tickets/{ticket}", resolved.Prompt, StringComparison.Ordinal);
+        Assert.Contains($"First compare `git remote get-url origin` with {AgentTestData.RepositoryUrl}", resolved.Prompt, StringComparison.Ordinal);
         Assert.Contains("\"Delegated run · Bug v1 / D\"", resolved.Prompt, StringComparison.Ordinal);
         Assert.DoesNotContain("{{", resolved.Prompt, StringComparison.Ordinal);
         Assert.Equal((ticket, TicketType.Bug, AgentPromptSource.Default, 1, 1), (resolved.TicketKey, resolved.TicketType, resolved.Template.Source, resolved.Template.Version, resolved.GuardrailsVersion));
@@ -160,13 +160,13 @@ public sealed class ResolveAgentPromptTests(TicketingApiFactory api)
 
         // Assert
         Assert.DoesNotContain("delegation_rules", resolved.Prompt, StringComparison.Ordinal);
-        Assert.EndsWith("Do not merge to main: a person reviews and merges.", resolved.Prompt, StringComparison.Ordinal);
+        Assert.EndsWith("Do not merge it yourself: a person reviews and merges.", resolved.Prompt, StringComparison.Ordinal);
         Assert.Equal(2, resolved.GuardrailsVersion);
     }
 
     [Theory]
-    [InlineData(AgentMergePolicy.Review, "Do not merge to main: a person reviews and merges.")]
-    [InlineData(AgentMergePolicy.MergeWhenVerified, "Then merge it into main as CLAUDE.md describes")]
+    [InlineData(AgentMergePolicy.Review, "Do not merge it yourself: a person reviews and merges.")]
+    [InlineData(AgentMergePolicy.MergeWhenVerified, "Then merge your branch back as CLAUDE.md describes")]
     public async Task The_finish_step_follows_the_project_merge_policy(AgentMergePolicy policy, string expected)
     {
         // Arrange
@@ -178,7 +178,7 @@ public sealed class ResolveAgentPromptTests(TicketingApiFactory api)
         var resolved = await ResolveAsync(owner, ticket);
 
         // Assert
-        Assert.Contains($"7. Finish: commit with messages that start with the ticket key", resolved.Prompt, StringComparison.Ordinal);
+        Assert.Contains($"7. Finish: commit with messages starting {ticket}, merge the latest main into your branch", resolved.Prompt, StringComparison.Ordinal);
         Assert.Contains(expected, resolved.Prompt, StringComparison.Ordinal);
     }
 
@@ -190,8 +190,8 @@ public sealed class ResolveAgentPromptTests(TicketingApiFactory api)
         var ticket = await api.TicketAsync(await api.ProjectAsync(admin, "TKT"), admin);
         await api.EnableAgentFlagAsync(admin);
         var client = await api.LoginAsync(admin);
-        await (await client.PutPromptAsync("TKT", "Bug", new { mode = "Custom", body = "Fix {{ticket.key}}. " + new string('b', 2_600), baseVersion = 0 })).ShouldHaveStatusAsync(HttpStatusCode.OK);
-        await (await client.PutInstancePromptAsync("guardrails", new { body = new string('r', 2_100), baseVersion = 1 })).ShouldHaveStatusAsync(HttpStatusCode.OK);
+        await (await client.PutPromptAsync("TKT", "Bug", new { mode = "Custom", body = "Fix {{ticket.key}}. " + new string('b', 2_400), baseVersion = 0 })).ShouldHaveStatusAsync(HttpStatusCode.OK);
+        await (await client.PutInstancePromptAsync("guardrails", new { body = new string('r', 2_300), baseVersion = 1 })).ShouldHaveStatusAsync(HttpStatusCode.OK);
 
         // Act
         var error = await Assert.ThrowsAsync<AppException>(() => ResolveAsync(admin, ticket));

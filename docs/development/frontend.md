@@ -37,6 +37,7 @@ web/src/
       projects/         ProjectDirectory (readable projects), ProjectContext (current project)
       tickets/          ticket wire types, TicketsApi, TicketCache, TicketEvents, FieldHints, ProjectPeople,
                         TicketCreator (create dialog), TICKET_DETAIL_SECTIONS (ticket view extension point)
+      testing/          test case and regression wire types, TestCasesApi, RegressionsApi
       theme/            ThemeService (light / dark / system, density)
     shared/             presentational UI kit, domain enums, markdown, pipes. Never imports core or features.
     features/<name>/    one folder per feature: <name>.routes.ts, <name>.views.ts, <page>/<page>.store.ts + <page>.view.ts
@@ -54,8 +55,8 @@ ESLint enforces the boundaries: `core` and `shared` may not import `@features/*`
 | `/projects` | `projects` (list implemented) | `projects.list` |
 | `/projects/:projectKey` → `dashboard` | `projects` (layout with tabs) + `dashboard` | `project.layout`, `project.dashboard` |
 | `/projects/:projectKey/backlog` | `backlog` | `backlog.list` |
-| `/projects/:projectKey/test-cases` | `test-cases` | `testcases.list` |
-| `/projects/:projectKey/regressions[/:sessionKey]` | `regressions` | `regressions.list`, `regressions.session` |
+| `/projects/:projectKey/test-cases`, `…/test-cases/:testCaseKey`, `…/test-cases/new?forTicket=KEY` (filters `?status=&q=&ticket=&archived=`) | `test-cases` | `testcases.list`, `testcases.editor` (side pane) |
+| `/projects/:projectKey/regressions[/:sessionKey]` (`?status=`; session `?item=KEY&show=mine`, `waiting` or `failed`) | `regressions` | `regressions.list`, `regressions.session` |
 | `/projects/:projectKey/settings` | `project-settings` | `project.settings` |
 | `/tickets/:ticketKey` | `tickets` | `ticket.detail` (presentation `page`) |
 | `?peek=KEY` on any shell URL | `tickets` | `ticket.detail` (presentation `peek`) |

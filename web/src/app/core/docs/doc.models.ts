@@ -30,6 +30,7 @@ export interface DocTreeItem {
   updatedAt: string;
   hasMyDraft: boolean;
   canDelete: boolean;
+  commentCount: number;
 }
 
 export interface DocTree {

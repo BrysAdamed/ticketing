@@ -25,7 +25,7 @@
   }
 } @else {
   @let page = doc();
-  <div class="layout">
+  <div class="layout" [class.with-rail]="railShown() && hasRail()">
     <article class="pbody">
       @if (page.myDraft && page.permissions.canEdit) {
         <tk-doc-draft-banner [doc]="page" (continue)="edit()" />
@@ -76,23 +76,86 @@
         <tk-doc-page-sections placement="footer" [doc]="page" />
       </div>
     </article>
-    <aside class="rail" aria-label="On this page">
-      @if (outline().length > 1) {
-        <nav class="rsec toc" data-testid="doc-outline">
-          <div class="rlabel">On this page</div>
-          @for (entry of outline(); track entry.id) {
-            <a
-              [href]="'#' + entry.id"
-              [class.on]="entry.id === activeId()"
-              [style.--d]="entry.depth - 1"
-              [attr.aria-current]="entry.id === activeId() ? 'location' : null"
-              (click)="goTo($event, entry)"
-              >{{ entry.text }}</a
-            >
-          }
-        </nav>
-      }
-      <tk-doc-page-sections placement="rail" [doc]="page" />
-    </aside>
+    @if (railShown() && hasRail()) {
+      <aside class="rail" aria-label="On this page" data-testid="doc-rail">
+        <ng-container *ngTemplateOutlet="railContent; context: { $implicit: false }" />
+      </aside>
+    }
   </div>
+
+  <ng-template #barActions>
+    @if (!railShown() && hasRail()) {
+      <button
+        #outlineOrigin="cdkOverlayOrigin"
+        cdkOverlayOrigin
+        type="button"
+        class="tk-icon-btn"
+        aria-label="On this page"
+        aria-haspopup="dialog"
+        data-testid="doc-outline-button"
+        [class.on]="outlineOpen()"
+        [attr.aria-expanded]="outlineOpen()"
+        [title]="'On this page (' + railKeys + ')'"
+        (click)="outlineOpen.set(!outlineOpen())"
+      >
+        <tk-icon name="tablerListDetails" [size]="16" />
+      </button>
+      <ng-template
+        cdkConnectedOverlay
+        cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+        [cdkConnectedOverlayOrigin]="outlineOrigin"
+        [cdkConnectedOverlayOpen]="outlineOpen()"
+        [cdkConnectedOverlayHasBackdrop]="true"
+        [cdkConnectedOverlayPositions]="popoverPositions"
+        (backdropClick)="outlineOpen.set(false)"
+        (detach)="outlineOpen.set(false)"
+        (overlayKeydown)="onPopoverKeydown($event)"
+        (attach)="focusPopover()"
+      >
+        <div
+          #popover
+          class="tk-popover outline-pop"
+          role="dialog"
+          aria-label="On this page"
+          tabindex="-1"
+          data-testid="doc-outline-popover"
+        >
+          <ng-container *ngTemplateOutlet="railContent; context: { $implicit: true }" />
+        </div>
+      </ng-template>
+    }
+  </ng-template>
+
+  <ng-template #railContent let-inPopover>
+    @if (outline().length > 1) {
+      <nav class="rsec toc" data-testid="doc-outline">
+        <div class="rlabel">
+          On this page
+          @if (!inPopover) {
+            <button
+              type="button"
+              class="tk-icon-btn hide"
+              aria-label="Hide the panel"
+              data-testid="doc-rail-hide"
+              [title]="'Hide the panel (' + railKeys + ')'"
+              (click)="toggleRail()"
+            >
+              <tk-icon name="tablerLayoutSidebarRightCollapse" [size]="14" />
+            </button>
+          }
+        </div>
+        @for (entry of outline(); track entry.id) {
+          <a
+            [href]="'#' + entry.id"
+            [class.on]="entry.id === activeId()"
+            [style.--d]="entry.depth - 1"
+            [attr.aria-current]="entry.id === activeId() ? 'location' : null"
+            (click)="goTo($event, entry)"
+            >{{ entry.text }}</a
+          >
+        }
+      </nav>
+    }
+    <tk-doc-page-sections placement="rail" [doc]="doc()" />
+  </ng-template>
 }

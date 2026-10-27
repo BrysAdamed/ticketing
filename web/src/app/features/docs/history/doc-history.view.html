@@ -240,6 +240,16 @@
                 </span>
                 <span class="s">
                   <span [title]="item.at | absoluteTime">{{ item.at | relativeTime }}</span>
+                  @if (item.linesAdded || item.linesRemoved) {
+                    ·
+                    <span
+                      class="lines tnum"
+                      data-testid="doc-history-lines"
+                      [title]="linesTitle(item)"
+                      ><span class="add">+{{ item.linesAdded }}</span
+                      >&ngsp;<span class="del">−{{ item.linesRemoved }}</span></span
+                    >
+                  }
                   @if (via(item.channel); as channel) {
                     · {{ channel }}
                   }

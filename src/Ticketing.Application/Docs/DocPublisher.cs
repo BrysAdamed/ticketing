@@ -26,9 +26,10 @@ public sealed class DocPublisher(ITicketingDbContext db, ICurrentUser currentUse
     public async Task PublishAsync(
         DocNode node, string? content, string? changeNote, int? restoredFrom, string? snapshotSvg, CancellationToken cancellationToken)
     {
+        var previousContent = node.Content;
         node.Publish(content, currentUser.Id, clock.Now);
         var snapshot = ApplyDiagramRules(node, snapshotSvg);
-        db.DocVersions.Add(DocVersion.Snapshot(node, changeNote, currentUser.Id, currentUser.Channel, clock.Now, restoredFrom, snapshot));
+        db.DocVersions.Add(DocVersion.Snapshot(node, previousContent, changeNote, currentUser.Id, currentUser.Channel, clock.Now, restoredFrom, snapshot));
         await IndexReferencesAsync(node, isNew: false, cancellationToken);
         if (restoredFrom is null)
         {
@@ -45,7 +46,7 @@ public sealed class DocPublisher(ITicketingDbContext db, ICurrentUser currentUse
     public async Task AddInitialVersionAsync(DocNode node, string? changeNote, string? snapshotSvg, CancellationToken cancellationToken)
     {
         var snapshot = ApplyDiagramRules(node, snapshotSvg);
-        db.DocVersions.Add(DocVersion.Snapshot(node, changeNote, currentUser.Id, currentUser.Channel, clock.Now, snapshotSvg: snapshot));
+        db.DocVersions.Add(DocVersion.Snapshot(node, null, changeNote, currentUser.Id, currentUser.Channel, clock.Now, snapshotSvg: snapshot));
         await IndexReferencesAsync(node, isNew: true, cancellationToken);
     }
 

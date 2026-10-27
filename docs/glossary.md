@@ -42,9 +42,9 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Canvas**: A diagram doc drawn in the visual editor (Excalidraw): shapes, bound arrows, text and free drawing. Its source is Excalidraw JSON, checked on every publish (no images, at most 10 000 elements). [§12.13](product/01-refined-spec.md#1213-canvas-diagrams-web-mcp)
 
-**Canvas outline**: The text of a Canvas diagram that the server extracts from its Excalidraw JSON on publish: labels in reading order plus connector relations such as `API → DB (SQL)`. It feeds search and MCP `get_doc` (D-99, D-111). [ADR 0013](adr/0013-diagram-editor-and-pdf-pipeline.md)
+**Canvas outline**: The text of a Canvas diagram that the server extracts from its Excalidraw JSON on publish: labels in reading order plus connector relations such as `API → DB (SQL)`. It feeds search and MCP `get_doc` (D-99, D-113). [ADR 0013](adr/0013-diagram-editor-and-pdf-pipeline.md)
 
-**Canvas snapshot**: The light SVG picture of one Canvas diagram version (fonts inlined), sent by the editor on publish, or stored once by the first writer who opens a version written over MCP. The reader, page embeds, history and the PDF show it; dark mode inverts it with CSS (D-99, D-111). [§12.13](product/01-refined-spec.md#1213-canvas-diagrams-web-mcp)
+**Canvas snapshot**: The light SVG picture of one Canvas diagram version (fonts inlined), sent by the editor on publish, or stored once by the first writer who opens a version written over MCP. The reader, page embeds, history and the PDF show it; dark mode inverts it with CSS (D-99, D-113). [§12.13](product/01-refined-spec.md#1213-canvas-diagrams-web-mcp)
 
 **Carry-over**: Moving a board's unfinished tickets elsewhere when it is archived: to their project backlogs (top) or to another non-archived board. [§6.4](product/01-refined-spec.md#64-backlog-and-boards)
 

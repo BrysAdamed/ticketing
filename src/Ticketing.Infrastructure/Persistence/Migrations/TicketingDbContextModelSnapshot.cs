@@ -694,6 +694,14 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<int?>("LinesAdded")
+                        .HasColumnType("integer")
+                        .HasColumnName("lines_added");
+
+                    b.Property<int?>("LinesRemoved")
+                        .HasColumnType("integer")
+                        .HasColumnName("lines_removed");
+
                     b.Property<Guid>("NodeId")
                         .HasColumnType("uuid")
                         .HasColumnName("node_id");

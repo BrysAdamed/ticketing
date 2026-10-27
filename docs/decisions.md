@@ -632,7 +632,7 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
   - **Restore** (`POST /docs/{key}/versions/{n}/restore`, optional `{ changeNote }`; MCP `restore_doc_version`) goes through `DocPublisher` with `restoredFrom = n`: version n's title and content become a new version, the title is renamed back first (a sibling with that title now is 409 `doc.title.duplicate`; no `doc.renamed` entry, the version carries the title). It needs no `baseVersion`, since nothing is lost. Restoring what the latest version already is writes nothing (safe for LLM retries). It records `doc.version.restored` (`{ version, restoredFrom }`) instead of `doc.updated` and **keeps the restorer's draft**: the draft was not published, and the editor's 3-way merge applies it onto the restored version like onto any newer one.
   - **Web**: `?history=n[&with=m]` opens the history view (`docs.history`, a lazy chunk holding jsdiff) in place of the page bar and content: a 320 px panel of versions and activity grouped by day, and a comparison: an older version alone is compared with the current one (what a restore would change), the current one with its predecessor, Shift+click picks a second version. Changes show a unified or side-by-side line diff (layout remembered per browser) with word highlights inside paired lines and folded unchanged runs; Canvas diagrams show both versions rendered side by side. `?v=n` renders one version (`docs.version`) under "You are viewing v3 of 7 · Back to latest". `H` toggles the history, `Esc` closes it, Restore asks for confirmation (no optimistic update: the server creates the version).
   - **Diff**: common head and tail lines are skipped before jsdiff's Myers diff runs on the middle with a 250 ms timeout; on timeout the changed region is shown as removed then added. Word highlights only for paired lines up to 2 000 characters whose changed share is at most 60 %. Two 100 KB versions with 100 edited and 25 inserted lines diff in about 20 ms (Vitest budget 300 ms).
-  - Deviation from the mockup: version rows show the change note and "Restored from vN" but no `+12 −3` line counts, which would need a diff per row on the server; the counts are shown above the diff instead.
+  - Deviation from the mockup: version rows show the change note and "Restored from vN" but no `+12 −3` line counts, which would need a diff per row on the server; the counts are shown above the diff instead. (Row counts added by D-112.)
 - Rationale: one endpoint gives the panel and LLMs the whole story in order without a second request; making restore a normal publish keeps `DocPublisher` the only writer (references, Canvas outline and later hooks apply to restores for free), and keeping drafts makes restore lossless for everyone, including the restorer.
 
 ### D-108 Doc references: an index rebuilt in the publisher, resolved per reader into the doc GET, rendered by the shared renderer (TKT-16)
@@ -670,7 +670,26 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
   - **MCP** `create_diagram` (`format` defaults to Mermaid, `source`) on `CreateDoc`; the create/update tool descriptions list the seven supported types. No server-side Mermaid validation (I-104).
 - Rationale: a renderer per surface would drift from the PDF; remembering heights is the only way to know a diagram's size before Mermaid has run, and the estimate keeps the first visit within "good" CLS. Registries keyed by format keep the diagram view closed for modification while Canvas plugs in.
 
-### D-111 Canvas: rules and outline in the publisher, a picture per version filled once, pictures everywhere outside the editor (TKT-18)
+### D-111 "On this page" is a rail from 1440 px that `]` hides, otherwise a popover in the page bar; content views add page bar actions through `DocBarSlot` (TKT-45)
+
+- Question: the reader shows "On this page" only from 1440 px (refinement 1.1). screens.md 3 wants a popover button in the page bar on narrower screens and `]` to toggle the rail, but the page bar belongs to the `docs.doc` frame while the outline lives in the page view.
+- Decision:
+  - From 1440 px the 220 px rail shows unless the reader hid it with `]` or its hide button; that choice is remembered per browser (`tk-docs-rail-hidden`). Whenever the rail is not shown, the page bar has an "On this page" button that opens a popover with the same outline (scroll spy, smooth scroll, closes on a pick or `Esc`) and the registered rail sections; below 1440 px `]` opens and closes the popover. Pages without headings or rail sections show neither.
+  - The rail and the popover render rail sections only while visible, so a section component exists once.
+  - The frame provides `DocBarSlot`; a content view puts a template into it (`set(template)` returns the remover) and the frame renders it first on the bar's right side. The editor and the history replace the bar, so the page view clears the slot in edit mode.
+  - The button shows below 900 px too (the ticket names 900–1439 px); narrow screens are best effort and lose nothing by it.
+- Rationale: one rule ("the button shows when the rail does not") covers both the laptop width and a hidden rail. A template slot keeps the outline state in the page view, with no outline service shared between the frame and the content view.
+
+### D-112 Version line counts are computed once at publish and stored on the version (TKT-48)
+
+- Question: the history mockup shows "+12 −3" on every version row. TKT-15 (D-107) diffs only in the browser, for the selected comparison; a count per row needs each version diffed against its predecessor.
+- Decision:
+  - `DocPublisher` counts the lines when it snapshots a version (`DocLineDiff`, a Myers line diff in the domain after skipping common head and tail lines) and stores them in `doc_versions.lines_added` / `lines_removed` (migration `AddDocVersionLineCounts`, nullable). Version 1 counts against empty content, a restore against the version it replaces. Canvas diagrams store null: their JSON lines mean nothing to a reader.
+  - `GET /docs/{key}/history` and `get_doc_history` return `linesAdded` / `linesRemoved`; the row shows "+a −r" after the time (hidden when both are 0 or null), with "a lines added, r removed against vN" as tooltip.
+  - No backfill: docs have not shipped, so no version predates the columns outside test stacks; such versions show no counts.
+- Rationale: counting once at publish costs one diff of the content the publisher already holds (typical edits skip most lines as common head and tail; a fully rewritten 100 KB page is unit-tested to stay under 500 ms) and makes the history a plain read, for the panel and for LLMs. A browser-side count would download every visible version's content.
+
+### D-113 Canvas: rules and outline in the publisher, a picture per version filled once, pictures everywhere outside the editor (TKT-18)
 
 - Context: D-99 fixed the stored format (Excalidraw JSON plus a light SVG per version). TKT-18 had to decide where the rules run, how a version written over MCP gets its picture, what the reader shows, and how the draft/conflict flow of pages fits a drawing.
 - Decision:
@@ -681,6 +700,7 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
   - **Editing.** `docs.diagram.canvas.edit` reuses `DocEditSession` with `textMerge: false` and an `attach` hook that adds the picture to every publish; the drawing is serialized into the draft 400 ms after the last change. A stale base opens the conflict view without "Keep editing on latest": both drawings side by side, Overwrite with mine (theirs stays in history) or Discard mine. New Canvas docs open in the editor. Images are refused on paste and drop ("Images go in pages").
   - **Keyboard.** Excalidraw owns single-key tools and `Esc`. `ShortcutService` treats focus inside an element marked `data-own-keys` (the Canvas editor), and on the body while one is shown, like a text field: only `allowInInputs` shortcuts (`Mod+S`, `Mod+Enter`) fire. Close is a button.
 - Rationale: one validation point keeps REST, MCP and restore consistent; pictures keep readers, history and PDF cheap and identical without a server-side Excalidraw; write-once pictures let readers' and writers' clients fill gaps without trusting them to rewrite history.
+
 ## Product owner answers (v1 review, 2026-10-27)
 
 These were open questions (Q-01..Q-05); the product owner resolved them as follows.

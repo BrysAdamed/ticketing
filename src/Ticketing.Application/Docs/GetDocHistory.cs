@@ -47,7 +47,7 @@ public static class GetDocHistory
                     orderby v.CreatedAt descending, v.Id descending
                     select new DocHistoryItemDto(
                         v.Id, DocHistoryItemType.Version, v.CreatedAt, new UserRefDto(u.Id, u.Email, u.DisplayName, u.IsActive), v.Channel,
-                        v.Number, v.Title, v.ChangeNote, v.RestoredFrom, null, null, null, null))
+                        v.Number, v.Title, v.ChangeNote, v.RestoredFrom, v.LinesAdded, v.LinesRemoved, null, null, null, null))
                 .Take(take)
                 .ToListAsync(cancellationToken);
             var activityRows = await (
@@ -62,7 +62,7 @@ public static class GetDocHistory
             var merged = versionItems
                 .Concat(activityRows.Select(r => new DocHistoryItemDto(
                     r.Id, DocHistoryItemType.Activity, r.OccurredAt, TicketQueries.User(r.ActorId, r.ActorEmail, r.ActorName, r.ActorActive), r.Channel,
-                    null, null, null, null, r.Action, r.Field, Parse(r.OldValue), Parse(r.NewValue))))
+                    null, null, null, null, null, null, r.Action, r.Field, Parse(r.OldValue), Parse(r.NewValue))))
                 .OrderByDescending(i => i.At)
                 .ThenByDescending(i => i.Id)
                 .ToList();

@@ -14,7 +14,7 @@ using Ticketing.Infrastructure.Persistence;
 namespace Ticketing.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(TicketingDbContext))]
-    [Migration("20261027204951_AddDocVersionSnapshots")]
+    [Migration("20261027215222_AddDocVersionSnapshots")]
     partial class AddDocVersionSnapshots
     {
         /// <inheritdoc />
@@ -696,6 +696,14 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
+
+                    b.Property<int?>("LinesAdded")
+                        .HasColumnType("integer")
+                        .HasColumnName("lines_added");
+
+                    b.Property<int?>("LinesRemoved")
+                        .HasColumnType("integer")
+                        .HasColumnName("lines_removed");
 
                     b.Property<Guid>("NodeId")
                         .HasColumnType("uuid")

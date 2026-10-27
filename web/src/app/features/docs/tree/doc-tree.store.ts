@@ -452,6 +452,7 @@ export class DocTreeStore {
         updatedAt: doc.updatedAt,
         hasMyDraft: !!doc.myDraft,
         canDelete: doc.permissions.canDelete,
+        commentCount: doc.commentCount,
       }),
     );
   }
@@ -549,6 +550,7 @@ export function treeItemOf(doc: Doc, depth: number): DocTreeItem {
     updatedAt: doc.updatedAt,
     hasMyDraft: !!doc.myDraft,
     canDelete: doc.permissions.canDelete,
+    commentCount: doc.commentCount,
   };
 }
 
@@ -566,6 +568,7 @@ function pendingItem(key: string, draft: CreateDraft, title: string): DocTreeIte
     updatedAt: new Date().toISOString(),
     hasMyDraft: false,
     canDelete: false,
+    commentCount: 0,
   };
 }
 

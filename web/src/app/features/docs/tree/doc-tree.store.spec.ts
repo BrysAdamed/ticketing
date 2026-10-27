@@ -21,6 +21,7 @@ function item(key: string, parentKey: string | null, kind: DocTreeItem['kind'] =
     childCount: 0,
     updatedAt: '2026-10-27T10:00:00Z',
     hasMyDraft: false,
+    commentCount: 0,
     canDelete: true,
   } satisfies DocTreeItem;
 }

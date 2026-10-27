@@ -101,6 +101,7 @@ public sealed record DocMentionsDto(int Total, IReadOnlyList<DocSummaryDto> Item
 }
 
 /// <summary>One node of the flat, depth-first tree (root children have depth 1), in the manual order of each folder.</summary>
+/// <param name="CommentCount">The comments that are not deleted (always 0 for folders).</param>
 public sealed record DocTreeItemDto(
     Guid Id,
     string Key,
@@ -113,7 +114,8 @@ public sealed record DocTreeItemDto(
     int ChildCount,
     DateTimeOffset UpdatedAt,
     bool HasMyDraft,
-    bool CanDelete);
+    bool CanDelete,
+    int CommentCount);
 
 /// <param name="CanManageTrash">Owners only: list the trash and restore anything from it.</param>
 public sealed record DocTreeDto(string ProjectKey, ProjectRole MyRole, bool CanWrite, bool CanManageTrash, int Total, IReadOnlyList<DocTreeItemDto> Items);
@@ -179,7 +181,8 @@ public enum DocHistoryItemType
 }
 
 /// <summary>
-/// One entry of a doc's history: a published version (number, title, change note, restored from) or an activity entry that no
+/// One entry of a doc's history: a published version (number, title, change note, restored from, lines added and removed
+/// compared with the version before it, null for Canvas diagrams) or an activity entry that no
 /// version represents (rename, move, delete, restore, attachments, comments) with its action and JSON values.
 /// </summary>
 public sealed record DocHistoryItemDto(
@@ -192,6 +195,8 @@ public sealed record DocHistoryItemDto(
     string? Title,
     string? ChangeNote,
     int? RestoredFrom,
+    int? LinesAdded,
+    int? LinesRemoved,
     string? Action,
     string? Field,
     JsonElement? OldValue,

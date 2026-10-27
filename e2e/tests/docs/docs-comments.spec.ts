@@ -29,6 +29,10 @@ test.describe('doc comments', () => {
         const card = view.commentCards().first();
         await expect(card.locator('strong')).toHaveText('holiday');
         await expect(view.metaComments).toHaveText('1 comment');
+        await expect(page.getByTestId(`doc-row-${doc.key}`).locator('.nm')).toHaveAttribute(
+            'title',
+            'Release plan\n1 comment',
+        );
         await expect(card).not.toHaveAttribute('aria-busy', 'true');
 
         // Act: edit

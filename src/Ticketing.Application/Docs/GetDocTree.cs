@@ -35,7 +35,8 @@ public static class GetDocTree
                 .OrderBy(n => n.Rank).ThenBy(n => n.Id)
                 .Select(n => new Row(
                     n.Id, n.Number, n.Kind, n.DiagramFormat, n.Title, n.ParentId, n.CurrentVersion, n.UpdatedAt, n.CreatedById,
-                    db.DocDrafts.Any(d => d.NodeId == n.Id && d.UserId == me)))
+                    db.DocDrafts.Any(d => d.NodeId == n.Id && d.UserId == me),
+                    db.Comments.Count(c => c.DocNodeId == n.Id && c.DeletedAt == null)))
                 .ToListAsync(cancellationToken);
 
             var items = Flatten(rows, start, request.Depth, grant, currentUser);
@@ -63,7 +64,8 @@ public static class GetDocTree
                     row.Id, HumanKeys.Doc(grant.ProjectKey, row.Number), row.Kind, row.DiagramFormat, row.Title,
                     row.ParentId is { } parentId ? HumanKeys.Doc(grant.ProjectKey, numbers[parentId]) : null,
                     depth, row.CurrentVersion, children.Count, row.UpdatedAt, row.HasMyDraft,
-                    DocQueries.CanDelete(grant, currentUser, row.CreatedById, row.Kind, children.Count)));
+                    DocQueries.CanDelete(grant, currentUser, row.CreatedById, row.Kind, children.Count),
+                    row.CommentCount));
                 if (maxDepth is null || depth - startDepth < maxDepth)
                 {
                     for (var i = children.Count - 1; i >= 0; i--)
@@ -75,6 +77,6 @@ public static class GetDocTree
 
         private sealed record Row(
             Guid Id, int Number, DocKind Kind, DiagramFormat? DiagramFormat, string Title, Guid? ParentId, int CurrentVersion, DateTimeOffset UpdatedAt,
-            Guid CreatedById, bool HasMyDraft);
+            Guid CreatedById, bool HasMyDraft, int CommentCount);
     }
 }

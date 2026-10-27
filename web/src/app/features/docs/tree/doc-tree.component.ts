@@ -41,7 +41,14 @@ import { PickerOption } from '@shared/ui/inline-picker/picker-option';
 import { KbdComponent } from '@shared/ui/kbd/kbd.component';
 import { docIcon, DOCS_ICONS } from '../docs-icons';
 import { AutofocusSelectDirective } from './autofocus-select.directive';
-import { CreateRow, DropTarget, dropTargetAt, NodeRow, TreeRow } from './doc-tree-logic';
+import {
+  CreateRow,
+  DropTarget,
+  dropTargetAt,
+  NodeRow,
+  rowTooltip,
+  TreeRow,
+} from './doc-tree-logic';
 import { DocTreeStore, isPendingKey, KIND_LABELS } from './doc-tree.store';
 
 export const TREE_ROW_HEIGHT = 28;
@@ -88,6 +95,7 @@ export class DocTreeComponent {
 
   protected readonly rowHeight = TREE_ROW_HEIGHT;
   protected readonly docIcon = docIcon;
+  protected readonly rowTooltip = rowTooltip;
   protected readonly kindLabels = KIND_LABELS;
   protected readonly skeleton = SKELETON;
   protected readonly homeUrl = computed(() => docsHomeUrl(this.store.projectKey()));

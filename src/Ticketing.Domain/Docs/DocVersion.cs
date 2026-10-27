@@ -33,17 +33,28 @@ public sealed class DocVersion
     /// <summary>Set when the version was created by restoring an older one.</summary>
     public int? RestoredFrom { get; private set; }
 
+    /// <summary>Lines added compared with the previous version; null for Canvas diagrams and versions published before TKT-48.</summary>
+    public int? LinesAdded { get; private set; }
+
+    /// <summary>Lines removed compared with the previous version; null like <see cref="LinesAdded"/>.</summary>
+    public int? LinesRemoved { get; private set; }
+
     /// <summary>
     /// Canvas only: the light SVG picture of this version (<see cref="CanvasSnapshot"/>). Null until a client exported it, for
     /// example for versions written over MCP; it is filled once and never replaced.
     /// </summary>
     public string? SnapshotSvg { get; private set; }
 
-    /// <summary>Snapshots <paramref name="node"/>'s current version, title and content (and the Canvas picture, if any).</summary>
+    /// <summary>
+    /// Snapshots <paramref name="node"/>'s current version, title and content (and the Canvas picture, if any);
+    /// <paramref name="previousContent"/> is the content of the version before it (null for version 1).
+    /// </summary>
     public static DocVersion Snapshot(
-        DocNode node, string? changeNote, Guid authorId, WriteChannel channel, DateTimeOffset now, int? restoredFrom = null, string? snapshotSvg = null)
+        DocNode node, string? previousContent, string? changeNote, Guid authorId, WriteChannel channel, DateTimeOffset now, int? restoredFrom = null,
+        string? snapshotSvg = null)
     {
         node.EnsureHasContent();
+        DocLineChanges? changes = node.DiagramFormat == DiagramFormat.Canvas ? null : DocLineDiff.Count(previousContent, node.Content);
         return new DocVersion
         {
             Id = EntityId.New(),
@@ -56,6 +67,8 @@ public sealed class DocVersion
             Channel = channel,
             CreatedAt = now,
             RestoredFrom = restoredFrom,
+            LinesAdded = changes?.Added,
+            LinesRemoved = changes?.Removed,
             SnapshotSvg = snapshotSvg,
         };
     }

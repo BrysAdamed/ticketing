@@ -172,6 +172,35 @@ public sealed class DocCommentTests(TicketingApiFactory api)
     }
 
     [Fact]
+    public async Task The_tree_and_folder_children_count_the_comments_that_are_not_deleted()
+    {
+        // Arrange
+        var world = await SeedAsync("TREEC");
+        var other = await SeedAsync("TREEX");
+        var folder = await world.Owner.CreateFolderAsync("TREEC", "Specs");
+        var page = await world.Owner.CreatePageAsync("TREEC", "Design", parent: folder.Key);
+        var diagram = await world.Owner.CreateDocAsync("TREEC", new { kind = "Diagram", diagramFormat = "Mermaid", title = "Flow", parent = folder.Key, content = "flowchart LR\n  a --> b" });
+        var quiet = await world.Owner.CreatePageAsync("TREEC", "Quiet");
+        await world.Member.AddDocCommentAsync(page.Key, "One");
+        await world.Member.AddDocCommentAsync(page.Key, "Two");
+        var removed = await world.Member.AddDocCommentAsync(page.Key, "Gone");
+        (await world.Member.DeleteDocCommentAsync(removed.Id)).EnsureSuccessStatusCode();
+        await world.Owner.AddDocCommentAsync(diagram.Key, "Arrow");
+        var elsewhere = await other.Owner.CreatePageAsync("TREEX", "Design");
+        await other.Member.AddDocCommentAsync(elsewhere.Key, "Other project");
+
+        // Act
+        var tree = await world.Viewer.GetTreeAsync("TREEC");
+        var children = (await world.Viewer.GetDocAsync(folder.Key)).Children!;
+
+        // Assert
+        Assert.Equal(
+            [(folder.Key, 0), (page.Key, 2), (diagram.Key, 1), (quiet.Key, 0)],
+            tree.Items.Select(i => (i.Key, i.CommentCount)));
+        Assert.Equal([(page.Key, 2), (diagram.Key, 1)], children.Select(i => (i.Key, i.CommentCount)));
+    }
+
+    [Fact]
     public async Task Archived_projects_keep_comments_readable_but_refuse_writes()
     {
         // Arrange

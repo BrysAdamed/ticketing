@@ -27,7 +27,7 @@ public sealed class DocTools
 
     [McpServerTool(Name = "list_docs", ReadOnly = true, Idempotent = true, Title = "List docs")]
     [Description("The docs tree of a project as a flat list, depth-first in each folder's manual order: key, kind (" + Kinds + "), diagramFormat, "
-        + "title, parentKey, depth (root children are 1), version, childCount, updatedAt. No content: read a doc with get_doc.")]
+        + "title, parentKey, depth (root children are 1), version, childCount, updatedAt, commentCount. No content: read a doc with get_doc.")]
     public static Task<DocTreeDto> ListDocs(
         GetDocTree.Handler handler,
         [Description("Project key, for example WEB.")] string projectKey,
@@ -57,7 +57,7 @@ public sealed class DocTools
 
     [McpServerTool(Name = "get_doc_history", ReadOnly = true, Idempotent = true, Title = "Get doc history")]
     [Description("A doc's history, newest first: { docKey, currentVersion, items, nextCursor }. type Version items are published versions "
-        + "(version, title, changeNote, restoredFrom, actor, channel Web/Api/Mcp, at); type Activity items are other changes (action such as "
+        + "(version, title, changeNote, restoredFrom, linesAdded/linesRemoved compared with the version before, actor, channel Web/Api/Mcp, at); type Activity items are other changes (action such as "
         + "doc.renamed, doc.moved, doc.deleted, doc.restored, doc.attachment.added, with field, oldValue and newValue). Read an old version "
         + "with get_doc and version; bring it back with restore_doc_version.")]
     public static Task<DocHistoryPage> GetDocHistory(

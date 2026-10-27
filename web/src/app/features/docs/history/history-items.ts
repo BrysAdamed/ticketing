@@ -72,6 +72,14 @@ export function channelLabel(channel: WriteChannel | null): string | null {
   return null;
 }
 
+/// Tooltip of a version's "+12 −3": "12 lines added, 3 removed against v4".
+export function linesTitle(item: DocHistoryItem): string {
+  const added = item.linesAdded ?? 0;
+  const removed = item.linesRemoved ?? 0;
+  const against = item.version && item.version > 1 ? ` against v${item.version - 1}` : '';
+  return `${added} ${added === 1 ? 'line' : 'lines'} added, ${removed} removed${against}`;
+}
+
 export interface HistoryDay {
   label: string;
   items: DocHistoryItem[];

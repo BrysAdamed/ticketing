@@ -57,6 +57,29 @@ public sealed class DocHistoryTests(TicketingApiFactory api)
     }
 
     [Fact]
+    public async Task Versions_count_the_lines_added_and_removed_against_the_version_before()
+    {
+        // Arrange
+        var client = await api.LoginAsync(await api.CreateUserAsync());
+        await client.CreateProjectAsync("LINES");
+        var page = await client.CreatePageAsync("LINES", "Plan", content: "# Plan\nOne\nTwo\n");
+        await client.PatchDocAsync(page.Key, new { content = "# Plan\nOne\n2\nThree\nFour\n", baseVersion = 1 });
+        await RestoreAsync(client, page.Key, 1);
+        var canvas = await client.CreateDocAsync("LINES", new { kind = "Diagram", diagramFormat = "Canvas", title = "Board", content = """{"type":"excalidraw","version":2,"elements":[]}""" });
+
+        // Act
+        var history = await HistoryAsync(client, page.Key);
+        var canvasHistory = await HistoryAsync(client, canvas.Key);
+
+        // Assert
+        Assert.Equal(
+            [(3, 1, 3), (2, 3, 1), (1, 3, 0)],
+            history.Items.Select(i => (i.Version!.Value, i.LinesAdded!.Value, i.LinesRemoved!.Value)));
+        var board = Assert.Single(canvasHistory.Items);
+        Assert.Equal((1, (int?)null, (int?)null), (board.Version!.Value, board.LinesAdded, board.LinesRemoved));
+    }
+
+    [Fact]
     public async Task History_pages_with_one_cursor_over_versions_and_activity()
     {
         // Arrange

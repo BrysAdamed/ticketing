@@ -24,6 +24,7 @@ export interface SearchFilters {
   resolvedFrom: string;
   resolvedTo: string;
   fromRegression: boolean;
+  watching: boolean;
   sort: SearchSort;
   order: SortOrder | '';
 }
@@ -102,6 +103,7 @@ export const EMPTY_SEARCH: SearchFilters = {
   resolvedFrom: '',
   resolvedTo: '',
   fromRegression: false,
+  watching: false,
   sort: 'updated',
   order: '',
 };
@@ -122,7 +124,8 @@ export function parseSearchParams(params: Params): SearchFilters {
   for (const field of TEXT_FIELDS) {
     filters[field] = (valuesOf(params[field]).at(-1) ?? '').trim();
   }
-  filters.fromRegression = valuesOf(params['fromRegression']).at(-1)?.toLowerCase() === 'true';
+  filters.fromRegression = flagOf(params['fromRegression']);
+  filters.watching = flagOf(params['watching']);
   const sort = valuesOf(params['sort']).at(-1)?.toLowerCase();
   filters.sort = SORTS.some((s) => s.value === sort) ? (sort as SearchSort) : 'updated';
   const order = valuesOf(params['order']).at(-1)?.toLowerCase();
@@ -142,6 +145,7 @@ export function toSearchParams(filters: SearchFilters): Record<string, string> {
     if (value) params[field] = value;
   }
   if (filters.fromRegression) params['fromRegression'] = 'true';
+  if (filters.watching) params['watching'] = 'true';
   if (filters.sort !== 'updated') params['sort'] = filters.sort;
   if (filters.order) params['order'] = filters.order;
   return params;
@@ -184,6 +188,10 @@ export function utcDate(now: Date, daysAgo: number): string {
     Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - daysAgo),
   );
   return date.toISOString().slice(0, 10);
+}
+
+function flagOf(value: unknown): boolean {
+  return valuesOf(value).at(-1)?.toLowerCase() === 'true';
 }
 
 function valuesOf(value: unknown): string[] {

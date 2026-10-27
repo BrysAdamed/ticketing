@@ -21,7 +21,12 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltip } from '@angular/material/tooltip';
 import { ActivatedRoute, Params, Router } from '@angular/router';
 import { provideIcons } from '@ng-icons/core';
-import { tablerDownload, tablerSortAscending, tablerSortDescending } from '@ng-icons/tabler-icons';
+import {
+  tablerDownload,
+  tablerEye,
+  tablerSortAscending,
+  tablerSortDescending,
+} from '@ng-icons/tabler-icons';
 import { PEEK_QUERY_PARAM, PeekService } from '@core/layout/peek/peek';
 import { ProjectDirectory } from '@core/projects/project-directory';
 import { ShortcutService } from '@core/shortcuts/shortcut.service';
@@ -70,7 +75,9 @@ const PREFETCH_DELAY_MS = 150;
     SearchFilterBarComponent,
   ],
   providers: [SearchStore],
-  viewProviders: [provideIcons({ tablerDownload, tablerSortAscending, tablerSortDescending })],
+  viewProviders: [
+    provideIcons({ tablerDownload, tablerEye, tablerSortAscending, tablerSortDescending }),
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'tk-page', 'data-testid': 'view-search.results' },
   templateUrl: './search.view.html',

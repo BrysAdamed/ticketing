@@ -14,6 +14,8 @@ export interface MyWork {
   ticketCount: number;
   truncated: boolean;
   regressionItems: MyRegressionItem[];
+  /// Open tickets I watch but am not assigned to, newest updated first (max 100).
+  watching: TicketSummary[];
 }
 
 export interface MyWorkProject {
@@ -35,11 +37,12 @@ export interface MyRegressionItem {
   url: string;
 }
 
-/// One entry of the keyboard-navigable list: tickets of every group, then regression items.
+/// One entry of the keyboard-navigable list: tickets of every group, regression items, then watched tickets.
 export type WorkEntry =
   { kind: 'ticket'; ticket: TicketSummary } | { kind: 'item'; item: MyRegressionItem };
 
-/// My work: open tickets assigned to me grouped by project, plus my waiting regression items.
+/// My work: open tickets assigned to me grouped by project, my waiting regression items and the open
+/// tickets I watch.
 @Injectable()
 export class MyWorkStore {
   private readonly api = inject(ApiClient);
@@ -53,7 +56,10 @@ export class MyWorkStore {
 
   readonly projects = computed(() => this.work()?.projects ?? []);
   readonly items = computed(() => this.work()?.regressionItems ?? []);
-  readonly isEmpty = computed(() => this.projects().length === 0 && this.items().length === 0);
+  readonly watching = computed(() => this.work()?.watching ?? []);
+  readonly isEmpty = computed(
+    () => this.projects().length === 0 && this.items().length === 0 && this.watching().length === 0,
+  );
   /// Visible entries in display order (collapsed groups are skipped).
   readonly entries = computed<WorkEntry[]>(() => [
     ...this.projects()
@@ -62,6 +68,9 @@ export class MyWorkStore {
     ...(this.collapsed().has(REGRESSIONS_GROUP)
       ? []
       : this.items().map((item) => ({ kind: 'item' as const, item }))),
+    ...(this.collapsed().has(WATCHING_GROUP)
+      ? []
+      : this.watching().map((ticket) => ({ kind: 'ticket' as const, ticket }))),
   ]);
   readonly focused = computed(() => this.entries()[this.focusIndex()] ?? null);
 
@@ -100,3 +109,4 @@ export class MyWorkStore {
 }
 
 export const REGRESSIONS_GROUP = 'regressions';
+export const WATCHING_GROUP = 'watching';

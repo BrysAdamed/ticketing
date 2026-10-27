@@ -97,6 +97,16 @@
   white-space: nowrap;
 }
 
+.cmts {
+  color: inherit;
+  text-decoration: none;
+
+  &:hover {
+    color: var(--tk-text);
+    text-decoration: underline;
+  }
+}
+
 .presence {
   margin-left: auto;
 }

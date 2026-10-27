@@ -18,6 +18,9 @@ export class DocPagePage {
     readonly changeNote: Locator;
     readonly conflict: Locator;
     readonly attachments: Locator;
+    readonly comments: Locator;
+    readonly commentComposer: Locator;
+    readonly metaComments: Locator;
 
     constructor(private readonly page: Page) {
         this.reader = page.getByTestId('view-docs.page');
@@ -35,11 +38,27 @@ export class DocPagePage {
         this.changeNote = page.getByTestId('doc-editor-change-note');
         this.conflict = page.getByTestId('doc-conflict');
         this.attachments = page.getByTestId('doc-attachments');
+        this.comments = page.getByTestId('doc-comments');
+        this.commentComposer = this.comments
+            .getByTestId('doc-comment-composer')
+            .getByRole('textbox');
+        this.metaComments = page.getByTestId('doc-meta-comments');
     }
 
     async goto(projectKey: string, docKey: string, edit = false): Promise<void> {
         await this.page.goto(`/projects/${projectKey}/docs/${docKey}${edit ? '?mode=edit' : ''}`);
         await expect(edit ? this.source : this.title).toBeVisible();
+    }
+
+    /// Posts a comment through the composer (Mod+Enter).
+    async comment(body: string): Promise<void> {
+        await this.commentComposer.fill(body);
+        await this.commentComposer.press('ControlOrMeta+Enter');
+    }
+
+    /// The comment cards of the thread, oldest first.
+    commentCards(): Locator {
+        return this.comments.locator('article.cmt');
     }
 
     async startEditing(): Promise<void> {

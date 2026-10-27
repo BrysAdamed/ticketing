@@ -62,6 +62,7 @@ public static class DocQueries
                     CreatedBy = new { c.Id, c.Email, c.DisplayName, c.IsActive },
                     UpdatedBy = new { u.Id, u.Email, u.DisplayName, u.IsActive },
                     ChildCount = db.DocNodes.Count(x => x.ParentId == n.Id && x.DeletedAt == null),
+                    CommentCount = db.Comments.Count(x => x.DocNodeId == n.Id && x.DeletedAt == null),
                 })
             .SingleAsync(cancellationToken);
 
@@ -97,6 +98,7 @@ public static class DocQueries
             children,
             Url(projectKey, key, row.Title),
             row.RowVersion,
+            row.CommentCount,
             references,
             embeds,
             backlinks);

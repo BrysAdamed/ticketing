@@ -52,6 +52,16 @@
         >
         <span class="dot">·</span>
         <span class="path" [title]="page.path">{{ page.path }}</span>
+        @if (page.commentCount) {
+          <span class="dot">·</span>
+          <a
+            class="cmts tnum"
+            href="#comments"
+            data-testid="doc-meta-comments"
+            (click)="goToComments($event)"
+            >{{ page.commentCount }} {{ page.commentCount === 1 ? 'comment' : 'comments' }}</a
+          >
+        }
         <tk-doc-presence class="presence" [editors]="page.editors" />
       </div>
       @if (page.content) {

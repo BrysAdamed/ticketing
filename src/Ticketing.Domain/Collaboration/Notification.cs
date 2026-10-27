@@ -16,8 +16,8 @@ public enum NotificationKind
 }
 
 /// <summary>
-/// An in-app notification for one recipient (I-30, D-94). Rapid changes by the same actor on the same ticket or regression
-/// session are merged into one row; the headline (kind and summary) is the highest ranked event. The summary is a short
+/// An in-app notification for one recipient (I-30, D-94) about a ticket, a regression item or a doc. Rapid changes by the same
+/// actor on the same ticket, regression session or doc are merged into one row; the headline (kind and summary) is the highest ranked event. The summary is a short
 /// server-rendered sentence without user content, so nothing a user removes later lingers here.
 /// </summary>
 public sealed class Notification
@@ -41,6 +41,8 @@ public sealed class Notification
     public Guid? RegressionSessionId { get; private set; }
 
     public string? TestCaseKey { get; private set; }
+
+    public Guid? DocNodeId { get; private set; }
 
     public Guid? ActorId { get; private set; }
 
@@ -76,6 +78,13 @@ public sealed class Notification
         });
     }
 
+    public static Notification AboutDoc(Guid recipientId, Guid projectId, Guid docNodeId, Guid? actorId, NotificationKind kind, string summary, DateTimeOffset now)
+    {
+        if (docNodeId == Guid.Empty)
+            throw new ArgumentException("A doc notification needs a doc.", nameof(docNodeId));
+        return Create(recipientId, projectId, actorId, kind, summary, now, n => n.DocNodeId = docNodeId);
+    }
+
     /// <summary>Headline rank: the kind shown when several events are merged into one notification (higher wins).</summary>
     public static int Rank(NotificationKind kind) => kind switch
     {
@@ -91,15 +100,16 @@ public sealed class Notification
     };
 
     /// <summary>
-    /// Whether an event is merged into this notification: same recipient, actor and ticket (or regression session), still
-    /// unread, and within <see cref="CollapseWindow"/> of the first event, so the row keeps its place in the list.
+    /// Whether an event is merged into this notification: same recipient, actor and ticket (or regression session, or doc),
+    /// still unread, and within <see cref="CollapseWindow"/> of the first event, so the row keeps its place in the list.
     /// </summary>
-    public bool Absorbs(Guid recipientId, Guid? actorId, Guid? ticketId, Guid? regressionSessionId, DateTimeOffset at) =>
+    public bool Absorbs(Guid recipientId, Guid? actorId, Guid? ticketId, Guid? regressionSessionId, Guid? docNodeId, DateTimeOffset at) =>
         ReadAt is null
         && RecipientId == recipientId
         && ActorId == actorId
         && TicketId == ticketId
         && RegressionSessionId == regressionSessionId
+        && DocNodeId == docNodeId
         && at - CreatedAt <= CollapseWindow;
 
     public void Merge(NotificationKind kind, string summary, DateTimeOffset at)

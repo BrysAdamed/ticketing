@@ -30,7 +30,8 @@ internal sealed class CollaborationProjector(ITicketingDbContext db) : IActivity
             await AddWatchersAsync(candidates, cancellationToken);
 
         var watchers = await WatchersAsync(NotificationRules.WatchedTickets(events), cancellationToken);
-        var notifications = NotificationRules.Candidates(events, watchers, mentions);
+        var participants = await DocParticipantsAsync(NotificationRules.CommentedDocs(events), cancellationToken);
+        var notifications = NotificationRules.Candidates(events, watchers, mentions, participants);
         if (notifications.Count > 0)
             await NotifyAsync(notifications, cancellationToken);
     }
@@ -59,10 +60,10 @@ internal sealed class CollaborationProjector(ITicketingDbContext db) : IActivity
         foreach (var candidate in allowed)
         {
             var e = candidate.Event;
-            var (ticketId, sessionId) = Subject(e);
+            var (ticketId, sessionId, docNodeId) = Subject(e);
             var summary = NotificationSummaries.For(candidate.Kind, e, names);
             var target = open
-                .Where(n => n.Absorbs(candidate.RecipientId, e.ActorId, ticketId, sessionId, e.OccurredAt))
+                .Where(n => n.Absorbs(candidate.RecipientId, e.ActorId, ticketId, sessionId, docNodeId, e.OccurredAt))
                 .MaxBy(n => n.CreatedAt);
             if (target is not null)
             {
@@ -70,18 +71,23 @@ internal sealed class CollaborationProjector(ITicketingDbContext db) : IActivity
                 continue;
             }
 
-            var created = e is RegressionItemAssigned item
-                ? Notification.AboutRegressionItem(candidate.RecipientId, e.ProjectId, item.SessionId, item.TestCaseKey, e.ActorId, candidate.Kind, summary, e.OccurredAt)
-                : Notification.AboutTicket(candidate.RecipientId, e.ProjectId, ticketId!.Value, e.ActorId, candidate.Kind, summary, e.OccurredAt);
+            var created = e switch
+            {
+                RegressionItemAssigned item => Notification.AboutRegressionItem(
+                    candidate.RecipientId, e.ProjectId, item.SessionId, item.TestCaseKey, e.ActorId, candidate.Kind, summary, e.OccurredAt),
+                DocCommentAdded doc => Notification.AboutDoc(candidate.RecipientId, e.ProjectId, doc.DocNodeId, e.ActorId, candidate.Kind, summary, e.OccurredAt),
+                _ => Notification.AboutTicket(candidate.RecipientId, e.ProjectId, ticketId!.Value, e.ActorId, candidate.Kind, summary, e.OccurredAt),
+            };
             db.Notifications.Add(created);
             open.Add(created);
         }
     }
 
-    private static (Guid? TicketId, Guid? SessionId) Subject(CollaborationEvent e) => e switch
+    private static (Guid? TicketId, Guid? SessionId, Guid? DocNodeId) Subject(CollaborationEvent e) => e switch
     {
-        TicketEvent t => (t.TicketId, null),
-        RegressionItemAssigned item => (null, item.SessionId),
+        TicketEvent t => (t.TicketId, null, null),
+        RegressionItemAssigned item => (null, item.SessionId, null),
+        DocCommentAdded doc => (null, null, doc.DocNodeId),
         _ => throw new InvalidOperationException($"Notifications about {e.GetType().Name} are not supported."),
     };
 
@@ -92,12 +98,14 @@ internal sealed class CollaborationProjector(ITicketingDbContext db) : IActivity
         var subjects = candidates.Select(c => Subject(c.Event)).ToList();
         var ticketIds = subjects.Where(s => s.TicketId is not null).Select(s => s.TicketId!.Value).Distinct().ToList();
         var sessionIds = subjects.Where(s => s.SessionId is not null).Select(s => s.SessionId!.Value).Distinct().ToList();
+        var docNodeIds = subjects.Where(s => s.DocNodeId is not null).Select(s => s.DocNodeId!.Value).Distinct().ToList();
         var since = candidates.Min(c => c.Event.OccurredAt) - Notification.CollapseWindow;
 
         await db.Notifications
             .Where(n => recipientIds.Contains(n.RecipientId) && n.ReadAt == null && n.CreatedAt >= since
                 && ((n.TicketId != null && ticketIds.Contains(n.TicketId.Value))
-                    || (n.RegressionSessionId != null && sessionIds.Contains(n.RegressionSessionId.Value))))
+                    || (n.RegressionSessionId != null && sessionIds.Contains(n.RegressionSessionId.Value))
+                    || (n.DocNodeId != null && docNodeIds.Contains(n.DocNodeId.Value))))
             .LoadAsync(cancellationToken);
         return [.. db.ChangeTracker.Entries<Notification>().Where(e => e.State != EntityState.Deleted).Select(e => e.Entity)];
     }
@@ -141,6 +149,24 @@ internal sealed class CollaborationProjector(ITicketingDbContext db) : IActivity
             .Select(w => new { w.TicketId, w.UserId })
             .ToListAsync(cancellationToken);
         return stored.Select(w => (w.TicketId, w.UserId)).Concat(tracked).Distinct().ToLookup(w => w.TicketId, w => w.UserId);
+    }
+
+    /// <summary>The author of each doc and the authors of its stored, not deleted comments (comments added by this save are not stored yet).</summary>
+    private async Task<ILookup<Guid, Guid>> DocParticipantsAsync(IReadOnlyCollection<Guid> docNodeIds, CancellationToken cancellationToken)
+    {
+        if (docNodeIds.Count == 0)
+            return Array.Empty<(Guid DocNodeId, Guid UserId)>().ToLookup(p => p.DocNodeId, p => p.UserId);
+
+        var authors = await db.DocNodes.AsNoTracking()
+            .Where(n => docNodeIds.Contains(n.Id))
+            .Select(n => new { DocNodeId = n.Id, UserId = n.CreatedById })
+            .ToListAsync(cancellationToken);
+        var commenters = await db.Comments.AsNoTracking()
+            .Where(c => c.DocNodeId != null && docNodeIds.Contains(c.DocNodeId.Value) && c.DeletedAt == null)
+            .Select(c => new { DocNodeId = c.DocNodeId!.Value, UserId = c.AuthorId })
+            .Distinct()
+            .ToListAsync(cancellationToken);
+        return authors.Concat(commenters).ToLookup(p => p.DocNodeId, p => p.UserId);
     }
 
     private async Task LoadReadersAsync(IEnumerable<(Guid ProjectId, Guid UserId)> pairs, CancellationToken cancellationToken)

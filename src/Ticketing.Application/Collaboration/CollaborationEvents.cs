@@ -45,6 +45,10 @@ public sealed record TicketMoved(Guid TicketId, Guid ProjectId, Guid? ActorId, D
 public sealed record TicketDeleted(Guid TicketId, Guid ProjectId, Guid? ActorId, DateTimeOffset OccurredAt)
     : TicketEvent(TicketId, ProjectId, ActorId, OccurredAt);
 
+/// <summary>A comment added to a page or diagram (docs refinement D12): its author and earlier commenters are notified.</summary>
+public sealed record DocCommentAdded(Guid DocNodeId, Guid ProjectId, Guid? ActorId, DateTimeOffset OccurredAt, Guid CommentId)
+    : CollaborationEvent(ProjectId, ActorId, OccurredAt);
+
 public sealed record RegressionItemAssigned(Guid SessionId, Guid ProjectId, Guid? ActorId, DateTimeOffset OccurredAt, string TestCaseKey, Guid? From, Guid? To)
     : CollaborationEvent(ProjectId, ActorId, OccurredAt);
 
@@ -83,6 +87,12 @@ public static class CollaborationEvents
             if (entry.Action != RegressionItemWrites.AssignedAction || Parse<ItemAssignment>(entry.NewValue) is not { } assignment)
                 return null;
             return new RegressionItemAssigned(id, projectId, actor, at, assignment.TestCaseKey, assignment.From, assignment.To);
+        }
+        if (entry.EntityType == ActivityEntityType.Doc)
+        {
+            if (entry.Action != AddDocComment.Action || Parse<CommentBody>(entry.NewValue) is not { } docComment)
+                return null;
+            return new DocCommentAdded(id, projectId, actor, at, docComment.CommentId);
         }
         if (entry.EntityType != ActivityEntityType.Ticket)
             return null;

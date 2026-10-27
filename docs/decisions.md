@@ -538,7 +538,39 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
   - Drafts may have an empty title while it is being typed; publishing still requires one.
 - Rationale: a docs tree is small (at most 5 000 nodes) and written rarely compared with how often it is read, so one lock per project costs nothing and makes every multi-row rule exact, including cycle checks of concurrent moves, which per-folder locks could not guarantee. Reusing the ranker and the counters keeps one implementation of ordering and numbering.
 
-### D-99 Docs search: one ranked query, plain-text snippets from ts_headline, docs inside quick jump
+### D-99 Canvas diagrams store Excalidraw JSON plus a light SVG snapshot per version (TKT-11)
+
+- Question: what is a Canvas diagram's stored `Source`, and how do pages, dark mode, search and the PDF show it without loading the 450 KB editor (refinement §1.2, §5)?
+- Decision:
+  - `Source` is Excalidraw's own file JSON as `serializeAsJSON(..., 'database')` writes it (`type: "excalidraw"`, `elements`, a reduced `appState`, `files` empty in v1). It opens unchanged in excalidraw.com.
+  - Every published Canvas version also has an **SVG snapshot**. The editor makes it with `exportSvg()`: light theme, background included, used glyphs subset and inlined. It is stored with the version, never edited on its own, and served as `image/svg+xml` behind a sandbox CSP (ADR 0013).
+  - Pages embed the snapshot in an `<img>`. In dark mode the image gets `filter: invert(93%) hue-rotate(180deg)`, the transform Excalidraw uses for its own dark canvas. The PDF uses the snapshot as it is (always light).
+  - A version written over MCP has no snapshot yet. The diagram view mounts the editor anyway, so when a writer opens it, the client exports the snapshot and stores it for that version without creating a new version. Until then embeds and the PDF show "Preview not rendered yet". Readers never write snapshots.
+  - The server extracts the outline (`CanvasOutline.Extract`: labels in reading order plus `A → B (label)` relations from bound arrows, with `↔` and `—` for two-headed and headless arrows) on publish, for search (weight B) and MCP `get_doc`.
+- Rationale: the native format keeps every Excalidraw feature and the round trip lossless. A snapshot per version makes embeds, history comparison and the PDF cheap and identical everywhere without a server-side Excalidraw. The outline gives LLMs and search the meaning of the drawing without the noisy element fields.
+
+### D-100 PDF export renders the SPA's own markdown renderer offline in a Gotenberg sidecar (TKT-11)
+
+- Question: §1.11 wants the same renderer for screen and PDF; the research proposed Markdig HTML. Which rendering source, and how is the renderer isolated?
+- Decision:
+  - A **print bundle** (`print.js`, `print.css`, the Inter font) is built from the SPA's `renderMarkdown` and Mermaid renderer with esbuild, plus SCSS compiled from the app's tokens and markdown styles. It must stay free of Angular imports, which its build checks.
+  - For an export, the API checks access and resolves everything for the exporting user: content, references, embeds and their snapshots, page images (attachments) and the folder tree. It writes the data as JSON (`<` escaped) into `index.html` and posts the files to Gotenberg `8.39.0-chromium`. The script renders, sets `window.__printReady`, and Chromium prints A4 with header, footer and bookmarks.
+  - The renderer never calls back and holds no user credentials, so no render token or print route is needed. Unreadable references are simply absent from the data, which makes the PDF leak rules the same as the screen's. Any URL that is not a bundle file is filtered by Gotenberg.
+  - Isolation: an `internal` network shared only with `api`, no published port, basic auth, a `file:///tmp` allow-list with private and public IPs denied, download-from, webhooks, PDF-engine routes and metrics off, a read-only root file system with `tmpfs`, and memory and CPU limits (ADR 0013).
+- Rejected: the SPA print route (Chromium would need network access to `web`/`api`, a new auth scheme and the whole SPA per export) and Markdig (a second markdown implementation that drifts).
+- Rationale: one renderer without drift, and the strongest isolation. The renderer sees only what the API decided the user may see.
+
+### D-101 PDF headers and footers are per export, not per document (TKT-11)
+
+- Question: §1.11 puts `{DocKey} v{n}` in the footer centre, but Chromium's header and footer templates are fixed for a whole render (only page number, total pages, title, URL and date are filled in). A folder export must be one render, so contents links and cross-document links keep working.
+- Decision:
+  - Single page or diagram: footer as specified.
+  - Folder export: the footer centre shows the folder's key and the document count (`TKT-D-12 · 50 documents`). The header shows `PK · folder title` and the folder path. Each document's first-page title block carries its own key, version, author and path.
+  - The contents page has links but no page numbers (the accepted fallback of §1.11); PDF bookmarks follow folders, documents and headings.
+  - The cover should carry no header or footer. TKT-20 tries `@page :first { margin: 0 }`; if Chromium still draws them, the cover keeps them in v1.
+- Rationale: a correct single-render PDF with working internal links is worth more than a per-document footer. Rendering each document separately and merging would lose cross-document links and restart page numbers.
+
+### D-102 Docs search: one ranked query, plain-text snippets from ts_headline, docs inside quick jump
 
 - Question: how docs search (TKT-19, refinement 1.10) ranks, builds snippets that are "plain text plus highlight ranges, never HTML", and reaches the command palette.
 - Decision:

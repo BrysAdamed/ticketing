@@ -1,0 +1,26 @@
+{
+  "type": "excalidraw",
+  "version": 2,
+  "source": "ticketing",
+  "elements": [
+    { "id": "client", "type": "rectangle", "x": 0, "y": 0, "width": 160, "height": 80, "isDeleted": false },
+    { "id": "client-label", "type": "text", "x": 40, "y": 30, "isDeleted": false, "containerId": "client", "text": "Client", "originalText": "Client" },
+    { "id": "server", "type": "rectangle", "x": 300, "y": 0, "width": 160, "height": 80, "isDeleted": false },
+    { "id": "server-label", "type": "text", "x": 340, "y": 30, "isDeleted": false, "containerId": "server", "text": "Server", "originalText": "Server" },
+    { "id": "blob", "type": "ellipse", "x": 600, "y": 0, "width": 120, "height": 80, "isDeleted": false },
+    { "id": "queue", "type": "diamond", "x": 0, "y": 200, "width": 160, "height": 100, "isDeleted": false },
+    { "id": "queue-label", "type": "text", "x": 50, "y": 240, "isDeleted": false, "containerId": "queue", "text": "Queue", "originalText": "Queue" },
+    { "id": "cache", "type": "text", "x": 300, "y": 200, "isDeleted": false, "containerId": null, "text": "Cache", "originalText": "Cache" },
+    { "id": "a-https", "type": "arrow", "x": 160, "y": 40, "isDeleted": false, "startBinding": { "elementId": "client" }, "endBinding": { "elementId": "server" }, "startArrowhead": null, "endArrowhead": "arrow" },
+    { "id": "a-https-label", "type": "text", "x": 200, "y": 30, "isDeleted": false, "containerId": "a-https", "text": "HTTPS", "originalText": "HTTPS" },
+    { "id": "a-back", "type": "arrow", "x": 300, "y": 60, "isDeleted": false, "startBinding": { "elementId": "server" }, "endBinding": { "elementId": "queue" }, "startArrowhead": "triangle", "endArrowhead": null },
+    { "id": "a-both", "type": "arrow", "x": 380, "y": 80, "isDeleted": false, "startBinding": { "elementId": "server" }, "endBinding": { "elementId": "cache" }, "startArrowhead": "arrow", "endArrowhead": "arrow" },
+    { "id": "a-plain", "type": "arrow", "x": 80, "y": 0, "isDeleted": false, "startBinding": { "elementId": "client" }, "endBinding": { "elementId": "blob" }, "startArrowhead": null, "endArrowhead": null },
+    { "id": "a-elbow", "type": "arrow", "x": 80, "y": 300, "isDeleted": false, "elbowed": true, "startBinding": { "elementId": "queue" }, "endBinding": { "elementId": "blob" }, "startArrowhead": null, "endArrowhead": "triangle" },
+    { "id": "a-dangling", "type": "arrow", "x": 500, "y": 300, "isDeleted": false, "startBinding": { "elementId": "cache" }, "endBinding": null, "startArrowhead": null, "endArrowhead": "arrow" },
+    { "id": "a-deleted-target", "type": "arrow", "x": 500, "y": 400, "isDeleted": false, "startBinding": { "elementId": "cache" }, "endBinding": { "elementId": "gone" }, "startArrowhead": null, "endArrowhead": "arrow" },
+    { "id": "gone", "type": "rectangle", "x": 700, "y": 400, "isDeleted": true }
+  ],
+  "appState": { "viewBackgroundColor": "#ffffff" },
+  "files": {}
+}

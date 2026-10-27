@@ -82,6 +82,15 @@
 .calm {
   margin: 8px 0;
   color: var(--tk-text-subtle);
+
+  a {
+    color: var(--tk-accent-fg);
+    text-decoration: none;
+  }
+
+  a:hover {
+    text-decoration: underline;
+  }
 }
 
 .row {

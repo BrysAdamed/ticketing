@@ -38,6 +38,30 @@ public static class DocQueries
         return new DocFolderIndex(folders);
     }
 
+    /// <summary>The project's <paramref name="limit"/> most recently updated, non-deleted pages and diagrams, newest first (Docs home, dashboard).</summary>
+    public static async Task<IReadOnlyList<DocSummaryDto>> RecentAsync(
+        ITicketingDbContext db, Guid projectId, string projectKey, int limit, CancellationToken cancellationToken)
+    {
+        var rows = await (
+                from n in db.DocNodes.AsNoTracking()
+                join u in db.Users on n.UpdatedById equals u.Id
+                where n.ProjectId == projectId && n.DeletedAt == null && n.Kind != DocKind.Folder
+                orderby n.UpdatedAt descending, n.Id descending
+                select new { n.Id, n.Number, n.Kind, n.DiagramFormat, n.Title, n.ParentId, n.CurrentVersion, n.UpdatedAt, u.Email, u.DisplayName, u.IsActive, UserId = u.Id })
+            .Take(limit)
+            .ToListAsync(cancellationToken);
+        if (rows.Count == 0)
+            return [];
+        var folders = await FoldersAsync(db, projectId, includeDeleted: false, cancellationToken);
+        return [.. rows.Select(r =>
+        {
+            var key = HumanKeys.Doc(projectKey, r.Number);
+            return new DocSummaryDto(
+                r.Id, key, projectKey, r.Kind, r.DiagramFormat, r.Title, folders.PathOf(r.ParentId, r.Title), r.CurrentVersion,
+                new UserRefDto(r.UserId, r.Email, r.DisplayName, r.IsActive), r.UpdatedAt, Url(projectKey, key, r.Title));
+        })];
+    }
+
     /// <summary>The doc with everything <see cref="DocDto"/> carries, references and backlinks filtered for the reader.</summary>
     public static async Task<DocDto> LoadAsync(
         ITicketingDbContext db, IProjectAccess access, ICurrentUser currentUser, IClock clock, DocTarget target, CancellationToken cancellationToken)

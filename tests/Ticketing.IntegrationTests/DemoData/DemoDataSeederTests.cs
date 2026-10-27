@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Ticketing.Api.DemoData;
 using Ticketing.Application.Dashboard;
+using Ticketing.Domain.Docs;
 using Ticketing.Domain.Projects;
 using Ticketing.Domain.Regressions;
 using Ticketing.Domain.Tickets;
@@ -75,6 +76,48 @@ public sealed class DemoDataSeederTests(TicketingApiFactory api)
     }
 
     [Fact]
+    public async Task Seeding_creates_a_docs_tree_per_project_with_diagrams_versions_mentions_and_comments()
+    {
+        // Arrange
+        await api.CreateUserAsync(GlobalRole.Admin);
+        await using var host = api.WithWebHostBuilder(b => b.UseSetting(DemoDataSetup.PasswordVariable, DemoPassword));
+        var seeder = host.Services.GetRequiredService<DemoDataSeeder>();
+
+        // Act
+        var result = await seeder.SeedAsync(_ct);
+
+        // Assert
+        Assert.True(result.Seeded, result.Message);
+        await api.WithDbAsync(async db =>
+        {
+            var projects = await db.Projects.AsNoTracking().ToDictionaryAsync(p => p.Id, p => p.Key, _ct);
+            var nodes = await db.DocNodes.AsNoTracking().ToListAsync(_ct);
+            foreach (var project in projects.Values)
+            {
+                var own = nodes.Where(n => projects[n.ProjectId] == project).ToList();
+                Assert.Equal(2, own.Count(n => n.Kind == DocKind.Folder));
+                Assert.Equal(4, own.Count(n => n.Kind == DocKind.Page));
+                Assert.Single(own, n => n.DiagramFormat == DiagramFormat.Mermaid);
+                Assert.Single(own, n => n.DiagramFormat == DiagramFormat.Canvas);
+                Assert.Contains(own, n => n.Kind == DocKind.Page && n.Content!.Contains("> [!", StringComparison.Ordinal)
+                    && n.Content.Contains("| --- |", StringComparison.Ordinal) && n.Content.Contains("](" + project + "-D-", StringComparison.Ordinal));
+            }
+
+            var versions = await db.DocVersions.AsNoTracking().ToListAsync(_ct);
+            Assert.Equal(3, versions.Count(v => v.SnapshotSvg is not null));
+            Assert.Equal(26, versions.Count);
+            Assert.All(nodes.Where(n => n.Kind != DocKind.Folder), n => Assert.Equal(versions.Count(v => v.NodeId == n.Id), n.CurrentVersion));
+            Assert.All(nodes.Where(n => n.DiagramFormat == DiagramFormat.Canvas), n => Assert.Contains("→", n.Outline, StringComparison.Ordinal));
+
+            var references = await db.DocReferences.AsNoTracking().ToListAsync(_ct);
+            Assert.True(references.Count(r => r.TargetType == DocReferenceTarget.Ticket) >= 25);
+            Assert.Equal(8, references.Count(r => r.TargetType == DocReferenceTarget.Doc));
+            Assert.Equal(8, await db.Comments.CountAsync(c => c.DocNodeId != null, _ct));
+            return true;
+        });
+    }
+
+    [Fact]
     public async Task Startup_seeding_fills_the_dashboard_and_demo_users_can_sign_in()
     {
         // Arrange
@@ -101,6 +144,8 @@ public sealed class DemoDataSeederTests(TicketingApiFactory api)
         Assert.NotNull(dashboard.Regressions.Latest);
         Assert.NotEmpty(dashboard.Regressions.RecentPassRates);
         Assert.Equal(1, dashboard.RegressionBugs.Count);
+        Assert.Equal(6, dashboard.RecentDocs.Total);
+        Assert.Equal(5, dashboard.RecentDocs.Items.Count);
     }
 
     [Fact]

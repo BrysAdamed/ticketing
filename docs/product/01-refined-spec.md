@@ -648,6 +648,7 @@ Shown on the project's home page. All numbers exclude deleted tickets. A single 
 | 10 | Test cases | Non-archived count per `TestCaseStatus`; automation ratio = Automatic / (Manual + Automatic). |
 | 11 | Regressions | Latest non-cancelled session summary (6.11), and pass rate of the last 5 completed sessions. |
 | 12 | Regression bugs | Open tickets created from regression items. |
+| 13 | Recent docs | Non-deleted pages and diagrams (not folders): total count and the 5 most recently updated, linking to the docs (12.15). Not filtered by version. |
 
 Every count links to the search that produces it. Target: dashboard loads in under 500 ms for a project with 50 000 tickets (queries run against indexed columns; no precomputed tables in v1).
 
@@ -664,7 +665,7 @@ Every count links to the search that produces it. Target: dashboard loads in und
 
 - Streamable HTTP MCP endpoint at `/mcp`, hosted in the same API process. No local install. Claude Code connects with `claude mcp add --transport http ticketing https://<host>/mcp --header "Authorization: Bearer tkt_..."`.
 - Every call runs as the PAT's user with that user's permissions and channel `Mcp`.
-- `tools/list` returns only tools allowed by the token scope. Read tools carry `readOnlyHint: true`. `delete_ticket`, `delete_comment`, `unlink_tickets`, `cancel_regression_session` and `archive_board` carry `destructiveHint: true`.
+- `tools/list` returns only tools allowed by the token scope. Read tools carry `readOnlyHint: true`. `delete_ticket`, `delete_comment`, `unlink_tickets`, `cancel_regression_session`, `archive_board`, `delete_doc` and `delete_doc_comment` carry `destructiveHint: true`.
 
 ### 9.2 Conventions for all tools
 
@@ -785,8 +786,9 @@ Docs (12)
 | `move_doc` | `docKey`, optional `parent` (key, path or `root`; omitted keeps the folder), `position` or `beforeKey`/`afterKey` | The doc. |
 | `delete_doc` | `docKey` | `{ id, key, deletedCount, deletedAt, undoUntil }`. Destructive. |
 | `search_docs` | optional `text`, `projectKeys`, `kinds`, `folder` (key or id), `mentions` (ticket key), `updatedFrom`/`updatedTo`, `sort` (`Relevance`, `Updated`), `limit`, `cursor` | `{ items, nextCursor, total, totalCapped, sort }` (12.7); each item has key, kind, title, path, folderPath, version, updatedBy, updatedAt, url and a plain-text `snippet` with highlight ranges. |
+| `get_doc_export_link` | `docKey`, optional `version` | `{ docKey, version, url, expiresAt }`: a server-relative PDF link with a signed token, valid 15 minutes (12.14). |
 
-The export link comes with its story (TKT-20). Restoring deleted docs stays REST and UI only (D-82).
+Restoring deleted docs stays REST and UI only (D-82).
 
 Out of MCP in v1: user administration, PAT management, feature flags, project deletion, board deletion. These stay in the web UI.
 
@@ -800,12 +802,12 @@ Out of MCP in v1: user administration, PAT management, feature flags, project de
 | Keyboard | `c` create, `/` or Ctrl+K quick jump, `j`/`k` next/previous in lists, `Enter` open, `e` edit, `s`/`p`/`t`/`a`/`l` status, priority, type, assignee and labels picker, `i` assign to me (with Undo), `m` move to…, `Del`/`⌘⌫` delete with Undo (D-81, D-82), `?` shortcut help (I-04). |
 | Browsers | Latest Chrome, Edge and Firefox. Desktop first, minimum width 1280 px. |
 | Accessibility | All actions reachable by keyboard; visible focus; WCAG 2.1 AA colour contrast. |
-| Operations | Docker Compose with `api`, `web` and `db` services. `/health/live` and `/health/ready` endpoints. Structured JSON logs. Database migrations applied on API start. Documented `pg_dump` backup procedure, attachments included. |
+| Operations | Docker Compose with `api`, `web` and `db` services, plus the internal `pdf` renderer for PDF export (12.14). `/health/live` and `/health/ready` endpoints. Structured JSON logs. Database migrations applied on API start. Documented `pg_dump` backup procedure, attachments included. |
 | Security | All writes authorised server-side. Private-project data never leaks through search, boards, links, hints, dashboards or MCP. Tests cover each of these paths. |
 
 ## 12. Docs
 
-Each project has documentation: a tree of folders, markdown pages and diagrams (Mermaid or Canvas). The full feature spec, including the UI, links, search, history and PDF export, is [03-docs-refinement.md §1](03-docs-refinement.md#1-refined-v1-of-docs-spec); this section states the rules the backend enforces (TKT-12, D-97, D-98).
+Each project has documentation: a tree of folders, markdown pages and diagrams (Mermaid or Canvas). The full feature spec, including the UI, links, search, history and PDF export, is [03-docs-refinement.md §1](03-docs-refinement.md#1-refined-v1-of-docs-spec); this section states the rules as built (epic TKT-10: TKT-12 to TKT-22, decisions D-97 to D-117).
 
 ### 12.1 Model and keys
 
@@ -855,7 +857,7 @@ Section [1.5 of the refinement](03-docs-refinement.md#15-permissions-mapped-to-5
 | Method and path | Purpose |
 | --- | --- |
 | `GET /projects/{pk}/docs/tree?folder=&depth=&kind=` | The tree, unpaged, depth-first: `{ projectKey, myRole, canWrite, canManageTrash, total, items }`, each item with key, kind, diagramFormat, title, parentKey, depth, version, childCount, updatedAt, `hasMyDraft`, `canDelete`, `commentCount` (comments not deleted, counted inside the one tree query) |
-| `GET /projects/{pk}/docs/recent?limit=10` | Latest updated pages and diagrams (1..50) |
+| `GET /projects/{pk}/docs/recent?limit=10` | Latest updated pages and diagrams (1..50); the dashboard returns the 5 latest itself (12.15) |
 | `GET /projects/{pk}/docs/by-path?path=` | A doc by path |
 | `GET /projects/{pk}/docs/trash?limit=&cursor=` | Delete groups, newest first (Owners) |
 | `POST /projects/{pk}/docs` | Create: `kind`, `title`, `parent`, `position` or `beforeKey`/`afterKey`, `content`, `diagramFormat`, `changeNote`, `snapshot` (Canvas, 12.13); `Idempotency-Key` |
@@ -899,7 +901,7 @@ The doc URL in the SPA is `/projects/{PK}/docs/{KEY}/{slug}`; the slug is cosmet
 
 ### 12.8 Reading and editing pages (web)
 
-- **Reader** (`docs.page`): title, a meta line (key, `vN`, "Edited by X, 2 h ago", path, "3 comments" linking to the thread, and who else is editing), the rendered markdown, "On this page" (h1–h3, scroll spy) in a 220 px right rail from 1440 px (`]` hides it, remembered per browser; whenever it is not shown, a page bar button opens it as a popover, and below 1440 px `]` toggles that popover; D-111), and the page sections (attachments; later backlinks and comments). Headings get stable ids (`#heading-slug`, duplicates `-2`, `-3`); hovering one shows `#`, which scrolls there and copies the link. GFM alerts (`> [!NOTE]`, `TIP`, `IMPORTANT`, `WARNING`, `CAUTION`) render as callouts everywhere markdown renders. Fenced code with a known language is highlighted (highlight.js, loaded lazily, tickets included); doc pages add a header with the language and Copy. The page bar has Download .md and Edit (`E`); `Ctrl .` / `Ctrl Shift .` copy the doc's key / link, and `Ctrl \` hides or shows the tree panel (remembered per browser; D-109). The open doc is refetched every 30 s, so "Jane is editing" appears within 30 s of her first autosave and disappears 10 minutes after her last one.
+- **Reader** (`docs.page`): title, a meta line (key, `vN`, "Edited by X, 2 h ago", path, "3 comments" linking to the thread, and who else is editing), the rendered markdown, "On this page" (h1–h3, scroll spy) in a 220 px right rail from 1440 px (`]` hides it, remembered per browser; whenever it is not shown, a page bar button opens it as a popover, and below 1440 px `]` toggles that popover; D-111), and the page sections (attachments, "Tickets mentioned", "Linked from" and comments; 12.9, 12.11). Headings get stable ids (`#heading-slug`, duplicates `-2`, `-3`); hovering one shows `#`, which scrolls there and copies the link. GFM alerts (`> [!NOTE]`, `TIP`, `IMPORTANT`, `WARNING`, `CAUTION`) render as callouts everywhere markdown renders. Fenced code with a known language is highlighted (highlight.js, loaded lazily, tickets included); doc pages add a header with the language and Copy. The page bar has Download .md and Edit (`E`); `Ctrl .` / `Ctrl Shift .` copy the doc's key / link, and `Ctrl \` hides or shows the tree panel (remembered per browser; D-109). The open doc is refetched every 30 s, so "Jane is editing" appears within 30 s of her first autosave and disappears 10 minutes after her last one.
 - **Draft banner**: when I have a draft, the reader shows "You have unpublished changes from 10:42" with Continue editing and Discard (confirmed); the tree shows the pencil dot.
 - **Editor** (`?mode=edit`, writers only; `docs.page.edit`, a lazy chunk): edit bar (draft status, base version, "Jane published v8", presence, Write / Split / Preview with `Mod+Shift+P`, Discard, Close `Esc`, Publish `Mod+S`), toolbar (heading, bold, italic, code, link, lists, task list, code block, table, callout, image), inline title, optional change note, a CodeMirror 6 markdown source and a live preview (the reader's renderer, 150 ms after typing stops, scroll synced through the headings). `/` at the start of a line opens the block menu. `Mod+Enter` publishes and closes; `Esc` closes and keeps the draft.
 - **Draft autosave**: 1 s after the last change, on blur, when the tab is hidden, before leaving the editor and on unload (a keepalive request; a draft over 60 KB, too large for one, is saved with a normal request and the browser asks before leaving, D-115). Status: Editing, Unsaved changes, Saving draft…, Draft saved, Couldn't save draft · Retry, Publishing…, Published vN, Conflicting changes.
@@ -936,6 +938,7 @@ The doc URL in the SPA is `/projects/{PK}/docs/{KEY}/{slug}`; the slug is cosmet
 - **A ticket's docs**: `GET /tickets/{key}/docs` and MCP `get_ticket` with `include: docs` (the MCP default includes it; the REST ticket read leaves it out unless `include=docs` is asked for) list readable, non-deleted docs mentioning the ticket, newest first, at most 20 plus `total`. An unreadable ticket answers 404 like a missing one. The docs search `mentions` filter (12.7) reads the same index.
 - **Rendering** (`renderMarkdown` with `references`, the reader and the PDF): a readable ticket key becomes a chip with its status ring (title and status on hover); a readable doc key or `[text](KEY)` links to the doc with its title on hover; a deleted doc renders struck through as `KEY (deleted)`; an unreadable or unknown key renders as plain text (the custom text of a link stays). `![caption](KEY)` of a readable diagram becomes a figure (`figure.tk-doc-embed` with `data-doc-key`, `data-diagram-format`, `data-version`, a header linking the diagram, an empty `.tk-doc-embed-body` for the diagram renderer and the caption); anything else shows "Diagram not available" without key, title or caption. The editor preview links keys it cannot resolve yet and shows unresolved embeds as a link until the page is published. Markdown outside docs (tickets, comments) links ticket keys to `/tickets/KEY` and doc keys (also as `[text](KEY)` and `![caption](KEY)`) to `/docs/KEY`.
 - **Web**: page footer sections "Tickets mentioned" (status ring, key, title; opens the ticket peek) and "Linked from" (title, folder path, updated; "and N more" past 50), both from the GET and hidden when empty; the ticket view's "Docs mentioning this ticket" section (`provideTicketDetailSection`, after attachments; title, folder path, last editor and time; "and N more" opens docs search `mentions=KEY`), hidden when empty. A row opens the doc at `#mention-KEY`: the reader scrolls to the first chip of the ticket and flashes it with `--tk-accent-subtle` for 600 ms (a mention only inside a diagram just opens the doc). Writers of the ticket's project get "Write doc" in its header: a page at the top level titled "KEY Ticket title" (" (2)", " (3)" … when taken) with the content `Related: KEY`, opened in the editor (D-114). In the editor `[[` + title text offers docs (the current project first; recent docs while empty) and inserts `[Title](KEY)`; `#` + key or title text offers tickets and inserts the key; the toolbar ("Link a doc", "Mention a ticket") and the `/` menu ("Doc link", "Ticket mention") open the same pickers.
+
 ### 12.12 Mermaid diagrams (web, MCP)
 
 - **Supported types** (tested, offered as templates and named in the MCP descriptions): `flowchart`, `sequenceDiagram`, `classDiagram`, `stateDiagram-v2`, `erDiagram`, `gantt`, `mindmap`. Mermaid 12.2.0 renders more; those work but are not promised. The source is not validated on the server (I-104); the web editor warns before publishing a source that does not parse.
@@ -965,3 +968,8 @@ The doc URL in the SPA is `/projects/{PK}/docs/{KEY}/{slug}`; the slug is cosmet
 - **Export links**: `POST /docs/{key}/export-link` and MCP `get_doc_export_link` return a server-relative `GET` URL with a signed token (Data Protection, 15 minutes) bound to the caller and the doc (and version). Using it needs no other credentials; the export runs as that user, so access is checked again. An expired or tampered link, one used on another doc, one whose user was deactivated or changed their password, or whose user lost access answers 404 `doc.notFound`. Dates in link exports are UTC.
 - **Web**: Export PDF in the page bar of pages, diagrams (the shown version with `?v=n`) and folders, `Mod+P` (replaces the browser's print), and in the tree's `…` menu. A page or diagram downloads directly. A folder exports in the background: a toast says so, the user keeps working, and a "ready" toast offers Download. One export per doc at a time; errors show the server's message.
 - Budget: single page p95 < 3 s and a 50-document folder < 30 s on the reference VM (measured in the TKT-11 spike; the API warms Chromium up after start).
+
+### 12.15 Dashboard and demo data
+
+- **Dashboard widget 13 "Recent docs"** (section 7): `GET /projects/{pk}/dashboard` and MCP `get_project_stats` return `recentDocs: { total, items }`: the number of non-deleted pages and diagrams and the 5 most recently updated (the `GET …/docs/recent` summary: key, kind, diagramFormat, title, path, version, updatedBy, updatedAt, url). Docs belong to the dashboard's project, so whoever can read the dashboard can read them; the version filter does not apply (D-117). The web card sits at the end of the lazily loaded part of the grid: rows with the kind icon, title, folder ("Top level" at the root), last editor and time, open the doc; "N docs" in the header and the empty state link to the Docs home. A project with docs but no tickets is not shown as an empty dashboard.
+- **Demo data** (D-85): the demo seeder writes a docs tree into each demo project through the use cases: two folders, four pages with callouts, tables, code blocks, ticket mentions and doc links, a Mermaid and a Canvas diagram embedded in a page (the Canvas with its picture, so embeds and PDFs show it at once), later versions with change notes for the history, and a few comments.

@@ -11,9 +11,9 @@ using Ticketing.Domain.Tickets;
 namespace Ticketing.Api.DemoData;
 
 /// <summary>
-/// Plans the demo workspace's twelve-week history from <see cref="DemoContent"/> with a fixed random seed, then replays
-/// it in time order through <see cref="DemoWorkspace"/>: every ticket, transition, comment, link, board move and
-/// regression result is a real use case call made by a demo user at a backdated time.
+/// Plans the demo workspace's twelve-week history from <see cref="DemoContent"/> and <see cref="DemoDocs"/> with a fixed
+/// random seed, then replays it in time order through <see cref="DemoWorkspace"/>: every ticket, transition, comment,
+/// link, board move, regression result and doc version is a real use case call made by a demo user at a backdated time.
 /// </summary>
 internal sealed partial class DemoScript(DemoWorkspace workspace, DemoActor admin, DateTimeOffset now, string? password, ILogger logger)
 {
@@ -65,6 +65,7 @@ internal sealed partial class DemoScript(DemoWorkspace workspace, DemoActor admi
         PlanTesting();
         PlanFlags();
         ScheduleTickets();
+        PlanDocs();
 
         foreach (var step in _timeline.OrderBy(s => s.At).ThenBy(s => s.Sequence))
             await step.Run(ct);
@@ -73,7 +74,8 @@ internal sealed partial class DemoScript(DemoWorkspace workspace, DemoActor admi
             await LogSetPasswordLinksAsync(ct);
 
         return $"{_createdUsers.Count} users, {DemoContent.Projects.Count} projects, {_tickets.Count + _extraTickets} tickets, "
-            + $"{_comments} comments, {_links} links, {_testCaseKeys.Count} test cases, 2 regression sessions, 2 boards, 3 feature flags";
+            + $"{_comments} comments, {_links} links, {_testCaseKeys.Count} test cases, 2 regression sessions, 2 boards, 3 feature flags, "
+            + $"{_docs.Count} docs with {_docComments} comments";
     }
 
     private static void ValidatePassword(string password)

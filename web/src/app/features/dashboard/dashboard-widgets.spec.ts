@@ -1,6 +1,12 @@
 import { DashboardLinks } from './dashboard-links';
 import { ProjectDashboard } from './dashboard.model';
-import { assigneeItems, categorySegments, percent, severityItems } from './dashboard-widgets';
+import {
+  assigneeItems,
+  categorySegments,
+  percent,
+  recentDocRows,
+  severityItems,
+} from './dashboard-widgets';
 
 function dashboard(overrides: Partial<ProjectDashboard> = {}): ProjectDashboard {
   return {
@@ -19,6 +25,7 @@ function dashboard(overrides: Partial<ProjectDashboard> = {}): ProjectDashboard 
     testCases: { total: 0, byStatus: [], automationRatio: null },
     regressions: { latest: null, recentPassRates: [] },
     regressionBugs: { count: 0, items: [] },
+    recentDocs: { total: 0, items: [] },
     ...overrides,
   };
 }
@@ -84,6 +91,53 @@ describe('dashboard widgets', () => {
     expect(items[0].color).toBe('var(--tk-severity-critical)');
     expect(items[1]).toMatchObject({ id: 'none', label: 'No severity', muted: true });
     expect(items[1].link?.query['severity']).toBe('none');
+  });
+
+  it('maps recent docs to rows with kind icon, folder and doc link', () => {
+    // Arrange
+    const editor = { id: 'u1', email: 'a@x.test', displayName: 'Anna', isActive: true };
+    const doc = {
+      id: 'd1',
+      projectKey: 'WEB',
+      version: 3,
+      updatedBy: editor,
+      updatedAt: '2026-10-27T09:00:00Z',
+      url: '/p/WEB/docs/WEB-D-1/x',
+    };
+    const data = dashboard({
+      recentDocs: {
+        total: 7,
+        items: [
+          {
+            ...doc,
+            key: 'WEB-D-4',
+            kind: 'Diagram',
+            diagramFormat: 'Canvas',
+            title: 'Wireframe',
+            path: 'Design/Check\\/out/Wireframe',
+          },
+          {
+            ...doc,
+            key: 'WEB-D-1',
+            kind: 'Page',
+            diagramFormat: null,
+            title: 'Intro',
+            path: 'Intro',
+          },
+        ],
+      },
+    });
+
+    // Act
+    const rows = recentDocRows(data);
+
+    // Assert
+    expect(rows.map((r) => [r.key, r.icon, r.folder])).toEqual([
+      ['WEB-D-4', 'tablerChalkboard', 'Design / Check/out'],
+      ['WEB-D-1', 'tablerFileText', 'Top level'],
+    ]);
+    expect(rows[0].url).toBe('/projects/WEB/docs/WEB-D-4/wireframe');
+    expect(rows[1].editor).toEqual({ id: 'u1', name: 'Anna' });
   });
 
   it('computes whole percentages and nothing for an empty whole', () => {

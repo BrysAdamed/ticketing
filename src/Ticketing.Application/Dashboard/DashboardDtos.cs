@@ -1,10 +1,14 @@
+using Ticketing.Application.Docs;
 using Ticketing.Domain.Regressions;
 using Ticketing.Domain.TestCases;
 using Ticketing.Domain.Tickets;
 
 namespace Ticketing.Application.Dashboard;
 
-/// <summary>All widgets of the project dashboard (spec 7). Ticket widgets honour <see cref="Version"/>; test case and regression widgets do not.</summary>
+/// <summary>
+/// All widgets of the project dashboard (spec 7). Ticket widgets honour <see cref="Version"/>; test case, regression and
+/// docs widgets do not.
+/// </summary>
 public sealed record ProjectDashboardDto(
     string ProjectKey,
     string? Version,
@@ -20,7 +24,8 @@ public sealed record ProjectDashboardDto(
     EpicProgressDto EpicProgress,
     TestCaseStatsDto TestCases,
     RegressionStatsDto Regressions,
-    RegressionBugsDto RegressionBugs);
+    RegressionBugsDto RegressionBugs,
+    RecentDocsDto RecentDocs);
 
 public sealed record DashboardTotalsDto(int OpenTickets, int DoneTickets, int OpenStoryPoints, int UnassignedOpenTickets);
 
@@ -100,3 +105,7 @@ public sealed record RegressionStatsDto(RegressionSessionSummaryDto? Latest, IRe
 
 /// <param name="Items">The 10 most important open regression bugs (priority, then severity, then key).</param>
 public sealed record RegressionBugsDto(int Count, IReadOnlyList<DashboardTicketDto> Items);
+
+/// <param name="Total">Non-deleted pages and diagrams of the project (folders are not counted).</param>
+/// <param name="Items">The 5 most recently updated of them, newest first.</param>
+public sealed record RecentDocsDto(int Total, IReadOnlyList<DocSummaryDto> Items);

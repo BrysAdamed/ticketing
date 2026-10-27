@@ -120,6 +120,7 @@ Version: a `mat-autocomplete` that lists this project's previously used versions
   - Tickets by type: horizontal bars in type colors (4 columns).
   - Open bugs by severity: bars in the severity colors (4 columns).
   - Regression history: stacked columns per session, passed/failed/blocked/skipped (4 columns).
+  - Recent docs (12 columns, last row; spec §12.15): 32px rows with the kind icon, title, folder path (muted), editor avatar and relative time, opening the doc; "N docs" in the header links to the Docs home.
   - Every chart has an accessible data table toggle (`Table` icon button) for screen readers and exact numbers.
 - Clicking a bar segment navigates to the backlog with the matching filter.
 - The loading skeleton mirrors the tile and card frames, and charts render as a flat `--tk-skeleton` block.

@@ -3,6 +3,7 @@ using Ticketing.Application.Abstractions;
 using Ticketing.Application.Auth;
 using Ticketing.Application.Boards;
 using Ticketing.Application.Comments;
+using Ticketing.Application.Docs;
 using Ticketing.Application.FeatureFlags;
 using Ticketing.Application.Projects;
 using Ticketing.Application.Regressions;
@@ -109,6 +110,15 @@ internal sealed class DemoWorkspace(IServiceProvider services, DemoClock clock, 
 
     public Task<FlagDto> CreateFlagAsync(DemoActor admin, DateTimeOffset at, CreateFlag.Command command, CancellationToken ct) =>
         RunAsync<CreateFlag.Handler, CreateFlag.Command, FlagDto>(admin, at, command, ct);
+
+    public Task<DocDto> CreateDocAsync(DemoActor actor, DateTimeOffset at, CreateDoc.Command command, CancellationToken ct) =>
+        RunAsync<CreateDoc.Handler, CreateDoc.Command, DocDto>(actor, at, command, ct);
+
+    public Task<DocDto> UpdateDocAsync(DemoActor actor, DateTimeOffset at, UpdateDoc.Command command, CancellationToken ct) =>
+        RunAsync<UpdateDoc.Handler, UpdateDoc.Command, DocDto>(actor, at, command, ct);
+
+    public Task<DocCommentDto> AddDocCommentAsync(DemoActor actor, DateTimeOffset at, string docKey, string body, CancellationToken ct) =>
+        RunAsync<AddDocComment.Handler, AddDocComment.Command, DocCommentDto>(actor, at, new(body, docKey), ct);
 
     public async Task<Dictionary<string, DemoActor>> FindUsersAsync(IReadOnlyCollection<string> emails, CancellationToken ct)
     {

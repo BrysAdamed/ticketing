@@ -16,7 +16,8 @@ public sealed class DashboardTools
         "createdVsResolved (12 ISO weeks, UTC, oldest first); openByAssignee (top 10 plus unassigned and others); stale (open, not updated for 30 days: " +
         "count and 10 oldest); epicProgress (open epics: direct children done/total by count and story points); testCases (non-archived per status " +
         "New/Manual/Automatic, automationRatio); regressions (latest non-cancelled session summary, pass rates of the last 5 completed sessions); " +
-        "regressionBugs (open bugs created from regression items). The version filter applies to ticket-based widgets only.")]
+        "regressionBugs (open bugs created from regression items); recentDocs (total pages and diagrams, and the 5 most recently updated: key, " +
+        "kind, title, path, version, updatedBy, updatedAt). The version filter applies to ticket-based widgets only.")]
     public static Task<ProjectDashboardDto> GetProjectStats(
         GetProjectDashboard.Handler handler,
         [Description("Project key (for example WEB) or project id.")] string projectKey,

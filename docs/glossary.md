@@ -66,6 +66,10 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Delete group (docs)**: The docs deleted by one delete: a doc, or a folder with its whole subtree. Its members share `DeletedRootId`; restore and the trash work on whole groups. [§12.5](product/01-refined-spec.md#125-delete-and-restore)
 
+**Demo data**: The believable workspace the demo seeder writes into an empty database for development and demos (`TICKETING_SEED_DEMO`, D-85): users, three projects with twelve weeks of ticket history, boards, test cases, regression sessions, feature flags and a docs tree per project (D-117). Never used on a real installation.
+
+**Diagram (doc)**: A doc whose content is a drawing: `Mermaid` (text source) or `Canvas` (Excalidraw JSON with a picture per version). It has versions, comments and a PDF export like a page, and pages embed it with `![caption](KEY)`.
+
 **Diagram embed**: `![caption](WEB-D-7)` in a page: the diagram doc rendered read-only in a figure with its title and caption. An unreadable or deleted diagram shows "Diagram not available". The diagram is drawn by its format's renderer when it scrolls into view ([§12.12](product/01-refined-spec.md#1212-mermaid-diagrams-web-mcp)).
 
 **Doc**: A node of a project's docs tree: a `Folder`, a markdown `Page` or a `Diagram` (`Mermaid` or `Canvas`). Pages and diagrams have versions; folders hold other docs, up to 6 levels deep. [§12](product/01-refined-spec.md#12-docs)
@@ -98,6 +102,8 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Field hints**: Suggestions of version and label values already used in a project, most recent first. Hints never restrict input. [§6.7](product/01-refined-spec.md#67-field-hints-version-labels)
 
+**Folder (doc)**: A doc that holds other docs (folders, pages, diagrams), up to 6 levels deep. It has no content and no versions; deleting it takes its subtree, exporting it prints the subtree as one PDF.
+
 **Global role**: `Admin` or `User`; exactly one per user. [§3](product/01-refined-spec.md#3-enumerations)
 
 **Hard delete**: Permanent removal. In v1 it exists only for test cases that never appeared in a regression session and for attachments; everything else is soft-deleted or deactivated. [§6.10](product/01-refined-spec.md#610-test-case-lifecycle)
@@ -128,6 +134,8 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Owner**: Project role with full control of a project: settings, members, archive, ticket deletion, comment moderation, assigning regression items to others. Admins act as Owner on every project. A non-archived project always has at least one active Owner. [§4.3](product/01-refined-spec.md#43-project), [§5.3](product/01-refined-spec.md#53-project-actions)
 
+**Page (doc)**: A markdown doc: GFM with callouts, tables, code, ticket chips, doc links and diagram embeds, edited in a private draft and published as a new version. Attachments (images, files) belong to pages only.
+
 **Parent / child**: Hierarchy between tickets of the same project via `ParentId`: at most 3 levels, no cycles, epics have no parent. Children are independent of their parent's status and placement. [§6.3](product/01-refined-spec.md#63-parent-and-child)
 
 **PAT (personal access token)**: A secret (`tkt_` + 40 base62 characters) a user creates to call REST or MCP as themselves. It has a scope and a mandatory expiry; only its SHA-256 hash is stored and it is shown once. [§4.2](product/01-refined-spec.md#42-personalaccesstoken), [§6.12](product/01-refined-spec.md#612-pat-lifecycle), [ADR 0003](adr/0003-authentication-cookie-and-pat.md)
@@ -148,11 +156,15 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Public project**: A project every signed-in user can read and write with Member access (D-02). Settings, membership and destructive actions stay with Owners. [§5.1](product/01-refined-spec.md#51-effective-project-access)
 
+**Publish (doc)**: Turning content into the doc's next version: the editor's Publish (`Ctrl S`), every MCP and REST content write, and a version restore. Publishing drops the publisher's draft, re-indexes references and makes the content visible to every reader.
+
 **Quick jump**: `Ctrl+K` or `/`: type a ticket, test case, regression session or doc key to open it, or text to list the 10 best ticket title matches and, below them, the 5 best docs with a snippet, across readable projects. With an empty query the palette lists recently viewed docs. [§6.8](product/01-refined-spec.md#68-search-lists-and-export), [§12.7](product/01-refined-spec.md#127-search)
 
 **Rank**: Hidden fractional-index string that orders tickets within their container; compared byte-wise (`COLLATE "C"`). [§6.6](product/01-refined-spec.md#66-ranking), [ADR 0010](adr/0010-fractional-index-ranking.md)
 
 **Ready ticket**: An open ticket that no open ticket blocks, so work on it can start. Shown green in the sub-tickets graph. [D-95](decisions.md)
+
+**Recent docs**: The project's most recently updated pages and diagrams: "Recently updated" on the Docs home (10), the palette's `p:` list, and dashboard widget 13 with the 5 latest and the total (`get_project_stats.recentDocs`).
 
 **Regression bug**: A ticket created from a failed regression session item (the item's `BugTicketId`). The dashboard counts the open ones. [§6.11](product/01-refined-spec.md#611-regression-session-lifecycle)
 

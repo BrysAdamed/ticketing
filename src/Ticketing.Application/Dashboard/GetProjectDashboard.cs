@@ -2,6 +2,7 @@ using System.Globalization;
 using Ticketing.Application.Abstractions;
 using Ticketing.Application.Access;
 using Ticketing.Application.Common;
+using Ticketing.Application.Docs;
 using Ticketing.Domain.Common;
 using Ticketing.Domain.Regressions;
 using Ticketing.Domain.TestCases;
@@ -11,7 +12,8 @@ namespace Ticketing.Application.Dashboard;
 
 /// <summary>
 /// The project dashboard (spec 7): every widget in one response. Deleted tickets never count, cancelled sessions are
-/// left out of regression summaries, and the optional version filter applies to ticket widgets only (I-23).
+/// left out of regression summaries, and the optional version filter applies to ticket widgets only (I-23). Recent docs
+/// (widget 13) are the project's own docs, readable whenever the dashboard is.
 /// </summary>
 public static class GetProjectDashboard
 {
@@ -22,6 +24,7 @@ public static class GetProjectDashboard
     public const int MaxEpics = 50;
     public const int RecentCompletedSessions = 5;
     public const int RegressionBugListSize = 10;
+    public const int RecentDocsListSize = 5;
 
     /// <param name="ProjectKeyOrId">A project key (<c>WEB</c>) or id.</param>
     /// <param name="Version">Exact ticket version (case-sensitive); null or blank for all versions.</param>
@@ -53,6 +56,10 @@ public static class GetProjectDashboard
             var testCases = await DashboardQueries.TestCasesAsync(db, projectId, cancellationToken);
             var sessions = await DashboardQueries.SessionsAsync(db, projectId, RecentCompletedSessions, cancellationToken);
             var bugs = await DashboardQueries.RegressionBugsAsync(db, projectId, version, RegressionBugListSize, cancellationToken);
+            var recentDocs = await DocQueries.RecentAsync(db, projectId, grant.ProjectKey, RecentDocsListSize, cancellationToken);
+            var docCount = recentDocs.Count < RecentDocsListSize
+                ? recentDocs.Count
+                : await DashboardQueries.DocCountAsync(db, projectId, cancellationToken);
 
             var key = grant.ProjectKey;
             var open = groups.Where(g => g.Status.IsOpen()).ToList();
@@ -81,7 +88,8 @@ public static class GetProjectDashboard
                         new ProgressDto(e.ChildrenDone, e.ChildrenTotal), new ProgressDto(e.PointsDone, e.PointsTotal))).ToList()),
                 TestCaseStats(testCases),
                 RegressionStats(key, sessions),
-                new RegressionBugsDto(bugs.Count == 0 ? 0 : bugs[0].Total, bugs.Select(t => ToTicket(key, t)).ToList()));
+                new RegressionBugsDto(bugs.Count == 0 ? 0 : bugs[0].Total, bugs.Select(t => ToTicket(key, t)).ToList()),
+                new RecentDocsDto(docCount, recentDocs));
         }
 
         private static IEnumerable<Severity?> SeverityBuckets() => Enum.GetValues<Severity>().Select(s => (Severity?)s).Append(null);

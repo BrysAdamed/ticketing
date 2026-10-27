@@ -40,7 +40,8 @@ export class DashboardStore {
       data.version === null &&
       data.totals.openTickets + data.totals.doneTickets === 0 &&
       data.testCases.total === 0 &&
-      data.regressions.latest === null
+      data.regressions.latest === null &&
+      data.recentDocs.total === 0
     );
   });
 

@@ -7,7 +7,7 @@ The Angular 22 SPA lives in `web/`. It uses standalone components, zoneless chan
 | Command (in `web/`) | What it does |
 | --- | --- |
 | `npm start` | `ng serve` on :4200. `proxy.conf.json` forwards `/api`, `/mcp`, `/scalar` and `/health` to the API on `http://localhost:5080`. |
-| `npm run start:mock` | Tiny Node stand-in for the API on :5080 (auth, `/me`, `/me/flags`, projects). Use it when the backend isn't running, and stop it before you start the real API, because both use port 5080. Sign in as `admin@ticketing.local` / `ChangeMe-Admin-2026!`. |
+| `npm run start:mock` | Tiny Node stand-in for the API on :5080 (auth, `/me`, `/me/flags`, `/me/notifications`, projects). Use it when the backend isn't running, and stop it before you start the real API, because both use port 5080. Sign in as `admin@ticketing.local` / `ChangeMe-Admin-2026!`. |
 | `npm run build` | Production build into `dist/ticketing-web/browser`. It fails over the bundle budget. |
 | `npm test` | Vitest run, once. `npm run test:watch` keeps watching. |
 | `npm run lint` | ESLint (angular-eslint, template a11y and the architecture import rules below). |
@@ -38,6 +38,7 @@ web/src/
       tickets/          ticket wire types, TicketsApi, TicketCache, TicketEvents, FieldHints, ProjectPeople,
                         TicketCreator (create dialog), TICKET_DETAIL_SECTIONS (ticket view extension point)
       testing/          test case and regression wire types, TestCasesApi, RegressionsApi
+      notifications/    NotificationsApi, NotificationCenter (unread count polling, panel state), top bar bell + panel
       theme/            ThemeService (light / dark / system, density)
     shared/             presentational UI kit, domain enums, markdown, pipes. Never imports core or features.
     features/<name>/    one folder per feature: <name>.routes.ts, <name>.views.ts, <page>/<page>.store.ts + <page>.view.ts
@@ -125,8 +126,9 @@ Inside project sections, `inject(ProjectContext)` gives the current project (`pr
 | Cached reads | `SwrCache.load(key, fetch, tags)` returns `{ cached, fresh }`: render `cached` at once, then `fresh` (D-84). While cached data is shown the refetch drives the shell's 2px top line. Tag entries (`project:KEY`, `ticketsTag(KEY)`, `MY_WORK_TAG`); `TicketEvents.emit` drops the ticket-list tags. `ApiClient.get` already shares identical in-flight GETs. |
 | Breadcrumbs | `data: { breadcrumb: 'Backlog' }` or `(route) => ({ label, projectKey })` on routes. Pages can call `Breadcrumbs.setTail([...])` for dynamic crumbs. |
 | Theme | `ThemeService.setPreference('light' \| 'dark' \| 'system')`, `toggle()`, `setDensity('compact')`. Stored in localStorage (`tk-theme`, `tk-density`) and applied as `data-theme` / `data-density` on `<html>` before Angular boots. |
+| Notifications | `NotificationCenter` (`core/notifications/`): `unreadCount()` for the top bar bell, polled every 60 s and on window focus while signed in (no push), and the panel state (`open/close/toggle`, `filter` all \| unread, `groups()` by day, `loadMore()`). `markRead(n)` / `markAllRead()` are optimistic with rollback and a toast; `activate(n)` marks read and opens the ticket peek (or navigates to a regression item). REST calls go through `NotificationsApi` (`/me/notifications`). |
 
-Built-in shortcuts: `Ctrl/⌘ K` and `/` open the palette, `?` opens the shortcut sheet, `[` toggles the sidebar, `C` creates a ticket (once registered). With `G` then a letter: `M` My work, `P` Projects, `O` Boards, and, inside a project, `D` dashboard, `B` backlog, `T` test cases, `R` regressions. `Esc` closes the peek panel.
+Built-in shortcuts: `Ctrl/⌘ K` and `/` open the palette, `?` opens the shortcut sheet, `[` toggles the sidebar, `C` creates a ticket (once registered). With `G` then a letter: `M` My work, `P` Projects, `O` Boards, `N` notifications panel, and, inside a project, `D` dashboard, `B` backlog, `T` test cases, `R` regressions. `Esc` closes the notifications panel, then the peek panel.
 
 ## Tickets: shared services and extension points
 

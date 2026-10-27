@@ -31,10 +31,6 @@ public static class SearchDocs
 
             var search = new DocSearchQuery(db, access);
             var scope = await search.BuildAsync(criteria, cancellationToken);
-            int? total = null;
-            if (page.Cursor is null)
-                total = await scope.Nodes.Take(CountLimit + 1).CountAsync(cancellationToken);
-
             IReadOnlyList<Guid> ids;
             string? nextCursor = null;
             if (sort == DocSearchSort.Relevance)
@@ -49,6 +45,14 @@ public static class SearchDocs
                     .ToCursorPageAsync(page, r => r, cancellationToken);
                 ids = [.. paged.Items.Select(r => r.I)];
                 nextCursor = paged.NextCursor;
+            }
+
+            int? total = null;
+            if (page.Cursor is null)
+            {
+                total = ids.Count < page.Size && nextCursor is null
+                    ? ids.Count
+                    : await scope.Nodes.Take(CountLimit + 1).CountAsync(cancellationToken);
             }
 
             var items = await search.ItemsAsync(ids, scope.Text, cancellationToken);

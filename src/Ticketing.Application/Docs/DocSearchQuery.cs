@@ -58,8 +58,8 @@ internal sealed class DocSearchQuery(ITicketingDbContext db, IProjectAccess acce
         var pattern = SqlLike.Contains(text);
         var keyProjectId = scope.KeyProjectId;
         var keyNumber = scope.KeyNumber;
-        return scope.Nodes
-            .Select(n => new
+        var ranked = keyNumber > 0
+            ? scope.Nodes.Select(n => new
             {
                 n.Id,
                 n.UpdatedAt,
@@ -67,8 +67,14 @@ internal sealed class DocSearchQuery(ITicketingDbContext db, IProjectAccess acce
                         + (EF.Functions.ILike(n.Title, pattern) ? 1f : 0f)
                         + EF.Property<NpgsqlTsVector>(n, DocSearch.VectorProperty).Rank(EF.Functions.WebSearchToTsQuery(DocSearch.Configuration, text)),
             })
-            .OrderByDescending(r => r.Score).ThenByDescending(r => r.UpdatedAt).ThenByDescending(r => r.Id)
-            .Select(r => r.Id);
+            : scope.Nodes.Select(n => new
+            {
+                n.Id,
+                n.UpdatedAt,
+                Score = (EF.Functions.ILike(n.Title, pattern) ? 1f : 0f)
+                        + EF.Property<NpgsqlTsVector>(n, DocSearch.VectorProperty).Rank(EF.Functions.WebSearchToTsQuery(DocSearch.Configuration, text)),
+            });
+        return ranked.OrderByDescending(r => r.Score).ThenByDescending(r => r.UpdatedAt).ThenByDescending(r => r.Id).Select(r => r.Id);
     }
 
     /// <summary>The result rows for <paramref name="ids"/> in that order, with paths and a snippet around the match.</summary>
@@ -133,11 +139,17 @@ internal sealed class DocSearchQuery(ITicketingDbContext db, IProjectAccess acce
         var pattern = SqlLike.Contains(text);
         var keyProjectId = keyMatch.Id;
         var keyNumber = keyMatch.Number;
+        if (keyNumber > 0)
+        {
+            return nodes.Where(n =>
+                EF.Property<NpgsqlTsVector>(n, DocSearch.VectorProperty).Matches(EF.Functions.WebSearchToTsQuery(DocSearch.Configuration, text))
+                || EF.Functions.ILike(n.Title, pattern)
+                || (n.ProjectId == keyProjectId && n.Number == keyNumber));
+        }
         return text.Length >= MinTrigramLength
             ? nodes.Where(n =>
                 EF.Property<NpgsqlTsVector>(n, DocSearch.VectorProperty).Matches(EF.Functions.WebSearchToTsQuery(DocSearch.Configuration, text))
-                || EF.Functions.ILike(n.Title, pattern)
-                || (n.ProjectId == keyProjectId && n.Number == keyNumber))
+                || EF.Functions.ILike(n.Title, pattern))
             : nodes.Where(n =>
                 EF.Property<NpgsqlTsVector>(n, DocSearch.VectorProperty).Matches(EF.Functions.WebSearchToTsQuery(DocSearch.Configuration, text)));
     }

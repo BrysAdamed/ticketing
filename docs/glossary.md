@@ -22,6 +22,8 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Automation ratio**: Share of runnable test cases that are automated: `Automatic / (Manual + Automatic)` over non-archived cases; `New` cases do not count. Shown on the dashboard. [§7](product/01-refined-spec.md#7-project-dashboard)
 
+**Backlink**: A doc whose latest content links to another doc (by key or `[text](KEY)`); listed under "Linked from" on the linked doc, readable and non-deleted ones only.
+
 **Backlog**: The ordered list of a project's tickets that are not on any board (`BoardId = null`). Every project has exactly one. [§6.4](product/01-refined-spec.md#64-backlog-and-boards)
 
 **Blocked ticket**: An open ticket that at least one open, readable ticket blocks (a `Blocks` link). Shown red in the sub-tickets graph; the opposite is a ready ticket. [D-95](decisions.md)
@@ -62,6 +64,8 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Delete group (docs)**: The docs deleted by one delete: a doc, or a folder with its whole subtree. Its members share `DeletedRootId`; restore and the trash work on whole groups. [§12.5](product/01-refined-spec.md#125-delete-and-restore)
 
+**Diagram embed**: `![caption](WEB-D-7)` in a page: the diagram doc rendered read-only in a figure with its title and caption. An unreadable or deleted diagram shows "Diagram not available".
+
 **Doc**: A node of a project's docs tree: a `Folder`, a markdown `Page` or a `Diagram` (`Mermaid` or `Canvas`). Pages and diagrams have versions; folders hold other docs, up to 6 levels deep. [§12](product/01-refined-spec.md#12-docs)
 
 **Doc draft**: A user's private, unpublished edit of a page or diagram, autosaved by the editor. Others only see that the user is editing. Publishing creates a version and deletes the draft. [§12.4](product/01-refined-spec.md#124-content-versions-and-drafts)
@@ -69,6 +73,8 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 **Doc key**: `{ProjectKey}-D-{n}`, for example `WEB-D-12`, for every kind of doc. Numbered per project from one counter, never reused, case-insensitive on lookup. [§12.1](product/01-refined-spec.md#121-model-and-keys)
 
 **Doc path**: A doc's titles from the root joined by `/` (`Architecture/ADRs/0001 Use Postgres`), case-insensitive; `/` inside a title is written `\/`. Unique because titles are unique within a folder. [§12.1](product/01-refined-spec.md#121-model-and-keys)
+
+**Doc reference**: An entry of the index of ticket and doc keys a doc's latest content names (`doc_references`), rebuilt on every publish and filtered for each reader. It feeds the ticket chips, the "Tickets mentioned" and "Linked from" sections, a ticket's "Docs mentioning this ticket" and the `mentions` search filter.
 
 **Doc search**: Search over doc titles, the latest published content and Canvas labels in readable projects (never drafts or deleted docs), by relevance or newest first. Each result carries a snippet. [§12.7](product/01-refined-spec.md#127-search)
 
@@ -187,6 +193,8 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 **Test case status**: `New` (not ready, excluded from regressions), `Manual` (needs at least one step) or `Automatic` (auto-passed in regressions). [§3](product/01-refined-spec.md#3-enumerations), [§6.10](product/01-refined-spec.md#610-test-case-lifecycle)
 
 **Ticket**: The unit of work: title, markdown description, type, status, priority, severity, story points, version, labels, parent, assignee, comments, attachments and links. [§4.5](product/01-refined-spec.md#45-ticket)
+
+**Ticket chip**: How a doc shows a mentioned ticket the reader may see: the status ring and the key, with the title and status on hover. Unreadable tickets show as plain text.
 
 **Ticket key**: `{ProjectKey}-{n}`, for example `WEB-42`. Numbers come from a per-project counter, are never reused and are looked up case-insensitively. [§4.5](product/01-refined-spec.md#45-ticket), [§6.1](product/01-refined-spec.md#61-keys)
 

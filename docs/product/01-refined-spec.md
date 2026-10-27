@@ -701,7 +701,7 @@ Tickets
 | Tool | Inputs | Output |
 | --- | --- | --- |
 | `search_tickets` | any filter from 6.8 (`projectKeys`, `text`, `types`, `statuses`, `statusCategory`, `priorities`, `severities`, `assignee` (email, `me` or `unassigned`), `reporter`, `labels`, `version`, `parentKey`, `location` (`backlog`, `board`, or a board id), date ranges, `watching`), `sort`, `limit`, `cursor` | Ticket summaries. |
-| `get_ticket` | `key`, optional `include` (any of `comments`, `children`, `links`, `testCases`, `attachments`, `watchers`; default all) | Full ticket incl. description, resolution, reporter, timestamps, rowVersion, and the included collections (latest 50 comments; watchers as `{ count, watching, users }`), and `mentions` (users mentioned in the description who are active and can read the project). |
+| `get_ticket` | `key`, optional `include` (any of `comments`, `children`, `links`, `testCases`, `attachments`, `watchers`, `docs`; default all) | Full ticket incl. description, resolution, reporter, timestamps, rowVersion, and the included collections (latest 50 comments; watchers as `{ count, watching, users }`; docs as `{ total, items }`, the 20 latest readable docs mentioning the ticket, 12.10), and `mentions` (users mentioned in the description who are active and can read the project). |
 | `watch_ticket` | `key` | `{ count, watching, users }`. Read access is enough (6.15). |
 | `unwatch_ticket` | `key` | `{ count, watching, users }`. |
 | `create_ticket` | `projectKey`, `title`, `type`, optional `description`, `status`, `priority`, `severity`, `storyPoints`, `version`, `labels`, `parentKey`, `assignee`, `boardId`, `idempotencyKey` | Created ticket (summary + rowVersion). |
@@ -769,7 +769,7 @@ Docs (12)
 | Tool | Inputs | Output |
 | --- | --- | --- |
 | `list_docs` | `projectKey`, optional `folder` (key or path), `depth` (1..6), `kinds` | The tree, flat and depth-first in manual order: key, kind, diagramFormat, title, parentKey, depth, version, childCount, updatedAt. No content. |
-| `get_doc` | `docKey`, or `projectKey` + `path` | The doc (12.6) with raw `content`; folders also list `children`. |
+| `get_doc` | `docKey`, or `projectKey` + `path` | The doc (12.6) with raw `content`; folders also list `children`; `references`, `embeds` and `backlinks` resolved for the caller (12.10). |
 | `list_doc_comments` | `docKey`, optional `cursor`, `limit` | `{ items, nextCursor }`: the comments of a page or diagram, oldest first (12.9). |
 | `add_doc_comment` | `docKey`, `body` | The comment. Notifies the doc's author and earlier commenters. |
 | `update_doc_comment` | `commentId`, `body` | The comment; your own only. |
@@ -808,7 +808,7 @@ Each project has documentation: a tree of folders, markdown pages and diagrams (
 
 - `DocNode` (one table for all kinds): `Kind` (`Folder`, `Page`, `Diagram`), `DiagramFormat` (`Mermaid`, `Canvas`; required for diagrams only), `ParentId` (null = project root, otherwise a folder of the same project), `Rank`, `Title`, `Content` (latest published copy; null for folders), `Outline` (Canvas labels for search), `CurrentVersion` (0 for folders), created/updated by and at, soft delete with `DeletedRootId`.
 - Keys are `{PK}-D-{n}` (`WEB-D-12`), from one per-project counter for every kind, allocated race-free like ticket numbers and never reused. Lookup is case-insensitive; a key or an id is accepted everywhere.
-- `DocVersion`: an immutable full snapshot (title, content, change note, author, channel, time, `RestoredFrom`) per publish; content columns use lz4 TOAST compression. `DocDraft`: one private draft per user and doc. `DocReference`: the derived ticket/doc mention index (filled by TKT-16).
+- `DocVersion`: an immutable full snapshot (title, content, change note, author, channel, time, `RestoredFrom`) per publish; content columns use lz4 TOAST compression. `DocDraft`: one private draft per user and doc. `DocReference`: the derived ticket/doc mention index, rebuilt on every publish (12.10).
 - Paths: titles joined by `/`, case-insensitive, `/` inside a title written `\/` and `\` written `\\`.
 
 ### 12.2 Tree rules
@@ -856,7 +856,7 @@ Section [1.5 of the refinement](03-docs-refinement.md#15-permissions-mapped-to-5
 | `GET /projects/{pk}/docs/by-path?path=` | A doc by path |
 | `GET /projects/{pk}/docs/trash?limit=&cursor=` | Delete groups, newest first (Owners) |
 | `POST /projects/{pk}/docs` | Create: `kind`, `title`, `parent`, `position` or `beforeKey`/`afterKey`, `content`, `diagramFormat`, `changeNote`; `Idempotency-Key` |
-| `GET /docs/{key}` | The doc: key, kind, diagramFormat, title, path, parentKey, breadcrumb, content, version, created/updated by and at, myRole, permissions, editors, myDraft, children (folders), url, rowVersion |
+| `GET /docs/{key}` | The doc: key, kind, diagramFormat, title, path, parentKey, breadcrumb, content, version, created/updated by and at, myRole, permissions, editors, myDraft, children (folders), url, rowVersion, `references`, `embeds`, `backlinks` (12.10) |
 | `PATCH /docs/{key}` | `title`, `content` + `baseVersion`, `changeNote`; `If-Match` optional |
 | `POST /docs/{key}/edits` | `{ edits, changeNote }` |
 | `POST /docs/{key}/move` | `{ parent, position, beforeKey, afterKey }` |
@@ -871,6 +871,7 @@ Section [1.5 of the refinement](03-docs-refinement.md#15-permissions-mapped-to-5
 | `GET /docs/{key}/comments?limit=&cursor=` | The comment thread, oldest first: `{ items, nextCursor }`, each `{ id, docKey, author, body, createdAt, editedAt, deleted, deletedAt, canEdit, canDelete }` (12.9) |
 | `POST /docs/{key}/comments` | `{ body }`; 201 with the comment |
 | `PATCH`, `DELETE /docs/comments/{id}` | Edit (author) or delete (author or Owner) a doc comment; both return the comment |
+| `GET /tickets/{key}/docs?limit=` | Readable docs mentioning the ticket, newest first (limit 1..100, default 20): `{ total, items }` (12.10) |
 
 Downloading (`GET /attachments/{id}`) and deleting (`DELETE /attachments/{id}`) a page attachment use the ticket attachment endpoints.
 
@@ -904,3 +905,16 @@ The doc URL in the SPA is `/projects/{PK}/docs/{KEY}/{slug}`; the slug is cosmet
 - Adding, editing or deleting a comment creates no version and leaves the doc's `updatedAt` and row version as they are. `GET /docs/{key}` returns `commentCount` (comments that are not deleted). Comments stay with a deleted doc (its comment routes answer 404 `doc.deleted`) and return with it on restore.
 - Notifications (6.16): a new comment notifies the doc's creator and the authors of the doc's earlier comments that are not deleted, never the actor, only while they can read the project; edits and deletes notify nobody.
 - Web: the `comments` footer section (`provideDocPageSection`, order 90, pages and diagrams) with the thread, edit and delete on hover, a composer for writers (`Shift+C` focuses it, `Mod+Enter` posts), optimistic add, edit and delete with rollback, and `#comments` scrolling to it.
+
+### 12.10 Links, backlinks and ticket mentions
+
+- **Index.** Every publish (create, update, find/replace edit, duplicate, version restore) rebuilds the doc's rows in `doc_references` inside the publish transaction (`DocPublisher`, D-107). Pages are scanned as markdown: upper-case ticket keys (`WEB-42`) and doc keys (`WEB-D-12`) in text, in `[text](KEY)` links and in `![caption](KEY)` embeds count; keys inside code spans, fenced or indented code blocks and URLs do not, and test case and session keys (`WEB-TC-7`, `WEB-R-3`) are not tickets. Mermaid sources are scanned as plain text; Canvas diagrams and folders have no references. Keys must name an existing ticket or doc in any project (deleted ones included, so a restore needs no re-index; unknown keys are dropped); a doc never references itself; at most 500 tickets and 500 docs per content.
+- **Reading** is filtered per caller with `ReadableProjects()`. `GET /docs/{key}` (and every doc a write returns) carries:
+  - `references.tickets`: mentioned, non-deleted tickets the caller can read: `{ id, key, title, type, status, url }`;
+  - `references.docs`: mentioned or linked docs the caller can read; a deleted one has only `{ key, deleted: true }` (no title or url);
+  - `embeds`: diagrams embedded with `![caption](KEY)` that are readable and not deleted, in order of appearance: `{ id, key, projectKey, title, diagramFormat, version, content, url }`, `content` being the Mermaid source (null for Canvas);
+  - `backlinks`: `{ total, items }`, the 50 most recently updated readable, non-deleted docs whose content links here (summaries with path).
+  A ticket or doc the caller cannot read is absent everywhere, so it never shows a title or status and is not counted.
+- **A ticket's docs**: `GET /tickets/{key}/docs` and MCP `get_ticket` with `include: docs` (the MCP default includes it; the REST ticket read leaves it out unless `include=docs` is asked for) list readable, non-deleted docs mentioning the ticket, newest first, at most 20 plus `total`. An unreadable ticket answers 404 like a missing one. The docs search `mentions` filter (12.7) reads the same index.
+- **Rendering** (`renderMarkdown` with `references`, the reader and the PDF): a readable ticket key becomes a chip with its status ring (title and status on hover); a readable doc key or `[text](KEY)` links to the doc with its title on hover; a deleted doc renders struck through as `KEY (deleted)`; an unreadable or unknown key renders as plain text (the custom text of a link stays). `![caption](KEY)` of a readable diagram becomes a figure (`figure.tk-doc-embed` with `data-doc-key`, `data-diagram-format`, `data-version`, a header linking the diagram, an empty `.tk-doc-embed-body` for the diagram renderer and the caption); anything else shows "Diagram not available" without key, title or caption. The editor preview links keys it cannot resolve yet and shows unresolved embeds as a link until the page is published. Markdown outside docs (tickets, comments) links ticket keys to `/tickets/KEY` and doc keys (also as `[text](KEY)` and `![caption](KEY)`) to `/docs/KEY`.
+- **Web**: page footer sections "Tickets mentioned" (status ring, key, title; opens the ticket peek) and "Linked from" (title, folder path, updated; "and N more" past 50), both from the GET and hidden when empty; the ticket view's "Docs mentioning this ticket" section (`provideTicketDetailSection`, after attachments; title, folder path, last editor and time; "and N more" opens docs search `mentions=KEY`), hidden when empty. In the editor `[[` + title text offers docs (the current project first; recent docs while empty) and inserts `[Title](KEY)`; `#` + key or title text offers tickets and inserts the key; the toolbar ("Link a doc", "Mention a ticket") and the `/` menu ("Doc link", "Ticket mention") open the same pickers.

@@ -57,10 +57,8 @@ import { StartSessionData, StartSessionDialog } from './start-session.dialog';
       <h1>Regressions</h1>
       <div class="tk-page-actions">
         @if (canWrite()) {
-          <button mat-flat-button type="button" data-testid="regression-start" (click)="start()">
-            <tk-icon name="tablerPlus" [size]="14" />Start regression<tk-kbd tone="on-solid"
-              >N</tk-kbd
-            >
+          <button mat-stroked-button type="button" data-testid="regression-start" (click)="start()">
+            <tk-icon name="tablerPlus" [size]="14" />Start regression<tk-kbd>N</tk-kbd>
           </button>
         }
       </div>
@@ -93,12 +91,21 @@ import { StartSessionData, StartSessionDialog } from './start-session.dialog';
         description="Start one to run every Manual and Automatic test case against a version."
       >
         @if (canWrite() && filter() === 'All') {
-          <button mat-flat-button type="button" (click)="start()">
-            Start regression <tk-kbd tone="on-solid">N</tk-kbd>
+          <button mat-stroked-button type="button" (click)="start()">
+            Start regression <tk-kbd>N</tk-kbd>
           </button>
         }
       </tk-empty-state>
     } @else {
+      <div class="cols" aria-hidden="true" data-testid="regression-columns">
+        <span class="badge">Status</span>
+        <span class="key">Key</span>
+        <span class="name">Name</span>
+        <span class="prog">Progress</span>
+        <span class="failed">Failed</span>
+        <span class="rate">Pass rate</span>
+        <span class="by">Started</span>
+      </div>
       <div class="list" role="list" data-testid="regression-list">
         @for (s of store.sessions(); track s.id) {
           <a

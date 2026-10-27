@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using ModelContextProtocol.Server;
 using Ticketing.Api.Auth;
 using Ticketing.Application.Attachments;
+using Ticketing.Application.Common;
 using Ticketing.Application.Docs;
 using Ticketing.Domain.Docs;
 
@@ -40,14 +41,29 @@ public sealed class DocTools
     [Description("Gets a doc by docKey, or by projectKey and path. Pages return their markdown in content; diagrams their source in content "
         + "(diagramFormat Mermaid: Mermaid text; Canvas: Excalidraw JSON); folders "
         + "list their children. Also: breadcrumb, editors (others with an unpublished draft changed in the last 10 minutes) and permissions. "
-        + "Use version as baseVersion for update_doc.")]
+        + "Use version as baseVersion for update_doc. With version (a number from get_doc_history), content is that older version's "
+        + "and atVersion describes it (number, title, changeNote, author, createdAt, restoredFrom); every other field is the doc now.")]
     public static Task<DocDto> GetDoc(
         GetDoc.Handler handler,
         [Description(DocKey + " Leave empty when giving projectKey and path.")] string? docKey = null,
         [Description("Project key, with path.")] string? projectKey = null,
         [Description(Path)] string? path = null,
+        [Description("Optional older version number to read. Default: the latest.")] int? version = null,
         CancellationToken cancellationToken = default) =>
-        handler.HandleAsync(new GetDoc.Query(docKey, projectKey, path), cancellationToken);
+        handler.HandleAsync(new GetDoc.Query(docKey, projectKey, path, version), cancellationToken);
+
+    [McpServerTool(Name = "get_doc_history", ReadOnly = true, Idempotent = true, Title = "Get doc history")]
+    [Description("A doc's history, newest first: { docKey, currentVersion, items, nextCursor }. type Version items are published versions "
+        + "(version, title, changeNote, restoredFrom, actor, channel Web/Api/Mcp, at); type Activity items are other changes (action such as "
+        + "doc.renamed, doc.moved, doc.deleted, doc.restored, doc.attachment.added, with field, oldValue and newValue). Read an old version "
+        + "with get_doc and version; bring it back with restore_doc_version.")]
+    public static Task<DocHistoryPage> GetDocHistory(
+        GetDocHistory.Handler handler,
+        [Description(DocKey)] string docKey,
+        [Description("Page size 1..100, default 25.")] int? limit = null,
+        [Description("nextCursor from the previous page.")] string? cursor = null,
+        CancellationToken cancellationToken = default) =>
+        handler.HandleAsync(new GetDocHistory.Query(docKey, new PageRequest(limit, cursor)), cancellationToken);
 
     [McpServerTool(Name = "list_doc_attachments", ReadOnly = true, Idempotent = true, Title = "List doc attachments")]
     [Description("Lists a page's attachments (images and files embedded in its markdown as ![name](url)), oldest first: id, fileName, "
@@ -156,6 +172,20 @@ public sealed class DocTools
         [Description("Optional 'what changed' note, at most 200 characters.")] string? changeNote = null,
         CancellationToken cancellationToken = default) =>
         handler.HandleAsync(new EditDoc.Command(edits, changeNote, docKey), cancellationToken);
+
+    [Authorize(Policy = AuthPolicies.CanWrite)]
+    [McpServerTool(Name = "restore_doc_version", Destructive = false, Title = "Restore doc version")]
+    [Description("Restores an older version of a page or diagram: its title and content become a new version with restoredFrom set, "
+        + "so nothing is lost (the replaced version stays in get_doc_history). No baseVersion needed. Nothing is written when the latest "
+        + "version already equals it. Fails with doc.version.notFound, or doc.title.duplicate when a sibling now has the old title. "
+        + DocOutput)]
+    public static Task<DocDto> RestoreDocVersion(
+        RestoreDocVersion.Handler handler,
+        [Description(DocKey)] string docKey,
+        [Description("The version number to restore (from get_doc_history).")] int version,
+        [Description("Optional 'what changed' note, at most 200 characters.")] string? changeNote = null,
+        CancellationToken cancellationToken = default) =>
+        handler.HandleAsync(new RestoreDocVersion.Command(changeNote) { KeyOrId = docKey, Number = version }, cancellationToken);
 
     [Authorize(Policy = AuthPolicies.CanWrite)]
     [McpServerTool(Name = "move_doc", Destructive = false, Title = "Move doc")]

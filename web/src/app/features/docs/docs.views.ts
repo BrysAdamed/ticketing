@@ -38,6 +38,24 @@ export const DOCS_PAGE_EDIT_VIEW = defineView({
   },
 });
 
+/// Version history (`?history=n[&with=m]`): diff of two versions or one rendered, and the history
+/// panel; a lazy chunk that also holds the diff library. Replaces the content view of pages and
+/// diagrams while open.
+export const DOCS_HISTORY_VIEW = defineView({
+  viewId: 'docs.history',
+  variants: {
+    default: () => import('./history/doc-history.view').then((m) => m.DocHistoryView),
+  },
+});
+
+/// One older version rendered read-only (`?v=n`) under the banner "You are viewing v3 of 7".
+export const DOCS_VERSION_VIEW = defineView({
+  viewId: 'docs.version',
+  variants: {
+    default: () => import('./history/doc-version.view').then((m) => m.DocVersionView),
+  },
+});
+
 /// A diagram of any format: the rendered diagram with zoom and fit, or, for `?mode=edit`, the
 /// editor of its format from `DIAGRAM_EDIT_VIEWS`.
 export const DOCS_DIAGRAM_VIEW = defineView({

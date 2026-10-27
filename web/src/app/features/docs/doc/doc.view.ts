@@ -15,7 +15,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { ActivatedRoute, NavigationEnd, Router, RouterLink } from '@angular/router';
 import { provideIcons } from '@ng-icons/core';
-import { tablerDownload } from '@ng-icons/tabler-icons';
+import { tablerDownload, tablerHistory } from '@ng-icons/tabler-icons';
 import { filter, map } from 'rxjs';
 import { docsHomeUrl, docSlug, docUrl } from '@core/docs/doc-links';
 import { Doc, DocKind } from '@core/docs/doc.models';
@@ -26,13 +26,19 @@ import { KbdComponent } from '@shared/ui/kbd/kbd.component';
 import { Breadcrumbs } from '@core/layout/breadcrumbs';
 import { PageTitleStrategy } from '@core/layout/page-title';
 import { ToastService } from '@core/notify/toast.service';
+import { ViewDefinition } from '@core/views/view-definition';
 import { ViewRegistry } from '@core/views/view-registry';
 import { RelativeTimePipe } from '@shared/pipes/relative-time.pipe';
 import { AvatarComponent } from '@shared/ui/domain/avatar.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { IconComponent } from '@shared/ui/icon/icon.component';
 import { DOCS_ICONS } from '../docs-icons';
-import { DOC_CONTENT_VIEWS, hasDocEditor } from '../docs.views';
+import {
+  DOC_CONTENT_VIEWS,
+  DOCS_HISTORY_VIEW,
+  DOCS_VERSION_VIEW,
+  hasDocEditor,
+} from '../docs.views';
 import { DocTreeStore } from '../tree/doc-tree.store';
 import { DocStore } from './doc.store';
 
@@ -57,12 +63,16 @@ const PRESENCE_REFRESH_MS = 30_000;
     RelativeTimePipe,
   ],
   providers: [DocStore],
-  viewProviders: [provideIcons({ ...DOCS_ICONS, tablerDownload })],
+  viewProviders: [provideIcons({ ...DOCS_ICONS, tablerDownload, tablerHistory })],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { 'data-testid': 'view-docs.doc', '[class.editing]': 'editing()' },
+  host: {
+    'data-testid': 'view-docs.doc',
+    '[class.editing]': 'editing()',
+    '[class.history]': 'historyOpen()',
+  },
   template: `
     @if (viewDoc(); as doc) {
-      @if (!editing()) {
+      @if (!editing() && !historyOpen()) {
         <div class="pbar" data-testid="doc-bar">
           <span class="meta">
             <tk-icon
@@ -89,7 +99,15 @@ const PRESENCE_REFRESH_MS = 30_000;
               <span class="who">{{ doc.updatedBy.displayName }}</span>
               <span>{{ doc.updatedAt | relativeTime }}</span>
               <span class="sep">·</span>
-              <span class="badge tnum" data-testid="doc-version">v{{ doc.version }}</span>
+              <button
+                type="button"
+                class="badge tnum"
+                title="Version history (H)"
+                data-testid="doc-version"
+                (click)="openHistory()"
+              >
+                v{{ doc.version }}
+              </button>
             }
           </span>
           <div class="right">
@@ -104,6 +122,18 @@ const PRESENCE_REFRESH_MS = 30_000;
               >
                 <tk-icon name="tablerDownload" [size]="16" />
               </a>
+            }
+            @if (doc.kind !== 'Folder') {
+              <button
+                type="button"
+                class="tk-icon-btn"
+                title="Version history (H)"
+                aria-label="Version history"
+                data-testid="doc-history"
+                (click)="openHistory()"
+              >
+                <tk-icon name="tablerHistory" [size]="16" />
+              </button>
             }
             <button
               type="button"
@@ -218,10 +248,11 @@ export class DocView {
     ),
     { initialValue: -1 },
   );
-  private readonly mode = toSignal(this.route.queryParamMap.pipe(map((q) => q.get('mode'))), {
-    initialValue: null,
+  private readonly query = toSignal(this.route.queryParamMap, {
+    initialValue: this.route.snapshot.queryParamMap,
   });
-  private contentKind: DocKind | null = null;
+  private readonly mode = computed(() => this.query().get('mode'));
+  private contentViewId: string | null = null;
 
   /// Docs with an editor (`hasDocEditor`) in a writable project can be edited (`E`, `?mode=edit`).
   protected readonly canEditContent = computed(() => {
@@ -230,6 +261,18 @@ export class DocView {
   });
   /// In edit mode the content view's editor bar replaces the page bar.
   protected readonly editing = computed(() => this.mode() === 'edit' && this.canEditContent());
+  /// `?history=n`: the history view (with its own bar) replaces the page bar and the content.
+  protected readonly historyOpen = computed(
+    () => !this.editing() && this.query().has('history') && this.store.doc()?.kind !== 'Folder',
+  );
+  /// The content view: the history, one older version (`?v=n`) or the view of the doc's kind.
+  private readonly contentView = computed<ViewDefinition | null>(() => {
+    const kind: DocKind | undefined = this.store.doc()?.kind;
+    if (!kind) return null;
+    if (this.historyOpen()) return DOCS_HISTORY_VIEW;
+    if (!this.editing() && kind !== 'Folder' && this.query().has('v')) return DOCS_VERSION_VIEW;
+    return DOC_CONTENT_VIEWS[kind];
+  });
 
   constructor() {
     this.shortcuts.registerScoped([
@@ -239,6 +282,15 @@ export class DocView {
         section: 'Docs',
         handler: () => {
           if (this.canEditContent() && !this.editing()) this.edit();
+        },
+      },
+      {
+        keys: 'h',
+        description: 'Version history',
+        section: 'Docs',
+        handler: () => {
+          if (this.historyOpen()) this.closeHistory();
+          else if (!this.editing()) this.openHistory();
         },
       },
     ]);
@@ -304,14 +356,13 @@ export class DocView {
     });
 
     effect(() => {
-      const kind = this.store.doc()?.kind ?? null;
-      if (!kind || kind === this.contentKind) return;
-      this.contentKind = kind;
-      const definition = DOC_CONTENT_VIEWS[kind];
+      const definition = this.contentView();
+      if (!definition || definition.viewId === this.contentViewId) return;
+      this.contentViewId = definition.viewId;
       untracked(() => {
         this.content.set(null);
         void this.registry.resolve(definition).then((component) => {
-          if (this.contentKind !== kind) return;
+          if (this.contentViewId !== definition.viewId) return;
           this.content.set(component);
           this.registry.reportExposure(definition.viewId);
         });
@@ -332,6 +383,24 @@ export class DocView {
     void this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { mode: 'edit' },
+      queryParamsHandling: 'merge',
+    });
+  }
+
+  protected openHistory(): void {
+    const doc = this.store.doc();
+    if (!doc || doc.kind === 'Folder') return;
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { history: this.query().get('v') ?? doc.version, v: null },
+      queryParamsHandling: 'merge',
+    });
+  }
+
+  private closeHistory(): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { history: null, with: null },
       queryParamsHandling: 'merge',
     });
   }

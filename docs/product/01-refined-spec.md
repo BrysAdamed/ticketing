@@ -769,7 +769,8 @@ Docs (12)
 | Tool | Inputs | Output |
 | --- | --- | --- |
 | `list_docs` | `projectKey`, optional `folder` (key or path), `depth` (1..6), `kinds` | The tree, flat and depth-first in manual order: key, kind, diagramFormat, title, parentKey, depth, version, childCount, updatedAt. No content. |
-| `get_doc` | `docKey`, or `projectKey` + `path` | The doc (12.6) with raw `content`; folders also list `children`. |
+| `get_doc` | `docKey`, or `projectKey` + `path`, optional `version` | The doc (12.6) with raw `content`; folders also list `children`. With `version`, `content` is that version's and `atVersion` describes it (12.10). |
+| `get_doc_history` | `docKey`, optional `limit`, `cursor` | `{ docKey, currentVersion, items, nextCursor }`: versions and other activity, newest first (12.10). |
 | `list_doc_comments` | `docKey`, optional `cursor`, `limit` | `{ items, nextCursor }`: the comments of a page or diagram, oldest first (12.9). |
 | `add_doc_comment` | `docKey`, `body` | The comment. Notifies the doc's author and earlier commenters. |
 | `update_doc_comment` | `commentId`, `body` | The comment; your own only. |
@@ -777,14 +778,15 @@ Docs (12)
 | `list_doc_attachments` | `docKey` | The page's attachments, oldest first (12.6). Read text ones with `get_attachment_text`. |
 | `create_folder` | `projectKey`, `title`, optional `parent` (key, path or `root`), `position` (`Top`, `Bottom`) or `beforeKey`/`afterKey`, `idempotencyKey` | The folder. |
 | `create_page` | as `create_folder`, plus `content` (markdown), `changeNote` | The page at version 1. |
-| `create_diagram` | as `create_folder`, plus `format` (`Mermaid`, the default, or `Canvas`), `source`, `changeNote` | The diagram at version 1 (12.10). The description lists the supported Mermaid types and prefers Mermaid for LLM-written diagrams. |
+| `create_diagram` | as `create_folder`, plus `format` (`Mermaid`, the default, or `Canvas`), `source`, `changeNote` | The diagram at version 1 (12.11). The description lists the supported Mermaid types and prefers Mermaid for LLM-written diagrams. |
 | `update_doc` | `docKey`, any of `title`, `content` (needs `baseVersion`), `changeNote` | The doc. Stale `baseVersion`: `doc.version.conflict` with `currentVersion`, `updatedBy`, `updatedAt`. |
 | `edit_doc` | `docKey`, `edits` (1..50 of `{ oldText, newText, replaceAll? }`), `changeNote` | The doc at its new version. `doc.edit.noMatch`, `doc.edit.ambiguous`; all or nothing. |
+| `restore_doc_version` | `docKey`, `version`, optional `changeNote` | The doc at its new version (`restoredFrom` set), or unchanged when the latest version already equals it (12.10). |
 | `move_doc` | `docKey`, optional `parent` (key, path or `root`; omitted keeps the folder), `position` or `beforeKey`/`afterKey` | The doc. |
 | `delete_doc` | `docKey` | `{ id, key, deletedCount, deletedAt, undoUntil }`. Destructive. |
 | `search_docs` | optional `text`, `projectKeys`, `kinds`, `folder` (key or id), `mentions` (ticket key), `updatedFrom`/`updatedTo`, `sort` (`Relevance`, `Updated`), `limit`, `cursor` | `{ items, nextCursor, total, totalCapped, sort }` (12.7); each item has key, kind, title, path, folderPath, version, updatedBy, updatedAt, url and a plain-text `snippet` with highlight ranges. |
 
-History (`get_doc_history`, `restore_doc_version`, reading one version) and the export link come with their stories (TKT-15, TKT-20). Restoring deleted docs stays REST and UI only (D-82).
+The export link comes with its story (TKT-20). Restoring deleted docs stays REST and UI only (D-82).
 
 Out of MCP in v1: user administration, PAT management, feature flags, project deletion, board deletion. These stay in the web UI.
 
@@ -835,10 +837,10 @@ Section [1.5 of the refinement](03-docs-refinement.md#15-permissions-mapped-to-5
 
 - Size limits: page 100 000 characters, Mermaid 20 000, Canvas 2 000 000 (`doc.content.tooLong`). Line endings are stored as `\n`. Folders have no content (`doc.kind.unsupported`).
 - Replacing content requires `baseVersion` (`doc.baseVersion.required`); a stale one is 409 `doc.version.conflict` with `currentVersion`, `updatedBy` (the latest version's author) and `updatedAt`. Content equal to the current one creates no version. A rename creates no version; the next version snapshots the new title.
-- Find/replace edits (`POST /docs/{key}/edits`, MCP `edit_doc`) apply to the latest version without `baseVersion`, 1..50 per call, in order, all or nothing; pages and Mermaid only. A diagram's `content` is its source (Mermaid text or Canvas JSON); MCP `create_diagram` creates one (12.10).
+- Find/replace edits (`POST /docs/{key}/edits`, MCP `edit_doc`) apply to the latest version without `baseVersion`, 1..50 per call, in order, all or nothing; pages and Mermaid only. A diagram's `content` is its source (Mermaid text or Canvas JSON); MCP `create_diagram` creates one (12.11).
 - Publishing deletes the publisher's own draft. A draft (`baseVersion` 1..current, title may be empty while typing, same size limits) is never visible to others; `GET /docs/{key}` lists as `editors` the other users whose draft changed in the last 10 minutes.
 - `GET /docs/{key}/versions/{n}` returns one version with its full content (the base of the web editor's 3-way merge); a number the doc does not have is 404 `doc.version.notFound`.
-- Activity (`EntityType = Doc`, with channel): `doc.created`, `doc.updated` (new version number), `doc.renamed` (title), `doc.moved` (parent key; parent changes only), `doc.deleted` (`deletedRootId`, `count`), `doc.restored`, `doc.attachment.added` and `doc.attachment.deleted` (`attachmentId`, `fileName`), `doc.comment.added` and `doc.comment.deleted` (`commentId`), `doc.comment.edited` (field `comment`, old value `{ commentId, body }` with the previous body).
+- Activity (`EntityType = Doc`, with channel): `doc.created`, `doc.updated` (new version number), `doc.renamed` (title), `doc.moved` (parent key; parent changes only), `doc.deleted` (`deletedRootId`, `count`), `doc.restored`, `doc.version.restored` (`version`, `restoredFrom`; instead of `doc.updated`), `doc.attachment.added` and `doc.attachment.deleted` (`attachmentId`, `fileName`), `doc.comment.added` and `doc.comment.deleted` (`commentId`), `doc.comment.edited` (field `comment`, old value `{ commentId, body }` with the previous body).
 - Pages (not folders or diagrams: `doc.kind.unsupported`, 409) take attachments with the ticket rules of 4.8 and D-63: the same store, allow-list, content sniffing, 1 byte..10 MiB and `/api/v1/attachments/{id}` download URL, at most 200 per page (`attachment.limitReached`, counted under the page's row lock). Writers upload; the uploader or an Owner deletes (`attachment.forbidden`); archived projects answer 409 `project.archived`.
 - An upload or delete creates no version and leaves the page's `updatedAt` as it is. Attachments of a deleted page answer 404 `attachment.notFound`, like those of an unreadable project.
 - `GET /docs/{key}/export.md` downloads the latest page markdown: `text/markdown; charset=utf-8`, `Content-Disposition: attachment` with the title as file name (path and reserved characters dropped; the key when nothing is left), `nosniff`. Every reader can export, Viewers and archived projects included. Pages only.
@@ -857,7 +859,7 @@ Section [1.5 of the refinement](03-docs-refinement.md#15-permissions-mapped-to-5
 | `GET /projects/{pk}/docs/by-path?path=` | A doc by path |
 | `GET /projects/{pk}/docs/trash?limit=&cursor=` | Delete groups, newest first (Owners) |
 | `POST /projects/{pk}/docs` | Create: `kind`, `title`, `parent`, `position` or `beforeKey`/`afterKey`, `content`, `diagramFormat`, `changeNote`; `Idempotency-Key` |
-| `GET /docs/{key}` | The doc: key, kind, diagramFormat, title, path, parentKey, breadcrumb, content, version, created/updated by and at, myRole, permissions, editors, myDraft, children (folders), url, rowVersion |
+| `GET /docs/{key}?version=` | The doc: key, kind, diagramFormat, title, path, parentKey, breadcrumb, content, version, created/updated by and at, myRole, permissions, editors, myDraft, children (folders), url, rowVersion |
 | `PATCH /docs/{key}` | `title`, `content` + `baseVersion`, `changeNote`; `If-Match` optional |
 | `POST /docs/{key}/edits` | `{ edits, changeNote }` |
 | `POST /docs/{key}/move` | `{ parent, position, beforeKey, afterKey }` |
@@ -865,6 +867,8 @@ Section [1.5 of the refinement](03-docs-refinement.md#15-permissions-mapped-to-5
 | `DELETE /docs/{key}` | `{ id, key, deletedCount, deletedAt, undoUntil }` |
 | `POST /docs/{key}/restore` | Restore the delete group |
 | `GET`, `PUT`, `DELETE /docs/{key}/draft` | My draft: `{ baseVersion, title, content }`; 404 `doc.draft.notFound` when none |
+| `GET /docs/{key}/history?limit=&cursor=` | Versions merged with the other activity, newest first (12.10) |
+| `POST /docs/{key}/versions/{n}/restore` | Optional `{ changeNote }`; publishes version n again as a new version (12.10) |
 | `GET /docs/{key}/versions/{n}` | One version: `{ docKey, number, title, content, changeNote, author, channel, createdAt, restoredFrom }`; 404 `doc.version.notFound` |
 | `GET /docs/{key}/attachments` | The page's attachments, oldest first, unpaged: `{ id, docKey, fileName, contentType, sizeBytes, sha256, isImage, uploadedAt, uploadedBy, url, canDelete }` |
 | `POST /docs/{key}/attachments` | Upload one file (multipart field `file`); 201 with the attachment, `Location` = its `url` |
@@ -906,7 +910,15 @@ The doc URL in the SPA is `/projects/{PK}/docs/{KEY}/{slug}`; the slug is cosmet
 - Notifications (6.16): a new comment notifies the doc's creator and the authors of the doc's earlier comments that are not deleted, never the actor, only while they can read the project; edits and deletes notify nobody.
 - Web: the `comments` footer section (`provideDocPageSection`, order 90, pages and diagrams) with the thread, edit and delete on hover, a composer for writers (`Shift+C` focuses it, `Mod+Enter` posts), optimistic add, edit and delete with rollback, and `#comments` scrolling to it.
 
-### 12.10 Mermaid diagrams (web, MCP)
+### 12.10 Version history
+
+- `GET /docs/{key}/history` (MCP `get_doc_history`) lists, newest first, the versions (`type: Version`: `version`, `title`, `changeNote`, `restoredFrom`, `actor`, `channel`, `at`) merged with every other activity entry of the doc (`type: Activity`: `action`, `field`, `oldValue`, `newValue`, `actor`, `channel`, `at`). `doc.updated`, `doc.version.restored` and, for pages and diagrams, `doc.created` are not listed: the version rows are those events. Paged with `limit` (1..100, default 25) and one `cursor` over both; `currentVersion` is the latest version (0 for folders). Every reader may read it, Viewers and archived projects included (D-107).
+- `GET /docs/{key}?version=n` (MCP `get_doc` with `version`) returns the doc as it is now with `content` of version n and `atVersion` (`number`, `title`, `changeNote`, `author`, `channel`, `createdAt`, `restoredFrom`); `title`, `path` and `version` stay the current ones. A missing version is 404 `doc.version.notFound`.
+- `POST /docs/{key}/versions/{n}/restore` (MCP `restore_doc_version`; writers only, 409 `project.archived` on archived projects) publishes version n's title and content as a new version with `restoredFrom = n` and `doc.version.restored`; no `baseVersion` is needed. A folder is 409 `doc.kind.unsupported`; a sibling now holding the old title is 409 `doc.title.duplicate`. When the latest version already has that title and content nothing is written. The restorer's draft is kept (the editor merges it onto the new version on publish).
+- **Web** (`?history=n[&with=m]`, `docs.history`, a lazy chunk): `H`, the History button or the `vN` badge opens it; `Esc` or `H` closes it. A 320 px panel lists the history by day: versions with avatar (a robot for MCP), author, time, channel, change note, "Restored from vN" and `Current`; activity as one line (renamed, moved, deleted, restored, attachments, comments). Clicking an older version compares it with the current one; clicking the current one shows its own changes; Shift+click picks a second version; ↑/↓ move through versions. The main area shows `Changes` (a unified or side-by-side line diff with word highlights inside paired lines, unchanged runs folded to "··· n unchanged lines", `+a −r lines` and a changed title) or `Rendered` (the selected version, read-only); Canvas diagrams show both versions rendered side by side. Writers get `Restore vN` (confirmed). Copy link copies the `?v=n` URL.
+- `?v=n` (`docs.version`) renders one version read-only under "You are viewing v3 of 7 · Back to latest", with Compare with current and, for writers, Restore this version.
+- Diffs are computed in the browser and two 100 KB versions diff in under 300 ms; a pathological pair falls back after 250 ms to "the changed part as replaced".
+### 12.11 Mermaid diagrams (web, MCP)
 
 - **Supported types** (tested, offered as templates and named in the MCP descriptions): `flowchart`, `sequenceDiagram`, `classDiagram`, `stateDiagram-v2`, `erDiagram`, `gantt`, `mindmap`. Mermaid 12.2.0 renders more; those work but are not promised. The source is not validated on the server (I-104); the web editor warns before publishing a source that does not parse.
 - **Rendering** (one renderer for screen and PDF, free of Angular): `securityLevel: 'strict'`, no HTML labels, dagre layout, the app palette per theme, and a DOMPurify SVG pass (D-99). Mermaid is a lazy chunk loaded on the first diagram.

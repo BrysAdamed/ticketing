@@ -74,7 +74,8 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Doc version**: An immutable full snapshot of a page or diagram's title and content, numbered 1..n, created by every publish. `baseVersion` names the version an edit started from. [§12.4](product/01-refined-spec.md#124-content-versions-and-drafts)
 
-**Diagram embed**: `![caption](WEB-D-12)` in a page: the diagram doc drawn read-only in place, with its caption and a link to open it. An unreadable or deleted diagram shows "Diagram not available". [§12.10](product/01-refined-spec.md#1210-mermaid-diagrams-web-mcp)
+**Diagram embed**: `![caption](WEB-D-12)` in a page: the diagram doc drawn read-only in place, with its caption and a link to open it. An unreadable or deleted diagram shows "Diagram not available". [§12.11](product/01-refined-spec.md#1211-mermaid-diagrams-web-mcp)
+**Doc history**: A doc's versions merged with its other activity (renames, moves, deletes, attachments, comments), newest first: the History panel (`H`) and MCP `get_doc_history`. Any two versions can be compared as a line diff with word highlights. [§12.10](product/01-refined-spec.md#1210-version-history), D-107
 
 **Effective access**: A user's resulting role on a project, computed from global role, membership and visibility. It decides every project permission. [§5.1](product/01-refined-spec.md#51-effective-project-access)
 
@@ -110,7 +111,7 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Mention**: A reference to a user in a ticket description or comment, written with the `@` people picker or as `@email`, stored as `@[Name](user:<id>)` so it survives renames. Only active users who can read the project can be newly mentioned; a new mention notifies them once and makes them a watcher, and readers see it as a chip with the current name (others see plain text) (D-96). [§6.9](product/01-refined-spec.md#69-comments)
 
-**Mermaid diagram**: Diagram written as Mermaid text, either inline in markdown (a ```` ```mermaid ```` block, in pages, tickets and comments) or as a diagram doc with its own view and editor. Rendered in the browser with strict security; the supported types are flowchart, sequence, class, state (v2), ER, gantt and mind map. [§12.10](product/01-refined-spec.md#1210-mermaid-diagrams-web-mcp), D-107
+**Mermaid diagram**: Diagram written as Mermaid text, either inline in markdown (a ```` ```mermaid ```` block, in pages, tickets and comments) or as a diagram doc with its own view and editor. Rendered in the browser with strict security; the supported types are flowchart, sequence, class, state (v2), ER, gantt and mind map. [§12.11](product/01-refined-spec.md#1211-mermaid-diagrams-web-mcp), D-108
 
 **Notification**: An in-app message to one user about a change someone else made: assigned to them (ticket or regression item), mentioned, or a comment, status change, priority raised to High/Highest, move or deletion on a ticket they watch, or a new comment on a doc they wrote or commented on. Created in the same transaction as the change, shown under the bell, listed only while the user can read the project, purged after 90 days (D-94). See Collapsing. [§6.16](product/01-refined-spec.md#616-in-app-notifications-i-30-d-94)
 
@@ -157,6 +158,8 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 **Reporter**: The user who reported a ticket; defaults to its creator and can be changed. [§4.5](product/01-refined-spec.md#45-ticket)
 
 **Resolution**: Why a ticket is done: `Done`, `WontDo`, `Duplicate`, `CannotReproduce`. Set if and only if the status is `Done`. [§3](product/01-refined-spec.md#3-enumerations), [§6.2](product/01-refined-spec.md#62-ticket-lifecycle)
+
+**Restore (doc version)**: Publishing an older version's title and content again as a new version with `restoredFrom` set, so nothing is lost; not the same as restoring a deleted doc from the trash. [§12.10](product/01-refined-spec.md#1210-version-history)
 
 **Row version**: PostgreSQL `xmin` exposed as `rowVersion`, used for optimistic concurrency on every mutable aggregate. [§2](product/01-refined-spec.md#2-cross-cutting-conventions), [ADR 0005](adr/0005-postgresql-and-ef-core.md)
 

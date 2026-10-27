@@ -35,9 +35,9 @@ import { IconComponent } from '@shared/ui/icon/icon.component';
 import { DOCS_ICONS } from '../docs-icons';
 import {
   DOC_CONTENT_VIEWS,
-  DOC_EDITABLE_KINDS,
   DOCS_HISTORY_VIEW,
   DOCS_VERSION_VIEW,
+  hasDocEditor,
 } from '../docs.views';
 import { DocTreeStore } from '../tree/doc-tree.store';
 import { DocBarSlot } from './doc-bar-slot';
@@ -261,10 +261,10 @@ export class DocView {
   private readonly mode = computed(() => this.query().get('mode'));
   private contentViewId: string | null = null;
 
-  /// Docs of an editable kind in a writable project can be edited (`E`, `?mode=edit`).
+  /// Docs with an editor (`hasDocEditor`) in a writable project can be edited (`E`, `?mode=edit`).
   protected readonly canEditContent = computed(() => {
     const doc = this.store.doc();
-    return !!doc && DOC_EDITABLE_KINDS.has(doc.kind) && doc.permissions.canEdit;
+    return !!doc && hasDocEditor(doc) && doc.permissions.canEdit;
   });
   /// In edit mode the content view's editor bar replaces the page bar.
   protected readonly editing = computed(() => this.mode() === 'edit' && this.canEditContent());

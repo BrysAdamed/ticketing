@@ -8,6 +8,7 @@ import {
   effect,
   ElementRef,
   inject,
+  Injector,
   input,
   signal,
   untracked,
@@ -20,9 +21,6 @@ import { EditorView } from '@codemirror/view';
 import { provideIcons } from '@ng-icons/core';
 import {
   tablerBold,
-  tablerCloud,
-  tablerCloudCheck,
-  tablerCloudOff,
   tablerCode,
   tablerEye,
   tablerH1,
@@ -57,14 +55,14 @@ import { KbdComponent } from '@shared/ui/kbd/kbd.component';
 import {
   createMarkdownEditor,
   insertBlock,
-  replaceDocument,
   replaceSelection,
   SlashCommand,
   topLine,
 } from '../../editing/codemirror-markdown';
+import { replaceDocument } from '../../editing/codemirror-shared';
 import { DocEditSession } from '../../editing/doc-edit-session';
+import { DocEditStatusComponent } from '../../editing/doc-edit-status.component';
 import { DocMarkdownComponent } from '../doc-markdown.component';
-import { DocPresenceComponent } from '../doc-presence.component';
 import { headingLines, syncedScrollTop } from '../page-outline';
 import { DocConflictComponent } from './doc-conflict.component';
 import { EDITOR_ACTIONS } from './editor-actions';
@@ -95,16 +93,13 @@ interface ToolbarItem {
     IconComponent,
     KbdComponent,
     DocMarkdownComponent,
-    DocPresenceComponent,
+    DocEditStatusComponent,
     DocConflictComponent,
   ],
   providers: [DocEditSession],
   viewProviders: [
     provideIcons({
       tablerBold,
-      tablerCloud,
-      tablerCloudCheck,
-      tablerCloudOff,
       tablerCode,
       tablerEye,
       tablerH1,
@@ -141,6 +136,7 @@ export class PageEditorView {
   private readonly confirm = inject(ConfirmService);
   private readonly toast = inject(ToastService);
   private readonly document = inject(DOCUMENT);
+  private readonly injector = inject(Injector);
   private readonly plugins = [...inject(DOC_EDITOR_PLUGINS)].sort((a, b) => a.order - b.order);
 
   readonly doc = input.required<Doc>();
@@ -351,10 +347,6 @@ export class PageEditorView {
     if (await this.session.discard()) await this.leave();
   }
 
-  protected retrySave(): void {
-    void this.session.flush();
-  }
-
   protected copyReference(): void {
     const text = this.session.reference()?.content ?? '';
     void navigator.clipboard
@@ -414,6 +406,7 @@ export class PageEditorView {
     const context: DocEditorCommandContext = {
       docKey: doc.key,
       projectKey: doc.projectKey,
+      injector: this.injector,
       selectedText: () =>
         view.state.sliceDoc(view.state.selection.main.from, view.state.selection.main.to),
       replaceSelection: (text, select) => replaceSelection(view, text, select),

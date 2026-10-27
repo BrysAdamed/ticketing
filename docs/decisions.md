@@ -657,7 +657,20 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
   - `ShortcutService` first tries the physical-key form of a shifted symbol (`mod+shift+.` from `event.code` `Period`), then the reported character (`?`), so both notations work on any layout that has the key.
 - Rationale: the bracket keys are taken by the two other panels, and a modifier keeps the tree toggle from firing while reading. Matching shifted symbols by physical key fixes the ticket shortcut as well without per-layout tables.
 
-### D-110 "On this page" is a rail from 1440 px that `]` hides, otherwise a popover in the page bar; content views add page bar actions through `DocBarSlot` (TKT-45)
+### D-110 Mermaid: lazy blocks with remembered heights, one diagram view with renderer and editor registries (TKT-17)
+
+- Context: TKT-17 renders Mermaid in every markdown surface and as diagram docs with an editor, under two constraints from the epic: Mermaid stays out of the initial bundle and a page with ten diagrams must not shift while they render. TKT-18 (Canvas) shares the diagram view right after, and the PDF bundle (TKT-20) reuses the renderer.
+- Decision:
+  - **One block renderer** `renderMermaidBlocks(root, theme, { lazy, signal, lastGood })` in `shared/diagrams/mermaid/mermaid-blocks.ts`, free of Angular. `tk-markdown` (tickets, comments) and the docs markdown enhancer both call it; the PDF bundle calls it with `lazy: false`. The theme reaches `shared/` through the `DIAGRAM_THEME` token, which the app config provides from `ThemeService`. `tk-markdown` re-creates its HTML on a theme change only when the source mentions `mermaid`.
+  - **Lazy with reserved height**: one shared IntersectionObserver (600 px margin). Until a block renders it is a skeleton of the height it had on this device last time (localStorage, newest 300, keyed by a hash of the source) or of an estimate by diagram type and statement count. Rendered SVGs are cached per source and theme (64), so cached blocks are replaced synchronously and the editor preview and theme toggles don't flicker.
+  - **Errors**: a block that does not parse stays as code followed by a danger box with Mermaid's message; in the editor preview the last good render of that block stays, dimmed, above it.
+  - **Diagram doc view** `docs.diagram` serves every format: `DIAGRAM_RENDERERS[format]` turns a diagram's source into `{ element, width, height }` (Mermaid: inline SVG) for a zoom/fit viewport and for embeds; `DIAGRAM_EDIT_VIEWS[format]` names the editor view for `?mode=edit` (Mermaid: `docs.diagram.mermaid.edit`). `hasDocEditor(doc)` replaces `DOC_EDITABLE_KINDS`: pages, and diagrams whose format has an editor. Canvas adds one entry to each map.
+  - **Mermaid editor** reuses the page's `DocEditSession` (drafts, autosave, publish, 3-way merge, conflict view); the draft banner and the editor's status line became shared components (`tk-doc-draft-banner`, `tk-doc-edit-status`). CodeMirror gets a small stream tokenizer for Mermaid instead of a language package; editor plumbing shared by both editors (`replaceDocument`, the theme) moved to `codemirror-shared.ts` so the Mermaid chunk does not pull the markdown language.
+  - **Seam addition**: `DocEditorCommandContext.injector`, so editor plugins can open dialogs that use the docs layout's stores (the insert-diagram picker reads `DocTreeStore`).
+  - **MCP** `create_diagram` (`format` defaults to Mermaid, `source`) on `CreateDoc`; the create/update tool descriptions list the seven supported types. No server-side Mermaid validation (I-104).
+- Rationale: a renderer per surface would drift from the PDF; remembering heights is the only way to know a diagram's size before Mermaid has run, and the estimate keeps the first visit within "good" CLS. Registries keyed by format keep the diagram view closed for modification while Canvas plugs in.
+
+### D-111 "On this page" is a rail from 1440 px that `]` hides, otherwise a popover in the page bar; content views add page bar actions through `DocBarSlot` (TKT-45)
 
 - Question: the reader shows "On this page" only from 1440 px (refinement 1.1). screens.md 3 wants a popover button in the page bar on narrower screens and `]` to toggle the rail, but the page bar belongs to the `docs.doc` frame while the outline lives in the page view.
 - Decision:

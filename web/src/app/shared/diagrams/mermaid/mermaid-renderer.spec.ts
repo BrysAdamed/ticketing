@@ -1,5 +1,11 @@
 import { mermaidConfig } from './mermaid-config';
-import { renderMermaid, renderMermaidBlocks, sanitizeSvg } from './mermaid-renderer';
+import {
+  cachedMermaid,
+  loadMermaid,
+  mermaidDiagramType,
+  renderMermaid,
+  sanitizeSvg,
+} from './mermaid-renderer';
 import { MERMAID_SECURITY_SAMPLES, unsafeSvgFindings } from './mermaid-security.samples';
 
 function stubSvgLayout(): void {
@@ -58,7 +64,10 @@ describe('sanitizeSvg', () => {
 });
 
 describe('renderMermaid', { timeout: 30_000 }, () => {
-  beforeAll(stubSvgLayout);
+  beforeAll(async () => {
+    stubSvgLayout();
+    await loadMermaid();
+  }, 180_000);
 
   it('renders a flowchart to SVG', async () => {
     // Act
@@ -87,25 +96,30 @@ describe('renderMermaid', { timeout: 30_000 }, () => {
     expect(result.error).toBeUndefined();
     expect(unsafeSvgFindings(result.svg ?? '')).toEqual([]);
   });
-});
 
-describe('renderMermaidBlocks', { timeout: 30_000 }, () => {
-  beforeAll(stubSvgLayout);
-
-  it('replaces valid blocks with figures and keeps invalid ones with an error box', async () => {
+  it('keeps renders so a repeated source and theme answers at once', async () => {
     // Arrange
-    const root = document.createElement('div');
-    root.innerHTML =
-      '<pre><code class="language-mermaid">flowchart LR\n  A --> B</code></pre>' +
-      '<pre><code class="language-mermaid">flowchart LR\n  A --></code></pre>' +
-      '<pre><code class="language-ts">const a = 1;</code></pre>';
+    const source = 'flowchart TB\n  Cached --> Again';
 
     // Act
-    await renderMermaidBlocks(root, 'light');
+    const first = await renderMermaid(source, 'dark');
 
     // Assert
-    expect(root.querySelectorAll('figure.tk-mermaid svg')).toHaveLength(1);
-    expect(root.querySelectorAll('.tk-mermaid-error')).toHaveLength(1);
-    expect(root.querySelectorAll('pre')).toHaveLength(2);
+    expect(cachedMermaid(source, 'dark')).toBe(first);
+    expect(cachedMermaid(source, 'light')).toBeUndefined();
+  });
+});
+
+describe('mermaidDiagramType', () => {
+  it.each([
+    ['flowchart LR\n  A --> B', 'flowchart'],
+    ['graph TD\n  A --> B', 'flowchart'],
+    ['%% a comment\n\nsequenceDiagram\n  A->>B: hi', 'sequence'],
+    ['---\ntitle: Orders\n---\nerDiagram\n  A ||--o{ B : has', 'ER'],
+    ['stateDiagram-v2\n  [*] --> A', 'state'],
+    ['  ', null],
+  ])('reads the type of %j', (source, type) => {
+    // Act + Assert
+    expect(mermaidDiagramType(source)).toBe(type);
   });
 });

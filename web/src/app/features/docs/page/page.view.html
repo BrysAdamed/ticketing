@@ -28,18 +28,7 @@
   <div class="layout" [class.with-rail]="railShown() && hasRail()">
     <article class="pbody">
       @if (page.myDraft && page.permissions.canEdit) {
-        <div class="draft-banner" role="status" data-testid="doc-draft-banner">
-          <tk-icon name="tablerPencil" [size]="16" />
-          <span class="msg"
-            >You have unpublished changes from {{ draftTime(page.myDraft.updatedAt) }}</span
-          >
-          <button mat-button type="button" data-testid="doc-draft-continue" (click)="edit()">
-            Continue editing
-          </button>
-          <button mat-button type="button" data-testid="doc-draft-discard" (click)="discardDraft()">
-            Discard
-          </button>
-        </div>
+        <tk-doc-draft-banner [doc]="page" (continue)="edit()" />
       }
       <h1 class="ptitle" data-testid="doc-title">{{ page.title }}</h1>
       <div class="pmeta" data-testid="doc-meta">

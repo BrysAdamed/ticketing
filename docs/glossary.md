@@ -64,7 +64,7 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Delete group (docs)**: The docs deleted by one delete: a doc, or a folder with its whole subtree. Its members share `DeletedRootId`; restore and the trash work on whole groups. [§12.5](product/01-refined-spec.md#125-delete-and-restore)
 
-**Diagram embed**: `![caption](WEB-D-7)` in a page: the diagram doc rendered read-only in a figure with its title and caption. An unreadable or deleted diagram shows "Diagram not available".
+**Diagram embed**: `![caption](WEB-D-7)` in a page: the diagram doc rendered read-only in a figure with its title and caption. An unreadable or deleted diagram shows "Diagram not available". The diagram is drawn by its format's renderer when it scrolls into view ([§12.12](product/01-refined-spec.md#1212-mermaid-diagrams-web-mcp)).
 
 **Doc**: A node of a project's docs tree: a `Folder`, a markdown `Page` or a `Diagram` (`Mermaid` or `Canvas`). Pages and diagrams have versions; folders hold other docs, up to 6 levels deep. [§12](product/01-refined-spec.md#12-docs)
 
@@ -115,6 +115,8 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 **My work**: Page listing the current user's open tickets across projects, their waiting regression items and the open tickets they watch. [§6.8](product/01-refined-spec.md#68-search-lists-and-export)
 
 **Mention**: A reference to a user in a ticket description or comment, written with the `@` people picker or as `@email`, stored as `@[Name](user:<id>)` so it survives renames. Only active users who can read the project can be newly mentioned; a new mention notifies them once and makes them a watcher, and readers see it as a chip with the current name (others see plain text) (D-96). [§6.9](product/01-refined-spec.md#69-comments)
+
+**Mermaid diagram**: Diagram written as Mermaid text, either inline in markdown (a ```` ```mermaid ```` block, in pages, tickets and comments) or as a diagram doc with its own view and editor. Rendered in the browser with strict security; the supported types are flowchart, sequence, class, state (v2), ER, gantt and mind map. [§12.12](product/01-refined-spec.md#1212-mermaid-diagrams-web-mcp), D-110
 
 **Notification**: An in-app message to one user about a change someone else made: assigned to them (ticket or regression item), mentioned, or a comment, status change, priority raised to High/Highest, move or deletion on a ticket they watch, or a new comment on a doc they wrote or commented on. Created in the same transaction as the change, shown under the bell, listed only while the user can read the project, purged after 90 days (D-94). See Collapsing. [§6.16](product/01-refined-spec.md#616-in-app-notifications-i-30-d-94)
 

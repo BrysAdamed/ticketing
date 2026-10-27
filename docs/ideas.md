@@ -88,7 +88,7 @@ Items triaged as LATER in [product/02-improvements-triage.md](product/02-improve
 | I-74 | MCP prompts and resources | Canned workflows such as "triage this bug". | S |
 | I-49 | Outgoing webhooks | Lets other tools react to ticket changes. | M |
 | I-50 | Git integration by ticket key | Shows commits and pull requests on the ticket. | M |
-| I-48 | Built-in Jira importer | Only if the one-off migration script proves insufficient (D-11). | L |
+| I-48 | Built-in Jira importer | Not planned: the PO decided against migrating Jira data (Q-01). Revisit only if that changes. | L |
 
 ## Experiments and UI
 

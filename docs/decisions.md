@@ -71,7 +71,7 @@ Format: question, options considered, decision, rationale. "PO" marks decisions 
 ### D-11 Jira data migration mechanism
 
 - Options: built-in importer; one-off script against the REST API (or Claude Code over MCP).
-- Decision: no importer in v1. Migration runs as a one-off script. What to migrate is Q-01.
+- Decision: no importer and no migration (superseded by the PO answer to Q-01 below: teams start fresh).
 - Rationale: an importer is L-sized and used once.
 
 ### D-12 User deletion
@@ -472,33 +472,27 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
 - Decision: an opt-in seeder (`TICKETING_SEED_DEMO=true` at startup, or the `seed-demo` command) that runs only while no project exists, under a PostgreSQL advisory lock. It replays a planned twelve-week history (fixed random seed, dates relative to the time of seeding) through the application handlers as the demo users. It builds its own service provider from the normal registrations with a settable `TimeProvider` and an `ICurrentUser` for the acting user, so timestamps are backdated without touching production wiring. Never on by default; documented as development and demo only.
 - Rationale: going through the handlers keeps keys, ranks, hierarchy, activity history, board moves and regression snapshots genuine and follows every later rule change for free; raw SQL inserts would drift from the domain. The "no project" guard makes it impossible to mix demo data into a real workspace.
 
-## Needs product owner
+## Product owner answers (v1 review, 2026-10-27)
 
-None of these block v1. The implementation follows each recommendation provisionally; the product owner confirms or overrides them at the v1 review.
+These were open questions (Q-01..Q-05); the product owner resolved them as follows.
 
-### Q-01 What Jira data do we migrate?
+### Q-01 What Jira data do we migrate? — Decided: nothing
 
-- Why it matters: decides whether the REST API needs extra import support (preserving created dates, original keys) before launch.
-- Options: nothing (fresh start); open tickets only; everything including closed history.
-- Recommendation: open tickets and open epics with comments and attachments, via a one-off script. Store the original Jira key in the description's first line. Closed history stays in a Jira export kept read-only until the contract ends. No built-in importer (D-11).
+- Decision: no Jira migration. Teams start fresh in Ticketing; Jira history stays in Jira (or its export) until the contract ends. No migration script and no importer.
+- Consequence: D-11's one-off migration script is dropped; the REST API needs no import support (original keys, backdated timestamps). The built-in importer (I-48) stays in the ideas backlog only.
 
-### Q-02 Is v1 acceptable without notifications?
+### Q-02 Is v1 acceptable without notifications? — Decided: yes
 
-- Why it matters: it is the gap teams will notice first.
-- Options: ship v1 without, with a My work page; add in-app notifications to v1 (adds about 2 weeks).
-- Recommendation: ship without; build in-app notifications (I-30) as the first post-v1 item.
+- Decision: v1 ships without notifications; My work covers "what's on me". In-app notifications (I-30) are the first post-v1 item.
 
-### Q-03 Do teams run Scrum sprints in Jira today?
+### Q-03 Do teams run Scrum sprints? — Decided: boards are enough
 
-- Why it matters: if velocity and burndown are used in planning, boards plus archive (D-09) will feel like a step back.
-- Recommendation: boards plus archive with carry-over for v1; sprint metrics later if teams ask.
+- Decision: boards plus archive with carry-over (D-09) for v1; sprint metrics only if teams ask.
 
-### Q-04 Should Admins see private projects?
+### Q-04 Should Admins see private projects? — Decided: yes
 
-- Why it matters: projects for HR, legal or security work may be expected to be invisible even to IT admins.
-- Recommendation: yes, Admins see everything (D-17). If that is unacceptable, Admins instead get only "add myself as Owner", which notifies the project's Owners.
+- Decision: Admins see and manage every project, private ones included (D-17).
 
-### Q-05 Confirm Owner-only destructive actions on public projects
+### Q-05 Owner-only destructive actions on public projects — Decided: confirmed
 
-- Why it matters: it narrows the PO's "full write" answer.
-- Recommendation: on public projects, keep ticket deletion, deleting other people's comments, assigning regression items to others and hard-deleting test cases with Owners. Everything else is open to every signed-in user.
+- Decision: on public projects, ticket deletion, deleting other people's comments, assigning regression items to others and hard-deleting test cases stay with Owners; everything else is open to every signed-in user (D-02).

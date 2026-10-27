@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Ticketing.Domain.Activity;
 using Ticketing.Domain.Attachments;
 using Ticketing.Domain.Boards;
+using Ticketing.Domain.Collaboration;
 using Ticketing.Domain.Comments;
 using Ticketing.Domain.FeatureFlags;
 using Ticketing.Domain.Idempotency;
@@ -41,6 +42,8 @@ public interface ITicketingDbContext
     DbSet<TicketLink> TicketLinks { get; }
 
     DbSet<Comment> Comments { get; }
+
+    DbSet<TicketWatcher> TicketWatchers { get; }
 
     DbSet<Attachment> Attachments { get; }
 

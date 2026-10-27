@@ -4,6 +4,7 @@ using Ticketing.Application.Abstractions;
 using Ticketing.Domain.Activity;
 using Ticketing.Domain.Attachments;
 using Ticketing.Domain.Boards;
+using Ticketing.Domain.Collaboration;
 using Ticketing.Domain.Comments;
 using Ticketing.Domain.FeatureFlags;
 using Ticketing.Domain.Idempotency;
@@ -41,6 +42,8 @@ public sealed class TicketingDbContext(DbContextOptions<TicketingDbContext> opti
 
     public DbSet<Comment> Comments => Set<Comment>();
 
+    public DbSet<TicketWatcher> TicketWatchers => Set<TicketWatcher>();
+
     public DbSet<Attachment> Attachments => Set<Attachment>();
 
     public DbSet<TestCase> TestCases => Set<TestCase>();
@@ -59,7 +62,7 @@ public sealed class TicketingDbContext(DbContextOptions<TicketingDbContext> opti
 
     public DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();
 
-    public static void Configure(DbContextOptionsBuilder options, string connectionString) =>
+    public static DbContextOptionsBuilder Configure(DbContextOptionsBuilder options, string connectionString) =>
         options
             .UseNpgsql(connectionString, npgsql => npgsql.MigrationsHistoryTable("__ef_migrations_history"))
             .UseSnakeCaseNamingConvention();

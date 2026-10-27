@@ -11,6 +11,8 @@ namespace Ticketing.Application.Comments;
 
 public static class AddComment
 {
+    public const string Action = "comment.added";
+
     public sealed record Command(string Body, [property: JsonIgnore] string TicketKeyOrId = "") : IValidatable
     {
         public void Validate(Validator validator) => validator.Required("body", Body, Comment.BodyMaxLength);
@@ -27,7 +29,7 @@ public static class AddComment
             var comment = Comment.Create(target.Id, currentUser.Id, command.Body, clock.Now);
             db.Comments.Add(comment);
             ticket.Touch(clock.Now);
-            activity.Record(ActivityEntityType.Ticket, target.Id, target.ProjectId, "comment.added", new { commentId = comment.Id });
+            activity.Record(ActivityEntityType.Ticket, target.Id, target.ProjectId, Action, new { commentId = comment.Id });
             await db.SaveChangesAsync(cancellationToken);
             return await CommentQueries.OneAsync(db, currentUser, target.Grant, comment.Id, cancellationToken);
         }

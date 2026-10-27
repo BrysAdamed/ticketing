@@ -60,7 +60,8 @@ public sealed class DocExportTests(TicketingApiFactory api)
         // Arrange
         var client = await api.LoginAsync(await api.CreateUserAsync());
         await client.CreateProjectAsync("EXV");
-        var page = await client.CreatePageAsync("EXV", "Draft plan", content: "first");
+        var ticket = await client.CreateTicketAsync("EXV", "Only in the first version");
+        var page = await client.CreatePageAsync("EXV", "Draft plan", content: $"first {ticket.Key}");
         (await client.PatchDocAsync(page.Key, new { title = "Final plan", content = "second", baseVersion = 1 })).EnsureSuccessStatusCode();
 
         // Act
@@ -71,8 +72,9 @@ public sealed class DocExportTests(TicketingApiFactory api)
         Assert.Equal(HttpStatusCode.OK, old.StatusCode);
         var entry = FakePdfRenderer.Data(api.Pdf.Last).GetProperty("entries")[0];
         Assert.Equal("Draft plan", entry.GetProperty("title").GetString());
-        Assert.Equal("first", entry.GetProperty("content").GetString());
+        Assert.Equal($"first {ticket.Key}", entry.GetProperty("content").GetString());
         Assert.Equal(1, entry.GetProperty("version").GetInt32());
+        Assert.Equal(ticket.Key, Assert.Single(entry.GetProperty("references").GetProperty("tickets").EnumerateArray()).GetProperty("key").GetString());
         Assert.Contains($"{page.Key} v1", api.Pdf.Last.FooterHtml);
         await missing.ShouldBeProblemAsync(HttpStatusCode.NotFound, DocErrors.VersionNotFound);
     }

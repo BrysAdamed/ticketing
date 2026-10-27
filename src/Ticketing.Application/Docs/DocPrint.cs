@@ -131,7 +131,7 @@ public static partial class DocPrint
                     .SingleAsync(cancellationToken);
                 (title, author, content, number, at) = (node.Title, row.Author, row.Content ?? string.Empty, node.CurrentVersion, node.UpdatedAt);
             }
-            return await EntryAsync(node with { Title = title }, 0, number, author, at, content, DisplayPath(folders, node.ParentId, title), cancellationToken);
+            return await EntryAsync(node with { Title = title }, 0, number, author, at, content, DisplayPath(folders, node.ParentId, title), cancellationToken, olderVersion: version is not null);
         }
 
         public async Task<List<PrintEntry>> FolderEntriesAsync(List<(Node Node, int Depth)> subtree, DocFolderIndex folders, CancellationToken cancellationToken)
@@ -160,10 +160,13 @@ public static partial class DocPrint
         }
 
         private async Task<PrintEntry> EntryAsync(
-            Node node, int depth, int version, string author, DateTimeOffset at, string content, string path, CancellationToken cancellationToken)
+            Node node, int depth, int version, string author, DateTimeOffset at, string content, string path, CancellationToken cancellationToken,
+            bool olderVersion = false)
         {
             var key = Key(node.Number);
-            var (references, embeds) = await DocReferenceQueries.ReferencesAsync(db, access, node.Id, content, node.Kind, node.DiagramFormat, cancellationToken);
+            var (references, embeds) = olderVersion
+                ? await DocReferenceQueries.ReferencesOfContentAsync(db, access, node.Id, content, node.Kind, node.DiagramFormat, cancellationToken)
+                : await DocReferenceQueries.ReferencesAsync(db, access, node.Id, content, node.Kind, node.DiagramFormat, cancellationToken);
             var canvas = node.Kind == DocKind.Diagram && node.DiagramFormat == DiagramFormat.Canvas;
             var picture = canvas ? await PictureAsync(node.Id, node.Number, version, cancellationToken) : null;
             var printEmbeds = new List<PrintEmbed>(embeds.Count);

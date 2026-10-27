@@ -67,13 +67,20 @@
             />
           </button>
         </div>
-        @if (isExpanded(project.key) && !layout.sidebarCollapsed()) {
+        @if (
+          layout.sidebarCollapsed()
+            ? project.key === currentProjectKey()
+            : isExpanded(project.key)
+        ) {
           @for (item of projectNav; track item.path) {
             <a
               class="nav child"
               [routerLink]="['/projects', project.key, item.path]"
               routerLinkActive="active"
               [attr.data-testid]="item.testId"
+              [matTooltip]="item.label"
+              matTooltipPosition="right"
+              [matTooltipDisabled]="!layout.sidebarCollapsed()"
             >
               <tk-icon [name]="item.icon" [size]="14" />
               <span class="label">{{ item.label }}</span>

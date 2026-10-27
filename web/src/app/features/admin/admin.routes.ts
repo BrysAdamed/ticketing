@@ -12,9 +12,17 @@ export default [
     path: '',
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'users' },
-      viewRoute(ADMIN_USERS_VIEW, { path: 'users', data: { breadcrumb: 'Users' } }),
-      viewRoute(FEATURE_FLAGS_VIEW, { path: 'flags', data: { breadcrumb: 'Feature flags' } }),
-      viewRoute(AUDIT_LOG_VIEW, { path: 'audit', data: { breadcrumb: 'Audit log' } }),
+      viewRoute(ADMIN_USERS_VIEW, { path: 'users', title: 'Users', data: { breadcrumb: 'Users' } }),
+      viewRoute(FEATURE_FLAGS_VIEW, {
+        path: 'flags',
+        title: 'Feature flags',
+        data: { breadcrumb: 'Feature flags' },
+      }),
+      viewRoute(AUDIT_LOG_VIEW, {
+        path: 'audit',
+        title: 'Audit log',
+        data: { breadcrumb: 'Audit log' },
+      }),
     ],
   }),
 ] satisfies Routes;

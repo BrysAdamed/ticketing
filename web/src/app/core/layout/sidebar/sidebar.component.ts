@@ -4,6 +4,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 import { IconComponent } from '@shared/ui/icon/icon.component';
 import { ProjectTileComponent } from '@shared/ui/domain/project-tile.component';
 import { AuthService } from '../../auth/auth.service';
+import { BoardDirectory } from '../../boards/board-directory';
 import { ProjectDirectory } from '../../projects/project-directory';
 import { LayoutState } from '../layout-state';
 import { NavigationContext } from '../navigation-context';
@@ -63,6 +64,7 @@ export class SidebarComponent {
   protected readonly layout = inject(LayoutState);
   protected readonly auth = inject(AuthService);
   protected readonly directory = inject(ProjectDirectory);
+  protected readonly boardDirectory = inject(BoardDirectory);
   private readonly context = inject(NavigationContext);
 
   protected readonly projectNav = PROJECT_NAV;
@@ -86,6 +88,7 @@ export class SidebarComponent {
 
   constructor() {
     void this.directory.load();
+    void this.boardDirectory.load();
   }
 
   protected isExpanded(key: string): boolean {

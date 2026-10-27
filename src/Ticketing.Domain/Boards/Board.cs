@@ -55,8 +55,6 @@ public sealed class Board
     public void ChangeDescription(string? description) =>
         Description = Text.Optional(description, "description", DescriptionMaxLength);
 
-    public void TransferOwnership(Guid newOwnerId) => OwnerId = newOwnerId;
-
     public bool Links(Guid projectId) => _projects.Any(p => p.ProjectId == projectId);
 
     public void EnsureActive()
@@ -75,16 +73,39 @@ public sealed class Board
         _projects.Add(BoardProject.Create(Id, projectId, actorId, now));
     }
 
-    /// <summary>Unlinks a project; the caller moves the project's tickets on this board back to their backlog.</summary>
+    /// <summary>
+    /// Unlinks a project; the caller moves the project's tickets on this board back to their backlog. A board keeps at
+    /// least one linked project (spec 4.13).
+    /// </summary>
     public void UnlinkProject(Guid projectId)
     {
         EnsureActive();
+        if (!Links(projectId))
+            return;
+        if (_projects.Count == 1)
+            throw DomainException.Conflict(
+                BoardErrors.ProjectsRequired, "A board must link at least one project.", "Link another project before unlinking this one, or archive the board.");
         _projects.RemoveAll(p => p.ProjectId == projectId);
     }
 
-    public void Archive(Guid actorId, DateTimeOffset now)
+    public void TransferOwnership(Guid newOwnerId, bool newOwnerIsActive)
+    {
+        if (!newOwnerIsActive)
+            throw DomainException.Invalid("owner", BoardErrors.OwnerInvalid, "Only an active user can own a board.");
+        OwnerId = newOwnerId;
+    }
+
+    /// <summary>
+    /// Archives the board (I-11). <paramref name="carryOverTarget"/> is the board that receives unfinished tickets, or null
+    /// for their project backlogs; use <see cref="BoardCarryOver.Plan"/> to decide where each ticket goes.
+    /// </summary>
+    public void Archive(Guid actorId, DateTimeOffset now, Board? carryOverTarget = null)
     {
         EnsureActive();
+        if (carryOverTarget is not null && (carryOverTarget.Id == Id || carryOverTarget.IsArchived || carryOverTarget.IsDeleted))
+            throw DomainException.Invalid(
+                "carryOverTo", BoardErrors.CarryOverInvalid, "Unfinished tickets can only be carried over to another active board.",
+                "Pick a different, non-archived board, or carry the tickets over to their backlogs.");
         ArchivedAt = now;
         ArchivedById = actorId;
     }

@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  DestroyRef,
+  effect,
+  inject,
+  input,
+} from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TicketCreator } from '@core/tickets/create-ticket';
@@ -68,6 +76,7 @@ export class DashboardView {
 
   constructor() {
     effect(() => this.store.load(this.projectKey(), this.versionFilter()));
+    prefetchChartOnIdle(inject(DestroyRef));
   }
 
   protected setVersion(version: string | null): void {
@@ -85,5 +94,18 @@ export class DashboardView {
   private map<T>(mapper: (data: ProjectDashboard, links: DashboardLinks) => T[]): T[] {
     const data = this.store.data();
     return data ? mapper(data, this.store.links()) : [];
+  }
+}
+
+/// Loads the chart chunk (Chart.js) while the dashboard data is still on its way, so the deferred
+/// "Created vs resolved" chart renders as soon as the data arrives instead of after a second fetch.
+function prefetchChartOnIdle(destroyRef: DestroyRef): void {
+  const load = () => void import('./widgets/created-resolved-chart.component');
+  if (typeof requestIdleCallback === 'function') {
+    const handle = requestIdleCallback(load, { timeout: 1500 });
+    destroyRef.onDestroy(() => cancelIdleCallback(handle));
+  } else {
+    const handle = setTimeout(load, 200);
+    destroyRef.onDestroy(() => clearTimeout(handle));
   }
 }

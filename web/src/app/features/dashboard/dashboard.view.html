@@ -56,8 +56,8 @@
           description="Create tickets, test cases or regression sessions and this dashboard fills in by itself."
           data-testid="dashboard-empty"
         >
-          <button mat-flat-button type="button" (click)="createTicket()">
-            New ticket <tk-kbd tone="on-solid">C</tk-kbd>
+          <button mat-stroked-button type="button" (click)="createTicket()">
+            New ticket <tk-kbd>C</tk-kbd>
           </button>
           <a mat-stroked-button [routerLink]="['/projects', store.projectKey(), 'backlog']"
             >Open backlog</a
@@ -76,7 +76,7 @@
             title="Created vs resolved"
             note="Per ISO week, last 12 weeks"
           >
-            @defer (on viewport; prefetch on idle) {
+            @defer (on idle, viewport; prefetch on immediate) {
               <tk-created-resolved-chart [weeks]="d.createdVsResolved" [links]="store.links()" />
             } @placeholder {
               <div class="chart-placeholder"></div>

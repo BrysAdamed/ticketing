@@ -50,7 +50,8 @@
 
 .figures {
   display: flex;
-  gap: 32px;
+  flex-wrap: wrap;
+  gap: 8px 28px;
   margin-bottom: 12px;
 
   div {
@@ -67,6 +68,7 @@
 }
 
 .caption {
+  white-space: nowrap;
   font-size: var(--tk-text-sm);
   color: var(--tk-text-muted);
 }
@@ -201,6 +203,30 @@ circle {
 .empty {
   margin: 8px 0;
   color: var(--tk-text-subtle);
+}
+
+.single {
+  margin: 8px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--tk-text-subtle);
+  font-size: var(--tk-text-sm);
+
+  a {
+    color: var(--tk-text-muted);
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  strong {
+    color: var(--tk-text);
+    font-size: var(--tk-text-xl);
+    font-weight: var(--tk-weight-semibold);
+  }
 }
 
 .scale {

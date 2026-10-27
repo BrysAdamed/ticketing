@@ -44,6 +44,10 @@ A `ReadOnly` token only lists and accepts the read tools. Tokens cannot manage u
 
 Inputs and outputs are specified in [spec §9](product/01-refined-spec.md#9-mcp-server). Tickets, test cases and sessions are referenced by key (`PAY-42`, `PAY-TC-7`, `PAY-R-3`); enum values are listed in each tool's description. Errors come back as `{ code, message, hint }`.
 
+### Mentioning people
+
+Descriptions (`create_ticket`, `create_tickets`, `update_ticket`) and comments (`add_comment`, `update_comment`) may mention users. Write either `@jane.doe@example.com` (the server stores it as a mention) or the stored form `@[Jane Doe](user:<id>)`; `find_users` with `projectKey` and `access: "Read"` lists who can be mentioned, with ids. A newly added mention notifies the user and makes them a watcher; a mention of someone who is inactive or cannot read the project fails with `mention.invalid`. An address that belongs to no user stays plain text, and mentions inside code are ignored. `get_ticket` returns `mentions` for the description and `list_comments` one per comment: the mentioned users who can read the project.
+
 ## Verified with a real client
 
 On 2026-10-27 a headless Claude Code session (`claude -p --mcp-config …`) connected to a local stack with a fresh PAT and, using only these tools, created a project, an epic with two stories in one batch, updated fields, commented, created manual and automatic test cases, ran a regression session where a failure produced a linked bug, created a board, moved a ticket into a column, searched and read the dashboard statistics — 16 calls, no errors. The integration tests also exercise every tool through an MCP client (`tests/Ticketing.IntegrationTests`).

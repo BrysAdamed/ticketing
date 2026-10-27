@@ -12,7 +12,11 @@ function createPage(api: Api, projectKey: string, title: string, content: string
 }
 
 test.describe('docs search and quick jump', () => {
-    test('Ctrl+K lists matching docs with a snippet and opens one', async ({ page, api, shell }) => {
+    test('Ctrl+K lists matching docs with a snippet and opens one', async ({
+        page,
+        api,
+        shell,
+    }) => {
         // Arrange
         const projectKey = (await api.createProject()).key;
         const word = `okapi${Date.now().toString(36)}`;
@@ -69,7 +73,10 @@ test.describe('docs search and quick jump', () => {
             `Release ${word}`,
             `Notes for ${word}: <img src=x onerror=alert(1)> stays text.`,
         );
-        await api.post(`/projects/${projectKey}/docs`, { kind: 'Folder', title: `Archive ${word}` });
+        await api.post(`/projects/${projectKey}/docs`, {
+            kind: 'Folder',
+            title: `Archive ${word}`,
+        });
         let dialogs = 0;
         page.on('dialog', () => dialogs++);
         await page.goto(`/search?q=${word}`);

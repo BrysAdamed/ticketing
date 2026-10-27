@@ -2,6 +2,8 @@ import { inject, Injectable } from '@angular/core';
 import { Observable, shareReplay } from 'rxjs';
 import { ApiClient } from '../api/api-client';
 import {
+  AgentInstanceStatus,
+  AgentPromptOverride,
   AgentPromptPlaceholder,
   AgentPromptPreview,
   AgentPromptScope,
@@ -29,6 +31,16 @@ export class AgentPromptsClient {
 
   listInstance(): Observable<InstanceAgentPromptSummary[]> {
     return this.api.get(base({ kind: 'instance' }));
+  }
+
+  /// Admins: whether `TICKETING_PUBLIC_URL` is set. Needs only the flag, unlike every other call.
+  instanceStatus(): Observable<AgentInstanceStatus> {
+    return this.api.get('/admin/agent/status');
+  }
+
+  /// Admins: the projects that override a ticket type's default (Custom or Off).
+  overrides(slot: AgentPromptSlot): Observable<AgentPromptOverride[]> {
+    return this.api.get(`${slotPath({ kind: 'instance' }, slot)}/overrides`);
   }
 
   getProject(projectKey: string, slot: AgentPromptSlot): Observable<ProjectAgentPrompt> {

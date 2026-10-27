@@ -1,0 +1,129 @@
+@switch (store.status()) {
+  @case ('loaded') {
+    <div class="body">
+      <tk-public-url-status [status]="store.instance()!" />
+
+      @if (store.prompts()) {
+        <section aria-labelledby="agent-defaults-heading">
+          <div class="section-head">
+            <h2 id="agent-defaults-heading">Default prompt per ticket type</h2>
+            <span class="tk-subtle"
+              >Used by every project that doesn't override the type in its Agent settings.</span
+            >
+          </div>
+          <ul class="box" data-testid="agent-defaults">
+            @for (prompt of store.types(); track prompt.slot) {
+              <ng-container
+                *ngTemplateOutlet="row; context: { $implicit: prompt, overrides: true }"
+              />
+            }
+          </ul>
+        </section>
+
+        @if (store.guardrails(); as guardrails) {
+          <section aria-labelledby="agent-guardrails-heading">
+            <div class="section-head">
+              <h2 id="agent-guardrails-heading">Guardrails</h2>
+              <span class="tk-subtle"
+                >Appended to every prompt, after the type's prompt. Projects can't remove
+                them.</span
+              >
+            </div>
+            <ul class="box">
+              <ng-container
+                *ngTemplateOutlet="row; context: { $implicit: guardrails, overrides: false }"
+              />
+            </ul>
+          </section>
+        }
+      } @else {
+        <tk-empty-state
+          icon="tablerRobot"
+          data-testid="agent-prompts-unavailable"
+          title="Prompts can be edited once delegation is available"
+          description="Set the public URL above first. Stored prompts are kept as they are."
+        />
+      }
+    </div>
+  }
+  @case ('error') {
+    @if (store.error()?.isNotFound) {
+      <tk-empty-state
+        icon="tablerRobot"
+        data-testid="agent-prompts-disabled"
+        title="Agent delegation is turned off for you"
+        description="Turn on the agent.delegate feature flag for yourself to manage agent prompts."
+      />
+    } @else {
+      <tk-empty-state
+        icon="tablerAlertCircle"
+        tone="danger"
+        title="Couldn't load the agent prompts"
+        [description]="store.error()?.title ?? null"
+      >
+        <button mat-stroked-button type="button" (click)="store.load()">Retry</button>
+      </tk-empty-state>
+    }
+  }
+  @default {
+    <div class="body"><tk-skeleton-rows [count]="10" /></div>
+  }
+}
+
+<ng-template #row let-prompt let-overrides="overrides">
+  <li class="row" [attr.data-testid]="'agent-default-row-' + prompt.slot">
+    @if (prompt.type) {
+      <tk-type-icon [type]="prompt.type" />
+    } @else {
+      <tk-icon name="tablerShieldLock" [size]="16" class="shield" />
+    }
+    <a
+      class="name"
+      [routerLink]="slug(prompt)"
+      [attr.data-testid]="'agent-default-link-' + prompt.slot"
+    >
+      {{ label(prompt) }}
+    </a>
+    <tk-badge
+      [tone]="prompt.followsBuiltIn ? 'gray' : 'violet'"
+      [attr.data-testid]="'agent-default-chip-' + prompt.slot"
+    >
+      v{{ prompt.version }} ·
+      {{ prompt.followsBuiltIn ? 'Built-in ' + prompt.builtInVersion : 'Edited' }}
+    </tk-badge>
+    @if (prompt.newerBuiltInAvailable) {
+      <tk-badge tone="amber" [dot]="true" [attr.data-testid]="'agent-default-newer-' + prompt.slot">
+        Newer built-in
+      </tk-badge>
+    }
+    <span class="spacer"></span>
+    @if (overrides) {
+      @if (prompt.overridingProjects > 0) {
+        <button
+          mat-button
+          type="button"
+          class="overrides"
+          [attr.data-testid]="'agent-default-overrides-' + prompt.slot"
+          (click)="openOverrides(prompt)"
+        >
+          <tk-icon name="tablerFolders" [size]="14" />
+          {{ prompt.overridingProjects }}
+          {{ prompt.overridingProjects === 1 ? 'project overrides' : 'projects override' }}
+        </button>
+      } @else {
+        <span
+          class="tk-subtle no-overrides"
+          [attr.data-testid]="'agent-default-overrides-' + prompt.slot"
+          >No overrides</span
+        >
+      }
+    }
+    <span class="changed">
+      <tk-user [user]="prompt.updatedBy" emptyLabel="System" />
+      <span class="tk-subtle" [title]="prompt.updatedAt | absoluteTime">
+        {{ prompt.updatedAt | relativeTime }}
+      </span>
+    </span>
+    <tk-icon name="tablerChevronRight" [size]="16" class="chevron" />
+  </li>
+</ng-template>

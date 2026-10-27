@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ProjectAgentPromptSummary } from '@core/agent/agent-prompt.models';
+import { promptTypeSlug } from '@core/agent/prompt-slugs';
 import { TICKET_TYPE_LABELS } from '@shared/domain/enums';
 import { AbsoluteTimePipe, RelativeTimePipe } from '@shared/pipes/relative-time.pipe';
 import { BadgeComponent, BadgeTone } from '@shared/ui/domain/badge.component';
@@ -9,7 +10,6 @@ import { UserDisplayComponent } from '@shared/ui/domain/user-display.component';
 import { IconComponent } from '@shared/ui/icon/icon.component';
 import { SkeletonRowsComponent } from '@shared/ui/skeleton/skeleton-rows.component';
 import { AgentSettingsStore } from './agent-settings.store';
-import { promptTypeSlug } from './prompt-slugs';
 
 /// The five ticket types with the prompt each one uses (state chip) and its last change.
 @Component({

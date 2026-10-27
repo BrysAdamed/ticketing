@@ -28,6 +28,7 @@ public sealed class InstanceAgentPromptTests(TicketingApiFactory api)
         { "GET", $"{Prompts}/Bug/versions/1" },
         { "POST", $"{Prompts}/Bug/versions/1/restore" },
         { "POST", $"{Prompts}/guardrails/preview" },
+        { "GET", $"{Prompts}/Bug/overrides" },
     };
 
     [Theory]
@@ -182,6 +183,69 @@ public sealed class InstanceAgentPromptTests(TicketingApiFactory api)
         // Assert
         Assert.Equal(2, list.Single(p => p.Slot == "Bug").OverridingProjects);
         Assert.All(list.Where(p => p.Slot != "Bug"), p => Assert.Equal(0, p.OverridingProjects));
+    }
+
+    [Fact]
+    public async Task The_overriding_projects_of_a_type_are_listed_by_key_with_their_mode()
+    {
+        // Arrange
+        var admin = await api.CreateUserAsync(GlobalRole.Admin);
+        var owner = await api.CreateUserAsync();
+        await api.EnableAgentFlagAsync([], GlobalRole.Admin, GlobalRole.User);
+        var adminClient = await api.LoginAsync(admin);
+        var ownerClient = await api.LoginAsync(owner);
+        await api.ProjectAsync(owner, "PRIV");
+        var archived = await api.ProjectAsync(owner, "ARCH");
+        await api.ProjectAsync(owner, "INHERIT");
+        await api.ProjectAsync(owner, "GONE");
+        await (await ownerClient.PutPromptAsync("PRIV", "Bug", new { mode = "Custom", body = "Private {{ticket.key}}", baseVersion = 0 })).ShouldHaveStatusAsync(HttpStatusCode.OK);
+        await (await ownerClient.PutPromptAsync("ARCH", "Bug", new { mode = "Off", baseVersion = 0 })).ShouldHaveStatusAsync(HttpStatusCode.OK);
+        await (await ownerClient.PutPromptAsync("INHERIT", "Bug", new { mode = "Off", baseVersion = 0 })).ShouldHaveStatusAsync(HttpStatusCode.OK);
+        await (await ownerClient.PostAsJsonAsync("/api/v1/projects/INHERIT/agent/prompts/Bug/reset", new { baseVersion = 1 }, _ct)).ShouldHaveStatusAsync(HttpStatusCode.OK);
+        await (await ownerClient.PutPromptAsync("GONE", "Bug", new { mode = "Off", baseVersion = 0 })).ShouldHaveStatusAsync(HttpStatusCode.OK);
+        await (await ownerClient.PutPromptAsync("PRIV", "Spike", new { mode = "Off", baseVersion = 0 })).ShouldHaveStatusAsync(HttpStatusCode.OK);
+        await (await adminClient.PutInstancePromptAsync("Bug", new { body = "Newer default {{ticket.key}}", baseVersion = 1 })).ShouldHaveStatusAsync(HttpStatusCode.OK);
+        await api.ArchiveAsync(archived, owner);
+        await api.WithDbAsync(async db =>
+        {
+            var gone = await db.Projects.SingleAsync(p => p.Key == "GONE", _ct);
+            gone.Archive(owner.Id, DateTimeOffset.UtcNow);
+            gone.Delete(owner.Id, DateTimeOffset.UtcNow, "GONE");
+            return await db.SaveChangesAsync(_ct);
+        });
+
+        // Act
+        var overrides = await (await adminClient.GetAsync($"{Prompts}/bug/overrides", _ct)).ReadAsync<List<AgentPromptOverrideDto>>();
+        var count = (await (await adminClient.GetAsync(Prompts, _ct)).ReadAsync<List<InstanceAgentPromptSummaryDto>>()).Single(p => p.Slot == "Bug").OverridingProjects;
+        var none = await (await adminClient.GetAsync($"{Prompts}/Epic/overrides", _ct)).ReadAsync<List<AgentPromptOverrideDto>>();
+        var guardrails = await adminClient.GetAsync($"{Prompts}/guardrails/overrides", _ct);
+
+        // Assert
+        Assert.Equal(
+            [("ARCH", true, AgentPromptMode.Off, false), ("PRIV", false, AgentPromptMode.Custom, true)],
+            overrides.Select(o => (o.ProjectKey, o.IsArchived, o.Mode, o.DefaultChanged)));
+        Assert.Equal(("PRIV project", 1, owner.Id), (overrides[1].ProjectName, overrides[1].Version, overrides[1].UpdatedBy!.Id));
+        Assert.Equal(overrides.Count, count);
+        Assert.Empty(none);
+        await guardrails.ShouldBeProblemAsync(HttpStatusCode.NotFound, AgentErrors.PromptNotFound);
+    }
+
+    [Fact]
+    public async Task Preview_of_cleared_guardrails_shows_the_prompt_without_them()
+    {
+        // Arrange
+        var admin = await api.CreateUserAsync(GlobalRole.Admin);
+        await api.EnableAgentFlagAsync([], GlobalRole.Admin);
+        var client = await api.LoginAsync(admin);
+
+        // Act
+        var stored = await (await client.PostAsJsonAsync($"{Prompts}/guardrails/preview", new { body = (string?)null }, _ct)).ReadAsync<AgentPromptPreviewDto>();
+        var cleared = await (await client.PostAsJsonAsync($"{Prompts}/guardrails/preview", new { body = "" }, _ct)).ReadAsync<AgentPromptPreviewDto>();
+
+        // Assert
+        Assert.NotNull(stored.GuardrailsStart);
+        Assert.Null(cleared.GuardrailsStart);
+        Assert.Equal(stored.Prompt![..stored.GuardrailsStart!.Value].TrimEnd(), cleared.Prompt);
     }
 
     [Fact]

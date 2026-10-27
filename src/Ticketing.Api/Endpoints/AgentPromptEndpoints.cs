@@ -20,6 +20,14 @@ public sealed class AgentPromptEndpoints : IEndpointModule
         MapProject(api.MapGroup("/projects/{projectKeyOrId}/agent/prompts").WithTags("Agent prompts"));
         MapInstance(api.MapGroup("/admin/agent/prompts").WithTags("Admin: agent prompts"));
 
+        api.MapGet("/admin/agent/status", async (GetAgentInstanceStatus.Handler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.HandleAsync(new GetAgentInstanceStatus.Query(), ct)))
+            .WithTags("Admin: agent prompts")
+            .WithSummary("Admins: whether TICKETING_PUBLIC_URL is set and delegation is available. Needs only the agent.delegate flag, "
+                + "so it answers while the URL is unset and every other agent route is agent.disabled.")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
         api.MapGet("/agent/prompt-placeholders", async (ListAgentPromptPlaceholders.Handler handler, CancellationToken ct) =>
                 TypedResults.Ok(await handler.HandleAsync(new ListAgentPromptPlaceholders.Query(), ct)))
             .WithTags("Agent prompts")
@@ -92,6 +100,12 @@ public sealed class AgentPromptEndpoints : IEndpointModule
         prompts.MapGet("/{slot}", async (string slot, GetInstanceAgentPrompt.Handler handler, CancellationToken ct) =>
                 TypedResults.Ok(await handler.HandleAsync(new GetInstanceAgentPrompt.Query(slot), ct)))
             .WithSummary("Admins: one slot (a ticket type or guardrails) with its body and the latest built-in.")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        prompts.MapGet("/{slot}/overrides", async (string slot, ListAgentPromptOverrides.Handler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.HandleAsync(new ListAgentPromptOverrides.Query(slot), ct)))
+            .WithSummary("Admins: the projects that override this ticket type's default (Custom or Off), by project key. Not for guardrails.")
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound);
 

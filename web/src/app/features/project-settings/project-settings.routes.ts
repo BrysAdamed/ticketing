@@ -1,9 +1,9 @@
 import { ActivatedRouteSnapshot, Routes } from '@angular/router';
 import { AGENT_FLAG } from '@core/agent/agent-prompt.models';
+import { promptTypeLabel } from '@core/agent/prompt-slugs';
 import { featureGuard } from '@core/flags/feature.guard';
 import { unsavedChangesGuard } from '@core/layout/unsaved-changes.guard';
 import { viewRoute } from '@core/views/view-registry';
-import { promptTypeLabel } from './agent/prompt-slugs';
 import {
   PROJECT_AGENT_PROMPT_VIEW,
   PROJECT_AGENT_SETTINGS_VIEW,

@@ -9,11 +9,11 @@ import { KbdComponent } from '@shared/ui/kbd/kbd.component';
 import { AuthService } from '../../auth/auth.service';
 import { CommandPaletteService } from '../../commands/command-palette.service';
 import { CommandRegistry } from '../../commands/command-registry';
+import { OpenProjectState } from '../../projects/open-project';
 import { ProjectDirectory } from '../../projects/project-directory';
 import { ShortcutService } from '../../shortcuts/shortcut.service';
 import { ThemeService } from '../../theme/theme.service';
 import { Breadcrumbs } from '../breadcrumbs';
-import { NavigationContext } from '../navigation-context';
 import { ShellActions } from '../shell-actions';
 
 export const CREATE_TICKET_COMMAND = 'ticket.create';
@@ -41,7 +41,7 @@ export class TopbarComponent {
   protected readonly actions = inject(ShellActions);
   private readonly breadcrumbs = inject(Breadcrumbs);
   private readonly directory = inject(ProjectDirectory);
-  private readonly navigation = inject(NavigationContext);
+  private readonly openProject = inject(OpenProjectState);
   private readonly commands = inject(CommandRegistry);
   private readonly shortcuts = inject(ShortcutService);
 
@@ -55,7 +55,7 @@ export class TopbarComponent {
     this.commands.commands().some((c) => c.id === CREATE_TICKET_COMMAND),
   );
   protected readonly crumbs = computed(() => {
-    const open = this.navigation.openProject();
+    const open = this.openProject.project();
     return this.breadcrumbs.trail().map((crumb) => ({
       ...crumb,
       label: !crumb.projectKey

@@ -1,5 +1,5 @@
 import { computed, DestroyRef, effect, inject, Injectable, signal } from '@angular/core';
-import { NavigationContext } from '../layout/navigation-context';
+import { OpenProjectState } from './open-project';
 import { firstValueFrom } from 'rxjs';
 import { ApiClient } from '../api/api-client';
 import { ApiError, toApiError } from '../api/api-error';
@@ -72,14 +72,14 @@ export class ProjectContext {
   private token = 0;
 
   constructor() {
-    const navigation = inject(NavigationContext);
+    const open = inject(OpenProjectState);
     effect(() => {
       const project = this.project();
-      navigation.openProject.set(
+      open.project.set(
         project ? { key: project.key, name: project.name, archived: !!project.archivedAt } : null,
       );
     });
-    inject(DestroyRef).onDestroy(() => navigation.openProject.set(null));
+    inject(DestroyRef).onDestroy(() => open.project.set(null));
   }
 
   /// Shows the cached project at once (stale-while-revalidate) and fetches it once per key: calling

@@ -1,14 +1,8 @@
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router } from '@angular/router';
 import { filter, map } from 'rxjs';
 import { projectKeyOf, TICKET_KEY_PATTERN } from '@shared/domain/keys';
-
-export interface OpenProject {
-  key: string;
-  name: string;
-  archived: boolean;
-}
 
 /// Where the user is: current URL and the project in context (from /projects/:key or a ticket
 /// key in /tickets/:key or ?peek=KEY).
@@ -37,11 +31,6 @@ export class NavigationContext {
     }
     return null;
   });
-
-  /// The open project as loaded by the project frame, so the breadcrumb shows its current name and
-  /// the sidebar keeps it (and its sections) while the user is in it, even when the readable-projects
-  /// list leaves it out (archived, or beyond the list's first page).
-  readonly openProject = signal<OpenProject | null>(null);
 
   projectUrl(view?: string): string | null {
     const key = this.projectKey();

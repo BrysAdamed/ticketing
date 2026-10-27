@@ -273,6 +273,11 @@ tk-doc-markdown {
   display: block;
 }
 
+tk-doc-markdown ::ng-deep > * {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 40px;
+}
+
 .reference {
   min-height: 0;
   display: flex;

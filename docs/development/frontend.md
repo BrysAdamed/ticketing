@@ -164,11 +164,17 @@ The component is lazily loaded, receives the inputs `ticketKey`, `ticketId` and 
 
 | Need | Use |
 | --- | --- |
-| Docs REST calls | `DocsApi` (`core/docs/docs.api.ts`): `tree`, `recent`, `trash`, `get`, `create`, `rename`, `move`, `duplicate`, `delete`, `restore`. Wire types in `doc.models.ts` (`Doc`, `DocTreeItem`, `DocSummary`, `DocTrashItem`, `DocPlacement`, `DOC_TREE_LIMITS`). |
+| Docs REST calls | `DocsApi` (`core/docs/docs.api.ts`): `tree`, `recent`, `trash`, `get`, `create`, `rename`, `move`, `duplicate`, `delete`, `restore`, plus the content calls below. Wire types in `doc.models.ts` (`Doc`, `DocTreeItem`, `DocSummary`, `DocTrashItem`, `DocPlacement`, `DOC_TREE_LIMITS`). |
 | Doc links | `docUrl(key, title)` → `/projects/{PK}/docs/{KEY}/{slug}`, `docSlug` (same as the server's `DocPaths.Slug`), `docsHomeUrl`, `docPathSegments(path)`, `projectKeyOfDoc`, `DOC_KEY_PATTERN` (`shared/domain/keys.ts`). |
 | The tree inside the Docs section | `DocTreeStore` (`features/docs/tree/`, provided by `docs.layout`): `items`, `rows`, `canWrite`, `canManageTrash`, `activeKey`, `cursorKey`, `startCreate(kind, parent)`, `startRename`, `move`, `duplicate`, `delete` (Undo toast), `restore`, `patchFromDoc(doc)` after a write, `structureVersion` (bumped after renames and moves). Pure rules in `doc-tree-logic.ts`. |
 | The open doc | `DocStore` (`features/docs/doc/`, provided by the `docs.doc` frame): `doc`, `status`, `load`, `refresh`, `set(doc)` after a write. |
-| A content view for a doc kind | Change the loader of `DOCS_PAGE_VIEW`, `DOCS_DIAGRAM_VIEW` or `DOCS_FOLDER_VIEW` in `features/docs/docs.views.ts` (or add a flagged variant). The component takes `doc = input.required<Doc>()` and renders below the page bar. |
+| A content view for a doc kind | Change the loader of `DOCS_PAGE_VIEW`, `DOCS_DIAGRAM_VIEW` or `DOCS_FOLDER_VIEW` in `features/docs/docs.views.ts` (or add a flagged variant). The component takes `doc = input.required<Doc>()` and renders below the page bar. With `?mode=edit` (pages and diagrams of writers) the frame hides its page bar and the content view renders its editor; `E` and the Edit button set it. |
+| Page content, drafts, versions | `DocsApi.update(key, { title?, content, baseVersion, changeNote })`, `draft`, `saveDraft`, `saveDraftOnUnload` (keepalive), `discardDraft`, `version(key, n)`, `markdownExportUrl`. Page attachments: `DocAttachmentsApi` (`core/docs/doc-attachments.api.ts`: `list`, `upload`, `delete`, `changes`, `markdownFor`). |
+| Editing a doc's text | `DocEditSession` (`features/docs/editing/`, provide it in the editor component): `open(doc)`, `edit({ title?, content? })` (autosave 1 s later), `flush()`, `saveOnUnload()`, `publish(note)` (merges on `doc.version.conflict`), `conflict`, `keepEditingOnLatest`, `overwriteWithMine`, `discard`, `status`, `revision` (reload the editor text when it changes). `mergeThreeWay(base, mine, theirs)` is the pure merge; `createMarkdownEditor` and helpers (`insertBlock`, `wrap`, `prefixLines`, `replaceDocument`) wrap CodeMirror. |
+| Rendering a doc's markdown | `tk-doc-markdown` (`features/docs/page/`): heading anchors, callouts, code headers, highlighting and the registered enhancers; `rendered` emits the host after each render. Measured as `performance` entry `tk-doc-markdown`. |
+| A section in the page reader | `provideDocPageSection({ id, order, placement: 'footer' \| 'rail', loadComponent })` (`core/docs/doc-extensions.ts`) in the `providers` of `docs.routes.ts`. The component takes `doc = input.required<Doc>()`, is re-created per doc key and renders its own `h2` (copy the attachments section's `sec-h`/`box` look). Footer sections sit below the content (attachments at order 50), rail sections below "On this page". |
+| Post-processing rendered markdown (Mermaid, embeds) | `provideDocMarkdownEnhancer({ id, order, enhance(host, { mode, theme, docKey, signal }) })`. It runs after every render in the reader (`mode: 'view'`) and the editor preview (`'preview'`, re-rendered while typing) and after a theme change (the HTML is set again first). Replace descendants only; drop async work once `signal` is aborted. |
+| Toolbar buttons, `/` commands, CodeMirror extensions | `provideDocEditorPlugin({ id, order, toolbar?, slashCommands?, extensions? })`. Actions get a `DocEditorCommandContext` (`selectedText`, `replaceSelection`, `insertBlock`, `focus`, `docKey`, `projectKey`); register extra icons with `provideIcons` next to the plugin. `extensions(context)` returns CodeMirror `Extension`s and is loaded with the editor chunk (for `[[` completion, ticket-key completion). |
 
 ## UI kit (`shared/`)
 
@@ -224,6 +230,7 @@ Global CSS helpers (`styles/`): `.tk-page`, `.tk-page-header` (+ `.tk-page-count
   - Import `test` and `expect` from `e2e/support/fixtures.ts`. It provides page objects (`loginPage`, `shell`) and `api`.
   - `api` (`e2e/support/api.ts`) uses the admin cookie session and handles XSRF itself (it reads the `XSRF-TOKEN` cookie and echoes it as `X-XSRF-TOKEN`). Seed data through it (`api.createProject()`, `api.post(...)`), never through the UI. Use `uniqueProjectKey()` so parallel tests don't collide.
   - Page objects live in `e2e/pages/*.page.ts`. They expose locators and intent-level methods, never assertions about business rules.
+  - Timing budgets go in `*.perf.spec.ts`. The `chromium` project ignores them; the `perf` project runs them only when asked, alone: `E2E_PERF=1 npx playwright test --project=perf` (parallel workers skew the numbers).
 
 ### `data-testid` conventions
 

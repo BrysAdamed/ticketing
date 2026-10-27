@@ -26,6 +26,18 @@ export default defineConfig({
         { name: 'setup', testMatch: /global\.setup\.ts/ },
         {
             name: 'chromium',
+            testIgnore: /\.perf\.spec\.ts$/,
+            use: {
+                ...devices['Desktop Chrome'],
+                viewport: { width: 1440, height: 900 },
+                storageState: ADMIN_STORAGE_STATE,
+            },
+            dependencies: ['setup'],
+        },
+        {
+            name: 'perf',
+            testMatch: /\.perf\.spec\.ts$/,
+            fullyParallel: false,
             use: {
                 ...devices['Desktop Chrome'],
                 viewport: { width: 1440, height: 900 },

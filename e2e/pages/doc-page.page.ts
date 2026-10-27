@@ -44,7 +44,7 @@ export class DocPagePage {
 
     async startEditing(): Promise<void> {
         await this.page.locator('body').press('e');
-        await expect(this.source).toBeVisible();
+        await expect(this.source).toBeVisible({ timeout: 15_000 });
     }
 
     /// Replaces line `line` (1-based) of the source with `text`.

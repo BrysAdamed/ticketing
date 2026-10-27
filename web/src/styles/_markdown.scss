@@ -212,7 +212,7 @@ $icon-octagon: tabler-icon(
       margin-bottom: 0;
     }
 
-    > p {
+    > p:not(:last-child) {
       margin-bottom: 6px;
     }
   }
@@ -245,7 +245,7 @@ $icon-octagon: tabler-icon(
     --tk-callout-icon: #{$icon-octagon};
   }
 
-  .tk-md-callout-title {
+  .tk-md-callout > .tk-md-callout-title {
     display: flex;
     align-items: center;
     gap: 6px;

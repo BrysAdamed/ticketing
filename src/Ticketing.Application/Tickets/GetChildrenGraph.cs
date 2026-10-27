@@ -17,7 +17,7 @@ public sealed record TicketGraphEdgeDto(Guid LinkId, TicketLinkType Type, string
 public sealed record TicketGraphDto(string Key, IReadOnlyList<TicketGraphNodeDto> Nodes, IReadOnlyList<TicketGraphEdgeDto> Edges);
 
 /// <summary>
-/// The children of a ticket and the links that touch them (D-94): links among the children, and links to tickets outside the
+/// The children of a ticket and the links that touch them (D-95): links among the children, and links to tickets outside the
 /// parent, which become external nodes. Tickets in projects the caller cannot read and deleted tickets are left out.
 /// </summary>
 public static class GetChildrenGraph

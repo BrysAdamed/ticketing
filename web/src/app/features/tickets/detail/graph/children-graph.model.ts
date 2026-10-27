@@ -1,7 +1,7 @@
 import { TicketGraph, TicketGraphEdge, TicketGraphNode } from '@core/tickets/ticket.models';
 
 /// Ready: open and nothing open blocks it. Blocked: open with at least one open `Blocks`
-/// predecessor. Done: closed (D-94).
+/// predecessor. Done: closed (D-95).
 export type GraphNodeState = 'ready' | 'blocked' | 'done';
 
 export interface GraphNode extends TicketGraphNode {

@@ -45,6 +45,8 @@ public interface ITicketingDbContext
 
     DbSet<TicketWatcher> TicketWatchers { get; }
 
+    DbSet<Notification> Notifications { get; }
+
     DbSet<Attachment> Attachments { get; }
 
     DbSet<TestCase> TestCases { get; }

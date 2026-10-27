@@ -9,6 +9,7 @@ import { KbdComponent } from '@shared/ui/kbd/kbd.component';
 import { AuthService } from '../../auth/auth.service';
 import { CommandPaletteService } from '../../commands/command-palette.service';
 import { CommandRegistry } from '../../commands/command-registry';
+import { NotificationBellComponent } from '../../notifications/notification-bell.component';
 import { OpenProjectState } from '../../projects/open-project';
 import { ProjectDirectory } from '../../projects/project-directory';
 import { ShortcutService } from '../../shortcuts/shortcut.service';
@@ -28,6 +29,7 @@ export const CREATE_TICKET_COMMAND = 'ticket.create';
     KbdComponent,
     AvatarComponent,
     ProjectTileComponent,
+    NotificationBellComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './topbar.component.html',

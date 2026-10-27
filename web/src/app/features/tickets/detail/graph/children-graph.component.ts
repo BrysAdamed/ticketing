@@ -51,7 +51,7 @@ const ARROWS: Record<string, Direction> = {
 
 let nextId = 0;
 
-/// Dependency graph of a ticket's children (D-94): `Blocks` links laid out top to bottom, blocked
+/// Dependency graph of a ticket's children (D-95): `Blocks` links laid out top to bottom, blocked
 /// and ready tickets, the critical path, hover/focus highlighting of everything up- and downstream,
 /// zoom, pan and fit. Loaded lazily (`@defer`) together with dagre.
 @Component({

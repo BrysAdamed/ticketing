@@ -9,7 +9,7 @@ export type SubticketsView = 'list' | 'graph';
 
 const STORAGE_PREFIX = 'tk-subtickets-view:';
 
-/// List or graph in the ticket view's Sub-tickets section (D-94). The graph exists only while
+/// List or graph in the ticket view's Sub-tickets section (D-95). The graph exists only while
 /// flag `ticket.subtickets-graph` is on; the choice is remembered per user in this browser.
 @Injectable({ providedIn: 'root' })
 export class SubticketsViewPreference {

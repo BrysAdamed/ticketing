@@ -27,7 +27,7 @@ export interface GraphLayout {
   unlinkedLabel: Point | null;
 }
 
-/// Lays out the `Blocks` edges top to bottom with dagre (D-94); tickets without blocking links go
+/// Lays out the `Blocks` edges top to bottom with dagre (D-95); tickets without blocking links go
 /// in a grid below. `RelatesTo` / `Duplicates` edges are drawn between the placed cards.
 export function layoutGraph(model: ChildrenGraphModel): GraphLayout {
   const { nodes, edges, width: layeredWidth, height: layeredHeight } = layers(model);

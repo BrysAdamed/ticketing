@@ -42,6 +42,8 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Child**: See Parent / child.
 
+**Collapsing (notifications)**: Merging rapid changes into one notification: an event by the same actor on the same ticket (or regression session) within 5 minutes of the first event of an unread notification raises its event count instead of adding a row; the highest-ranked kind becomes the headline (D-94). [§6.16](product/01-refined-spec.md#616-in-app-notifications-i-30-d-94)
+
 **Comment**: Markdown text on a ticket, listed oldest first. Authors edit or delete their own; Owners delete any; a deleted comment leaves a placeholder. [§4.7](product/01-refined-spec.md#47-comment), [§6.9](product/01-refined-spec.md#69-comments)
 
 **Container**: Where a ticket sits: its project backlog or exactly one board. Rank orders tickets within a container. [§6.4](product/01-refined-spec.md#64-backlog-and-boards), [§6.6](product/01-refined-spec.md#66-ranking)
@@ -79,6 +81,8 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 **Member**: Project role that can read and write tickets, test cases and regressions, but not delete tickets, moderate comments or manage the project. Every signed-in user has Member access to a public project. [§5.3](product/01-refined-spec.md#53-project-actions)
 
 **My work**: Page listing the current user's open tickets across projects, their waiting regression items and the open tickets they watch. [§6.8](product/01-refined-spec.md#68-search-lists-and-export)
+
+**Notification**: An in-app message to one user about a change someone else made: assigned to them (ticket or regression item), mentioned, or a comment, status change, priority raised to High/Highest, move or deletion on a ticket they watch. Created in the same transaction as the change, shown under the bell, listed only while the user can read the project, purged after 90 days (D-94). See Collapsing. [§6.16](product/01-refined-spec.md#616-in-app-notifications-i-30-d-94)
 
 **Open**: A ticket whose status category is not `Done`. Used in dashboards and filters. [§3](product/01-refined-spec.md#3-enumerations)
 

@@ -258,6 +258,90 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                     b.ToTable("board_projects", (string)null);
                 });
 
+            modelBuilder.Entity("Ticketing.Domain.Collaboration.Notification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("ActorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("actor_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("EventCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("event_count");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("integer")
+                        .HasColumnName("kind");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("project_id");
+
+                    b.Property<DateTimeOffset?>("ReadAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("read_at");
+
+                    b.Property<Guid>("RecipientId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("recipient_id");
+
+                    b.Property<Guid?>("RegressionSessionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("regression_session_id");
+
+                    b.Property<string>("Summary")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("summary");
+
+                    b.Property<string>("TestCaseKey")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("test_case_key");
+
+                    b.Property<Guid?>("TicketId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("ticket_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_notifications");
+
+                    b.HasIndex("ActorId")
+                        .HasDatabaseName("ix_notifications_actor_id");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("ix_notifications_created_at");
+
+                    b.HasIndex("ProjectId")
+                        .HasDatabaseName("ix_notifications_project_id");
+
+                    b.HasIndex("RegressionSessionId")
+                        .HasDatabaseName("ix_notifications_regression_session_id");
+
+                    b.HasIndex("TicketId")
+                        .HasDatabaseName("ix_notifications_ticket_id");
+
+                    b.HasIndex("RecipientId", "CreatedAt", "Id")
+                        .HasDatabaseName("ix_notifications_recipient_id_created_at_id");
+
+                    b.HasIndex("RecipientId", "ReadAt", "CreatedAt", "Id")
+                        .HasDatabaseName("ix_notifications_recipient_id_read_at_created_at_id");
+
+                    b.ToTable("notifications", (string)null);
+                });
+
             modelBuilder.Entity("Ticketing.Domain.Collaboration.TicketWatcher", b =>
                 {
                     b.Property<Guid>("TicketId")
@@ -1392,6 +1476,41 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_board_projects_projects_project_id");
+                });
+
+            modelBuilder.Entity("Ticketing.Domain.Collaboration.Notification", b =>
+                {
+                    b.HasOne("Ticketing.Domain.Users.User", null)
+                        .WithMany()
+                        .HasForeignKey("ActorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_notifications_users_actor_id");
+
+                    b.HasOne("Ticketing.Domain.Projects.Project", null)
+                        .WithMany()
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_notifications_projects_project_id");
+
+                    b.HasOne("Ticketing.Domain.Users.User", null)
+                        .WithMany()
+                        .HasForeignKey("RecipientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_notifications_users_recipient_id");
+
+                    b.HasOne("Ticketing.Domain.Regressions.RegressionSession", null)
+                        .WithMany()
+                        .HasForeignKey("RegressionSessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("fk_notifications_regression_sessions_regression_session_id");
+
+                    b.HasOne("Ticketing.Domain.Tickets.Ticket", null)
+                        .WithMany()
+                        .HasForeignKey("TicketId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("fk_notifications_tickets_ticket_id");
                 });
 
             modelBuilder.Entity("Ticketing.Domain.Collaboration.TicketWatcher", b =>

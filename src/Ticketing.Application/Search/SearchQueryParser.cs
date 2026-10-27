@@ -50,7 +50,7 @@ public static class SearchQueryParser
             Order = Order(v, parameters.Single("order")),
         };
 
-        v.MaxLength("q", criteria.Text, 500);
+        v.MaxLength("q", criteria.Text, SqlLike.MaxTextLength);
         foreach (var (name, count) in parameters.ListCounts)
             v.Must(count <= MaxListValues, name, $"{name} accepts at most {MaxListValues} values.");
         v.ThrowIfInvalid();

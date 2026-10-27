@@ -9,8 +9,6 @@ public sealed class User
     public const int EmailMaxLength = 254;
     public const int DisplayNameMaxLength = 100;
     public const int SecurityStampLength = 32;
-    public const int MaxFailedLogins = 5;
-    public static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(15);
     public static readonly TimeSpan NewUserSetPasswordLinkLifetime = TimeSpan.FromHours(72);
     public static readonly TimeSpan ResetSetPasswordLinkLifetime = TimeSpan.FromHours(24);
 
@@ -39,10 +37,6 @@ public sealed class User
 
     /// <summary>Changes whenever the password is (re)set; cookie sessions carrying an older stamp are rejected.</summary>
     public string SecurityStamp { get; private set; }
-
-    public int FailedLoginCount { get; private set; }
-
-    public DateTimeOffset? LockedUntil { get; private set; }
 
     public DateTimeOffset CreatedAt { get; private set; }
 
@@ -78,37 +72,17 @@ public sealed class User
         return normalized;
     }
 
-    public bool IsLockedOut(DateTimeOffset now) => LockedUntil is { } until && until > now;
-
-    /// <summary>Counts a failed password attempt. Returns true when this attempt locked the account.</summary>
-    public bool RegisterFailedLogin(DateTimeOffset now)
-    {
-        FailedLoginCount++;
-        if (FailedLoginCount < MaxFailedLogins)
-            return false;
-        FailedLoginCount = 0;
-        LockedUntil = now + LockoutDuration;
-        return true;
-    }
-
-    public void RegisterSuccessfulLogin(DateTimeOffset now)
-    {
-        FailedLoginCount = 0;
-        LockedUntil = null;
-        LastLoginAt = now;
-    }
+    public void RegisterSuccessfulLogin(DateTimeOffset now) => LastLoginAt = now;
 
     /// <summary>
-    /// Sets a new password: consumes any pending set-password link, lifts a lockout and rotates the security stamp, so
-    /// every other cookie session of the user ends.
+    /// Sets a new password: consumes any pending set-password link and rotates the security stamp, so every other cookie
+    /// session of the user ends.
     /// </summary>
     public void SetPasswordHash(string passwordHash)
     {
         PasswordHash = passwordHash;
         SetPasswordTokenHash = null;
         SetPasswordTokenExpiresAt = null;
-        FailedLoginCount = 0;
-        LockedUntil = null;
         SecurityStamp = NewSecurityStamp();
     }
 

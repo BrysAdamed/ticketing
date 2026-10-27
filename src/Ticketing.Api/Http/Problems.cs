@@ -17,7 +17,6 @@ public static class Problems
         ErrorKind.Forbidden => StatusCodes.Status403Forbidden,
         ErrorKind.NotFound => StatusCodes.Status404NotFound,
         ErrorKind.Conflict => StatusCodes.Status409Conflict,
-        ErrorKind.Locked => StatusCodes.Status423Locked,
         ErrorKind.TooManyRequests => StatusCodes.Status429TooManyRequests,
         _ => StatusCodes.Status500InternalServerError,
     };

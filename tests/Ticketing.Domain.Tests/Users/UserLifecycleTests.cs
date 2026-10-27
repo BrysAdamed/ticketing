@@ -9,14 +9,12 @@ public sealed class UserLifecycleTests
     private static readonly DateTimeOffset Now = new(2026, 10, 26, 12, 0, 0, TimeSpan.Zero);
 
     [Fact]
-    public void Setting_a_password_consumes_the_link_lifts_the_lockout_and_rotates_the_stamp()
+    public void Setting_a_password_consumes_the_link_and_rotates_the_stamp()
     {
         // Arrange
         var user = User.Create("jane@example.com", "Jane", GlobalRole.User, null, Now);
         var stamp = user.SecurityStamp;
         user.IssueSetPasswordToken(new string('a', 64), Now.AddHours(1));
-        for (var i = 0; i < User.MaxFailedLogins; i++)
-            user.RegisterFailedLogin(Now);
 
         // Act
         user.SetPasswordHash("hash");
@@ -24,7 +22,6 @@ public sealed class UserLifecycleTests
         // Assert
         Assert.True(user.HasPassword);
         Assert.Null(user.SetPasswordTokenHash);
-        Assert.False(user.IsLockedOut(Now));
         Assert.NotEqual(stamp, user.SecurityStamp);
         Assert.Equal(User.SecurityStampLength, user.SecurityStamp.Length);
     }

@@ -1160,6 +1160,38 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                     b.ToTable("personal_access_tokens", (string)null);
                 });
 
+            modelBuilder.Entity("Ticketing.Domain.Users.LoginThrottle", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<string>("ClientAddress")
+                        .HasMaxLength(45)
+                        .HasColumnType("character varying(45)")
+                        .HasColumnName("client_address");
+
+                    b.Property<int>("FailedCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("failed_count");
+
+                    b.Property<DateTimeOffset>("LastFailedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_failed_at");
+
+                    b.Property<DateTimeOffset?>("LockedUntil")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("locked_until");
+
+                    b.HasKey("UserId", "ClientAddress")
+                        .HasName("pk_login_throttles");
+
+                    b.HasIndex("LastFailedAt")
+                        .HasDatabaseName("ix_login_throttles_last_failed_at");
+
+                    b.ToTable("login_throttles", (string)null);
+                });
+
             modelBuilder.Entity("Ticketing.Domain.Users.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1195,10 +1227,6 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(254)")
                         .HasColumnName("email");
 
-                    b.Property<int>("FailedLoginCount")
-                        .HasColumnType("integer")
-                        .HasColumnName("failed_login_count");
-
                     b.Property<int>("GlobalRole")
                         .HasColumnType("integer")
                         .HasColumnName("global_role");
@@ -1210,10 +1238,6 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset?>("LastLoginAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("last_login_at");
-
-                    b.Property<DateTimeOffset?>("LockedUntil")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("locked_until");
 
                     b.Property<string>("PasswordHash")
                         .HasColumnType("text")
@@ -1253,6 +1277,37 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                         .HasFilter("set_password_token_hash IS NOT NULL");
 
                     b.ToTable("users", (string)null);
+                });
+
+            modelBuilder.Entity("Ticketing.Domain.Users.UserSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTimeOffset>("LastSeenAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_seen_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_user_sessions");
+
+                    b.HasIndex("LastSeenAt")
+                        .HasDatabaseName("ix_user_sessions_last_seen_at");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_user_sessions_user_id");
+
+                    b.ToTable("user_sessions", (string)null);
                 });
 
             modelBuilder.Entity("Ticketing.Infrastructure.Persistence.AttachmentContent", b =>
@@ -1516,6 +1571,26 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_personal_access_tokens_users_user_id");
+                });
+
+            modelBuilder.Entity("Ticketing.Domain.Users.LoginThrottle", b =>
+                {
+                    b.HasOne("Ticketing.Domain.Users.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_login_throttles_users_user_id");
+                });
+
+            modelBuilder.Entity("Ticketing.Domain.Users.UserSession", b =>
+                {
+                    b.HasOne("Ticketing.Domain.Users.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_user_sessions_users_user_id");
                 });
 
             modelBuilder.Entity("Ticketing.Infrastructure.Persistence.AttachmentContent", b =>

@@ -24,6 +24,10 @@ public interface ITicketingDbContext
 {
     DbSet<User> Users { get; }
 
+    DbSet<LoginThrottle> LoginThrottles { get; }
+
+    DbSet<UserSession> UserSessions { get; }
+
     DbSet<PersonalAccessToken> PersonalAccessTokens { get; }
 
     DbSet<Project> Projects { get; }

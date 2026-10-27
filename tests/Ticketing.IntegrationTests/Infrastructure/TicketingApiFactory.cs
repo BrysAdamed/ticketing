@@ -1,3 +1,5 @@
+using System.Net;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Npgsql;
@@ -17,6 +19,7 @@ public sealed class TicketingApiFactory : WebApplicationFactory<Program>, IAsync
 {
     public const string BootstrapAdminEmail = "bootstrap-admin@ticketing.test";
     public const string BootstrapAdminPassword = "Bootstrap-Admin-Password-1";
+    public const string RemoteAddressHeader = "X-Test-Remote-Address";
 
     private Respawner _respawner = null!;
 
@@ -58,5 +61,24 @@ public sealed class TicketingApiFactory : WebApplicationFactory<Program>, IAsync
         builder.UseSetting("Logging:Console:FormatterName", "simple");
         builder.UseSetting("Logging:LogLevel:Default", "Warning");
         builder.UseSetting("Logging:LogLevel:Microsoft.AspNetCore", "Error");
+        builder.ConfigureServices(services => services.AddSingleton<IStartupFilter, RemoteAddressStartupFilter>());
+    }
+
+    /// <summary>
+    /// The test server has no TCP connection; a request may name its remote address in <see cref="RemoteAddressHeader"/>.
+    /// It is applied before any app middleware, so forwarded-header handling sees it like a real peer address.
+    /// </summary>
+    private sealed class RemoteAddressStartupFilter : IStartupFilter
+    {
+        public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => app =>
+        {
+            app.Use((context, nextMiddleware) =>
+            {
+                if (IPAddress.TryParse(context.Request.Headers[RemoteAddressHeader].ToString(), out var address))
+                    context.Connection.RemoteIpAddress = address;
+                return nextMiddleware(context);
+            });
+            next(app);
+        };
     }
 }

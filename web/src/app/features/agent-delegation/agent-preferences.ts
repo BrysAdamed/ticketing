@@ -1,6 +1,6 @@
 import { DOCUMENT } from '@angular/common';
 import { inject, Injectable, signal } from '@angular/core';
-import { ClaudeApp } from '@core/agent/claude-deep-link';
+import { ClaudeApp, localFolderError } from '@core/agent/claude-deep-link';
 
 const FOLDERS_KEY = 'tk-agent-folders';
 const APP_KEY = 'tk-agent-app';
@@ -16,8 +16,11 @@ export class AgentPreferences {
     this.read(APP_KEY) === 'ClaudeDesktop' ? 'ClaudeDesktop' : 'ClaudeCode',
   );
 
+  /// The remembered folder, or null when none is stored or the stored value is not a folder Claude
+  /// accepts (`localStorage` is writable by any script on our origin, so it is checked on every read).
   folder(projectKey: string): string | null {
-    return this.folders()[projectKey.toUpperCase()] ?? null;
+    const path = this.folders()[projectKey.toUpperCase()];
+    return path !== undefined && localFolderError(path) === null ? path : null;
   }
 
   setFolder(projectKey: string, path: string): void {

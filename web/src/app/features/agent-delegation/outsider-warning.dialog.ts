@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
-import { ResolvedAgentPrompt } from '@core/agent/agent-delegation.client';
+import { OUTSIDER_CONTENT_LABELS, ResolvedAgentPrompt } from '@core/agent/agent-delegation.client';
 import { RelativeTimePipe } from '@shared/pipes/relative-time.pipe';
 
 export interface OutsiderWarningDialogData {
@@ -12,8 +12,8 @@ export interface OutsiderWarningDialogData {
   proceed: () => void;
 }
 
-/// Shown before a launch when the latest description or comment of a public project's ticket came
-/// from a non-member (refinement §6 hardening, D-100): the agent reads that text over MCP.
+/// Shown before a launch when a title, description, comment or attachment of a public project's
+/// ticket came from a non-member (refinement §6 hardening, D-100, D-104): the agent reads it over MCP.
 @Component({
   selector: 'tk-outsider-warning-dialog',
   imports: [MatButtonModule, MatDialogModule, RelativeTimePipe],
@@ -24,8 +24,8 @@ export interface OutsiderWarningDialogData {
     <mat-dialog-content>
       <div class="tk-callout tk-callout-warning">
         <strong>{{ data.content.author?.displayName ?? 'Someone' }}</strong>
-        wrote the latest {{ data.content.source === 'Comment' ? 'comment' : 'description' }}
-        {{ data.content.at | relativeTime }} and isn't a member of {{ data.projectKey }}.
+        {{ action }} {{ data.content.at | relativeTime }} and isn't a member of
+        {{ data.projectKey }}.
       </div>
       <p class="text">
         The agent reads the ticket over MCP, so text from outside the team can steer it. Read the
@@ -57,6 +57,7 @@ export interface OutsiderWarningDialogData {
 })
 export class OutsiderWarningDialog {
   protected readonly data = inject<OutsiderWarningDialogData>(MAT_DIALOG_DATA);
+  protected readonly action = OUTSIDER_CONTENT_LABELS[this.data.content.source];
   private readonly ref = inject(MatDialogRef<OutsiderWarningDialog>);
 
   protected proceed(): void {

@@ -12,6 +12,15 @@ export interface AgentPromptUser {
   isActive: boolean;
 }
 
+export type OutsiderContentSource = 'Title' | 'Description' | 'Comment' | 'Attachment';
+
+export const OUTSIDER_CONTENT_LABELS: Record<OutsiderContentSource, string> = {
+  Title: 'changed the title',
+  Description: 'wrote the description',
+  Comment: 'wrote a comment',
+  Attachment: 'attached a file',
+};
+
 /// `GET /tickets/{key}/agent-prompt` (TKT-28, D-100).
 export interface ResolvedAgentPrompt {
   prompt: string;
@@ -24,9 +33,10 @@ export interface ResolvedAgentPrompt {
     updatedBy: AgentPromptUser | null;
   };
   guardrailsVersion: number;
-  /// Set on public projects when the latest description write or comment came from a non-member.
+  /// Set on public projects when any title or description write, comment or attachment came from a
+  /// non-member: the newest one (D-104).
   outsiderContent: {
-    source: 'Description' | 'Comment';
+    source: OutsiderContentSource;
     author: AgentPromptUser | null;
     at: string;
   } | null;

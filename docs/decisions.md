@@ -616,6 +616,18 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
   - Audit: `agent.prompt.updated` reads "changed agent prompt `TKT Bug` · v2 → v3, Custom → Use default"; the filter gains "Agent prompts" while the flag is on.
 - Rationale: a dedicated status read is the narrowest opening that lets the page explain itself, and it reveals configuration only to the people who set it. Reusing reset-built-in for Adopt keeps one write path and one history shape for "take the shipped text".
 
+### D-104 Security review of agent delegation: outsider warning on any outsider write, an explicit URL allowlist for rendered markdown, stricter repository URLs and branch names (TKT-33)
+
+- Question: what the TKT-33 security review changes in the epic, and where the threat model lives.
+- Decision:
+  - The threat model is `docs/architecture/agent-delegation-threats.md`: six threats, each with its control, the tests that prove it and its residual risk, plus a manual script for a reviewer outside the implementing pair.
+  - Outsider content (refines D-100): `outsiderContent` reports the newest title or description write (creation included), non-deleted comment (at its last edit, `EditedAt ?? CreatedAt`) or attachment written by someone who is neither a project member nor an Admin. A later write by an insider no longer clears it, because the outsider's text may still be there. `source` gains `Title` and `Attachment`. Private projects still never warn; linked tickets, test cases and content written while a project was public are TKT-43.
+  - Rendered markdown keeps only `http:`, `https:`, `mailto:` and scheme-less URLs. `SAFE_URL` in `shared/markdown/render-markdown.ts` is passed to DOMPurify as `ALLOWED_URI_REGEXP` rather than relying on its default list, which also allows `tel:`, `sms:`, `xmpp:` and others. ESLint `no-restricted-syntax` rejects `bypassSecurityTrust*` and `[innerHTML]` everywhere except `tk-markdown`, so every user-text surface (Docs too, once built) goes through that renderer.
+  - A repository URL's user part must not look like a token: a known token prefix (`ghp_`, `github_pat_`, `glpat-`, `tkt_`, …), more than 50 characters or a leading `-` is refused, on the server and in the setup form. Branch names allow only ASCII letters, digits, `-`, `_`, `.` and `/`. Both values render into every prompt.
+  - Error messages do not echo template bodies or setup values: an unknown placeholder is named with at most 40 characters, and an invalid branch is not repeated.
+  - The browser checks the stored local folder again on every read; an invalid value asks for the folder again instead of launching.
+  - `CapturedLogs` in the integration tests records the API's log lines and scopes at Information and above (EF commands at Warning, as in production), so tests can assert that no prompt, path or token is logged.
+- Rationale: the warning exists because ticket text steers the agent. An insider's reply does not remove an outsider's text, so it must not remove the warning. An allowlist is the only form of URL filtering that stays correct when a sanitizer's defaults change. The repository URL and branch reach every reader and every prompt, so they are kept to what a git remote and a branch need.
 ## Product owner answers (v1 review, 2026-10-27)
 
 These were open questions (Q-01..Q-05); the product owner resolved them as follows.

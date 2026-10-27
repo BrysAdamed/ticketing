@@ -126,6 +126,20 @@ public sealed class PromptTemplateTests
     }
 
     [Fact]
+    public void An_unknown_placeholder_echoes_at_most_40_characters_of_the_body()
+    {
+        // Arrange
+        var secret = "secret instructions " + new string('x', 400);
+
+        // Act
+        var parse = PromptTemplate.Parse($"{{{{{secret}}}}}", AgentPromptPlaceholders.Names);
+
+        // Assert
+        var error = Assert.Single(parse.Errors);
+        Assert.Equal($"Unknown placeholder '{secret[..40]}…'.", error.Message);
+    }
+
+    [Fact]
     public void Every_error_is_reported_in_position_order()
     {
         // Act

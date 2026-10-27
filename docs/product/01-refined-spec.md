@@ -875,7 +875,7 @@ Placeholders, deliberately only trusted values (D-98): there is **no** title, de
 4. The project row for the ticket's type: `Off` gives 409 `agent.type.off`; `Custom` uses its body; `Inherit` or no row uses the instance default.
 5. Render it with the trusted values, append the guardrails when non-empty, and enforce the limit (409 `agent.prompt.tooLong`).
 
-The result carries the prompt, the ticket key and type, the template's source, version and last editor, the guardrails version and `outsiderContent`: on public projects, `{ source: Description | Comment, author, at }` when the current description's last write or the latest comment came from someone who is neither a project member nor an Admin, otherwise null (D-100). Anyone who can read the project may resolve, including Viewers and read-only tokens; nothing is written.
+The result carries the prompt, the ticket key and type, the template's source, version and last editor, the guardrails version and `outsiderContent`: on public projects, `{ source: Title | Description | Comment | Attachment, author, at }` for the newest title or description write, non-deleted comment (at its last edit) or attachment that came from someone who is neither a project member nor an Admin, otherwise null (D-100, D-104); a later write by an insider does not clear it. Anyone who can read the project may resolve, including Viewers and read-only tokens; nothing is written.
 
 ### 13.6 Permissions
 

@@ -118,6 +118,8 @@ public sealed class GetAgentPromptTests(TicketingApiFactory api)
         var onTools = await ToolNamesAsync(on);
         var offTools = await ToolNamesAsync(off);
         var called = await off.CallToolAsync(Tool, new Dictionary<string, object?> { ["key"] = ticket }, cancellationToken: _ct);
+        var projectOn = await on.CallToolAsync("get_project", new Dictionary<string, object?> { ["projectKey"] = "TKT" }, cancellationToken: _ct);
+        var projectOff = await off.CallToolAsync("get_project", new Dictionary<string, object?> { ["projectKey"] = "TKT" }, cancellationToken: _ct);
 
         // Assert
         Assert.Contains(Tool, onTools);
@@ -125,6 +127,8 @@ public sealed class GetAgentPromptTests(TicketingApiFactory api)
         Assert.Contains("get_project", offTools);
         Assert.True(called.IsError);
         Assert.Equal(AgentErrors.Disabled, Payload(called).GetProperty("code").GetString());
+        Assert.Equal(JsonValueKind.Object, Payload(projectOn).GetProperty("agent").ValueKind);
+        Assert.False(Payload(projectOff).TryGetProperty("agent", out var hidden) && hidden.ValueKind != JsonValueKind.Null);
     }
 
     [Fact]

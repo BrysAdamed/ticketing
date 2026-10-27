@@ -248,12 +248,12 @@ export class DelegateActionComponent {
         { label: 'Help', run: () => this.openHelp() },
       ],
     });
-    void this.record(prompt.ticketKey, app);
+    void this.record(prompt, app);
   }
 
-  private async record(ticketKey: string, app: ClaudeApp): Promise<void> {
+  private async record(launched: ResolvedAgentPrompt, app: ClaudeApp): Promise<void> {
     try {
-      const ticket = await firstValueFrom(this.client.recordDelegation(ticketKey, app));
+      const ticket = await firstValueFrom(this.client.recordDelegation(launched, app));
       this.events.emit({ kind: 'updated', ticket });
       this.host.refresh();
     } catch (error) {

@@ -51,8 +51,16 @@ export class AgentDelegationClient {
     return this.api.get<ResolvedAgentPrompt>(`/tickets/${ticketKey}/agent-prompt`);
   }
 
-  /// Writes `ticket.agent.delegated` and applies the project's on-delegate settings; returns the ticket.
-  recordDelegation(ticketKey: string, app: ClaudeApp): Observable<Ticket> {
-    return this.api.post<Ticket>(`/tickets/${ticketKey}/agent-delegations`, { app });
+  /// Writes `ticket.agent.delegated` with the versions of the prompt that was launched (D-105) and
+  /// applies the project's on-delegate settings; returns the ticket.
+  recordDelegation(launched: ResolvedAgentPrompt, app: ClaudeApp): Observable<Ticket> {
+    return this.api.post<Ticket>(`/tickets/${launched.ticketKey}/agent-delegations`, {
+      app,
+      launched: {
+        templateSource: launched.template.source,
+        templateVersion: launched.template.version,
+        guardrailsVersion: launched.guardrailsVersion,
+      },
+    });
   }
 }

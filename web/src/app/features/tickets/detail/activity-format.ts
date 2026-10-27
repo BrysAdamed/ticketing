@@ -243,13 +243,19 @@ function plural(word: string, items: readonly unknown[]): string {
   return items.length === 1 ? word : `${word}s`;
 }
 
-/// "Bug prompt v3 (custom) · Claude Code" from `{ templateSource, templateVersion, app }` (D-100).
+/// "prompt v3 (custom) · Claude Code" from `{ templateSource, templateVersion, app }` (D-100), with
+/// "since changed" or "since withdrawn" when the launched prompt was no longer current (D-105).
 function delegation(value: Record<string, unknown>): string | null {
   const version = value['templateVersion'];
   if (typeof version !== 'number') return null;
   const source = value['templateSource'] === 'Custom' ? 'custom' : 'default';
+  const since = value['withdrawn']
+    ? ', since withdrawn'
+    : value['current']
+      ? ', since changed'
+      : '';
   const app = value['app'] === 'ClaudeDesktop' ? 'Claude Desktop' : 'Claude Code';
-  return `prompt v${version} (${source}) · ${app}`;
+  return `prompt v${version} (${source}${since}) · ${app}`;
 }
 
 function attachmentName(value: unknown): string {

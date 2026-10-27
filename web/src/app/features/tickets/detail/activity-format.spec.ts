@@ -47,6 +47,32 @@ describe('describeEntry', () => {
     });
   });
 
+  it.each([
+    [
+      { current: { templateSource: 'Custom', templateVersion: 1, guardrailsVersion: 1 } },
+      'changed',
+    ],
+    [{ withdrawn: 'agent.type.off' }, 'withdrawn'],
+  ])('marks a delegation whose prompt is no longer current: %o', (extra, since) => {
+    // Act
+    const line = describeEntry(
+      entry({
+        action: 'ticket.agent.delegated',
+        newValue: {
+          templateSource: 'Default',
+          templateVersion: 2,
+          guardrailsVersion: 1,
+          app: 'ClaudeCode',
+          ...extra,
+        },
+      }),
+      users,
+    );
+
+    // Assert
+    expect(line.to).toBe(`prompt v2 (default, since ${since}) · Claude Code`);
+  });
+
   it('renders enum field changes with display labels', () => {
     // Act
     const line = describeEntry(

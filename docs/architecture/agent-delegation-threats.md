@@ -221,7 +221,7 @@ Code review (TKT-33) together with `AgentSecretHygieneTests` confirm:
 | --- | --- |
 | nginx access log | `log_format ticketing` logs method, `$loggable_request_uri` (`/set-password` queries dropped), status, size, the Referer without its query and the User-Agent. No agent endpoint takes a prompt or path in the URL, the deep link never reaches nginx, and `Authorization` is not logged. |
 | API logs | `ApiExceptionHandler` logs `{Status} {Code}`. EF command logging stays at Warning without sensitive data, and `Microsoft.AspNetCore` is at Warning. Unhandled exceptions log the exception: Npgsql redacts details and the agent code puts no body into exception messages. |
-| Activity values | `agent.prompt.updated` stores `{version, mode}`. `ticket.agent.delegated` stores `{templateSource, templateVersion, guardrailsVersion, app}`. Assignee and status changes are ordinary field changes. |
+| Activity values | `agent.prompt.updated` stores `{version, mode}`. `ticket.agent.delegated` stores `{templateSource, templateVersion, guardrailsVersion, app}` of the launched prompt, plus `current` versions or a `withdrawn` error code when the prompt changed after the page loaded (D-105). Assignee and status changes are ordinary field changes. |
 | Notifications | Built from activity actions and fields, never from values of agent entries. |
 | Error bodies | Template errors name the code, position and at most 40 characters of an unknown placeholder name (TKT-33). The length error states only the length. A stored template that no longer parses (`agent.template.invalid`) names the slot, the position and the error code only (TKT-44). A branch error no longer echoes the input (TKT-33). Repository URL errors never echo the input. |
 | Browser | The folder lives only in `localStorage`. The prompt is not logged to the console (no `console.log` in `web/src/app`). |
@@ -253,7 +253,7 @@ No High findings. Fixed in TKT-33, each with tests:
 
 Deferred:
 
-- **TKT-42:** record the prompt versions actually launched. The record is resolved at POST time, which can differ from the prompt the page loaded.
+- **TKT-42 (done, D-105):** the delegation record keeps the versions the browser launched, adds the current ones when they differ, and records a launch whose prompt was withdrawn since instead of refusing it (`RecordAgentDelegationTests` › `The_entry_records_the_launched_versions_when_the_template_changed_after_page_load`, `A_launch_whose_prompt_was_withdrawn_after_page_load_is_still_recorded_as_withdrawn`).
 - **TKT-43:** cover linked and child tickets, test cases and content written before a project turned private in the outsider warning.
 - **TKT-44 (done):** a stored template that no longer parses now gives 409 `agent.template.invalid` with the position and where to fix it, never the body (`GetAgentPromptTests` › `A_stored_template_that_no_longer_parses_is_agent_template_invalid_over_rest_and_mcp`).
 

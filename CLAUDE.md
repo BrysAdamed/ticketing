@@ -11,7 +11,7 @@ We track this project in Ticketing itself: project `TKT` on the team's own insta
 3. Keep the status current over MCP: `InProgress` when you start, `Review` when the branch is pushed, `Done` when it is merged to `main`. Add test cases (`create_test_case`) for behaviour worth regression-testing.
 4. On merge, add a short comment to the ticket: what changed, the merge commit, anything deferred (deferred work = a new ticket, not a TODO).
 
-The instance runs as compose project `ticketing-dogfood` (`WEB_HOST_PORT=8090 docker compose -p ticketing-dogfood -f docker-compose.yml up -d --build` to upgrade). It holds real data: **never** run `down -v`, demo seeding or e2e suites against it — tests use their own compose project and ports.
+The instance runs as compose project `ticketing-dogfood` (`TICKETING_PUBLIC_URL=http://localhost:8090 WEB_HOST_PORT=8090 docker compose -p ticketing-dogfood -f docker-compose.yml up -d --build` to upgrade; without the public URL, Delegate to agent is disabled). It holds real data: **never** run `down -v`, demo seeding or e2e suites against it — tests use their own compose project and ports.
 
 ## Before you change anything
 

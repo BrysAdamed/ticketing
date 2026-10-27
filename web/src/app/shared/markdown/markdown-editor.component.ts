@@ -77,9 +77,11 @@ const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(naviga
       </div>
     }
     <div class="footer">
-      <span class="hint"
-        ><tk-kbd>{{ submitKeys }}</tk-kbd> {{ submitHint() }}</span
-      >
+      @if (submitHint(); as hint) {
+        <span class="hint"
+          ><tk-kbd>{{ submitKeys }}</tk-kbd> {{ hint }}</span
+        >
+      }
       @if (uploading() > 0) {
         <span class="hint" role="status" data-testid="markdown-uploading">Uploading…</span>
       } @else if (uploadHandler()) {
@@ -176,7 +178,8 @@ export class MarkdownEditorComponent {
   readonly mode = model<MarkdownEditorMode>('write');
   readonly placeholder = input('Write in markdown…');
   readonly ariaLabel = input('Markdown');
-  readonly submitHint = input('to submit');
+  /// Footer hint after the submit keys; null hides it (when the host shows its own).
+  readonly submitHint = input<string | null>('to submit');
   readonly minRows = input(3);
   readonly maxRows = input(20);
   readonly maxLength = input<number | null>(null);

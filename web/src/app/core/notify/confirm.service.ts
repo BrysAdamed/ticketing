@@ -12,7 +12,7 @@ export class ConfirmService {
     const ref = this.dialog.open<ConfirmDialog, ConfirmOptions, boolean>(ConfirmDialog, {
       data: options,
       width: '440px',
-      autoFocus: options.requireText ? 'first-tabbable' : 'dialog',
+      autoFocus: 'first-tabbable',
     });
     return (await firstValueFrom(ref.afterClosed())) === true;
   }

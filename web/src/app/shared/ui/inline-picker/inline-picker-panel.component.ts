@@ -5,21 +5,39 @@ import {
   Component,
   computed,
   ElementRef,
+  inject,
   input,
   output,
   signal,
   viewChild,
 } from '@angular/core';
+import { SeverityBadgeComponent } from '../domain/domain-badges';
+import { PriorityIconComponent } from '../domain/priority-icon.component';
+import { StatusIconComponent } from '../domain/status-icon.component';
+import { TypeIconComponent } from '../domain/type-icon.component';
 import { IconComponent } from '../icon/icon.component';
 import { KbdComponent } from '../kbd/kbd.component';
-import { filterOptions, PickerOption, PickerOptionTemplate } from './picker-option';
+import {
+  filterOptions,
+  PICKER_SHORTCUT_AVAILABLE,
+  PickerOption,
+  PickerOptionTemplate,
+} from './picker-option';
 
 let nextPanelId = 0;
 
 /// Command-menu style listbox rendered in a CDK overlay by `InlinePickerDirective`.
 @Component({
   selector: 'tk-inline-picker-panel',
-  imports: [NgTemplateOutlet, IconComponent, KbdComponent],
+  imports: [
+    NgTemplateOutlet,
+    IconComponent,
+    KbdComponent,
+    StatusIconComponent,
+    TypeIconComponent,
+    PriorityIconComponent,
+    SeverityBadgeComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'tk-popover', 'data-testid': 'inline-picker' },
   template: `
@@ -38,8 +56,8 @@ let nextPanelId = 0;
         (input)="onQuery(input.value)"
         (keydown)="onKeydown($event)"
       />
-      @if (shortcut()) {
-        <tk-kbd>{{ shortcut() }}</tk-kbd>
+      @if (shownShortcut(); as key) {
+        <tk-kbd>{{ key }}</tk-kbd>
       }
     </div>
     <div class="list" role="listbox" [id]="listId" [attr.aria-label]="placeholder()">
@@ -67,7 +85,25 @@ let nextPanelId = 0;
               }"
             />
           } @else {
-            <span class="label">{{ option.label }}</span>
+            @switch (option.icon?.kind) {
+              @case ('status') {
+                <tk-status-icon [status]="$any(option.icon).status" />
+              }
+              @case ('type') {
+                <tk-type-icon [type]="$any(option.icon).type" [size]="14" />
+              }
+              @case ('priority') {
+                <tk-priority-icon [priority]="$any(option.icon).priority" [showTitle]="false" />
+              }
+              @case ('icon') {
+                <tk-icon class="glyph" [name]="$any(option.icon).name" [size]="14" />
+              }
+            }
+            @if (option.icon?.kind === 'severity') {
+              <tk-severity-badge [severity]="$any(option.icon).severity" />
+            } @else {
+              <span class="label">{{ option.label }}</span>
+            }
           }
           @if (option.value === selected()) {
             <tk-icon class="check" name="tablerCheck" [size]="14" />
@@ -134,6 +170,9 @@ let nextPanelId = 0;
       overflow: hidden;
       text-overflow: ellipsis;
     }
+    .glyph {
+      color: var(--tk-text-subtle);
+    }
     .check {
       margin-left: auto;
       color: var(--tk-accent-fg);
@@ -165,6 +204,11 @@ export class InlinePickerPanelComponent<T> {
   readonly picked = output<T>();
   readonly dismissed = output<void>();
 
+  private readonly shortcutAvailable = inject(PICKER_SHORTCUT_AVAILABLE);
+  protected readonly shownShortcut = computed(() => {
+    const key = this.shortcut();
+    return key && this.shortcutAvailable(key) ? key : null;
+  });
   protected readonly listId = `tk-picker-${nextPanelId++}`;
   protected readonly query = signal('');
   protected readonly active = signal(0);

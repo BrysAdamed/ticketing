@@ -1,4 +1,4 @@
-import { PickerOption } from '@shared/ui/inline-picker/picker-option';
+import { PickerIcon, PickerOption } from '@shared/ui/inline-picker/picker-option';
 import {
   PRIORITIES,
   Priority,
@@ -20,25 +20,35 @@ import {
 function optionsOf<T extends string>(
   values: readonly T[],
   labels: Record<T, string>,
+  icon?: (value: T) => PickerIcon,
 ): PickerOption<T>[] {
-  return values.map((value) => ({ value, label: labels[value], keywords: [value] }));
+  return values.map((value) => ({
+    value,
+    label: labels[value],
+    keywords: [value],
+    ...(icon ? { icon: icon(value) } : {}),
+  }));
 }
 
 export const TICKET_STATUS_OPTIONS: readonly PickerOption<TicketStatus>[] = optionsOf(
   TICKET_STATUSES,
   TICKET_STATUS_LABELS,
+  (status) => ({ kind: 'status', status }),
 );
 export const PRIORITY_OPTIONS: readonly PickerOption<Priority>[] = optionsOf(
   PRIORITIES,
   PRIORITY_LABELS,
+  (priority) => ({ kind: 'priority', priority }),
 );
 export const SEVERITY_OPTIONS: readonly PickerOption<Severity>[] = optionsOf(
   SEVERITIES,
   SEVERITY_LABELS,
+  (severity) => ({ kind: 'severity', severity }),
 );
 export const TICKET_TYPE_OPTIONS: readonly PickerOption<TicketType>[] = optionsOf(
   TICKET_TYPES,
   TICKET_TYPE_LABELS,
+  (type) => ({ kind: 'type', type }),
 );
 export const TEST_CASE_STATUS_OPTIONS: readonly PickerOption<TestCaseStatus>[] = optionsOf(
   TEST_CASE_STATUSES,

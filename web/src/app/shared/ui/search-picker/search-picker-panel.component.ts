@@ -3,6 +3,7 @@ import {
   afterNextRender,
   ChangeDetectionStrategy,
   Component,
+  computed,
   DestroyRef,
   ElementRef,
   inject,
@@ -13,7 +14,11 @@ import {
 } from '@angular/core';
 import { IconComponent } from '../icon/icon.component';
 import { KbdComponent } from '../kbd/kbd.component';
-import { PickerOption, PickerOptionTemplate } from '../inline-picker/picker-option';
+import {
+  PICKER_SHORTCUT_AVAILABLE,
+  PickerOption,
+  PickerOptionTemplate,
+} from '../inline-picker/picker-option';
 
 const DEBOUNCE_MS = 150;
 let nextPanelId = 0;
@@ -39,8 +44,8 @@ let nextPanelId = 0;
         (input)="onQuery(input.value)"
         (keydown)="onKeydown($event)"
       />
-      @if (shortcut()) {
-        <tk-kbd>{{ shortcut() }}</tk-kbd>
+      @if (shownShortcut(); as key) {
+        <tk-kbd>{{ key }}</tk-kbd>
       }
     </div>
     <div
@@ -144,6 +149,11 @@ export class SearchPickerPanelComponent<T> {
   readonly picked = output<T>();
   readonly dismissed = output<void>();
 
+  private readonly shortcutAvailable = inject(PICKER_SHORTCUT_AVAILABLE);
+  protected readonly shownShortcut = computed(() => {
+    const key = this.shortcut();
+    return key && this.shortcutAvailable(key) ? key : null;
+  });
   protected readonly listId = `tk-search-picker-${nextPanelId++}`;
   protected readonly options = signal<readonly PickerOption<T>[]>([]);
   protected readonly loading = signal(true);

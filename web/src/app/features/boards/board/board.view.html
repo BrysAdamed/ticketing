@@ -1,10 +1,19 @@
 @if (store.status() === 'error' && !store.board()) {
   @if (store.error()?.isNotFound) {
-    <tk-empty-state icon="tablerLayoutKanban" title="Board not found" description="It was deleted, or the link is wrong.">
+    <tk-empty-state
+      icon="tablerLayoutKanban"
+      title="Board not found"
+      description="It was deleted, or the link is wrong."
+    >
       <a mat-stroked-button routerLink="/boards">All boards</a>
     </tk-empty-state>
   } @else {
-    <tk-empty-state icon="tablerAlertCircle" tone="danger" title="Couldn't load the board" [description]="store.error()?.title ?? null">
+    <tk-empty-state
+      icon="tablerAlertCircle"
+      tone="danger"
+      title="Couldn't load the board"
+      [description]="store.error()?.title ?? null"
+    >
       <button mat-stroked-button type="button" (click)="store.reload()">Retry</button>
     </tk-empty-state>
   }
@@ -16,17 +25,30 @@
     }
     <span class="projs">
       @for (project of board.projects; track project.id) {
-        <a class="pchip" [routerLink]="['/projects', project.key, 'backlog']" [matTooltip]="project.name" [attr.data-testid]="'board-project-' + project.key">
+        <a
+          class="pchip"
+          [routerLink]="['/projects', project.key, 'backlog']"
+          [matTooltip]="project.name"
+          [attr.data-testid]="'board-project-' + project.key"
+        >
           <tk-project-tile [projectKey]="project.key" />{{ project.key }}
         </a>
       }
     </span>
     <span class="stats tnum" data-testid="board-stats">
-      {{ store.totalCount() }} {{ store.totalCount() === 1 ? 'ticket' : 'tickets' }}@if (store.totalPoints()) { · {{ store.totalPoints() }} pts}
+      {{ store.totalCount() }} {{ store.totalCount() === 1 ? 'ticket' : 'tickets' }}
+      @if (store.totalPoints()) {
+        · {{ store.totalPoints() }} pts
+      }
     </span>
     <div class="tk-page-actions">
       @if (store.canAddTickets()) {
-        <button mat-stroked-button type="button" data-testid="board-add-tickets" (click)="openAddTickets()">
+        <button
+          mat-stroked-button
+          type="button"
+          data-testid="board-add-tickets"
+          (click)="openAddTickets()"
+        >
           <tk-icon name="tablerPlus" [size]="14" />Add tickets
         </button>
       }
@@ -50,7 +72,9 @@
       <tk-icon name="tablerArchive" [size]="16" />
       This board is archived and read-only. Done tickets stay here as a record.
       @if (store.canManage()) {
-        <button mat-button type="button" data-testid="board-unarchive" (click)="store.unarchive()">Unarchive</button>
+        <button mat-button type="button" data-testid="board-unarchive" (click)="store.unarchive()">
+          Unarchive
+        </button>
       }
     </div>
   }
@@ -65,21 +89,41 @@
     />
     <span class="right">
       @if (store.visibleCount() !== store.totalCount()) {
-        <span class="shown tnum" data-testid="board-shown">{{ store.visibleCount() }} of {{ store.totalCount() }} shown</span>
+        <span class="shown tnum" data-testid="board-shown"
+          >{{ store.visibleCount() }} of {{ store.totalCount() }} shown</span
+        >
       }
-      <button type="button" class="tbtn" [matMenuTriggerFor]="laneMenu" data-testid="board-swimlanes">
+      <button
+        type="button"
+        class="tbtn"
+        [matMenuTriggerFor]="laneMenu"
+        data-testid="board-swimlanes"
+      >
         <tk-icon name="tablerLayersSubtract" [size]="14" />Swimlanes: <b>{{ swimlaneLabel() }}</b>
       </button>
       <mat-menu #laneMenu="matMenu">
         @for (option of swimlaneOptions; track option.value) {
-          <button mat-menu-item type="button" [attr.data-testid]="'swimlanes-' + option.value" (click)="setSwimlanes(option.value)">{{ option.label }}</button>
+          <button
+            mat-menu-item
+            type="button"
+            [attr.data-testid]="'swimlanes-' + option.value"
+            (click)="setSwimlanes(option.value)"
+          >
+            {{ option.label }}
+          </button>
         }
       </mat-menu>
     </span>
   </div>
 
   <div class="bscroll" cdkScrollable>
-    <div class="bgrid" cdkDropListGroup [class.single]="store.swimlanes() === 'none'" [style.grid-template-columns]="gridColumns()" [class.dragging]="dragging().size > 0">
+    <div
+      class="bgrid"
+      cdkDropListGroup
+      [class.single]="store.swimlanes() === 'none'"
+      [style.grid-template-columns]="gridColumns()"
+      [class.dragging]="dragging().size > 0"
+    >
       @for (status of statuses; track status) {
         @let collapsed = store.collapsed().has(status);
         <div
@@ -89,7 +133,12 @@
           [attr.data-testid]="'board-column-' + status"
         >
           @if (collapsed) {
-            <button type="button" class="vert" [attr.aria-label]="'Expand ' + statusLabels[status]" (click)="store.toggleColumn(status)">
+            <button
+              type="button"
+              class="vert"
+              [attr.aria-label]="'Expand ' + statusLabels[status]"
+              (click)="store.toggleColumn(status)"
+            >
               <tk-status-icon [status]="status" />
               <span class="vname">{{ statusLabels[status] }}</span>
               <span class="n tnum">{{ store.columnCounts().get(status) }}</span>
@@ -97,14 +146,28 @@
           } @else {
             <tk-status-icon [status]="status" />
             <span class="cname">{{ statusLabels[status] }}</span>
-            <span class="n tnum" [attr.data-testid]="'board-count-' + status">{{ store.columnCounts().get(status) }}</span>
+            <span class="n tnum" [attr.data-testid]="'board-count-' + status">{{
+              store.columnCounts().get(status)
+            }}</span>
             <span class="acts">
               @if (store.canAddTickets()) {
-                <button type="button" class="tk-icon-btn tk-icon-btn-sm" [attr.aria-label]="'New ticket in ' + statusLabels[status]" matTooltip="New ticket" (click)="createIn(status)">
+                <button
+                  type="button"
+                  class="tk-icon-btn tk-icon-btn-sm"
+                  [attr.aria-label]="'New ticket in ' + statusLabels[status]"
+                  matTooltip="New ticket"
+                  (click)="createIn(status)"
+                >
                   <tk-icon name="tablerPlus" [size]="14" />
                 </button>
               }
-              <button type="button" class="tk-icon-btn tk-icon-btn-sm" [attr.aria-label]="'Collapse ' + statusLabels[status]" matTooltip="Collapse column" (click)="store.toggleColumn(status)">
+              <button
+                type="button"
+                class="tk-icon-btn tk-icon-btn-sm"
+                [attr.aria-label]="'Collapse ' + statusLabels[status]"
+                matTooltip="Collapse column"
+                (click)="store.toggleColumn(status)"
+              >
                 <tk-icon name="tablerLayoutSidebarRightCollapse" [size]="14" />
               </button>
             </span>
@@ -115,8 +178,17 @@
       @for (lane of store.lanes(); track lane.key; let lastLane = $last) {
         @if (store.swimlanes() !== 'none') {
           <div class="lane" [attr.data-testid]="'board-lane-' + lane.key">
-            <button type="button" class="lane-in" [attr.aria-expanded]="!collapsedLanes().has(lane.key)" (click)="toggleLane(lane.key)">
-              <tk-icon class="chev" [name]="collapsedLanes().has(lane.key) ? 'tablerChevronRight' : 'tablerChevronDown'" [size]="14" />
+            <button
+              type="button"
+              class="lane-in"
+              [attr.aria-expanded]="!collapsedLanes().has(lane.key)"
+              (click)="toggleLane(lane.key)"
+            >
+              <tk-icon
+                class="chev"
+                [name]="collapsedLanes().has(lane.key) ? 'tablerChevronRight' : 'tablerChevronDown'"
+                [size]="14"
+              />
               @if (store.swimlanes() === 'assignee') {
                 @if (lane.user; as user) {
                   <tk-avatar [userId]="user.id" [name]="user.displayName" />
@@ -126,7 +198,10 @@
                 <span class="lane-key tnum">{{ epic.key }}</span>
               }
               <span class="lane-name">{{ lane.label }}</span>
-              <span class="n">{{ lane.count }} {{ lane.count === 1 ? 'ticket' : 'tickets' }}{{ lanePoints(lane) }}</span>
+              <span class="n"
+                >{{ lane.count }} {{ lane.count === 1 ? 'ticket' : 'tickets'
+                }}{{ lanePoints(lane) }}</span
+              >
             </button>
           </div>
         }
@@ -157,7 +232,9 @@
                     [cdkDragDisabled]="!store.canDrag(card)"
                     [cdkDragStartDelay]="0"
                     [card]="card"
-                    [assignee]="card.assigneeId ? (store.users().get(card.assigneeId) ?? null) : null"
+                    [assignee]="
+                      card.assigneeId ? (store.users().get(card.assigneeId) ?? null) : null
+                    "
                     [parent]="card.parentId ? (store.parents().get(card.parentId) ?? null) : null"
                     [done]="status === 'Done'"
                     [selected]="store.selection().has(card.id)"
@@ -178,7 +255,11 @@
         }
       } @empty {
         <div class="no-cards">
-          <tk-empty-state icon="tablerSearch" title="No cards match these filters" description="Clear the filters to see every card.">
+          <tk-empty-state
+            icon="tablerSearch"
+            title="No cards match these filters"
+            description="Clear the filters to see every card."
+          >
             <button mat-stroked-button type="button" (click)="clearFilters()">Clear filters</button>
           </tk-empty-state>
         </div>
@@ -189,10 +270,16 @@
         <tk-empty-state
           icon="tablerLayoutKanban"
           title="No tickets on this board yet"
-          [description]="store.canAddTickets() ? 'Pull tickets from the linked projects’ backlogs.' : 'Tickets you can see will appear here.'"
+          [description]="
+            store.canAddTickets()
+              ? 'Pull tickets from the linked projects’ backlogs.'
+              : 'Tickets you can see will appear here.'
+          "
         >
           @if (store.canAddTickets()) {
-            <button mat-flat-button type="button" (click)="openAddTickets()">Add tickets from backlog</button>
+            <button mat-flat-button type="button" (click)="openAddTickets()">
+              Add tickets from backlog
+            </button>
           }
         </tk-empty-state>
       </div>
@@ -203,11 +290,18 @@
     <div class="bulk" role="toolbar" aria-label="Selected cards" data-testid="board-bulk">
       <span class="count tnum">{{ store.selection().size }} selected</span>
       @if (!store.isArchived()) {
-        <button type="button" class="bbtn" data-testid="bulk-to-backlog" (click)="sendSelectionToBacklog()">
+        <button
+          type="button"
+          class="bbtn"
+          data-testid="bulk-to-backlog"
+          (click)="sendSelectionToBacklog()"
+        >
           <tk-icon name="tablerArrowBarToUp" [size]="14" />Send to backlog
         </button>
       }
-      <button type="button" class="bbtn" (click)="store.clearSelection()">Clear <span class="kbd">Esc</span></button>
+      <button type="button" class="bbtn" (click)="store.clearSelection()">
+        Clear <span class="kbd">Esc</span>
+      </button>
     </div>
   }
 } @else {

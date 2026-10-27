@@ -1,4 +1,16 @@
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, ElementRef, inject, input, signal, untracked, viewChild } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  DestroyRef,
+  effect,
+  ElementRef,
+  inject,
+  input,
+  signal,
+  untracked,
+  viewChild,
+} from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckbox } from '@angular/material/checkbox';
 import { MatMenuModule } from '@angular/material/menu';
@@ -16,14 +28,20 @@ import { MarkdownEditorComponent } from '@shared/markdown/markdown-editor.compon
 import { MarkdownViewerComponent } from '@shared/markdown/markdown-viewer.component';
 import { AbsoluteTimePipe, RelativeTimePipe } from '@shared/pipes/relative-time.pipe';
 import { AvatarComponent } from '@shared/ui/domain/avatar.component';
-import { RegressionItemBadgeComponent, RegressionSessionBadgeComponent } from '@shared/ui/domain/domain-badges';
+import {
+  RegressionItemBadgeComponent,
+  RegressionSessionBadgeComponent,
+} from '@shared/ui/domain/domain-badges';
 import { UserDisplayComponent } from '@shared/ui/domain/user-display.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { IconComponent } from '@shared/ui/icon/icon.component';
 import { PickerOption } from '@shared/ui/inline-picker/picker-option';
 import { KbdComponent } from '@shared/ui/kbd/kbd.component';
 import { SearchPickerDirective } from '@shared/ui/search-picker/search-picker.directive';
-import { SegmentedControlComponent, SegmentOption } from '@shared/ui/segmented/segmented-control.component';
+import {
+  SegmentedControlComponent,
+  SegmentOption,
+} from '@shared/ui/segmented/segmented-control.component';
 import { SkeletonRowsComponent } from '@shared/ui/skeleton/skeleton-rows.component';
 import { SessionProgressComponent } from '../session-progress.component';
 import { ChecklistStepsComponent } from './checklist-steps.component';
@@ -107,14 +125,20 @@ export class RegressionSessionView {
   protected readonly readOnlyReason = computed(() => {
     const s = this.store.session();
     if (!s) return null;
-    if (s.status === 'Completed') return `Completed by ${s.completedBy?.displayName ?? 'someone'}. The session is read-only.`;
-    if (s.status === 'Cancelled') return `Cancelled by ${s.cancelledBy?.displayName ?? 'someone'}. The session is read-only.`;
+    if (s.status === 'Completed')
+      return `Completed by ${s.completedBy?.displayName ?? 'someone'}. The session is read-only.`;
+    if (s.status === 'Cancelled')
+      return `Cancelled by ${s.cancelledBy?.displayName ?? 'someone'}. The session is read-only.`;
     if (!s.permissions.canExecute) return 'You have read-only access to this project.';
     return null;
   });
 
   protected readonly assigneeSearch = async (query: string): Promise<PickerOption<UserRef>[]> =>
-    (await this.people.search(this.projectKey(), query)).map((u) => ({ value: u, label: u.displayName, keywords: [u.email] }));
+    (await this.people.search(this.projectKey(), query)).map((u) => ({
+      value: u,
+      label: u.displayName,
+      keywords: [u.email],
+    }));
 
   constructor() {
     effect(() => {
@@ -131,23 +155,62 @@ export class RegressionSessionView {
         this.failing.set(false);
         if (key && key !== this.item()?.toUpperCase()) this.syncUrl({ item: key });
         this.paneBody()?.nativeElement.scrollTo({ top: 0 });
-        document.querySelector(`[data-testid="item-row-${key}"]`)?.scrollIntoView({ block: 'nearest' });
+        document
+          .querySelector(`[data-testid="item-row-${key}"]`)
+          ?.scrollIntoView({ block: 'nearest' });
       });
     });
 
     const section = 'Regression session';
     inject(ShortcutService).registerScoped(
       [
-        { keys: 'p', description: 'Pass the focused item', section, handler: () => this.result('Passed') },
-        { keys: 'f', description: 'Fail the focused item', section, handler: (e) => this.startFail(e) },
-        { keys: 's', description: 'Skip the focused item', section, handler: () => this.result('Skipped') },
-        { keys: 'w', description: 'Back to waiting', section, handler: () => this.result('WaitingForExecution') },
+        {
+          keys: 'p',
+          description: 'Pass the focused item',
+          section,
+          handler: () => this.result('Passed'),
+        },
+        {
+          keys: 'f',
+          description: 'Fail the focused item',
+          section,
+          handler: (e) => this.startFail(e),
+        },
+        {
+          keys: 's',
+          description: 'Skip the focused item',
+          section,
+          handler: () => this.result('Skipped'),
+        },
+        {
+          keys: 'w',
+          description: 'Back to waiting',
+          section,
+          handler: () => this.result('WaitingForExecution'),
+        },
         { keys: 'i', description: 'Take (assign to me)', section, handler: () => this.take() },
-        { keys: 'n', description: 'Next waiting item', section, handler: () => this.store.focusNextWaiting() },
+        {
+          keys: 'n',
+          description: 'Next waiting item',
+          section,
+          handler: () => this.store.focusNextWaiting(),
+        },
         { keys: 'j', description: 'Next item', section, handler: () => this.store.step(1) },
         { keys: 'k', description: 'Previous item', section, handler: () => this.store.step(-1) },
-        { keys: 'mod+enter', description: 'Confirm the failure', section, allowInInputs: true, handler: () => this.failing() && this.confirmFail() },
-        { keys: 'escape', description: 'Close the failure panel', section, allowInInputs: true, handler: () => this.failing.set(false) },
+        {
+          keys: 'mod+enter',
+          description: 'Confirm the failure',
+          section,
+          allowInInputs: true,
+          handler: () => this.failing() && this.confirmFail(),
+        },
+        {
+          keys: 'escape',
+          description: 'Close the failure panel',
+          section,
+          allowInInputs: true,
+          handler: () => this.failing.set(false),
+        },
       ],
       inject(DestroyRef),
     );
@@ -186,7 +249,9 @@ export class RegressionSessionView {
     this.failNote.set(item.status === 'Failed' ? (item.resultNote ?? '') : '');
     this.createBug.set(!item.bug);
     this.failing.set(true);
-    setTimeout(() => document.querySelector<HTMLTextAreaElement>('[data-testid="fail-note"] textarea')?.focus());
+    setTimeout(() =>
+      document.querySelector<HTMLTextAreaElement>('[data-testid="fail-note"] textarea')?.focus(),
+    );
   }
 
   protected async confirmFail(): Promise<void> {
@@ -220,14 +285,18 @@ export class RegressionSessionView {
   protected async cancel(): Promise<void> {
     const ok = await this.confirm.confirm({
       title: `Cancel ${this.store.sessionKey()}?`,
-      message: 'Recorded results stay, but the session becomes read-only and is left out of dashboard trends.',
+      message:
+        'Recorded results stay, but the session becomes read-only and is left out of dashboard trends.',
       confirmLabel: 'Cancel session',
       danger: true,
     });
     if (ok) await this.store.cancel();
   }
 
-  protected trackRow(_: number, row: { kind: string; status?: string; item?: RegressionItem }): string {
+  protected trackRow(
+    _: number,
+    row: { kind: string; status?: string; item?: RegressionItem },
+  ): string {
     return row.kind === 'group' ? `g-${row.status}` : row.item!.id;
   }
 
@@ -240,6 +309,11 @@ export class RegressionSessionView {
   }
 
   private syncUrl(params: Record<string, string | null>): void {
-    void this.router.navigate([], { relativeTo: this.route, queryParams: params, queryParamsHandling: 'merge', replaceUrl: true });
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: params,
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
   }
 }

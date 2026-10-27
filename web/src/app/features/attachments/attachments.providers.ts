@@ -7,6 +7,7 @@ export function provideAttachments(): EnvironmentProviders {
     id: 'attachments',
     order: 20,
     title: 'Attachments',
-    loadComponent: () => import('./attachments-section.component').then((m) => m.AttachmentsSectionComponent),
+    loadComponent: () =>
+      import('./attachments-section.component').then((m) => m.AttachmentsSectionComponent),
   });
 }

@@ -23,9 +23,12 @@ export interface Attachment {
 
 export const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 export const MAX_ATTACHMENTS_PER_TICKET = 50;
-export const ATTACHMENT_ACCEPT = '.png,.jpg,.jpeg,.gif,.webp,.pdf,.txt,.log,.md,.csv,.json,.zip,image/png,image/jpeg,image/gif,image/webp,application/pdf,text/plain,text/csv,application/json,application/zip';
+export const ATTACHMENT_ACCEPT =
+  '.png,.jpg,.jpeg,.gif,.webp,.pdf,.txt,.log,.md,.csv,.json,.zip,image/png,image/jpeg,image/gif,image/webp,application/pdf,text/plain,text/csv,application/json,application/zip';
 
-export type AttachmentChange = { kind: 'added'; ticketKey: string; attachment: Attachment } | { kind: 'removed'; ticketKey: string; id: string };
+export type AttachmentChange =
+  | { kind: 'added'; ticketKey: string; attachment: Attachment }
+  | { kind: 'removed'; ticketKey: string; id: string };
 
 /// Ticket attachments: list, upload (multipart), delete, and the markdown editor upload hook that
 /// turns a pasted or dropped image into `![name](/api/v1/attachments/{id})`.
@@ -46,7 +49,9 @@ export class TicketAttachments {
     if (file.size > MAX_ATTACHMENT_BYTES) throw new Error(`${file.name} is larger than 10 MB.`);
     const form = new FormData();
     form.append('file', file, file.name);
-    const attachment = await firstValueFrom(this.api.post<Attachment>(`/tickets/${encodeURIComponent(ticketKey)}/attachments`, form));
+    const attachment = await firstValueFrom(
+      this.api.post<Attachment>(`/tickets/${encodeURIComponent(ticketKey)}/attachments`, form),
+    );
     this.changeSubject.next({ kind: 'added', ticketKey: ticketKey.toUpperCase(), attachment });
     return attachment;
   }
@@ -67,9 +72,13 @@ export class TicketAttachments {
       try {
         const attachment = await this.upload(ticketKey(), file);
         const name = attachment.fileName.replace(/[[\]]/g, '');
-        return attachment.isImage ? `![${name}](${attachment.url})` : `[${name}](${this.downloadUrl(attachment)})`;
+        return attachment.isImage
+          ? `![${name}](${attachment.url})`
+          : `[${name}](${this.downloadUrl(attachment)})`;
       } catch (error) {
-        this.toast.error(error instanceof ApiError || !(error instanceof Error) ? error : error.message);
+        this.toast.error(
+          error instanceof ApiError || !(error instanceof Error) ? error : error.message,
+        );
         return null;
       }
     };

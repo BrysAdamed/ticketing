@@ -18,9 +18,20 @@ const MAX_PROJECTS = 20;
 /// New board: a name, an optional description and 1..20 projects the user can write to.
 @Component({
   selector: 'tk-create-board-dialog',
-  imports: [MatButtonModule, MatDialogModule, MatFormFieldModule, MatInputModule, ProjectTileComponent, IconComponent],
+  imports: [
+    MatButtonModule,
+    MatDialogModule,
+    MatFormFieldModule,
+    MatInputModule,
+    ProjectTileComponent,
+    IconComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { 'data-testid': 'create-board-dialog', '(keydown.control.enter)': 'submit()', '(keydown.meta.enter)': 'submit()' },
+  host: {
+    'data-testid': 'create-board-dialog',
+    '(keydown.control.enter)': 'submit()',
+    '(keydown.meta.enter)': 'submit()',
+  },
   template: `
     <h2 mat-dialog-title>New board</h2>
     <mat-dialog-content>
@@ -49,7 +60,9 @@ const MAX_PROJECTS = 20;
           (input)="description.set($any($event.target).value)"
         ></textarea>
       </mat-form-field>
-      <span class="tk-field-label">Projects <span class="muted tnum">{{ selected().size }} / {{ maxProjects }}</span></span>
+      <span class="tk-field-label"
+        >Projects <span class="muted tnum">{{ selected().size }} / {{ maxProjects }}</span></span
+      >
       <div class="projects" role="group" aria-label="Projects">
         @for (project of projects(); track project.id) {
           <button
@@ -71,7 +84,9 @@ const MAX_PROJECTS = 20;
             <span class="muted">{{ project.key }}</span>
           </button>
         } @empty {
-          <div class="muted empty">You need write access to at least one project to create a board.</div>
+          <div class="muted empty">
+            You need write access to at least one project to create a board.
+          </div>
         }
       </div>
       @if (error(); as message) {
@@ -80,7 +95,15 @@ const MAX_PROJECTS = 20;
     </mat-dialog-content>
     <mat-dialog-actions>
       <button mat-button type="button" mat-dialog-close>Cancel</button>
-      <button mat-flat-button type="button" data-testid="create-board-submit" [disabled]="!valid() || busy()" (click)="submit()">Create board</button>
+      <button
+        mat-flat-button
+        type="button"
+        data-testid="create-board-submit"
+        [disabled]="!valid() || busy()"
+        (click)="submit()"
+      >
+        Create board
+      </button>
     </mat-dialog-actions>
   `,
   styles: `
@@ -164,7 +187,9 @@ export class CreateBoardDialog {
   protected readonly projects = computed(() =>
     this.directory.activeProjects().filter((p) => p.myRole === 'Owner' || p.myRole === 'Member'),
   );
-  protected readonly valid = computed(() => this.name().trim().length > 0 && this.selected().size > 0);
+  protected readonly valid = computed(
+    () => this.name().trim().length > 0 && this.selected().size > 0,
+  );
 
   constructor() {
     void this.directory.load();
@@ -185,13 +210,19 @@ export class CreateBoardDialog {
     this.error.set(null);
     try {
       const board = await this.data.create(
-        { name: this.name().trim(), description: this.description().trim() || null, projectKeys: [...this.selected()] },
+        {
+          name: this.name().trim(),
+          description: this.description().trim() || null,
+          projectKeys: [...this.selected()],
+        },
         this.idempotencyKey,
       );
       this.ref.close(board);
     } catch (error) {
       const apiError = toApiError(error);
-      this.error.set(apiError.fieldError('name') ?? apiError.fieldError('projectKeys') ?? apiError.title);
+      this.error.set(
+        apiError.fieldError('name') ?? apiError.fieldError('projectKeys') ?? apiError.title,
+      );
     } finally {
       this.busy.set(false);
     }

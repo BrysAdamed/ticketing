@@ -1,5 +1,12 @@
 import { BacklogItem } from '@core/tickets/ticket.models';
-import { buildRows, EMPTY_FILTERS, matchesFilters, moveBlock, planDrop, sortItems } from './backlog-logic';
+import {
+  buildRows,
+  EMPTY_FILTERS,
+  matchesFilters,
+  moveBlock,
+  planDrop,
+  sortItems,
+} from './backlog-logic';
 import { EMPTY_SELECTION, prune, select, step, targets } from './backlog-selection';
 
 function item(n: number, overrides: Partial<BacklogItem> = {}): BacklogItem {
@@ -25,7 +32,12 @@ function item(n: number, overrides: Partial<BacklogItem> = {}): BacklogItem {
   };
 }
 
-const context = { users: new Map(), parents: new Map(), collapsed: new Set<string>(), showEmpty: false };
+const context = {
+  users: new Map(),
+  parents: new Map(),
+  collapsed: new Set<string>(),
+  showEmpty: false,
+};
 
 describe('moveBlock', () => {
   const items = [1, 2, 3, 4, 5].map((n) => item(n));
@@ -41,34 +53,54 @@ describe('moveBlock', () => {
 
   it('moves after an anchor and to the top or bottom', () => {
     // Act / Assert
-    expect(keys(moveBlock(items, ['id-1'], { afterId: 'id-3' }))).toEqual(['WEB-2', 'WEB-3', 'WEB-1', 'WEB-4', 'WEB-5']);
-    expect(keys(moveBlock(items, ['id-4'], { position: 'Top' }))).toEqual(['WEB-4', 'WEB-1', 'WEB-2', 'WEB-3', 'WEB-5']);
-    expect(keys(moveBlock(items, ['id-1', 'id-2'], { position: 'Bottom' }))).toEqual(['WEB-3', 'WEB-4', 'WEB-5', 'WEB-1', 'WEB-2']);
+    expect(keys(moveBlock(items, ['id-1'], { afterId: 'id-3' }))).toEqual([
+      'WEB-2',
+      'WEB-3',
+      'WEB-1',
+      'WEB-4',
+      'WEB-5',
+    ]);
+    expect(keys(moveBlock(items, ['id-4'], { position: 'Top' }))).toEqual([
+      'WEB-4',
+      'WEB-1',
+      'WEB-2',
+      'WEB-3',
+      'WEB-5',
+    ]);
+    expect(keys(moveBlock(items, ['id-1', 'id-2'], { position: 'Bottom' }))).toEqual([
+      'WEB-3',
+      'WEB-4',
+      'WEB-5',
+      'WEB-1',
+      'WEB-2',
+    ]);
   });
 });
 
 describe('buildRows', () => {
   it('groups by status in category order and skips empty groups', () => {
     // Arrange
-    const items = [item(1), item(2, { status: 'Review', storyPoints: 3 }), item(3, { status: 'InProgress', storyPoints: 5 })];
+    const items = [
+      item(1),
+      item(2, { status: 'Review', storyPoints: 3 }),
+      item(3, { status: 'InProgress', storyPoints: 5 }),
+    ];
 
     // Act
     const rows = buildRows(items, 'status', context);
 
     // Assert
-    expect(rows.map((r) => (r.kind === 'group' ? `[${r.label} ${r.count}/${r.points}]` : r.item.key))).toEqual([
-      '[In Progress 1/5]',
-      'WEB-3',
-      '[Review 1/3]',
-      'WEB-2',
-      '[To Do 1/0]',
-      'WEB-1',
-    ]);
+    expect(
+      rows.map((r) => (r.kind === 'group' ? `[${r.label} ${r.count}/${r.points}]` : r.item.key)),
+    ).toEqual(['[In Progress 1/5]', 'WEB-3', '[Review 1/3]', 'WEB-2', '[To Do 1/0]', 'WEB-1']);
   });
 
   it('hides tickets of collapsed groups but keeps the header', () => {
     // Act
-    const rows = buildRows([item(1), item(2)], 'status', { ...context, collapsed: new Set(['status:ToDo']) });
+    const rows = buildRows([item(1), item(2)], 'status', {
+      ...context,
+      collapsed: new Set(['status:ToDo']),
+    });
 
     // Assert
     expect(rows).toHaveLength(1);
@@ -77,13 +109,20 @@ describe('buildRows', () => {
 
   it('puts unassigned tickets last when grouping by assignee', () => {
     // Arrange
-    const users = new Map([['u1', { id: 'u1', email: 'a@x', displayName: 'Anna', isActive: true }]]);
+    const users = new Map([
+      ['u1', { id: 'u1', email: 'a@x', displayName: 'Anna', isActive: true }],
+    ]);
 
     // Act
-    const rows = buildRows([item(1), item(2, { assigneeId: 'u1' })], 'assignee', { ...context, users });
+    const rows = buildRows([item(1), item(2, { assigneeId: 'u1' })], 'assignee', {
+      ...context,
+      users,
+    });
 
     // Assert
-    expect(rows.filter((r) => r.kind === 'group').map((r) => r.kind === 'group' && r.label)).toEqual(['Anna', 'Unassigned']);
+    expect(
+      rows.filter((r) => r.kind === 'group').map((r) => r.kind === 'group' && r.label),
+    ).toEqual(['Anna', 'Unassigned']);
   });
 });
 
@@ -121,7 +160,9 @@ describe('matchesFilters', () => {
     expect(matchesFilters(ticket, { ...EMPTY_FILTERS, text: 'ticket 12' }, null)).toBe(true);
     expect(matchesFilters(ticket, { ...EMPTY_FILTERS, text: 'nope' }, null)).toBe(false);
     expect(matchesFilters(ticket, { ...EMPTY_FILTERS, assignee: 'me' }, 'me-id')).toBe(true);
-    expect(matchesFilters(ticket, { ...EMPTY_FILTERS, assignee: 'unassigned' }, 'me-id')).toBe(false);
+    expect(matchesFilters(ticket, { ...EMPTY_FILTERS, assignee: 'unassigned' }, 'me-id')).toBe(
+      false,
+    );
     expect(matchesFilters(ticket, { ...EMPTY_FILTERS, labels: ['UI'] }, null)).toBe(true);
   });
 });
@@ -129,7 +170,11 @@ describe('matchesFilters', () => {
 describe('sortItems', () => {
   it('sorts by priority keeping rank order for ties', () => {
     // Arrange
-    const items = [item(1, { priority: 'Low' }), item(2, { priority: 'Highest' }), item(3, { priority: 'Low' })];
+    const items = [
+      item(1, { priority: 'Low' }),
+      item(2, { priority: 'Highest' }),
+      item(3, { priority: 'Low' }),
+    ];
 
     // Act / Assert
     expect(sortItems(items, 'priority').map((i) => i.key)).toEqual(['WEB-2', 'WEB-1', 'WEB-3']);
@@ -163,7 +208,9 @@ describe('selection', () => {
 
   it('prunes hidden ids and steps through the list', () => {
     // Act / Assert
-    expect([...prune(select(EMPTY_SELECTION, order, 'c', 'single'), ['a', 'b']).selected]).toEqual([]);
+    expect([...prune(select(EMPTY_SELECTION, order, 'c', 'single'), ['a', 'b']).selected]).toEqual(
+      [],
+    );
     expect(step(order, null, 1)).toBe('a');
     expect(step(order, 'd', 1)).toBe('d');
     expect(step(order, 'b', -1)).toBe('a');

@@ -1,6 +1,16 @@
 import { Clipboard } from '@angular/cdk/clipboard';
 import { DOCUMENT } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked, viewChild } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+  untracked,
+  viewChild,
+} from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltip } from '@angular/material/tooltip';
@@ -80,20 +90,29 @@ export class TicketDetailView {
   private readonly breadcrumbs = inject(Breadcrumbs);
 
   readonly ticketKey = input.required<string>();
-  protected readonly uploadHandler = inject(TicketAttachments).markdownUploader(() => this.ticketKey());
+  protected readonly uploadHandler = inject(TicketAttachments).markdownUploader(() =>
+    this.ticketKey(),
+  );
   readonly presentation = input<TicketPresentation>('page');
 
   protected readonly typeLabels = TICKET_TYPE_LABELS;
   protected readonly assignable = signal<readonly UserRef[]>([]);
-  protected readonly hasTestCaseSection = inject(TICKET_DETAIL_SECTIONS).some((s) => s.id === 'test-cases');
+  protected readonly hasTestCaseSection = inject(TICKET_DETAIL_SECTIONS).some(
+    (s) => s.id === 'test-cases',
+  );
   protected readonly notFoundTitle = computed(() => {
     const error = this.store.error();
     if (!error) return '';
-    return error.code === 'ticket.deleted' ? error.title : `${this.ticketKey().toUpperCase()} doesn't exist or you don't have access`;
+    return error.code === 'ticket.deleted'
+      ? error.title
+      : `${this.ticketKey().toUpperCase()} doesn't exist or you don't have access`;
   });
   protected readonly saveTitle = (title: string) => this.saveText({ title }, { title });
   protected readonly saveDescription = (description: string) =>
-    this.saveText({ description: description.trim() || null }, { description: description.trim() || null });
+    this.saveText(
+      { description: description.trim() || null },
+      { description: description.trim() || null },
+    );
   protected readonly addComment = (body: string) => this.store.addComment(body);
 
   private readonly title = viewChild(TicketTitleComponent);
@@ -112,7 +131,9 @@ export class TicketDetailView {
       const parent = ticket.parent;
       untracked(() =>
         this.breadcrumbs.setTail([
-          ...(parent ? [{ label: `${parent.key} ${parent.title}`, url: `/tickets/${parent.key}` }] : []),
+          ...(parent
+            ? [{ label: `${parent.key} ${parent.title}`, url: `/tickets/${parent.key}` }]
+            : []),
           { label: ticket.key, url: null },
         ]),
       );
@@ -120,22 +141,49 @@ export class TicketDetailView {
 
     effect(() => {
       const id = this.store.ticket()?.id;
-      if (id && this.store.historyStatus() === 'idle') untracked(() => void this.store.loadHistory());
+      if (id && this.store.historyStatus() === 'idle')
+        untracked(() => void this.store.loadHistory());
     });
 
     effect(() => {
       const projectKey = this.store.ticket()?.projectKey;
       if (!projectKey || projectKey === this.loadedPeopleFor) return;
       this.loadedPeopleFor = projectKey;
-      untracked(() => void this.people.assignable(projectKey).then((users) => this.assignable.set(users)).catch(() => undefined));
+      untracked(
+        () =>
+          void this.people
+            .assignable(projectKey)
+            .then((users) => this.assignable.set(users))
+            .catch(() => undefined),
+      );
     });
 
     inject(ShortcutService).registerScoped([
-      { keys: 'e', section: 'Ticket', description: 'Edit title', handler: () => this.title()?.start() },
-      { keys: 'shift+e', section: 'Ticket', description: 'Edit description', handler: () => this.description()?.start() },
-      { keys: 'i', section: 'Ticket', description: 'Assign to me', handler: () => this.assignToMe() },
+      {
+        keys: 'e',
+        section: 'Ticket',
+        description: 'Edit title',
+        handler: () => this.title()?.start(),
+      },
+      {
+        keys: 'shift+e',
+        section: 'Ticket',
+        description: 'Edit description',
+        handler: () => this.description()?.start(),
+      },
+      {
+        keys: 'i',
+        section: 'Ticket',
+        description: 'Assign to me',
+        handler: () => this.assignToMe(),
+      },
       { keys: 'mod+.', section: 'Ticket', description: 'Copy key', handler: () => this.copyKey() },
-      { keys: 'mod+shift+.', section: 'Ticket', description: 'Copy link', handler: () => this.copyLink() },
+      {
+        keys: 'mod+shift+.',
+        section: 'Ticket',
+        description: 'Copy link',
+        handler: () => this.copyLink(),
+      },
     ]);
   }
 
@@ -184,7 +232,8 @@ export class TicketDetailView {
     if (!ticket) return;
     const ok = await this.confirm.confirm({
       title: `Delete ${ticket.key}?`,
-      message: 'It disappears from every list and board, its links are removed and its key is never reused.',
+      message:
+        'It disappears from every list and board, its links are removed and its key is never reused.',
       confirmLabel: 'Delete',
       danger: true,
     });
@@ -194,13 +243,17 @@ export class TicketDetailView {
   }
 
   /// Title and description saves carry If-Match; a conflict offers to reload and keeps the editor open.
-  private async saveText(patch: { title?: string; description?: string | null }, optimistic: { title?: string; description?: string | null }): Promise<boolean> {
+  private async saveText(
+    patch: { title?: string; description?: string | null },
+    optimistic: { title?: string; description?: string | null },
+  ): Promise<boolean> {
     const result = await this.store.patch(patch, optimistic, { ifMatch: true });
     if (result === 'saved') return true;
     if (result === 'conflict') {
       const reload = await this.confirm.confirm({
         title: 'Someone else changed this ticket',
-        message: 'Reload the latest version? Your text stays in the editor so you can save it again.',
+        message:
+          'Reload the latest version? Your text stays in the editor so you can save it again.',
         confirmLabel: 'Reload',
       });
       if (reload) await this.store.reload();

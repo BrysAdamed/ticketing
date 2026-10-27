@@ -11,10 +11,22 @@ export interface TestCaseFilters {
   archived: boolean;
 }
 
-export const EMPTY_FILTERS: TestCaseFilters = { status: 'All', text: '', ticket: null, archived: false };
+export const EMPTY_FILTERS: TestCaseFilters = {
+  status: 'All',
+  text: '',
+  ticket: null,
+  archived: false,
+};
 
-export function filtersFromQuery(query: { status?: string | null; q?: string | null; ticket?: string | null; archived?: string | null }): TestCaseFilters {
-  const status = (TEST_CASE_STATUSES as readonly string[]).includes(query.status ?? '') ? (query.status as TestCaseStatus) : 'All';
+export function filtersFromQuery(query: {
+  status?: string | null;
+  q?: string | null;
+  ticket?: string | null;
+  archived?: string | null;
+}): TestCaseFilters {
+  const status = (TEST_CASE_STATUSES as readonly string[]).includes(query.status ?? '')
+    ? (query.status as TestCaseStatus)
+    : 'All';
   return {
     status,
     text: query.q ?? '',
@@ -33,7 +45,12 @@ export function filtersToQuery(filters: TestCaseFilters): Record<string, string 
 }
 
 export function isFiltered(filters: TestCaseFilters): boolean {
-  return filters.status !== 'All' || filters.text.trim() !== '' || filters.ticket !== null || filters.archived;
+  return (
+    filters.status !== 'All' ||
+    filters.text.trim() !== '' ||
+    filters.ticket !== null ||
+    filters.archived
+  );
 }
 
 export function summaryOf(testCase: TestCase): TestCaseSummary {
@@ -48,7 +65,9 @@ export function summaryOf(testCase: TestCase): TestCaseSummary {
     ticket: testCase.ticket,
     archived: testCase.archivedAt !== null,
     updatedAt: testCase.updatedAt,
-    lastRun: lastRun ? { sessionKey: lastRun.sessionKey, status: lastRun.status, executedAt: lastRun.executedAt } : null,
+    lastRun: lastRun
+      ? { sessionKey: lastRun.sessionKey, status: lastRun.status, executedAt: lastRun.executedAt }
+      : null,
   };
 }
 
@@ -58,12 +77,22 @@ export function matches(row: TestCaseSummary, filters: TestCaseFilters): boolean
   if (filters.status !== 'All' && row.status !== filters.status) return false;
   if (filters.ticket && row.ticket?.key !== filters.ticket) return false;
   const text = filters.text.trim().toLowerCase();
-  if (text && !row.title.toLowerCase().includes(text) && !row.key.toLowerCase().includes(text) && String(row.number) !== text) return false;
+  if (
+    text &&
+    !row.title.toLowerCase().includes(text) &&
+    !row.key.toLowerCase().includes(text) &&
+    String(row.number) !== text
+  )
+    return false;
   return true;
 }
 
 /// Applies a saved test case to the loaded rows (in number order) without a refetch.
-export function upsertRow(rows: readonly TestCaseSummary[], row: TestCaseSummary, filters: TestCaseFilters): TestCaseSummary[] {
+export function upsertRow(
+  rows: readonly TestCaseSummary[],
+  row: TestCaseSummary,
+  filters: TestCaseFilters,
+): TestCaseSummary[] {
   const without = rows.filter((r) => r.id !== row.id);
   if (!matches(row, filters)) return without;
   const index = without.findIndex((r) => r.number > row.number);
@@ -72,7 +101,11 @@ export function upsertRow(rows: readonly TestCaseSummary[], row: TestCaseSummary
 }
 
 /// Moves one test case between the count buckets after a create, edit, archive or delete.
-export function adjustCounts(counts: TestCaseCounts, before: TestCaseSummary | null, after: TestCaseSummary | null): TestCaseCounts {
+export function adjustCounts(
+  counts: TestCaseCounts,
+  before: TestCaseSummary | null,
+  after: TestCaseSummary | null,
+): TestCaseCounts {
   const next = { ...counts };
   const bucket = (row: TestCaseSummary): keyof TestCaseCounts =>
     row.archived ? 'archived' : (row.status.toLowerCase() as 'new' | 'manual' | 'automatic');

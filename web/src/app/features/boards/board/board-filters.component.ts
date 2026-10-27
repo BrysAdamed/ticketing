@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, ElementRef, input, output, viewChild } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  ElementRef,
+  input,
+  output,
+  viewChild,
+} from '@angular/core';
 import { MatMenuModule } from '@angular/material/menu';
 import { BoardProject } from '@core/boards/board.models';
 import { UserRef } from '@core/tickets/ticket.models';
@@ -16,7 +24,15 @@ type ListField = 'assignees' | 'types' | 'labels' | 'projects';
 /// Board quick filters (I-29): only mine, assignee, type, label and project chips plus a title/key filter (`/`).
 @Component({
   selector: 'tk-board-filters',
-  imports: [MatMenuModule, AvatarComponent, LabelChipComponent, ProjectTileComponent, TypeIconComponent, IconComponent, KbdComponent],
+  imports: [
+    MatMenuModule,
+    AvatarComponent,
+    LabelChipComponent,
+    ProjectTileComponent,
+    TypeIconComponent,
+    IconComponent,
+    KbdComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <button
@@ -30,7 +46,13 @@ type ListField = 'assignees' | 'types' | 'labels' | 'projects';
       <tk-icon name="tablerUser" [size]="14" />Only mine
     </button>
 
-    <button type="button" class="fchip" [class.on]="filters().assignees.length" [matMenuTriggerFor]="assigneeMenu" data-testid="filter-assignee">
+    <button
+      type="button"
+      class="fchip"
+      [class.on]="filters().assignees.length"
+      [matMenuTriggerFor]="assigneeMenu"
+      data-testid="filter-assignee"
+    >
       @if (filters().assignees.length) {
         Assignee: <span class="n">{{ filters().assignees.length }}</span>
       } @else {
@@ -38,11 +60,22 @@ type ListField = 'assignees' | 'types' | 'labels' | 'projects';
       }
     </button>
     <mat-menu #assigneeMenu="matMenu" class="tk-filter-menu">
-      <button mat-menu-item type="button" (click)="$event.stopPropagation(); toggle('assignees', unassigned)">
-        <span class="opt"><span class="box" [class.on]="filters().assignees.includes(unassigned)"></span>Unassigned</span>
+      <button
+        mat-menu-item
+        type="button"
+        (click)="$event.stopPropagation(); toggle('assignees', unassigned)"
+      >
+        <span class="opt"
+          ><span class="box" [class.on]="filters().assignees.includes(unassigned)"></span
+          >Unassigned</span
+        >
       </button>
       @for (user of users(); track user.id) {
-        <button mat-menu-item type="button" (click)="$event.stopPropagation(); toggle('assignees', user.id)">
+        <button
+          mat-menu-item
+          type="button"
+          (click)="$event.stopPropagation(); toggle('assignees', user.id)"
+        >
           <span class="opt">
             <span class="box" [class.on]="filters().assignees.includes(user.id)"></span>
             <tk-avatar [userId]="user.id" [name]="user.displayName" />{{ user.displayName }}
@@ -51,7 +84,13 @@ type ListField = 'assignees' | 'types' | 'labels' | 'projects';
       }
     </mat-menu>
 
-    <button type="button" class="fchip" [class.on]="filters().types.length" [matMenuTriggerFor]="typeMenu" data-testid="filter-type">
+    <button
+      type="button"
+      class="fchip"
+      [class.on]="filters().types.length"
+      [matMenuTriggerFor]="typeMenu"
+      data-testid="filter-type"
+    >
       @if (filters().types.length) {
         Type: <span class="n">{{ filters().types.length }}</span>
       } @else {
@@ -60,13 +99,26 @@ type ListField = 'assignees' | 'types' | 'labels' | 'projects';
     </button>
     <mat-menu #typeMenu="matMenu" class="tk-filter-menu">
       @for (type of types; track type) {
-        <button mat-menu-item type="button" (click)="$event.stopPropagation(); toggle('types', type)">
-          <span class="opt"><span class="box" [class.on]="filters().types.includes(type)"></span><tk-type-icon [type]="type" [size]="14" [showLabel]="true" /></span>
+        <button
+          mat-menu-item
+          type="button"
+          (click)="$event.stopPropagation(); toggle('types', type)"
+        >
+          <span class="opt"
+            ><span class="box" [class.on]="filters().types.includes(type)"></span
+            ><tk-type-icon [type]="type" [size]="14" [showLabel]="true"
+          /></span>
         </button>
       }
     </mat-menu>
 
-    <button type="button" class="fchip" [class.on]="filters().labels.length" [matMenuTriggerFor]="labelMenu" data-testid="filter-labels">
+    <button
+      type="button"
+      class="fchip"
+      [class.on]="filters().labels.length"
+      [matMenuTriggerFor]="labelMenu"
+      data-testid="filter-labels"
+    >
       @if (filters().labels.length) {
         Labels: <span class="n">{{ filters().labels.length }}</span>
       } @else {
@@ -75,8 +127,15 @@ type ListField = 'assignees' | 'types' | 'labels' | 'projects';
     </button>
     <mat-menu #labelMenu="matMenu" class="tk-filter-menu">
       @for (label of labels(); track label) {
-        <button mat-menu-item type="button" (click)="$event.stopPropagation(); toggle('labels', label)">
-          <span class="opt"><span class="box" [class.on]="filters().labels.includes(label)"></span><tk-label-chip [label]="label" /></span>
+        <button
+          mat-menu-item
+          type="button"
+          (click)="$event.stopPropagation(); toggle('labels', label)"
+        >
+          <span class="opt"
+            ><span class="box" [class.on]="filters().labels.includes(label)"></span
+            ><tk-label-chip [label]="label"
+          /></span>
         </button>
       } @empty {
         <div class="empty">No labels on this board</div>
@@ -84,7 +143,13 @@ type ListField = 'assignees' | 'types' | 'labels' | 'projects';
     </mat-menu>
 
     @if (projects().length > 1) {
-      <button type="button" class="fchip" [class.on]="filters().projects.length" [matMenuTriggerFor]="projectMenu" data-testid="filter-project">
+      <button
+        type="button"
+        class="fchip"
+        [class.on]="filters().projects.length"
+        [matMenuTriggerFor]="projectMenu"
+        data-testid="filter-project"
+      >
         @if (filters().projects.length) {
           Project: <span class="n">{{ filters().projects.length }}</span>
         } @else {
@@ -93,7 +158,11 @@ type ListField = 'assignees' | 'types' | 'labels' | 'projects';
       </button>
       <mat-menu #projectMenu="matMenu" class="tk-filter-menu">
         @for (project of projects(); track project.id) {
-          <button mat-menu-item type="button" (click)="$event.stopPropagation(); toggle('projects', project.key)">
+          <button
+            mat-menu-item
+            type="button"
+            (click)="$event.stopPropagation(); toggle('projects', project.key)"
+          >
             <span class="opt">
               <span class="box" [class.on]="filters().projects.includes(project.key)"></span>
               <tk-project-tile [projectKey]="project.key" />{{ project.name }}
@@ -121,7 +190,14 @@ type ListField = 'assignees' | 'types' | 'labels' | 'projects';
       }
     </label>
     @if (active()) {
-      <button type="button" class="clear" data-testid="filters-clear" (click)="filtersChange.emit(empty)">Clear</button>
+      <button
+        type="button"
+        class="clear"
+        data-testid="filters-clear"
+        (click)="filtersChange.emit(empty)"
+      >
+        Clear
+      </button>
     }
   `,
   styles: `

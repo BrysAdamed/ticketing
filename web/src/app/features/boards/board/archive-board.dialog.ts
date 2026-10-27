@@ -24,15 +24,33 @@ type CarryOverMode = 'backlog' | 'board';
     <mat-dialog-content>
       <p class="lead">
         {{ openCount() }} unfinished {{ openCount() === 1 ? 'card moves' : 'cards move' }};
-        {{ doneCount() }} done {{ doneCount() === 1 ? 'card stays' : 'cards stay' }} on the archived board.
+        {{ doneCount() }} done {{ doneCount() === 1 ? 'card stays' : 'cards stay' }} on the archived
+        board.
       </p>
-      <mat-radio-group class="modes" aria-label="Carry unfinished cards over to" [value]="mode()" (change)="mode.set($event.value)">
-        <mat-radio-button value="backlog" data-testid="carry-over-backlog">Their project backlogs (top)</mat-radio-button>
-        <mat-radio-button value="board" data-testid="carry-over-board" [disabled]="boards().length === 0">Another board</mat-radio-button>
+      <mat-radio-group
+        class="modes"
+        aria-label="Carry unfinished cards over to"
+        [value]="mode()"
+        (change)="mode.set($event.value)"
+      >
+        <mat-radio-button value="backlog" data-testid="carry-over-backlog"
+          >Their project backlogs (top)</mat-radio-button
+        >
+        <mat-radio-button
+          value="board"
+          data-testid="carry-over-board"
+          [disabled]="boards().length === 0"
+          >Another board</mat-radio-button
+        >
       </mat-radio-group>
       @if (mode() === 'board') {
         <mat-form-field class="target">
-          <mat-select placeholder="Pick a board" data-testid="carry-over-target" [value]="target()" (valueChange)="target.set($event)">
+          <mat-select
+            placeholder="Pick a board"
+            data-testid="carry-over-target"
+            [value]="target()"
+            (valueChange)="target.set($event)"
+          >
             @for (board of boards(); track board.id) {
               <mat-option [value]="board.id">{{ board.name }}</mat-option>
             }
@@ -43,7 +61,13 @@ type CarryOverMode = 'backlog' | 'board';
     </mat-dialog-content>
     <mat-dialog-actions>
       <button mat-button type="button" mat-dialog-close>Cancel</button>
-      <button mat-flat-button type="button" data-testid="archive-submit" [disabled]="busy() || (mode() === 'board' && !target())" (click)="submit()">
+      <button
+        mat-flat-button
+        type="button"
+        data-testid="archive-submit"
+        [disabled]="busy() || (mode() === 'board' && !target())"
+        (click)="submit()"
+      >
         Archive board
       </button>
     </mat-dialog-actions>
@@ -79,7 +103,9 @@ export class ArchiveBoardDialog {
   protected readonly target = signal<string | null>(null);
   protected readonly boards = signal<readonly BoardSummary[]>([]);
   protected readonly busy = signal(false);
-  protected readonly doneCount = computed(() => this.store.columns().find((c) => c.status === 'Done')?.cards.length ?? 0);
+  protected readonly doneCount = computed(
+    () => this.store.columns().find((c) => c.status === 'Done')?.cards.length ?? 0,
+  );
   protected readonly openCount = computed(() => this.store.totalCount() - this.doneCount());
 
   constructor() {
@@ -96,10 +122,14 @@ export class ArchiveBoardDialog {
     this.busy.set(false);
     if (!result) return;
     const parts = [
-      result.movedToBoard ? `${result.movedToBoard} to ${this.boards().find((b) => b.id === target)?.name ?? 'the other board'}` : null,
+      result.movedToBoard
+        ? `${result.movedToBoard} to ${this.boards().find((b) => b.id === target)?.name ?? 'the other board'}`
+        : null,
       result.movedToBacklog ? `${result.movedToBacklog} to backlogs` : null,
     ].filter(Boolean);
-    this.toast.success(parts.length ? `Board archived · moved ${parts.join(', ')}` : 'Board archived');
+    this.toast.success(
+      parts.length ? `Board archived · moved ${parts.join(', ')}` : 'Board archived',
+    );
     this.ref.close(true);
   }
 }

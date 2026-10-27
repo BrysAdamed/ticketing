@@ -1,4 +1,14 @@
-import { ChangeDetectionStrategy, Component, effect, ElementRef, inject, input, signal, untracked, viewChild } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  effect,
+  ElementRef,
+  inject,
+  input,
+  signal,
+  untracked,
+  viewChild,
+} from '@angular/core';
 import { MatTooltip } from '@angular/material/tooltip';
 import { RouterLink } from '@angular/router';
 import { provideIcons } from '@ng-icons/core';
@@ -31,7 +41,12 @@ import { RUN_STATUS_ICONS, TEST_CASE_ICONS } from '../test-case-icons';
           <button type="button" class="add" data-testid="ticket-tc-add" (click)="startAdding()">
             <tk-icon name="tablerPlus" [size]="14" />New
           </button>
-          <a class="add" data-testid="ticket-tc-editor" [routerLink]="['/projects', projectKey(), 'test-cases', 'new']" [queryParams]="{ forTicket: ticketKey() }">
+          <a
+            class="add"
+            data-testid="ticket-tc-editor"
+            [routerLink]="['/projects', projectKey(), 'test-cases', 'new']"
+            [queryParams]="{ forTicket: ticketKey() }"
+          >
             <tk-icon name="tablerListNumbers" [size]="14" />With steps
           </a>
         </span>
@@ -39,7 +54,11 @@ import { RUN_STATUS_ICONS, TEST_CASE_ICONS } from '../test-case-icons';
     </div>
     <div class="box">
       @for (testCase of cases(); track testCase.id) {
-        <a class="lrow" [routerLink]="['/projects', projectKey(), 'test-cases', testCase.key]" [attr.data-testid]="'ticket-tc-' + testCase.key">
+        <a
+          class="lrow"
+          [routerLink]="['/projects', projectKey(), 'test-cases', testCase.key]"
+          [attr.data-testid]="'ticket-tc-' + testCase.key"
+        >
           <span class="st"><tk-test-case-status-badge [status]="testCase.status" /></span>
           <span class="key tnum">{{ testCase.key }}</span>
           <span class="t">{{ testCase.title }}</span>
@@ -214,7 +233,13 @@ export class TicketTestCasesComponent {
     if (!text || this.saving()) return;
     this.saving.set(true);
     try {
-      const created = await firstValueFrom(this.api.create(this.projectKey(), { title: text, ticketKey: this.ticketKey() }, crypto.randomUUID()));
+      const created = await firstValueFrom(
+        this.api.create(
+          this.projectKey(),
+          { title: text, ticketKey: this.ticketKey() },
+          crypto.randomUUID(),
+        ),
+      );
       this.cases.update((cases) => [
         ...cases,
         {
@@ -240,7 +265,10 @@ export class TicketTestCasesComponent {
 
   private async load(ticketKey: string): Promise<void> {
     this.loaded.set(false);
-    const [cases, ticket] = await Promise.allSettled([firstValueFrom(this.api.forTicket(ticketKey)), this.cache.fetch(ticketKey)]);
+    const [cases, ticket] = await Promise.allSettled([
+      firstValueFrom(this.api.forTicket(ticketKey)),
+      this.cache.fetch(ticketKey),
+    ]);
     if (ticketKey !== this.ticketKey()) return;
     if (cases.status === 'fulfilled') this.cases.set(cases.value);
     this.canEdit.set(ticket.status === 'fulfilled' && ticket.value.permissions.canEdit);

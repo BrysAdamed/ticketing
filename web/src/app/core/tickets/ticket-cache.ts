@@ -69,7 +69,14 @@ export class TicketCache {
 
 /// PATCH responses carry `null` for collections that were not requested; keep the cached ones.
 function stripNulls(update: Partial<Ticket>): Partial<Ticket> {
-  const collections: (keyof Ticket)[] = ['children', 'childProgress', 'links', 'comments', 'commentCount', 'testCases'];
+  const collections: (keyof Ticket)[] = [
+    'children',
+    'childProgress',
+    'links',
+    'comments',
+    'commentCount',
+    'testCases',
+  ];
   const result: Partial<Ticket> = { ...update };
   for (const field of collections) {
     if (result[field] === null || result[field] === undefined) delete result[field];

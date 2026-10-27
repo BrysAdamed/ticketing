@@ -1,5 +1,12 @@
 import { TestCaseSummary } from '@core/testing/testing.models';
-import { adjustCounts, EMPTY_FILTERS, filtersFromQuery, filtersToQuery, matches, upsertRow } from './test-case-list-logic';
+import {
+  adjustCounts,
+  EMPTY_FILTERS,
+  filtersFromQuery,
+  filtersToQuery,
+  matches,
+  upsertRow,
+} from './test-case-list-logic';
 
 function row(number: number, overrides: Partial<TestCaseSummary> = {}): TestCaseSummary {
   return {
@@ -20,7 +27,12 @@ function row(number: number, overrides: Partial<TestCaseSummary> = {}): TestCase
 describe('test case list logic', () => {
   it('round-trips filters through the URL query', () => {
     // Arrange
-    const filters = { status: 'Automatic' as const, text: ' login ', ticket: 'WEB-4', archived: true };
+    const filters = {
+      status: 'Automatic' as const,
+      text: ' login ',
+      ticket: 'WEB-4',
+      archived: true,
+    };
 
     // Act
     const query = filtersToQuery(filters);

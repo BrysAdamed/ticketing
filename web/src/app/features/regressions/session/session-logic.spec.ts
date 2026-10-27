@@ -1,5 +1,13 @@
 import { RegressionItem } from '@core/testing/testing.models';
-import { buildRows, filterCounts, matchesFilter, nextWaiting, orderedItems, passRateLabel, progressSegments } from './session-logic';
+import {
+  buildRows,
+  filterCounts,
+  matchesFilter,
+  nextWaiting,
+  orderedItems,
+  passRateLabel,
+  progressSegments,
+} from './session-logic';
 
 const me = { id: 'me', email: 'me@x', displayName: 'Me', isActive: true };
 const other = { id: 'other', email: 'o@x', displayName: 'Other', isActive: true };
@@ -52,20 +60,31 @@ describe('regression session logic', () => {
 
   it('filters mine, waiting, failed and text', () => {
     // Arrange
-    const items = [item(1, { assignee: me }), item(2, { status: 'Failed', assignee: other }), item(3, { title: 'Export' })];
+    const items = [
+      item(1, { assignee: me }),
+      item(2, { status: 'Failed', assignee: other }),
+      item(3, { title: 'Export' }),
+    ];
 
     // Act
     const counts = filterCounts(items, 'me');
 
     // Assert
     expect(counts).toEqual({ mine: 1, waiting: 2, failed: 1, all: 3 });
-    expect(items.filter((i) => matchesFilter(i, 'all', 'me', 'expo')).map((i) => i.order)).toEqual([3]);
+    expect(items.filter((i) => matchesFilter(i, 'all', 'me', 'expo')).map((i) => i.order)).toEqual([
+      3,
+    ]);
     expect(items.filter((i) => matchesFilter(i, 'mine', null)).length).toBe(0);
   });
 
   it('finds the next waiting item, preferring mine and unassigned ones, wrapping around', () => {
     // Arrange
-    const items = [item(1), item(2, { assignee: other }), item(3, { status: 'Passed' }), item(4, { assignee: me })];
+    const items = [
+      item(1),
+      item(2, { assignee: other }),
+      item(3, { status: 'Passed' }),
+      item(4, { assignee: me }),
+    ];
 
     // Act
     const afterOne = nextWaiting(items, 'WEB-TC-1', 'me');
@@ -80,7 +99,17 @@ describe('regression session logic', () => {
 
   it('computes progress segments and the pass rate label', () => {
     // Arrange
-    const summary = { total: 4, passed: 2, passedManual: 1, passedAutomatic: 1, failed: 1, skipped: 0, waiting: 1, passRate: 2 / 3, bugsCreated: 0 };
+    const summary = {
+      total: 4,
+      passed: 2,
+      passedManual: 1,
+      passedAutomatic: 1,
+      failed: 1,
+      skipped: 0,
+      waiting: 1,
+      passRate: 2 / 3,
+      bugsCreated: 0,
+    };
 
     // Act
     const segments = progressSegments(summary);

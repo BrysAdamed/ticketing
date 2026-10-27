@@ -1,4 +1,13 @@
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, signal, untracked } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  DestroyRef,
+  effect,
+  inject,
+  signal,
+  untracked,
+} from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { firstValueFrom } from 'rxjs';
@@ -27,7 +36,16 @@ const MAX_SHOWN = 200;
 /// projects) and move them onto the board in one call, in backlog order.
 @Component({
   selector: 'tk-add-tickets-dialog',
-  imports: [MatButtonModule, MatDialogModule, AvatarComponent, PriorityIconComponent, ProjectTileComponent, StatusIconComponent, TypeIconComponent, IconComponent],
+  imports: [
+    MatButtonModule,
+    MatDialogModule,
+    AvatarComponent,
+    PriorityIconComponent,
+    ProjectTileComponent,
+    StatusIconComponent,
+    TypeIconComponent,
+    IconComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { 'data-testid': 'add-tickets-dialog' },
   template: `
@@ -94,10 +112,14 @@ const MAX_SHOWN = 200;
               }
             </button>
           } @empty {
-            <div class="note">{{ text() ? 'No backlog tickets match.' : 'This backlog is empty.' }}</div>
+            <div class="note">
+              {{ text() ? 'No backlog tickets match.' : 'This backlog is empty.' }}
+            </div>
           }
           @if (items().length > shown().length) {
-            <div class="note">Showing the first {{ shown().length }} of {{ items().length }}. Search to narrow down.</div>
+            <div class="note">
+              Showing the first {{ shown().length }} of {{ items().length }}. Search to narrow down.
+            </div>
           }
         }
       </div>
@@ -105,7 +127,13 @@ const MAX_SHOWN = 200;
     <mat-dialog-actions>
       <span class="count tnum">{{ selected().size }} selected</span>
       <button mat-button type="button" mat-dialog-close>Cancel</button>
-      <button mat-flat-button type="button" data-testid="add-tickets-submit" [disabled]="selected().size === 0 || busy()" (click)="submit()">
+      <button
+        mat-flat-button
+        type="button"
+        data-testid="add-tickets-submit"
+        [disabled]="selected().size === 0 || busy()"
+        (click)="submit()"
+      >
         Add {{ selected().size || '' }} {{ selected().size === 1 ? 'ticket' : 'tickets' }}
       </button>
     </mat-dialog-actions>
@@ -278,7 +306,9 @@ export class AddTicketsDialog {
   }
 
   protected async submit(): Promise<void> {
-    const keys = [...this.selected()].sort((a, b) => (this.order.get(a) ?? 0) - (this.order.get(b) ?? 0));
+    const keys = [...this.selected()].sort(
+      (a, b) => (this.order.get(a) ?? 0) - (this.order.get(b) ?? 0),
+    );
     this.busy.set(true);
     const added = await this.data.add(keys);
     this.busy.set(false);
@@ -290,7 +320,9 @@ export class AddTicketsDialog {
     const token = ++this.loadToken;
     this.status.set('loading');
     try {
-      const backlog = await firstValueFrom(this.tickets.backlog(projectKey, { text: text || null }));
+      const backlog = await firstValueFrom(
+        this.tickets.backlog(projectKey, { text: text || null }),
+      );
       if (token !== this.loadToken) return;
       backlog.items.forEach((item, index) => this.order.set(item.key, index));
       this.items.set(backlog.items);

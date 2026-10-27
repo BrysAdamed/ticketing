@@ -52,7 +52,12 @@ describe('test case form', () => {
 
   it('builds a create body with trimmed values and blank steps dropped', () => {
     // Arrange
-    const form = { ...emptyForm('WEB-4'), title: ' Log in ', steps: [newStep(' Open '), newStep(''), newStep('Submit')], preconditions: '  ' };
+    const form = {
+      ...emptyForm('WEB-4'),
+      title: ' Log in ',
+      steps: [newStep(' Open '), newStep(''), newStep('Submit')],
+      preconditions: '  ',
+    };
 
     // Act
     const body = toNew(form);

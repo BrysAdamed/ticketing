@@ -52,7 +52,12 @@ export class BoardDirectory {
   }
 
   visited(board: BoardLink): void {
-    this.updateRecent((list) => [{ id: board.id, name: board.name }, ...list.filter((b) => b.id !== board.id)].slice(0, MAX_RECENT));
+    this.updateRecent((list) =>
+      [{ id: board.id, name: board.name }, ...list.filter((b) => b.id !== board.id)].slice(
+        0,
+        MAX_RECENT,
+      ),
+    );
   }
 
   forget(boardId: string): void {
@@ -76,7 +81,9 @@ function readRecent(): readonly BoardLink[] {
     const raw = localStorage.getItem(RECENT_KEY);
     const parsed: unknown = raw ? JSON.parse(raw) : [];
     return Array.isArray(parsed)
-      ? parsed.filter((b): b is BoardLink => typeof b?.id === 'string' && typeof b?.name === 'string').slice(0, MAX_RECENT)
+      ? parsed
+          .filter((b): b is BoardLink => typeof b?.id === 'string' && typeof b?.name === 'string')
+          .slice(0, MAX_RECENT)
       : [];
   } catch {
     return [];

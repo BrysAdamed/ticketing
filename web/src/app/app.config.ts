@@ -56,13 +56,17 @@ export const appConfig: ApplicationConfig = {
     providePeekView(TICKET_DETAIL_VIEW),
     provideSearch(),
     provideAttachments(),
-    provideTicketCreation(() => import('@features/tickets/create/create-ticket.dialog').then((m) => m.CreateTicketDialog)),
+    provideTicketCreation(() =>
+      import('@features/tickets/create/create-ticket.dialog').then((m) => m.CreateTicketDialog),
+    ),
     provideTicketDetailSection({
       id: 'test-cases',
       order: 10,
       title: 'Test cases',
       loadComponent: () =>
-        import('@features/test-cases/ticket-section/ticket-test-cases.component').then((m) => m.TicketTestCasesComponent),
+        import('@features/test-cases/ticket-section/ticket-test-cases.component').then(
+          (m) => m.TicketTestCasesComponent,
+        ),
     }),
     { provide: MAT_RIPPLE_GLOBAL_OPTIONS, useValue: { disabled: true } },
     {

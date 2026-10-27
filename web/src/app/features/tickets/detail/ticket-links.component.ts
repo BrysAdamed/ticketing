@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  input,
+  output,
+  signal,
+} from '@angular/core';
 import { MatTooltip } from '@angular/material/tooltip';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -41,7 +49,16 @@ const KIND_OPTIONS: PickerOption<LinkKind>[] = [
 /// key or title; any readable ticket key from another project can be typed in full.
 @Component({
   selector: 'tk-ticket-links',
-  imports: [MatTooltip, RouterLink, AvatarComponent, StatusIconComponent, TypeIconComponent, IconComponent, InlinePickerDirective, SearchPickerDirective],
+  imports: [
+    MatTooltip,
+    RouterLink,
+    AvatarComponent,
+    StatusIconComponent,
+    TypeIconComponent,
+    IconComponent,
+    InlinePickerDirective,
+    SearchPickerDirective,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'sec', 'data-testid': 'ticket-links' },
   template: `
@@ -79,15 +96,36 @@ const KIND_OPTIONS: PickerOption<LinkKind>[] = [
     @if (links().length) {
       <div class="box">
         @for (link of links(); track link.id) {
-          <div class="lrow" [class.done]="link.ticket.status === 'Done'" [attr.data-testid]="'link-' + link.ticket.key">
+          <div
+            class="lrow"
+            [class.done]="link.ticket.status === 'Done'"
+            [attr.data-testid]="'link-' + link.ticket.key"
+          >
             <span class="rel">{{ link.label }}</span>
             <tk-status-icon [status]="link.ticket.status" />
-            <a class="key tnum" [routerLink]="['/tickets', link.ticket.key]">{{ link.ticket.key }}</a>
+            <a class="key tnum" [routerLink]="['/tickets', link.ticket.key]">{{
+              link.ticket.key
+            }}</a>
             <tk-type-icon [type]="link.ticket.type" [size]="14" />
-            <a class="t" [routerLink]="[]" [queryParams]="{ peek: link.ticket.key }" queryParamsHandling="merge">{{ link.ticket.title }}</a>
-            <tk-avatar [userId]="link.ticket.assignee?.id" [name]="link.ticket.assignee?.displayName" />
+            <a
+              class="t"
+              [routerLink]="[]"
+              [queryParams]="{ peek: link.ticket.key }"
+              queryParamsHandling="merge"
+              >{{ link.ticket.title }}</a
+            >
+            <tk-avatar
+              [userId]="link.ticket.assignee?.id"
+              [name]="link.ticket.assignee?.displayName"
+            />
             @if (canEdit()) {
-              <button type="button" class="tk-icon-btn tk-icon-btn-sm remove" aria-label="Remove link" matTooltip="Remove link" (click)="removed.emit(link)">
+              <button
+                type="button"
+                class="tk-icon-btn tk-icon-btn-sm remove"
+                aria-label="Remove link"
+                matTooltip="Remove link"
+                (click)="removed.emit(link)"
+              >
                 <tk-icon name="tablerX" [size]="14" />
               </button>
             }
@@ -110,7 +148,9 @@ export class TicketLinksComponent {
   protected readonly kindOptions = KIND_OPTIONS;
   protected readonly kind = signal<LinkKind>(KIND_OPTIONS[2].value);
   protected readonly kindLabel = computed(() =>
-    this.kind().inverse ? TICKET_LINK_TYPE_INVERSE_LABELS[this.kind().type] : TICKET_LINK_TYPE_LABELS[this.kind().type],
+    this.kind().inverse
+      ? TICKET_LINK_TYPE_INVERSE_LABELS[this.kind().type]
+      : TICKET_LINK_TYPE_LABELS[this.kind().type],
   );
   protected readonly links = computed(() => this.ticket().links ?? []);
   protected readonly search = computed(() => {
@@ -118,8 +158,14 @@ export class TicketLinksComponent {
     return async (query: string): Promise<PickerOption<string>[]> => {
       const typed = query.trim().toUpperCase();
       const found = await firstValueFrom(this.api.find(t.projectKey, query));
-      const options: PickerOption<string>[] = found.filter((x) => x.id !== t.id).map((x: TicketRef) => ({ value: x.key, label: `${x.key} ${x.title}` }));
-      if (TICKET_KEY_PATTERN.test(typed) && typed !== t.key && !options.some((o) => o.value === typed)) {
+      const options: PickerOption<string>[] = found
+        .filter((x) => x.id !== t.id)
+        .map((x: TicketRef) => ({ value: x.key, label: `${x.key} ${x.title}` }));
+      if (
+        TICKET_KEY_PATTERN.test(typed) &&
+        typed !== t.key &&
+        !options.some((o) => o.value === typed)
+      ) {
         options.unshift({ value: typed, label: `Link ${typed}` });
       }
       return options;
@@ -129,6 +175,10 @@ export class TicketLinksComponent {
   protected add(otherKey: string): void {
     const kind = this.kind();
     const self = this.ticket().key;
-    this.added.emit(kind.inverse ? { fromKey: otherKey, targetKey: self, type: kind.type } : { fromKey: self, targetKey: otherKey, type: kind.type });
+    this.added.emit(
+      kind.inverse
+        ? { fromKey: otherKey, targetKey: self, type: kind.type }
+        : { fromKey: self, targetKey: otherKey, type: kind.type },
+    );
   }
 }

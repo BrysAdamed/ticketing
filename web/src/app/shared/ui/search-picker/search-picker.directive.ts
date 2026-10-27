@@ -5,7 +5,16 @@ import {
   OverlayRef,
 } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
-import { DestroyRef, Directive, ElementRef, inject, Injector, input, output, signal } from '@angular/core';
+import {
+  DestroyRef,
+  Directive,
+  ElementRef,
+  inject,
+  Injector,
+  input,
+  output,
+  signal,
+} from '@angular/core';
 import { PickerOption, PickerOptionTemplate } from '../inline-picker/picker-option';
 import { SearchPickerPanelComponent } from './search-picker-panel.component';
 
@@ -58,7 +67,9 @@ export class SearchPickerDirective<T> {
       hasBackdrop: true,
       backdropClass: 'cdk-overlay-transparent-backdrop',
     });
-    const panel = overlayRef.attach(new ComponentPortal(SearchPickerPanelComponent<T>, null, this.injector));
+    const panel = overlayRef.attach(
+      new ComponentPortal(SearchPickerPanelComponent<T>, null, this.injector),
+    );
     panel.setInput('search', this.tkSearchPicker());
     panel.setInput('placeholder', this.pickerPlaceholder());
     panel.setInput('optionTemplate', this.pickerOptionTemplate());

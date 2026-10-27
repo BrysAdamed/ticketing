@@ -1,5 +1,17 @@
-import { CdkDrag, CdkDragEnd, CdkDragMove, CdkDragPlaceholder, CdkDragPreview, CdkDragStart, CdkDropList } from '@angular/cdk/drag-drop';
-import { CdkFixedSizeVirtualScroll, CdkVirtualForOf, CdkVirtualScrollViewport } from '@angular/cdk/scrolling';
+import {
+  CdkDrag,
+  CdkDragEnd,
+  CdkDragMove,
+  CdkDragPlaceholder,
+  CdkDragPreview,
+  CdkDragStart,
+  CdkDropList,
+} from '@angular/cdk/drag-drop';
+import {
+  CdkFixedSizeVirtualScroll,
+  CdkVirtualForOf,
+  CdkVirtualScrollViewport,
+} from '@angular/cdk/scrolling';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -29,8 +41,19 @@ import { FieldHints } from '@core/tickets/field-hints';
 import { ProjectPeople } from '@core/tickets/project-people';
 import { TicketCache } from '@core/tickets/ticket-cache';
 import { UserRef } from '@core/tickets/ticket.models';
-import { Priority, PRIORITIES, TICKET_STATUSES, TICKET_TYPES, TicketStatus, TicketType } from '@shared/domain/enums';
-import { PRIORITY_OPTIONS, TICKET_STATUS_OPTIONS, userOptions } from '@shared/domain/picker-options';
+import {
+  Priority,
+  PRIORITIES,
+  TICKET_STATUSES,
+  TICKET_TYPES,
+  TicketStatus,
+  TicketType,
+} from '@shared/domain/enums';
+import {
+  PRIORITY_OPTIONS,
+  TICKET_STATUS_OPTIONS,
+  userOptions,
+} from '@shared/domain/picker-options';
 import { AvatarComponent } from '@shared/ui/domain/avatar.component';
 import { StatusIconComponent } from '@shared/ui/domain/status-icon.component';
 import { TypeIconComponent } from '@shared/ui/domain/type-icon.component';
@@ -43,7 +66,14 @@ import { LabelToggle } from '@shared/ui/labels-picker/labels-picker-panel.compon
 import { SkeletonRowsComponent } from '@shared/ui/skeleton/skeleton-rows.component';
 import { BacklogFiltersComponent } from './backlog-filters.component';
 import { BACKLOG_ICONS } from './backlog-icons';
-import { BacklogFilters, EMPTY_FILTERS, GROUP_BY_OPTIONS, GroupBy, SORT_BY_OPTIONS, SortBy } from './backlog-logic';
+import {
+  BacklogFilters,
+  EMPTY_FILTERS,
+  GROUP_BY_OPTIONS,
+  GroupBy,
+  SORT_BY_OPTIONS,
+  SortBy,
+} from './backlog-logic';
 import { BacklogRowComponent, RowEdit } from './backlog-row.component';
 import { BacklogStore, CreateRow, ListRow } from './backlog.store';
 import { QuickCreate, QuickCreateRowComponent } from './quick-create-row.component';
@@ -110,12 +140,19 @@ export class BacklogView {
   protected readonly creating = signal(false);
   protected readonly dropIndex = signal<number | null>(null);
   protected readonly dragCount = signal(0);
-  protected readonly filterUsers = computed(() => [...this.store.users().values()].sort((a, b) => a.displayName.localeCompare(b.displayName)));
-  protected readonly groupLabel = computed(() => GROUP_BY_OPTIONS.find((o) => o.value === this.store.groupBy())?.label ?? '');
-  protected readonly sortLabel = computed(() => SORT_BY_OPTIONS.find((o) => o.value === this.store.sortBy())?.label ?? '');
+  protected readonly filterUsers = computed(() =>
+    [...this.store.users().values()].sort((a, b) => a.displayName.localeCompare(b.displayName)),
+  );
+  protected readonly groupLabel = computed(
+    () => GROUP_BY_OPTIONS.find((o) => o.value === this.store.groupBy())?.label ?? '',
+  );
+  protected readonly sortLabel = computed(
+    () => SORT_BY_OPTIONS.find((o) => o.value === this.store.sortBy())?.label ?? '',
+  );
   protected readonly selectionCount = computed(() => this.store.selection().selected.size);
   protected readonly trackRow = (_: number, row: ListRow) => row.id;
-  protected readonly labelSuggestions = (prefix: string) => this.hints.get(this.store.projectKey(), 'labels', prefix);
+  protected readonly labelSuggestions = (prefix: string) =>
+    this.hints.get(this.store.projectKey(), 'labels', prefix);
 
   private readonly viewport = viewChild(CdkVirtualScrollViewport);
   private readonly listWrap = viewChild<ElementRef<HTMLElement>>('listWrap');
@@ -132,7 +169,10 @@ export class BacklogView {
       untracked(() => {
         this.readUrl(this.queryParams());
         void this.store.load(key);
-        void this.people.assignable(key).then((users) => this.assignable.set(users)).catch(() => undefined);
+        void this.people
+          .assignable(key)
+          .then((users) => this.assignable.set(users))
+          .catch(() => undefined);
       });
     });
 
@@ -155,22 +195,102 @@ export class BacklogView {
     });
 
     inject(ShortcutService).registerScoped([
-      { keys: 'j', section: 'Backlog', description: 'Next ticket', handler: () => this.store.move(1) },
-      { keys: 'k', section: 'Backlog', description: 'Previous ticket', handler: () => this.store.move(-1) },
-      { keys: 'arrowdown', description: 'Next ticket', handler: () => this.store.move(1), showInHelp: false },
-      { keys: 'arrowup', description: 'Previous ticket', handler: () => this.store.move(-1), showInHelp: false },
-      { keys: 'shift+j', section: 'Backlog', description: 'Extend selection down', handler: () => this.store.move(1, true) },
-      { keys: 'shift+k', section: 'Backlog', description: 'Extend selection up', handler: () => this.store.move(-1, true) },
-      { keys: 'shift+arrowdown', description: 'Extend selection down', handler: () => this.store.move(1, true), showInHelp: false },
-      { keys: 'shift+arrowup', description: 'Extend selection up', handler: () => this.store.move(-1, true), showInHelp: false },
-      { keys: 'enter', section: 'Backlog', description: 'Open ticket', handler: () => this.openFocused(false) },
-      { keys: 'shift+enter', section: 'Backlog', description: 'Open ticket full page', handler: () => this.openFocused(true) },
-      { keys: 'x', section: 'Backlog', description: 'Select ticket', handler: () => this.toggleFocused() },
-      { keys: 'c', section: 'Backlog', description: 'Quick-create ticket', handler: () => this.store.openCreate(null) },
-      { keys: 'a', section: 'Backlog', description: 'Assign to me', handler: () => this.assignToMe() },
-      { keys: 'mod+a', section: 'Backlog', description: 'Select all', handler: () => this.store.selectAll() },
-      { keys: '/', section: 'Backlog', description: 'Filter by title or key', handler: () => this.filtersBar()?.focusText() },
-      { keys: 'escape', description: 'Clear selection', handler: () => this.escape(), showInHelp: false },
+      {
+        keys: 'j',
+        section: 'Backlog',
+        description: 'Next ticket',
+        handler: () => this.store.move(1),
+      },
+      {
+        keys: 'k',
+        section: 'Backlog',
+        description: 'Previous ticket',
+        handler: () => this.store.move(-1),
+      },
+      {
+        keys: 'arrowdown',
+        description: 'Next ticket',
+        handler: () => this.store.move(1),
+        showInHelp: false,
+      },
+      {
+        keys: 'arrowup',
+        description: 'Previous ticket',
+        handler: () => this.store.move(-1),
+        showInHelp: false,
+      },
+      {
+        keys: 'shift+j',
+        section: 'Backlog',
+        description: 'Extend selection down',
+        handler: () => this.store.move(1, true),
+      },
+      {
+        keys: 'shift+k',
+        section: 'Backlog',
+        description: 'Extend selection up',
+        handler: () => this.store.move(-1, true),
+      },
+      {
+        keys: 'shift+arrowdown',
+        description: 'Extend selection down',
+        handler: () => this.store.move(1, true),
+        showInHelp: false,
+      },
+      {
+        keys: 'shift+arrowup',
+        description: 'Extend selection up',
+        handler: () => this.store.move(-1, true),
+        showInHelp: false,
+      },
+      {
+        keys: 'enter',
+        section: 'Backlog',
+        description: 'Open ticket',
+        handler: () => this.openFocused(false),
+      },
+      {
+        keys: 'shift+enter',
+        section: 'Backlog',
+        description: 'Open ticket full page',
+        handler: () => this.openFocused(true),
+      },
+      {
+        keys: 'x',
+        section: 'Backlog',
+        description: 'Select ticket',
+        handler: () => this.toggleFocused(),
+      },
+      {
+        keys: 'c',
+        section: 'Backlog',
+        description: 'Quick-create ticket',
+        handler: () => this.store.openCreate(null),
+      },
+      {
+        keys: 'a',
+        section: 'Backlog',
+        description: 'Assign to me',
+        handler: () => this.assignToMe(),
+      },
+      {
+        keys: 'mod+a',
+        section: 'Backlog',
+        description: 'Select all',
+        handler: () => this.store.selectAll(),
+      },
+      {
+        keys: '/',
+        section: 'Backlog',
+        description: 'Filter by title or key',
+        handler: () => this.filtersBar()?.focusText(),
+      },
+      {
+        keys: 'escape',
+        description: 'Clear selection',
+        handler: () => this.escape(),
+        showInHelp: false,
+      },
     ]);
   }
 
@@ -183,7 +303,8 @@ export class BacklogView {
 
   protected setShowDone(showDone: boolean): void {
     this.setFilters({ ...this.store.filters(), showDone });
-    if (showDone) this.store.collapsed.update((set) => new Set([...set].filter((g) => g !== 'status:Done')));
+    if (showDone)
+      this.store.collapsed.update((set) => new Set([...set].filter((g) => g !== 'status:Done')));
   }
 
   protected setGroupBy(groupBy: GroupBy): void {
@@ -201,11 +322,17 @@ export class BacklogView {
   }
 
   protected loadLabelOptions(): void {
-    void this.hints.get(this.store.projectKey(), 'labels').then((labels) => this.labelOptions.set([...new Set([...this.store.filters().labels, ...labels])]));
+    void this.hints
+      .get(this.store.projectKey(), 'labels')
+      .then((labels) =>
+        this.labelOptions.set([...new Set([...this.store.filters().labels, ...labels])]),
+      );
   }
 
   protected loadVersionOptions(): void {
-    void this.hints.get(this.store.projectKey(), 'version').then((versions) => this.versionOptions.set(versions));
+    void this.hints
+      .get(this.store.projectKey(), 'version')
+      .then((versions) => this.versionOptions.set(versions));
   }
 
   // Rows
@@ -238,7 +365,14 @@ export class BacklogView {
         void this.store.setPoints(ids, edit.value);
         break;
       case 'assignee':
-        void this.store.setAssignee(ids, edit.value ? (this.assignable().find((u) => u.id === edit.value) ?? this.store.users().get(edit.value) ?? null) : null);
+        void this.store.setAssignee(
+          ids,
+          edit.value
+            ? (this.assignable().find((u) => u.id === edit.value) ??
+                this.store.users().get(edit.value) ??
+                null)
+            : null,
+        );
         break;
       case 'label':
         void this.store.toggleLabel(ids, edit.value.label, edit.value.add);
@@ -361,7 +495,9 @@ export class BacklogView {
 
   /// The virtual list needs a definite height: fill the window below the toolbar.
   private measure(element: HTMLElement): void {
-    requestAnimationFrame(() => this.listHeight.set(Math.max(240, window.innerHeight - element.getBoundingClientRect().top)));
+    requestAnimationFrame(() =>
+      this.listHeight.set(Math.max(240, window.innerHeight - element.getBoundingClientRect().top)),
+    );
   }
 
   private scrollIntoView(viewport: CdkVirtualScrollViewport, id: string): void {
@@ -389,7 +525,9 @@ export class BacklogView {
       statuses: list('status', TICKET_STATUSES) as TicketStatus[],
       priorities: list('priority', PRIORITIES) as Priority[],
       assignee: params['assignee'] ?? null,
-      labels: String(params['label'] ?? '').split(',').filter(Boolean),
+      labels: String(params['label'] ?? '')
+        .split(',')
+        .filter(Boolean),
       version: params['version'] ?? null,
       text: params['q'] ?? '',
     };

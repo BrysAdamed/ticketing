@@ -14,7 +14,14 @@ export interface BoardFilters {
   text: string;
 }
 
-export const EMPTY_FILTERS: BoardFilters = { assignees: [], types: [], labels: [], projects: [], mine: false, text: '' };
+export const EMPTY_FILTERS: BoardFilters = {
+  assignees: [],
+  types: [],
+  labels: [],
+  projects: [],
+  mine: false,
+  text: '',
+};
 
 export type Swimlanes = 'none' | 'assignee' | 'epic';
 
@@ -46,7 +53,8 @@ export function hasActiveFilters(filters: BoardFilters): boolean {
 
 export function cardMatches(card: BoardCard, filters: BoardFilters, meId: string | null): boolean {
   if (filters.mine && card.assigneeId !== meId) return false;
-  if (filters.assignees.length && !filters.assignees.includes(card.assigneeId ?? UNASSIGNED)) return false;
+  if (filters.assignees.length && !filters.assignees.includes(card.assigneeId ?? UNASSIGNED))
+    return false;
   if (filters.types.length && !filters.types.includes(card.type)) return false;
   if (filters.projects.length && !filters.projects.includes(card.projectKey)) return false;
   if (filters.labels.length && !filters.labels.some((l) => card.labels.includes(l))) return false;
@@ -55,7 +63,10 @@ export function cardMatches(card: BoardCard, filters: BoardFilters, meId: string
 }
 
 /// The epic a card belongs to: its parent when that is an epic, otherwise its grandparent when that is one.
-export function epicOf(card: BoardCard, parents: ReadonlyMap<string, BoardParent>): BoardParent | null {
+export function epicOf(
+  card: BoardCard,
+  parents: ReadonlyMap<string, BoardParent>,
+): BoardParent | null {
   if (card.type === 'Epic' || !card.parentId) return null;
   const parent = parents.get(card.parentId);
   if (!parent) return null;
@@ -109,19 +120,37 @@ export function buildLanes(
     }
   }
 
-  if (swimlanes === 'none') return [lanes.get('') ?? { key: '', label: '', user: null, epic: null, cells: emptyCells(), count: 0, points: 0 }];
+  if (swimlanes === 'none')
+    return [
+      lanes.get('') ?? {
+        key: '',
+        label: '',
+        user: null,
+        epic: null,
+        cells: emptyCells(),
+        count: 0,
+        points: 0,
+      },
+    ];
   const fallback = swimlanes === 'assignee' ? UNASSIGNED : 'none';
   return [...lanes.values()].sort((a, b) => {
     if (a.key === fallback) return 1;
     if (b.key === fallback) return -1;
-    return swimlanes === 'epic' ? compareKeys(a.epic!.key, b.epic!.key) : a.label.localeCompare(b.label);
+    return swimlanes === 'epic'
+      ? compareKeys(a.epic!.key, b.epic!.key)
+      : a.label.localeCompare(b.label);
   });
 }
 
 /// Where a block of cards lands when dropped at `index` of a visible cell. `visible` is the cell as
 /// displayed before the drop; the dragged and other moving cards are skipped as neighbours, like the
 /// server does. Hidden (filtered) cards are not considered: the anchor is the nearest visible card.
-export function anchorFor(visible: readonly BoardCard[], draggedId: string, index: number, moving: ReadonlySet<string>): MoveAnchor {
+export function anchorFor(
+  visible: readonly BoardCard[],
+  draggedId: string,
+  index: number,
+  moving: ReadonlySet<string>,
+): MoveAnchor {
   const rest = visible.filter((c) => c.id !== draggedId);
   for (let i = index; i < rest.length; i++) {
     if (!moving.has(rest[i].id)) return { beforeId: rest[i].id };
@@ -134,10 +163,16 @@ export function anchorFor(visible: readonly BoardCard[], draggedId: string, inde
 
 /// The optimistic version of a move: the cards leave their columns and land in `status` before or
 /// after the anchor (or at the bottom), in the order given. Returns new column arrays only where they change.
-export function applyMove(columns: readonly BoardColumn[], ids: readonly string[], status: TicketStatus, anchor: MoveAnchor): BoardColumn[] {
+export function applyMove(
+  columns: readonly BoardColumn[],
+  ids: readonly string[],
+  status: TicketStatus,
+  anchor: MoveAnchor,
+): BoardColumn[] {
   const moving = new Set(ids);
   const byId = new Map<string, BoardCard>();
-  for (const column of columns) for (const card of column.cards) if (moving.has(card.id)) byId.set(card.id, card);
+  for (const column of columns)
+    for (const card of column.cards) if (moving.has(card.id)) byId.set(card.id, card);
   const cards = ids.map((id) => byId.get(id)).filter((c): c is BoardCard => !!c);
 
   return columns.map((column) => {
@@ -160,7 +195,8 @@ export function applyMove(columns: readonly BoardColumn[], ids: readonly string[
 /// The selected cards in board order (column by column, top to bottom), so a block keeps its visual order.
 export function inBoardOrder(columns: readonly BoardColumn[], ids: ReadonlySet<string>): string[] {
   const result: string[] = [];
-  for (const column of columns) for (const card of column.cards) if (ids.has(card.id)) result.push(card.id);
+  for (const column of columns)
+    for (const card of column.cards) if (ids.has(card.id)) result.push(card.id);
   return result;
 }
 
@@ -168,7 +204,9 @@ export function statusOf(columns: readonly BoardColumn[], cardId: string): Ticke
   return columns.find((c) => c.cards.some((card) => card.id === cardId))?.status ?? null;
 }
 
-export function filtersFromParams(params: Readonly<Record<string, string | string[] | undefined>>): BoardFilters {
+export function filtersFromParams(
+  params: Readonly<Record<string, string | string[] | undefined>>,
+): BoardFilters {
   const list = (name: string): string[] => {
     const value = params[name];
     if (value === undefined) return [];
@@ -185,7 +223,8 @@ export function filtersFromParams(params: Readonly<Record<string, string | strin
 }
 
 export function filtersToParams(filters: BoardFilters): Record<string, string | null> {
-  const join = (values: readonly string[]): string | null => (values.length ? values.join(',') : null);
+  const join = (values: readonly string[]): string | null =>
+    values.length ? values.join(',') : null;
   return {
     assignee: join(filters.assignees),
     type: join(filters.types),
@@ -197,7 +236,10 @@ export function filtersToParams(filters: BoardFilters): Record<string, string | 
 }
 
 function emptyCells(): Record<TicketStatus, BoardCard[]> {
-  return Object.fromEntries(TICKET_STATUSES.map((s) => [s, []])) as unknown as Record<TicketStatus, BoardCard[]>;
+  return Object.fromEntries(TICKET_STATUSES.map((s) => [s, []])) as unknown as Record<
+    TicketStatus,
+    BoardCard[]
+  >;
 }
 
 function compareKeys(a: string, b: string): number {

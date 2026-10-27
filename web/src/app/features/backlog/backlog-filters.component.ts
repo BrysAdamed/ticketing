@@ -1,4 +1,13 @@
-import { ChangeDetectionStrategy, Component, computed, ElementRef, input, output, signal, viewChild } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  ElementRef,
+  input,
+  output,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { MatMenuModule } from '@angular/material/menu';
 import { UserRef } from '@core/tickets/ticket.models';
 import {
@@ -37,7 +46,13 @@ import { BacklogFilters, EMPTY_FILTERS } from './backlog-logic';
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <button type="button" class="fchip" [class.on]="filters().types.length" [matMenuTriggerFor]="typeMenu" data-testid="filter-type">
+    <button
+      type="button"
+      class="fchip"
+      [class.on]="filters().types.length"
+      [matMenuTriggerFor]="typeMenu"
+      data-testid="filter-type"
+    >
       @if (filters().types.length) {
         Type: <span class="n">{{ filters().types.length }}</span>
       } @else {
@@ -46,13 +61,26 @@ import { BacklogFilters, EMPTY_FILTERS } from './backlog-logic';
     </button>
     <mat-menu #typeMenu="matMenu" class="tk-filter-menu">
       @for (type of types; track type) {
-        <button mat-menu-item type="button" (click)="$event.stopPropagation(); toggle('types', type)">
-          <span class="opt"><span class="box" [class.on]="filters().types.includes(type)"></span><tk-type-icon [type]="type" [size]="14" [showLabel]="true" /></span>
+        <button
+          mat-menu-item
+          type="button"
+          (click)="$event.stopPropagation(); toggle('types', type)"
+        >
+          <span class="opt"
+            ><span class="box" [class.on]="filters().types.includes(type)"></span
+            ><tk-type-icon [type]="type" [size]="14" [showLabel]="true"
+          /></span>
         </button>
       }
     </mat-menu>
 
-    <button type="button" class="fchip" [class.on]="filters().statuses.length" [matMenuTriggerFor]="statusMenu" data-testid="filter-status">
+    <button
+      type="button"
+      class="fchip"
+      [class.on]="filters().statuses.length"
+      [matMenuTriggerFor]="statusMenu"
+      data-testid="filter-status"
+    >
       @if (filters().statuses.length) {
         Status: <span class="n">{{ filters().statuses.length }}</span>
       } @else {
@@ -61,13 +89,26 @@ import { BacklogFilters, EMPTY_FILTERS } from './backlog-logic';
     </button>
     <mat-menu #statusMenu="matMenu" class="tk-filter-menu">
       @for (status of statuses; track status) {
-        <button mat-menu-item type="button" (click)="$event.stopPropagation(); toggle('statuses', status)">
-          <span class="opt"><span class="box" [class.on]="filters().statuses.includes(status)"></span><tk-status-icon [status]="status" />{{ statusLabels[status] }}</span>
+        <button
+          mat-menu-item
+          type="button"
+          (click)="$event.stopPropagation(); toggle('statuses', status)"
+        >
+          <span class="opt"
+            ><span class="box" [class.on]="filters().statuses.includes(status)"></span
+            ><tk-status-icon [status]="status" />{{ statusLabels[status] }}</span
+          >
         </button>
       }
     </mat-menu>
 
-    <button type="button" class="fchip" [class.on]="filters().priorities.length" [matMenuTriggerFor]="priorityMenu" data-testid="filter-priority">
+    <button
+      type="button"
+      class="fchip"
+      [class.on]="filters().priorities.length"
+      [matMenuTriggerFor]="priorityMenu"
+      data-testid="filter-priority"
+    >
       @if (filters().priorities.length) {
         Priority: <span class="n">{{ filters().priorities.length }}</span>
       } @else {
@@ -76,13 +117,26 @@ import { BacklogFilters, EMPTY_FILTERS } from './backlog-logic';
     </button>
     <mat-menu #priorityMenu="matMenu" class="tk-filter-menu">
       @for (priority of priorities; track priority) {
-        <button mat-menu-item type="button" (click)="$event.stopPropagation(); toggle('priorities', priority)">
-          <span class="opt"><span class="box" [class.on]="filters().priorities.includes(priority)"></span><tk-priority-icon [priority]="priority" />{{ priorityLabels[priority] }}</span>
+        <button
+          mat-menu-item
+          type="button"
+          (click)="$event.stopPropagation(); toggle('priorities', priority)"
+        >
+          <span class="opt"
+            ><span class="box" [class.on]="filters().priorities.includes(priority)"></span
+            ><tk-priority-icon [priority]="priority" />{{ priorityLabels[priority] }}</span
+          >
         </button>
       }
     </mat-menu>
 
-    <button type="button" class="fchip" [class.on]="filters().assignee" [matMenuTriggerFor]="assigneeMenu" data-testid="filter-assignee">
+    <button
+      type="button"
+      class="fchip"
+      [class.on]="filters().assignee"
+      [matMenuTriggerFor]="assigneeMenu"
+      data-testid="filter-assignee"
+    >
       @if (filters().assignee) {
         Assignee: <span class="n">{{ assigneeLabel() }}</span>
       } @else {
@@ -95,7 +149,9 @@ import { BacklogFilters, EMPTY_FILTERS } from './backlog-logic';
       <button mat-menu-item type="button" (click)="setAssignee('unassigned')">Unassigned</button>
       @for (user of users(); track user.id) {
         <button mat-menu-item type="button" (click)="setAssignee(user.id)">
-          <span class="opt"><tk-avatar [userId]="user.id" [name]="user.displayName" />{{ user.displayName }}</span>
+          <span class="opt"
+            ><tk-avatar [userId]="user.id" [name]="user.displayName" />{{ user.displayName }}</span
+          >
         </button>
       }
     </mat-menu>
@@ -116,8 +172,15 @@ import { BacklogFilters, EMPTY_FILTERS } from './backlog-logic';
     </button>
     <mat-menu #labelMenu="matMenu" class="tk-filter-menu">
       @for (label of labelOptions(); track label) {
-        <button mat-menu-item type="button" (click)="$event.stopPropagation(); toggle('labels', label)">
-          <span class="opt"><span class="box" [class.on]="filters().labels.includes(label)"></span><tk-label-chip [label]="label" /></span>
+        <button
+          mat-menu-item
+          type="button"
+          (click)="$event.stopPropagation(); toggle('labels', label)"
+        >
+          <span class="opt"
+            ><span class="box" [class.on]="filters().labels.includes(label)"></span
+            ><tk-label-chip [label]="label"
+          /></span>
         </button>
       } @empty {
         <div class="empty">No labels used yet</div>
@@ -163,7 +226,9 @@ import { BacklogFilters, EMPTY_FILTERS } from './backlog-logic';
       }
     </label>
     @if (active()) {
-      <button type="button" class="clear" data-testid="filters-clear" (click)="clear()">Clear</button>
+      <button type="button" class="clear" data-testid="filters-clear" (click)="clear()">
+        Clear
+      </button>
     }
   `,
   styles: `
@@ -284,7 +349,9 @@ export class BacklogFiltersComponent {
   protected readonly typeLabels = TICKET_TYPE_LABELS;
   protected readonly statusLabels = TICKET_STATUS_LABELS;
   protected readonly priorityLabels = PRIORITY_LABELS;
-  protected readonly active = computed(() => JSON.stringify({ ...this.filters(), showDone: false }) !== JSON.stringify(EMPTY_FILTERS));
+  protected readonly active = computed(
+    () => JSON.stringify({ ...this.filters(), showDone: false }) !== JSON.stringify(EMPTY_FILTERS),
+  );
   protected readonly assigneeLabel = computed(() => {
     const value = this.filters().assignee;
     if (value === 'me') return 'me';
@@ -300,7 +367,10 @@ export class BacklogFiltersComponent {
     this.text().nativeElement.select();
   }
 
-  protected toggle(field: 'types' | 'statuses' | 'priorities' | 'labels', value: TicketType | TicketStatus | Priority | string): void {
+  protected toggle(
+    field: 'types' | 'statuses' | 'priorities' | 'labels',
+    value: TicketType | TicketStatus | Priority | string,
+  ): void {
     const current = this.filters()[field] as string[];
     const next = current.includes(value) ? current.filter((v) => v !== value) : [...current, value];
     this.filtersChange.emit({ ...this.filters(), [field]: next });
@@ -317,7 +387,9 @@ export class BacklogFiltersComponent {
   protected setText(text: string): void {
     const pending = this.textDebounce();
     if (pending) clearTimeout(pending);
-    this.textDebounce.set(setTimeout(() => this.filtersChange.emit({ ...this.filters(), text }), 200));
+    this.textDebounce.set(
+      setTimeout(() => this.filtersChange.emit({ ...this.filters(), text }), 200),
+    );
   }
 
   protected clear(): void {

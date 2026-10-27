@@ -1,4 +1,13 @@
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, input, untracked } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  DestroyRef,
+  effect,
+  inject,
+  input,
+  untracked,
+} from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatTooltip } from '@angular/material/tooltip';
@@ -13,7 +22,10 @@ import { RegressionSessionBadgeComponent } from '@shared/ui/domain/domain-badges
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { IconComponent } from '@shared/ui/icon/icon.component';
 import { KbdComponent } from '@shared/ui/kbd/kbd.component';
-import { SegmentedControlComponent, SegmentOption } from '@shared/ui/segmented/segmented-control.component';
+import {
+  SegmentedControlComponent,
+  SegmentOption,
+} from '@shared/ui/segmented/segmented-control.component';
 import { SkeletonRowsComponent } from '@shared/ui/skeleton/skeleton-rows.component';
 import { SessionProgressComponent } from '../session-progress.component';
 import { passRateLabel } from '../session/session-logic';
@@ -46,31 +58,55 @@ import { StartSessionData, StartSessionDialog } from './start-session.dialog';
       <div class="tk-page-actions">
         @if (canWrite()) {
           <button mat-flat-button type="button" data-testid="regression-start" (click)="start()">
-            <tk-icon name="tablerPlus" [size]="14" />Start regression<tk-kbd tone="on-solid">N</tk-kbd>
+            <tk-icon name="tablerPlus" [size]="14" />Start regression<tk-kbd tone="on-solid"
+              >N</tk-kbd
+            >
           </button>
         }
       </div>
     </header>
     <div class="tk-toolbar">
-      <tk-segmented ariaLabel="Session status" testId="regression-filter" [options]="filterOptions" [value]="filter()" (valueChange)="setFilter($event)" />
+      <tk-segmented
+        ariaLabel="Session status"
+        testId="regression-filter"
+        [options]="filterOptions"
+        [value]="filter()"
+        (valueChange)="setFilter($event)"
+      />
     </div>
 
     @if (store.status() === 'error' && !store.hasData()) {
-      <tk-empty-state icon="tablerAlertCircle" tone="danger" title="Couldn't load regression sessions" [description]="store.error()?.title ?? null">
+      <tk-empty-state
+        icon="tablerAlertCircle"
+        tone="danger"
+        title="Couldn't load regression sessions"
+        [description]="store.error()?.title ?? null"
+      >
         <button mat-stroked-button type="button" (click)="store.reload()">Retry</button>
       </tk-empty-state>
     } @else if (!store.hasData()) {
       <tk-skeleton-rows [count]="6" />
     } @else if (store.sessions().length === 0) {
-      <tk-empty-state icon="tablerHistory" title="No regression sessions" description="Start one to run every Manual and Automatic test case against a version.">
+      <tk-empty-state
+        icon="tablerHistory"
+        title="No regression sessions"
+        description="Start one to run every Manual and Automatic test case against a version."
+      >
         @if (canWrite() && filter() === 'All') {
-          <button mat-flat-button type="button" (click)="start()">Start regression <tk-kbd tone="on-solid">N</tk-kbd></button>
+          <button mat-flat-button type="button" (click)="start()">
+            Start regression <tk-kbd tone="on-solid">N</tk-kbd>
+          </button>
         }
       </tk-empty-state>
     } @else {
       <div class="list" role="list" data-testid="regression-list">
         @for (s of store.sessions(); track s.id) {
-          <a class="row" role="listitem" [routerLink]="[s.key]" [attr.data-testid]="'session-row-' + s.key">
+          <a
+            class="row"
+            role="listitem"
+            [routerLink]="[s.key]"
+            [attr.data-testid]="'session-row-' + s.key"
+          >
             <span class="badge"><tk-regression-session-badge [status]="s.status" /></span>
             <span class="key tnum">{{ s.key }}</span>
             <span class="name">
@@ -81,21 +117,31 @@ import { StartSessionData, StartSessionDialog } from './start-session.dialog';
             </span>
             <span class="prog">
               <tk-session-progress [summary]="s.summary" />
-              <span class="tnum done">{{ s.summary.total - s.summary.waiting }}/{{ s.summary.total }}</span>
+              <span class="tnum done"
+                >{{ s.summary.total - s.summary.waiting }}/{{ s.summary.total }}</span
+              >
             </span>
             <span class="failed tnum" [class.has]="s.summary.failed > 0">
               @if (s.summary.failed > 0) {
                 {{ s.summary.failed }} failed
               }
             </span>
-            <span class="rate tnum" matTooltip="Pass rate = passed / (passed + failed)">{{ passRate(s.summary) }}</span>
+            <span class="rate tnum" matTooltip="Pass rate = passed / (passed + failed)">{{
+              passRate(s.summary)
+            }}</span>
             <span class="by">
-              {{ s.startedBy.displayName }} · <span [title]="s.startedAt | absoluteTime">{{ s.startedAt | relativeTime }}</span>
+              {{ s.startedBy.displayName }} ·
+              <span [title]="s.startedAt | absoluteTime">{{ s.startedAt | relativeTime }}</span>
             </span>
           </a>
         }
         @if (store.nextCursor()) {
-          <button type="button" class="more" [disabled]="store.loadingMore()" (click)="store.loadMore()">
+          <button
+            type="button"
+            class="more"
+            [disabled]="store.loadingMore()"
+            (click)="store.loadMore()"
+          >
             {{ store.loadingMore() ? 'Loading…' : 'Load more' }}
           </button>
         }
@@ -123,7 +169,9 @@ export class RegressionsView {
   ];
   protected readonly filter = computed<SessionFilter>(() => {
     const value = this.status();
-    return (REGRESSION_SESSION_STATUSES as readonly string[]).includes(value ?? '') ? (value as SessionFilter) : 'All';
+    return (REGRESSION_SESSION_STATUSES as readonly string[]).includes(value ?? '')
+      ? (value as SessionFilter)
+      : 'All';
   });
   protected readonly canWrite = computed(() => {
     const p = this.project.project();
@@ -137,21 +185,35 @@ export class RegressionsView {
       untracked(() => void this.store.load(projectKey, filter));
     });
     inject(ShortcutService).registerScoped(
-      [{ keys: 'n', description: 'Start a regression session', section: 'Regressions', handler: () => this.canWrite() && this.start() }],
+      [
+        {
+          keys: 'n',
+          description: 'Start a regression session',
+          section: 'Regressions',
+          handler: () => this.canWrite() && this.start(),
+        },
+      ],
       inject(DestroyRef),
     );
   }
 
   protected setFilter(filter: SessionFilter): void {
-    void this.router.navigate([], { relativeTo: this.route, queryParams: { status: filter === 'All' ? null : filter }, replaceUrl: true });
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { status: filter === 'All' ? null : filter },
+      replaceUrl: true,
+    });
   }
 
   protected async start(): Promise<void> {
-    const ref = this.dialog.open<StartSessionDialog, StartSessionData, RegressionSession | null>(StartSessionDialog, {
-      data: { projectKey: this.projectKey() },
-      width: '520px',
-      autoFocus: 'first-tabbable',
-    });
+    const ref = this.dialog.open<StartSessionDialog, StartSessionData, RegressionSession | null>(
+      StartSessionDialog,
+      {
+        data: { projectKey: this.projectKey() },
+        width: '520px',
+        autoFocus: 'first-tabbable',
+      },
+    );
     const session = await firstValueFrom(ref.afterClosed());
     if (session) void this.router.navigate([session.key], { relativeTo: this.route });
   }

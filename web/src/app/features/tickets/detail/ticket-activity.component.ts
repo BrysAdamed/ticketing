@@ -1,9 +1,20 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  input,
+  output,
+  signal,
+} from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { RouterLink } from '@angular/router';
 import { ConfirmService } from '@core/notify/confirm.service';
 import { ActivityEntry, Comment, UserRef } from '@core/tickets/ticket.models';
-import { MarkdownEditorComponent, MarkdownUploadHandler } from '@shared/markdown/markdown-editor.component';
+import {
+  MarkdownEditorComponent,
+  MarkdownUploadHandler,
+} from '@shared/markdown/markdown-editor.component';
 import { MarkdownViewerComponent } from '@shared/markdown/markdown-viewer.component';
 import { AbsoluteTimePipe, RelativeTimePipe } from '@shared/pipes/relative-time.pipe';
 import { AvatarComponent } from '@shared/ui/domain/avatar.component';
@@ -13,7 +24,9 @@ import { ActivityGroup, describeEntry, groupEntries } from './activity-format';
 
 export type ActivityTab = 'all' | 'comments' | 'history';
 
-type FeedItem = { kind: 'comment'; at: string; comment: Comment } | { kind: 'history'; at: string; group: ActivityGroup };
+type FeedItem =
+  | { kind: 'comment'; at: string; comment: Comment }
+  | { kind: 'history'; at: string; group: ActivityGroup };
 
 /// Activity (layout-and-screens §3.3): tabs All · Comments · History, comment cards with edit/delete
 /// for your own, history lines grouped per operation, and the composer (Ctrl/⌘+Enter).
@@ -36,15 +49,25 @@ type FeedItem = { kind: 'comment'; at: string; comment: Comment } | { kind: 'his
     <div class="sec-h">
       <h2>Activity</h2>
       <span class="right">
-        <tk-segmented ariaLabel="Activity filter" testId="activity-tab" [options]="tabOptions()" [value]="tab()" (valueChange)="setTab($event)" />
+        <tk-segmented
+          ariaLabel="Activity filter"
+          testId="activity-tab"
+          [options]="tabOptions()"
+          [value]="tab()"
+          (valueChange)="setTab($event)"
+        />
       </span>
     </div>
 
     @if (tab() !== 'comments' && hasMoreHistory()) {
-      <button type="button" class="older" (click)="loadMoreHistory.emit()">Show older activity</button>
+      <button type="button" class="older" (click)="loadMoreHistory.emit()">
+        Show older activity
+      </button>
     }
     @if (tab() !== 'history' && commentCount() > comments().length) {
-      <button type="button" class="older" (click)="loadAllComments.emit()">Show all {{ commentCount() }} comments</button>
+      <button type="button" class="older" (click)="loadAllComments.emit()">
+        Show all {{ commentCount() }} comments
+      </button>
     }
 
     <div class="feed" data-testid="activity-feed">
@@ -58,18 +81,32 @@ type FeedItem = { kind: 'comment'; at: string; comment: Comment } | { kind: 'his
               @if (!c.author.isActive) {
                 <span class="subtle">(deactivated)</span>
               }
-              <span class="when" [title]="c.createdAt | absoluteTime">{{ c.createdAt | relativeTime }}</span>
+              <span class="when" [title]="c.createdAt | absoluteTime">{{
+                c.createdAt | relativeTime
+              }}</span>
               @if (c.editedAt && !c.deleted) {
                 <span class="when" [title]="c.editedAt | absoluteTime">· edited</span>
               }
               <span class="right">
                 @if (c.canEdit && editingId() !== c.id) {
-                  <button type="button" class="tk-icon-btn tk-icon-btn-sm" aria-label="Edit comment" data-testid="comment-edit" (click)="startEdit(c)">
+                  <button
+                    type="button"
+                    class="tk-icon-btn tk-icon-btn-sm"
+                    aria-label="Edit comment"
+                    data-testid="comment-edit"
+                    (click)="startEdit(c)"
+                  >
                     <tk-icon name="tablerPencil" [size]="14" />
                   </button>
                 }
                 @if (c.canDelete) {
-                  <button type="button" class="tk-icon-btn tk-icon-btn-sm" aria-label="Delete comment" data-testid="comment-delete" (click)="remove(c)">
+                  <button
+                    type="button"
+                    class="tk-icon-btn tk-icon-btn-sm"
+                    aria-label="Delete comment"
+                    data-testid="comment-delete"
+                    (click)="remove(c)"
+                  >
                     <tk-icon name="tablerTrash" [size]="14" />
                   </button>
                 }
@@ -78,9 +115,24 @@ type FeedItem = { kind: 'comment'; at: string; comment: Comment } | { kind: 'his
             @if (c.deleted) {
               <div class="cmt-b subtle">Comment deleted</div>
             } @else if (editingId() === c.id) {
-              <tk-markdown-editor ariaLabel="Edit comment" submitHint="to save" [maxLength]="20000" [uploadHandler]="uploadHandler()" [(value)]="editDraft" (submitted)="saveEdit(c)" (cancelled)="editingId.set(null)">
+              <tk-markdown-editor
+                ariaLabel="Edit comment"
+                submitHint="to save"
+                [maxLength]="20000"
+                [uploadHandler]="uploadHandler()"
+                [(value)]="editDraft"
+                (submitted)="saveEdit(c)"
+                (cancelled)="editingId.set(null)"
+              >
                 <button mat-button type="button" (click)="editingId.set(null)">Cancel</button>
-                <button mat-flat-button type="button" data-testid="comment-save" (click)="saveEdit(c)">Save</button>
+                <button
+                  mat-flat-button
+                  type="button"
+                  data-testid="comment-save"
+                  (click)="saveEdit(c)"
+                >
+                  Save
+                </button>
               </tk-markdown-editor>
             } @else {
               <tk-markdown class="cmt-b" [source]="c.body" />
@@ -102,18 +154,30 @@ type FeedItem = { kind: 'comment'; at: string; comment: Comment } | { kind: 'his
                   <span class="pill">{{ line.to }}</span>
                 }
                 @if (line.ticketKey) {
-                  <a class="tk-link tnum" [routerLink]="['/tickets', line.ticketKey]">{{ line.ticketKey }}</a>
+                  <a class="tk-link tnum" [routerLink]="['/tickets', line.ticketKey]">{{
+                    line.ticketKey
+                  }}</a>
                 }
                 @if (line.channel) {
                   <span class="chan">via {{ line.channel }}</span>
                 }
-                <span class="when" [title]="line.occurredAt | absoluteTime">· {{ line.occurredAt | relativeTime }}</span>
+                <span class="when" [title]="line.occurredAt | absoluteTime"
+                  >· {{ line.occurredAt | relativeTime }}</span
+                >
               </span>
             </div>
           }
         }
       } @empty {
-        <div class="none">{{ tab() === 'comments' ? 'No comments yet.' : historyLoading() ? 'Loading…' : 'No activity yet.' }}</div>
+        <div class="none">
+          {{
+            tab() === 'comments'
+              ? 'No comments yet.'
+              : historyLoading()
+                ? 'Loading…'
+                : 'No activity yet.'
+          }}
+        </div>
       }
     </div>
 
@@ -130,7 +194,15 @@ type FeedItem = { kind: 'comment'; at: string; comment: Comment } | { kind: 'his
         [(value)]="draft"
         (submitted)="submit()"
       >
-        <button mat-stroked-button type="button" data-testid="comment-submit" [disabled]="!draft().trim() || posting()" (click)="submit()">Comment</button>
+        <button
+          mat-stroked-button
+          type="button"
+          data-testid="comment-submit"
+          [disabled]="!draft().trim() || posting()"
+          (click)="submit()"
+        >
+          Comment
+        </button>
       </tk-markdown-editor>
     }
   `,
@@ -170,13 +242,16 @@ export class TicketActivityComponent {
   protected readonly feed = computed<FeedItem[]>(() => {
     const tab = this.tab();
     const items: FeedItem[] = [];
-    if (tab !== 'history') for (const comment of this.comments()) items.push({ kind: 'comment', at: comment.createdAt, comment });
+    if (tab !== 'history')
+      for (const comment of this.comments())
+        items.push({ kind: 'comment', at: comment.createdAt, comment });
     if (tab !== 'comments') {
       const entries = [...this.history()]
         .filter((e) => tab === 'history' || !e.action.startsWith('comment.'))
         .reverse()
         .map((e) => describeEntry(e, this.historyUsers()));
-      for (const group of groupEntries(entries)) items.push({ kind: 'history', at: group.occurredAt, group });
+      for (const group of groupEntries(entries))
+        items.push({ kind: 'history', at: group.occurredAt, group });
     }
     return items.sort((a, b) => a.at.localeCompare(b.at));
   });

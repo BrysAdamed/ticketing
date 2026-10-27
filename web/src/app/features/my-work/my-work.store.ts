@@ -34,7 +34,8 @@ export interface MyRegressionItem {
 }
 
 /// One entry of the keyboard-navigable list: tickets of every group, then regression items.
-export type WorkEntry = { kind: 'ticket'; ticket: TicketSummary } | { kind: 'item'; item: MyRegressionItem };
+export type WorkEntry =
+  { kind: 'ticket'; ticket: TicketSummary } | { kind: 'item'; item: MyRegressionItem };
 
 /// My work: open tickets assigned to me grouped by project, plus my waiting regression items.
 @Injectable()
@@ -55,7 +56,9 @@ export class MyWorkStore {
     ...this.projects()
       .filter((p) => !this.collapsed().has(p.projectKey))
       .flatMap((p) => p.tickets.map((ticket) => ({ kind: 'ticket' as const, ticket }))),
-    ...(this.collapsed().has(REGRESSIONS_GROUP) ? [] : this.items().map((item) => ({ kind: 'item' as const, item }))),
+    ...(this.collapsed().has(REGRESSIONS_GROUP)
+      ? []
+      : this.items().map((item) => ({ kind: 'item' as const, item }))),
   ]);
   readonly focused = computed(() => this.entries()[this.focusIndex()] ?? null);
 

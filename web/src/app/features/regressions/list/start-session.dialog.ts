@@ -22,7 +22,11 @@ const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(naviga
   selector: 'tk-start-session-dialog',
   imports: [MatAutocompleteModule, MatButtonModule, MatDialogModule, IconComponent, KbdComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { 'data-testid': 'start-session-dialog', '(keydown.control.enter)': 'start()', '(keydown.meta.enter)': 'start()' },
+  host: {
+    'data-testid': 'start-session-dialog',
+    '(keydown.control.enter)': 'start()',
+    '(keydown.meta.enter)': 'start()',
+  },
   template: `
     <h2 mat-dialog-title>Start regression</h2>
     <mat-dialog-content>
@@ -48,7 +52,10 @@ const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(naviga
         (input)="onVersion($any($event.target).value)"
         (focus)="loadHints(version())"
       />
-      <mat-autocomplete #versions="matAutocomplete" (optionSelected)="version.set($event.option.value)">
+      <mat-autocomplete
+        #versions="matAutocomplete"
+        (optionSelected)="version.set($event.option.value)"
+      >
         @for (hint of hints(); track hint) {
           <mat-option [value]="hint">{{ hint }}</mat-option>
         }
@@ -56,10 +63,14 @@ const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(naviga
       <div class="summary" data-testid="session-preview">
         @if (counts(); as c) {
           @if (c.manual + c.automatic === 0) {
-            <span class="warn"><tk-icon name="tablerAlertTriangle" [size]="14" />No Manual or Automatic test cases yet. Mark test cases Manual or Automatic first.</span>
+            <span class="warn"
+              ><tk-icon name="tablerAlertTriangle" [size]="14" />No Manual or Automatic test cases
+              yet. Mark test cases Manual or Automatic first.</span
+            >
           } @else {
-            <b>{{ c.manual }} manual</b> {{ c.manual === 1 ? 'case' : 'cases' }} will be added as <i>Waiting for execution</i> ·
-            <b>{{ c.automatic }} automatic</b> {{ c.automatic === 1 ? 'case' : 'cases' }} will be marked <i>Passed</i>
+            <b>{{ c.manual }} manual</b> {{ c.manual === 1 ? 'case' : 'cases' }} will be added as
+            <i>Waiting for execution</i> · <b>{{ c.automatic }} automatic</b>
+            {{ c.automatic === 1 ? 'case' : 'cases' }} will be marked <i>Passed</i>
           }
         } @else {
           <span class="tk-subtle">Counting test cases…</span>
@@ -71,7 +82,13 @@ const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(naviga
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button type="button" mat-dialog-close>Cancel</button>
-      <button mat-flat-button type="button" data-testid="session-start" [disabled]="saving() || !canStart()" (click)="start()">
+      <button
+        mat-flat-button
+        type="button"
+        data-testid="session-start"
+        [disabled]="saving() || !canStart()"
+        (click)="start()"
+      >
         Start session<tk-kbd tone="on-solid">{{ submitKeys }}</tk-kbd>
       </button>
     </mat-dialog-actions>
@@ -124,7 +141,8 @@ const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(naviga
 })
 export class StartSessionDialog {
   private readonly data = inject<StartSessionData>(MAT_DIALOG_DATA);
-  private readonly ref = inject<MatDialogRef<StartSessionDialog, RegressionSession | null>>(MatDialogRef);
+  private readonly ref =
+    inject<MatDialogRef<StartSessionDialog, RegressionSession | null>>(MatDialogRef);
   private readonly regressions = inject(RegressionsApi);
   private readonly testCases = inject(TestCasesApi);
   private readonly fieldHints = inject(FieldHints);

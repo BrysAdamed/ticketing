@@ -24,7 +24,9 @@ export interface FormStep {
   text: string;
 }
 
-export type FormErrors = Partial<Record<'title' | 'steps' | 'automationReference' | 'preconditions' | 'expectedResult', string>>;
+export type FormErrors = Partial<
+  Record<'title' | 'steps' | 'automationReference' | 'preconditions' | 'expectedResult', string>
+>;
 
 let nextStepId = 1;
 
@@ -33,7 +35,15 @@ export function newStep(text = ''): FormStep {
 }
 
 export function emptyForm(ticketKey: string | null = null): TestCaseForm {
-  return { title: '', status: 'New', preconditions: '', steps: [], expectedResult: '', automationReference: '', ticketKey };
+  return {
+    title: '',
+    status: 'New',
+    preconditions: '',
+    steps: [],
+    expectedResult: '',
+    automationReference: '',
+    ticketKey,
+  };
 }
 
 export function formFrom(testCase: TestCase): TestCaseForm {
@@ -63,12 +73,17 @@ export function validate(form: TestCaseForm): FormErrors {
 
   const steps = cleanSteps(form);
   if (steps.length > MAX_STEPS) errors.steps = `At most ${MAX_STEPS} steps.`;
-  else if (steps.some((s) => s.length > STEP_MAX)) errors.steps = `Each step can have at most ${STEP_MAX} characters.`;
-  else if (form.status === 'Manual' && steps.length === 0) errors.steps = 'A Manual test case needs at least one step.';
+  else if (steps.some((s) => s.length > STEP_MAX))
+    errors.steps = `Each step can have at most ${STEP_MAX} characters.`;
+  else if (form.status === 'Manual' && steps.length === 0)
+    errors.steps = 'A Manual test case needs at least one step.';
 
-  if (form.preconditions.trim().length > MARKDOWN_MAX) errors.preconditions = `At most ${MARKDOWN_MAX} characters.`;
-  if (form.expectedResult.trim().length > MARKDOWN_MAX) errors.expectedResult = `At most ${MARKDOWN_MAX} characters.`;
-  if (form.automationReference.trim().length > AUTOMATION_MAX) errors.automationReference = `At most ${AUTOMATION_MAX} characters.`;
+  if (form.preconditions.trim().length > MARKDOWN_MAX)
+    errors.preconditions = `At most ${MARKDOWN_MAX} characters.`;
+  if (form.expectedResult.trim().length > MARKDOWN_MAX)
+    errors.expectedResult = `At most ${MARKDOWN_MAX} characters.`;
+  if (form.automationReference.trim().length > AUTOMATION_MAX)
+    errors.automationReference = `At most ${AUTOMATION_MAX} characters.`;
   return errors;
 }
 
@@ -90,11 +105,15 @@ export function toPatch(saved: TestCase, form: TestCaseForm): TestCasePatch {
   const title = form.title.trim();
   if (title !== saved.title) patch.title = title;
   if (form.status !== saved.status) patch.status = form.status;
-  if (orNull(form.preconditions) !== saved.preconditions) patch.preconditions = orNull(form.preconditions);
-  if (orNull(form.expectedResult) !== saved.expectedResult) patch.expectedResult = orNull(form.expectedResult);
-  if (orNull(form.automationReference) !== saved.automationReference) patch.automationReference = orNull(form.automationReference);
+  if (orNull(form.preconditions) !== saved.preconditions)
+    patch.preconditions = orNull(form.preconditions);
+  if (orNull(form.expectedResult) !== saved.expectedResult)
+    patch.expectedResult = orNull(form.expectedResult);
+  if (orNull(form.automationReference) !== saved.automationReference)
+    patch.automationReference = orNull(form.automationReference);
   const steps = cleanSteps(form);
-  if (steps.length !== saved.steps.length || steps.some((s, i) => s !== saved.steps[i])) patch.steps = steps;
+  if (steps.length !== saved.steps.length || steps.some((s, i) => s !== saved.steps[i]))
+    patch.steps = steps;
   if ((form.ticketKey ?? null) !== (saved.ticket?.key ?? null)) patch.ticketKey = form.ticketKey;
   return patch;
 }

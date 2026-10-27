@@ -13,7 +13,12 @@ import {
 describe('search URL format', () => {
   it('merges comma-separated and repeated values and normalizes case', () => {
     // Arrange
-    const params = { project: ['web,api', 'WEB'], status: 'InProgress,Review', label: 'UI, Backend', q: ' login ' };
+    const params = {
+      project: ['web,api', 'WEB'],
+      status: 'InProgress,Review',
+      label: 'UI, Backend',
+      q: ' login ',
+    };
 
     // Act
     const filters = parseSearchParams(params);
@@ -44,7 +49,9 @@ describe('search URL format', () => {
     const parsed = parseSearchParams(Object.fromEntries(new URLSearchParams(query)));
 
     // Assert
-    expect(query).toBe('project=WEB&category=ToDo%2CInProgress&severity=none&assignee=me&version=1.4.0&fromRegression=true&sort=priority&order=desc');
+    expect(query).toBe(
+      'project=WEB&category=ToDo%2CInProgress&severity=none&assignee=me&version=1.4.0&fromRegression=true&sort=priority&order=desc',
+    );
     expect(parsed).toEqual(filters);
   });
 

@@ -60,11 +60,16 @@ export interface PickerUser {
 }
 
 /// Assignee options: "Unassigned" first (value null), then the users by name.
-export function userOptions(users: readonly PickerUser[], includeUnassigned = true): PickerOption<string | null>[] {
+export function userOptions(
+  users: readonly PickerUser[],
+  includeUnassigned = true,
+): PickerOption<string | null>[] {
   const options: PickerOption<string | null>[] = users.map((user) => ({
     value: user.id,
     label: user.displayName,
     keywords: user.email ? [user.email] : [],
   }));
-  return includeUnassigned ? [{ value: null, label: 'Unassigned', keywords: ['none'] }, ...options] : options;
+  return includeUnassigned
+    ? [{ value: null, label: 'Unassigned', keywords: ['none'] }, ...options]
+    : options;
 }

@@ -7,5 +7,7 @@ export const TEST_CASES_VIEW = defineView({
 
 export const TEST_CASE_EDITOR_VIEW = defineView({
   viewId: 'testcases.editor',
-  variants: { default: () => import('./editor/test-case-editor.view').then((m) => m.TestCaseEditorView) },
+  variants: {
+    default: () => import('./editor/test-case-editor.view').then((m) => m.TestCaseEditorView),
+  },
 });

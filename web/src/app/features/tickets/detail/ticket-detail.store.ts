@@ -59,7 +59,8 @@ export class TicketDetailStore {
     this.events.events.pipe(takeUntilDestroyed(inject(DestroyRef))).subscribe((event) => {
       const current = this.ticket();
       if (!current) return;
-      if (event.kind === 'updated' && event.ticket.id !== current.id) this.refreshRelated(event.ticket);
+      if (event.kind === 'updated' && event.ticket.id !== current.id)
+        this.refreshRelated(event.ticket);
     });
   }
 
@@ -107,14 +108,21 @@ export class TicketDetailStore {
   }
 
   /// Applies `optimistic` locally, sends the PATCH and merges the response; rolls back on failure.
-  async patch(patch: TicketPatch, optimistic: Partial<Ticket> = {}, options: { ifMatch?: boolean; quiet?: boolean } = {}): Promise<SaveResult> {
+  async patch(
+    patch: TicketPatch,
+    optimistic: Partial<Ticket> = {},
+    options: { ifMatch?: boolean; quiet?: boolean } = {},
+  ): Promise<SaveResult> {
     const before = this.ticket();
     if (!before) return 'failed';
     this.ticket.set({ ...before, ...optimistic });
     try {
-      const updated = await firstValueFrom(this.api.update(before.key, patch, options.ifMatch ? before.rowVersion : undefined));
+      const updated = await firstValueFrom(
+        this.api.update(before.key, patch, options.ifMatch ? before.rowVersion : undefined),
+      );
       this.applyServer(updated);
-      if (patch.labels || patch.addLabels || patch.version !== undefined) this.hints.invalidate(before.projectKey);
+      if (patch.labels || patch.addLabels || patch.version !== undefined)
+        this.hints.invalidate(before.projectKey);
       if (this.historyStatus() !== 'idle') void this.loadHistory();
       return 'saved';
     } catch (error) {
@@ -122,7 +130,9 @@ export class TicketDetailStore {
       const apiError = toApiError(error);
       if (apiError.isConflict && apiError.code === 'concurrency.conflict') return 'conflict';
       if (!options.quiet)
-        this.toast.error(apiError.title, { action: { label: 'Retry', run: () => void this.patch(patch, optimistic, options) } });
+        this.toast.error(apiError.title, {
+          action: { label: 'Retry', run: () => void this.patch(patch, optimistic, options) },
+        });
       return 'failed';
     }
   }
@@ -130,7 +140,10 @@ export class TicketDetailStore {
   assignToMe(): Promise<SaveResult> {
     const me = this.me();
     if (!me) return Promise.resolve('failed');
-    return this.patch({ assignee: me.id }, { assignee: { id: me.id, email: me.email, displayName: me.displayName, isActive: true } });
+    return this.patch(
+      { assignee: me.id },
+      { assignee: { id: me.id, email: me.email, displayName: me.displayName, isActive: true } },
+    );
   }
 
   // Comments
@@ -167,7 +180,11 @@ export class TicketDetailStore {
 
   async deleteComment(id: string): Promise<void> {
     const before = this.comments();
-    this.comments.update((list) => list.map((c) => (c.id === id ? { ...c, body: '', deleted: true, canEdit: false, canDelete: false } : c)));
+    this.comments.update((list) =>
+      list.map((c) =>
+        c.id === id ? { ...c, body: '', deleted: true, canEdit: false, canDelete: false } : c,
+      ),
+    );
     try {
       const comment = await firstValueFrom(this.api.deleteComment(id));
       this.comments.update((list) => list.map((c) => (c.id === id ? comment : c)));
@@ -185,7 +202,9 @@ export class TicketDetailStore {
     let cursor: string | null = null;
     try {
       do {
-        const page: Page<Comment> = await firstValueFrom(this.api.comments(ticket.key, { limit: 100, cursor }));
+        const page: Page<Comment> = await firstValueFrom(
+          this.api.comments(ticket.key, { limit: 100, cursor }),
+        );
         all.push(...page.items);
         cursor = page.nextCursor;
       } while (cursor);
@@ -204,10 +223,15 @@ export class TicketDetailStore {
     this.historyStatus.set('loading');
     try {
       const page = await firstValueFrom(
-        this.api.history(ticket.key, { limit: HISTORY_PAGE, cursor: more ? this.historyCursor() : null }),
+        this.api.history(ticket.key, {
+          limit: HISTORY_PAGE,
+          cursor: more ? this.historyCursor() : null,
+        }),
       );
       this.history.update((list) => (more ? [...list, ...page.items] : page.items));
-      this.historyUsers.update((map) => new Map([...(more ? map : []), ...page.users.map((u) => [u.id, u] as const)]));
+      this.historyUsers.update(
+        (map) => new Map([...(more ? map : []), ...page.users.map((u) => [u.id, u] as const)]),
+      );
       this.historyCursor.set(page.nextCursor);
       this.historyStatus.set('loaded');
     } catch (error) {
@@ -224,7 +248,9 @@ export class TicketDetailStore {
       await firstValueFrom(this.api.link(fromKey, targetKey, type));
       await this.reload();
     } catch (error) {
-      this.toast.error(`Couldn't link ${fromKey === this.key() ? targetKey : fromKey}: ${toApiError(error).title}`);
+      this.toast.error(
+        `Couldn't link ${fromKey === this.key() ? targetKey : fromKey}: ${toApiError(error).title}`,
+      );
     }
   }
 
@@ -245,7 +271,13 @@ export class TicketDetailStore {
     const ticket = this.ticket();
     if (!ticket) return false;
     try {
-      const created = await firstValueFrom(this.api.create(ticket.projectKey, { title, type, parentKey: ticket.key }, crypto.randomUUID()));
+      const created = await firstValueFrom(
+        this.api.create(
+          ticket.projectKey,
+          { title, type, parentKey: ticket.key },
+          crypto.randomUUID(),
+        ),
+      );
       this.events.emit({ kind: 'created', ticket: created });
       await this.reload();
       return true;
@@ -286,7 +318,11 @@ export class TicketDetailStore {
   private afterCommentChange(): void {
     const ticket = this.ticket();
     if (!ticket) return;
-    const updated: Ticket = { ...ticket, comments: [...this.comments()], commentCount: this.commentCount() };
+    const updated: Ticket = {
+      ...ticket,
+      comments: [...this.comments()],
+      commentCount: this.commentCount(),
+    };
     this.cache.put(updated);
     this.events.emit({ kind: 'updated', ticket: updated });
     if (this.historyStatus() !== 'idle') void this.loadHistory();
@@ -325,7 +361,16 @@ export class TicketDetailStore {
     const current = this.ticket();
     if (!current) return;
     const ref = (r: TicketRef): TicketRef =>
-      r.id === other.id ? { ...r, title: other.title, status: other.status, priority: other.priority, type: other.type, assignee: other.assignee } : r;
+      r.id === other.id
+        ? {
+            ...r,
+            title: other.title,
+            status: other.status,
+            priority: other.priority,
+            type: other.type,
+            assignee: other.assignee,
+          }
+        : r;
     const isChild = current.children?.some((c) => c.id === other.id) ?? false;
     const stillChild = other.parent?.id === current.id;
     if (!isChild && !(current.links?.some((l) => l.ticket.id === other.id) ?? false)) {

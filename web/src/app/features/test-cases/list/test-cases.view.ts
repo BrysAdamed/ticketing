@@ -1,4 +1,16 @@
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, ElementRef, inject, input, signal, untracked, viewChild } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  DestroyRef,
+  effect,
+  ElementRef,
+  inject,
+  input,
+  signal,
+  untracked,
+  viewChild,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSlideToggle } from '@angular/material/slide-toggle';
@@ -21,10 +33,20 @@ import { IconComponent } from '@shared/ui/icon/icon.component';
 import { PickerOption } from '@shared/ui/inline-picker/picker-option';
 import { KbdComponent } from '@shared/ui/kbd/kbd.component';
 import { SearchPickerDirective } from '@shared/ui/search-picker/search-picker.directive';
-import { SegmentedControlComponent, SegmentOption } from '@shared/ui/segmented/segmented-control.component';
+import {
+  SegmentedControlComponent,
+  SegmentOption,
+} from '@shared/ui/segmented/segmented-control.component';
 import { SkeletonRowsComponent } from '@shared/ui/skeleton/skeleton-rows.component';
 import { RUN_STATUS_ICONS, TEST_CASE_ICONS } from '../test-case-icons';
-import { EMPTY_FILTERS, filtersFromQuery, filtersToQuery, isFiltered, StatusFilter, TestCaseFilters } from './test-case-list-logic';
+import {
+  EMPTY_FILTERS,
+  filtersFromQuery,
+  filtersToQuery,
+  isFiltered,
+  StatusFilter,
+  TestCaseFilters,
+} from './test-case-list-logic';
 import { TestCasesStore } from './test-cases.store';
 
 const TEXT_DEBOUNCE_MS = 250;
@@ -77,7 +99,12 @@ export class TestCasesView {
   protected readonly runIcons = RUN_STATUS_ICONS;
   protected readonly runLabels = REGRESSION_ITEM_STATUS_LABELS;
   protected readonly filters = computed(() =>
-    filtersFromQuery({ status: this.status(), q: this.q(), ticket: this.ticket(), archived: this.archived() }),
+    filtersFromQuery({
+      status: this.status(),
+      q: this.q(),
+      ticket: this.ticket(),
+      archived: this.archived(),
+    }),
   );
   protected readonly canWrite = computed(() => {
     const p = this.project.project();
@@ -104,7 +131,10 @@ export class TestCasesView {
   protected readonly paneOpen = signal(false);
 
   protected readonly ticketSearch = async (query: string): Promise<PickerOption<TicketRef>[]> =>
-    (await firstValueFrom(this.tickets.find(this.projectKey(), query))).map((t) => ({ value: t, label: `${t.key} ${t.title}` }));
+    (await firstValueFrom(this.tickets.find(this.projectKey(), query))).map((t) => ({
+      value: t,
+      label: `${t.key} ${t.title}`,
+    }));
 
   constructor() {
     effect(() => {
@@ -120,11 +150,36 @@ export class TestCasesView {
 
     inject(ShortcutService).registerScoped(
       [
-        { keys: 'j', description: 'Next test case', section: 'Test cases', handler: () => this.move(1) },
-        { keys: 'k', description: 'Previous test case', section: 'Test cases', handler: () => this.move(-1) },
-        { keys: 'enter', description: 'Open the focused test case', section: 'Test cases', handler: () => this.openFocused() },
-        { keys: '/', description: 'Filter test cases', section: 'Test cases', handler: (e) => this.focusFilter(e) },
-        { keys: 'n', description: 'New test case', section: 'Test cases', handler: () => this.canWrite() && this.openNew() },
+        {
+          keys: 'j',
+          description: 'Next test case',
+          section: 'Test cases',
+          handler: () => this.move(1),
+        },
+        {
+          keys: 'k',
+          description: 'Previous test case',
+          section: 'Test cases',
+          handler: () => this.move(-1),
+        },
+        {
+          keys: 'enter',
+          description: 'Open the focused test case',
+          section: 'Test cases',
+          handler: () => this.openFocused(),
+        },
+        {
+          keys: '/',
+          description: 'Filter test cases',
+          section: 'Test cases',
+          handler: (e) => this.focusFilter(e),
+        },
+        {
+          keys: 'n',
+          description: 'New test case',
+          section: 'Test cases',
+          handler: () => this.canWrite() && this.openNew(),
+        },
       ],
       this.destroyRef,
     );
@@ -155,7 +210,10 @@ export class TestCasesView {
 
   protected open(row: TestCaseSummary, index: number): void {
     this.focusIndex.set(index);
-    void this.router.navigate([row.key], { relativeTo: this.route, queryParamsHandling: 'preserve' });
+    void this.router.navigate([row.key], {
+      relativeTo: this.route,
+      queryParamsHandling: 'preserve',
+    });
   }
 
   protected openNew(): void {
@@ -172,7 +230,11 @@ export class TestCasesView {
   }
 
   private navigate(filters: TestCaseFilters): void {
-    void this.router.navigate([], { relativeTo: this.route.firstChild ?? this.route, queryParams: filtersToQuery(filters), replaceUrl: true });
+    void this.router.navigate([], {
+      relativeTo: this.route.firstChild ?? this.route,
+      queryParams: filtersToQuery(filters),
+      replaceUrl: true,
+    });
   }
 
   private move(step: number): void {
@@ -180,7 +242,9 @@ export class TestCasesView {
     if (count === 0) return;
     const next = Math.min(count - 1, Math.max(0, this.focusIndex() + step));
     this.focusIndex.set(next);
-    document.querySelector(`[data-testid="tc-row-${this.store.items()[next].key}"]`)?.scrollIntoView({ block: 'nearest' });
+    document
+      .querySelector(`[data-testid="tc-row-${this.store.items()[next].key}"]`)
+      ?.scrollIntoView({ block: 'nearest' });
   }
 
   private openFocused(): void {

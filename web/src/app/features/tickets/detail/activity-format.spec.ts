@@ -25,16 +25,27 @@ function entry(overrides: Partial<ActivityEntry>): ActivityEntry {
 describe('describeEntry', () => {
   it('renders enum field changes with display labels', () => {
     // Act
-    const line = describeEntry(entry({ field: 'status', oldValue: 'ToDo', newValue: 'ReadyForTesting' }), users);
+    const line = describeEntry(
+      entry({ field: 'status', oldValue: 'ToDo', newValue: 'ReadyForTesting' }),
+      users,
+    );
 
     // Assert
-    expect(line).toMatchObject({ actor: 'Anna', verb: 'changed status', from: 'To Do', to: 'Ready for Testing' });
+    expect(line).toMatchObject({
+      actor: 'Anna',
+      verb: 'changed status',
+      from: 'To Do',
+      to: 'Ready for Testing',
+    });
   });
 
   it('resolves assignee ids and marks deactivated users', () => {
     // Act
     const set = describeEntry(entry({ field: 'assignee', oldValue: null, newValue: 'u2' }), users);
-    const cleared = describeEntry(entry({ field: 'assignee', oldValue: 'u1', newValue: null }), users);
+    const cleared = describeEntry(
+      entry({ field: 'assignee', oldValue: 'u1', newValue: null }),
+      users,
+    );
 
     // Assert
     expect(set).toMatchObject({ verb: 'set assignee to', to: 'Bob (deactivated)' });
@@ -43,15 +54,26 @@ describe('describeEntry', () => {
 
   it('describes label diffs, links and the MCP channel', () => {
     // Act
-    const labels = describeEntry(entry({ field: 'labels', oldValue: ['api'], newValue: ['ui'] }), users);
+    const labels = describeEntry(
+      entry({ field: 'labels', oldValue: ['api'], newValue: ['ui'] }),
+      users,
+    );
     const link = describeEntry(
-      entry({ action: 'ticket.link.added', channel: 'Mcp', newValue: { type: 'Blocks', direction: 'Inward', key: 'WEB-9' } }),
+      entry({
+        action: 'ticket.link.added',
+        channel: 'Mcp',
+        newValue: { type: 'Blocks', direction: 'Inward', key: 'WEB-9' },
+      }),
       users,
     );
 
     // Assert
     expect(labels.verb).toBe('added label ui and removed label api');
-    expect(link).toMatchObject({ verb: 'linked: is blocked by', ticketKey: 'WEB-9', channel: 'MCP' });
+    expect(link).toMatchObject({
+      verb: 'linked: is blocked by',
+      ticketKey: 'WEB-9',
+      channel: 'MCP',
+    });
   });
 });
 
@@ -61,7 +83,10 @@ describe('groupEntries', () => {
     const lines = [
       describeEntry(entry({ id: 'a', field: 'status', oldValue: 'ToDo', newValue: 'Done' }), users),
       describeEntry(entry({ id: 'b', field: 'resolution', newValue: 'Done' }), users),
-      describeEntry(entry({ id: 'c', occurredAt: '2026-10-25T10:00:00Z', action: 'ticket.created' }), users),
+      describeEntry(
+        entry({ id: 'c', occurredAt: '2026-10-25T10:00:00Z', action: 'ticket.created' }),
+        users,
+      ),
     ];
 
     // Act

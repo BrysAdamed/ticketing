@@ -1,6 +1,23 @@
-import { CdkDrag, CdkDragDrop, CdkDragPlaceholder, CdkDragStart, CdkDropList, CdkDropListGroup } from '@angular/cdk/drag-drop';
+import {
+  CdkDrag,
+  CdkDragDrop,
+  CdkDragPlaceholder,
+  CdkDragStart,
+  CdkDropList,
+  CdkDropListGroup,
+} from '@angular/cdk/drag-drop';
 import { CdkScrollable } from '@angular/cdk/scrolling';
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked, viewChild } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+  untracked,
+  viewChild,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
@@ -15,7 +32,13 @@ import { ShortcutService } from '@core/shortcuts/shortcut.service';
 import { TicketCreator } from '@core/tickets/create-ticket';
 import { TicketCache } from '@core/tickets/ticket-cache';
 import { TicketsApi } from '@core/tickets/tickets.api';
-import { STATUS_CATEGORY_LABELS, statusCategory, TICKET_STATUS_LABELS, TICKET_STATUSES, TicketStatus } from '@shared/domain/enums';
+import {
+  STATUS_CATEGORY_LABELS,
+  statusCategory,
+  TICKET_STATUS_LABELS,
+  TICKET_STATUSES,
+  TicketStatus,
+} from '@shared/domain/enums';
 import { AvatarComponent } from '@shared/ui/domain/avatar.component';
 import { BadgeComponent } from '@shared/ui/domain/badge.component';
 import { ProjectTileComponent } from '@shared/ui/domain/project-tile.component';
@@ -28,7 +51,15 @@ import { BOARD_ICONS } from '../board-icons';
 import { AddTicketsDialog, AddTicketsDialogData } from './add-tickets.dialog';
 import { BoardCardComponent } from './board-card.component';
 import { BoardFiltersComponent } from './board-filters.component';
-import { anchorFor, BoardFilters, EMPTY_FILTERS, filtersFromParams, filtersToParams, Lane, Swimlanes } from './board-logic';
+import {
+  anchorFor,
+  BoardFilters,
+  EMPTY_FILTERS,
+  filtersFromParams,
+  filtersToParams,
+  Lane,
+  Swimlanes,
+} from './board-logic';
 import { BoardSettingsDialog } from './board-settings.dialog';
 import { BoardStore } from './board.store';
 
@@ -43,7 +74,9 @@ const SWIMLANE_OPTIONS: { value: Swimlanes; label: string }[] = [
   { value: 'epic', label: 'Epic' },
 ];
 const PREFETCH_DELAY_MS = 150;
-const SKELETON_COLUMNS = [3, 2, 1, 2, 1, 1, 1, 2].map((n) => Array.from({ length: n }, (_, i) => i));
+const SKELETON_COLUMNS = [3, 2, 1, 2, 1, 1, 1, 2].map((n) =>
+  Array.from({ length: n }, (_, i) => i),
+);
 
 /// The kanban board (board.html): 8 status columns that scroll horizontally, optional swimlanes,
 /// quick filters in the URL, CDK drag and drop between and within columns (optimistic, multi-select).
@@ -98,17 +131,25 @@ export class BoardView {
   protected readonly dragging = signal<ReadonlySet<string>>(new Set());
   protected readonly filtersBar = viewChild(BoardFiltersComponent);
 
-  protected readonly swimlaneLabel = computed(() => SWIMLANE_OPTIONS.find((o) => o.value === this.store.swimlanes())?.label ?? 'None');
-  protected readonly filterUsers = computed(() => [...this.store.users().values()].sort((a, b) => a.displayName.localeCompare(b.displayName)));
+  protected readonly swimlaneLabel = computed(
+    () => SWIMLANE_OPTIONS.find((o) => o.value === this.store.swimlanes())?.label ?? 'None',
+  );
+  protected readonly filterUsers = computed(() =>
+    [...this.store.users().values()].sort((a, b) => a.displayName.localeCompare(b.displayName)),
+  );
   protected readonly gridColumns = computed(() => {
     const collapsed = this.store.collapsed();
-    return TICKET_STATUSES.map((s) => (collapsed.has(s) ? '40px' : 'var(--tk-board-col-w)')).join(' ');
+    return TICKET_STATUSES.map((s) => (collapsed.has(s) ? '40px' : 'var(--tk-board-col-w)')).join(
+      ' ',
+    );
   });
   protected readonly highlightKey = this.peek.ticketKey;
   protected readonly collapsedLanes = signal<ReadonlySet<string>>(new Set());
 
   private readonly queryParams = toSignal(this.route.queryParams, { initialValue: {} as Params });
-  private readonly navigated = toSignal(this.router.events.pipe(filter((e) => e instanceof NavigationEnd)));
+  private readonly navigated = toSignal(
+    this.router.events.pipe(filter((e) => e instanceof NavigationEnd)),
+  );
   private readonly enterPredicates = new Map<string, (drag: CdkDrag<BoardCard>) => boolean>();
   private prefetchTimer: ReturnType<typeof setTimeout> | null = null;
   private lastDropAt = 0;
@@ -129,21 +170,96 @@ export class BoardView {
     });
 
     inject(ShortcutService).registerScoped([
-      { keys: 'j', section: 'Board', description: 'Next card in the column', handler: () => this.focus('down') },
-      { keys: 'k', section: 'Board', description: 'Previous card in the column', handler: () => this.focus('up') },
-      { keys: 'h', section: 'Board', description: 'Previous column', handler: () => this.focus('left') },
-      { keys: 'l', section: 'Board', description: 'Next column', handler: () => this.focus('right') },
-      { keys: 'arrowdown', description: 'Next card', handler: () => this.focus('down'), showInHelp: false },
-      { keys: 'arrowup', description: 'Previous card', handler: () => this.focus('up'), showInHelp: false },
-      { keys: 'arrowleft', description: 'Previous column', handler: () => this.focus('left'), showInHelp: false },
-      { keys: 'arrowright', description: 'Next column', handler: () => this.focus('right'), showInHelp: false },
-      { keys: 'shift+h', section: 'Board', description: 'Move card to the previous status', handler: () => void this.store.shiftStatus(-1) },
-      { keys: 'shift+l', section: 'Board', description: 'Move card to the next status', handler: () => void this.store.shiftStatus(1) },
-      { keys: 'enter', section: 'Board', description: 'Open card', handler: () => this.openFocused(false) },
-      { keys: 'shift+enter', section: 'Board', description: 'Open card full page', handler: () => this.openFocused(true) },
-      { keys: 'x', section: 'Board', description: 'Select card', handler: () => this.toggleFocused() },
-      { keys: '/', section: 'Board', description: 'Filter cards', handler: () => this.filtersBar()?.focusText() },
-      { keys: 'escape', description: 'Clear selection', handler: () => this.store.clearSelection(), showInHelp: false },
+      {
+        keys: 'j',
+        section: 'Board',
+        description: 'Next card in the column',
+        handler: () => this.focus('down'),
+      },
+      {
+        keys: 'k',
+        section: 'Board',
+        description: 'Previous card in the column',
+        handler: () => this.focus('up'),
+      },
+      {
+        keys: 'h',
+        section: 'Board',
+        description: 'Previous column',
+        handler: () => this.focus('left'),
+      },
+      {
+        keys: 'l',
+        section: 'Board',
+        description: 'Next column',
+        handler: () => this.focus('right'),
+      },
+      {
+        keys: 'arrowdown',
+        description: 'Next card',
+        handler: () => this.focus('down'),
+        showInHelp: false,
+      },
+      {
+        keys: 'arrowup',
+        description: 'Previous card',
+        handler: () => this.focus('up'),
+        showInHelp: false,
+      },
+      {
+        keys: 'arrowleft',
+        description: 'Previous column',
+        handler: () => this.focus('left'),
+        showInHelp: false,
+      },
+      {
+        keys: 'arrowright',
+        description: 'Next column',
+        handler: () => this.focus('right'),
+        showInHelp: false,
+      },
+      {
+        keys: 'shift+h',
+        section: 'Board',
+        description: 'Move card to the previous status',
+        handler: () => void this.store.shiftStatus(-1),
+      },
+      {
+        keys: 'shift+l',
+        section: 'Board',
+        description: 'Move card to the next status',
+        handler: () => void this.store.shiftStatus(1),
+      },
+      {
+        keys: 'enter',
+        section: 'Board',
+        description: 'Open card',
+        handler: () => this.openFocused(false),
+      },
+      {
+        keys: 'shift+enter',
+        section: 'Board',
+        description: 'Open card full page',
+        handler: () => this.openFocused(true),
+      },
+      {
+        keys: 'x',
+        section: 'Board',
+        description: 'Select card',
+        handler: () => this.toggleFocused(),
+      },
+      {
+        keys: '/',
+        section: 'Board',
+        description: 'Filter cards',
+        handler: () => this.filtersBar()?.focusText(),
+      },
+      {
+        keys: 'escape',
+        description: 'Clear selection',
+        handler: () => this.store.clearSelection(),
+        showInHelp: false,
+      },
     ]);
   }
 
@@ -187,13 +303,21 @@ export class BoardView {
     this.dragging.set(new Set(this.store.movingIds(event.source.data.id)));
   }
 
-  protected async drop(event: CdkDragDrop<CellData, CellData, BoardCard>, lane: Lane): Promise<void> {
+  protected async drop(
+    event: CdkDragDrop<CellData, CellData, BoardCard>,
+    lane: Lane,
+  ): Promise<void> {
     this.lastDropAt = Date.now();
     const moving = this.dragging();
     this.dragging.set(new Set());
     const card = event.item.data;
     const target = event.container.data;
-    if (event.previousContainer === event.container && event.previousIndex === event.currentIndex && moving.size <= 1) return;
+    if (
+      event.previousContainer === event.container &&
+      event.previousIndex === event.currentIndex &&
+      moving.size <= 1
+    )
+      return;
     const ids = moving.size ? [...this.store.movingIds(card.id)] : [card.id];
     const anchor = anchorFor(lane.cells[target.status], card.id, event.currentIndex, new Set(ids));
     this.store.focusId.set(card.id);
@@ -228,12 +352,20 @@ export class BoardView {
       projects: board.projects.filter((p) => p.canWrite && !p.isArchived),
       add: (keys) => this.store.addFromBacklog(keys),
     };
-    this.dialog.open<AddTicketsDialog, AddTicketsDialogData, string[]>(AddTicketsDialog, { data, width: '640px', autoFocus: 'first-tabbable' });
+    this.dialog.open<AddTicketsDialog, AddTicketsDialogData, string[]>(AddTicketsDialog, {
+      data,
+      width: '640px',
+      autoFocus: 'first-tabbable',
+    });
   }
 
   protected openSettings(): void {
     if (!this.store.board()) return;
-    const ref = this.dialog.open(BoardSettingsDialog, { data: this.store, width: '600px', autoFocus: 'first-tabbable' });
+    const ref = this.dialog.open(BoardSettingsDialog, {
+      data: this.store,
+      width: '600px',
+      autoFocus: 'first-tabbable',
+    });
     ref.afterClosed().subscribe((result) => {
       if (result === 'deleted') void this.router.navigate(['/boards']);
     });
@@ -247,7 +379,10 @@ export class BoardView {
       projectKey: project.key,
       status,
       heading: `New ticket on ${board.name}`,
-      submit: (projectKey, ticket) => firstValueFrom(this.ticketsApi.create(projectKey, { ...ticket, boardId: board.id } as typeof ticket)),
+      submit: (projectKey, ticket) =>
+        firstValueFrom(
+          this.ticketsApi.create(projectKey, { ...ticket, boardId: board.id } as typeof ticket),
+        ),
     });
     if (created) await this.store.reload(true);
   }
@@ -261,7 +396,9 @@ export class BoardView {
   }
 
   private laneOf(cardId: string): string | null {
-    for (const lane of this.store.lanes()) for (const status of TICKET_STATUSES) if (lane.cells[status].some((c) => c.id === cardId)) return lane.key;
+    for (const lane of this.store.lanes())
+      for (const status of TICKET_STATUSES)
+        if (lane.cells[status].some((c) => c.id === cardId)) return lane.key;
     return null;
   }
 
@@ -269,7 +406,10 @@ export class BoardView {
     const id = this.store.moveFocus(direction);
     if (!id) return;
     const card = this.store.cardById(id);
-    if (card) document.querySelector(`[data-testid="board-card-${card.key}"]`)?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    if (card)
+      document
+        .querySelector(`[data-testid="board-card-${card.key}"]`)
+        ?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }
 
   private openFocused(fullPage: boolean): void {

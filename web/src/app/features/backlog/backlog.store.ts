@@ -33,7 +33,15 @@ import {
   sortItems,
   SortBy,
 } from './backlog-logic';
-import { EMPTY_SELECTION, prune, select, SelectionState, SelectMode, step, targets } from './backlog-selection';
+import {
+  EMPTY_SELECTION,
+  prune,
+  select,
+  SelectionState,
+  SelectMode,
+  step,
+  targets,
+} from './backlog-selection';
 
 export interface CreateRow {
   kind: 'create';
@@ -95,14 +103,25 @@ export class BacklogStore {
     });
     const creating = this.creatingIn();
     if (creating === null) return rows;
-    if (creating === 'all') return [{ kind: 'create', id: 'create:all', groupId: 'all', value: null }, ...rows];
+    if (creating === 'all')
+      return [{ kind: 'create', id: 'create:all', groupId: 'all', value: null }, ...rows];
     const index = rows.findIndex((r) => r.kind === 'group' && r.id === creating);
     if (index < 0) return rows;
     const group = rows[index] as GroupRow;
-    return [...rows.slice(0, index + 1), { kind: 'create', id: `create:${creating}`, groupId: creating, value: group.value }, ...rows.slice(index + 1)];
+    return [
+      ...rows.slice(0, index + 1),
+      { kind: 'create', id: `create:${creating}`, groupId: creating, value: group.value },
+      ...rows.slice(index + 1),
+    ];
   });
-  readonly order = computed(() => this.rows().filter((r) => r.kind === 'ticket').map((r) => r.id));
-  readonly selectedIds = computed(() => this.order().filter((id) => this.selection().selected.has(id)));
+  readonly order = computed(() =>
+    this.rows()
+      .filter((r) => r.kind === 'ticket')
+      .map((r) => r.id),
+  );
+  readonly selectedIds = computed(() =>
+    this.order().filter((id) => this.selection().selected.has(id)),
+  );
   readonly canDrag = computed(() => this.canWrite() && this.sortBy() === 'rank');
 
   private loadToken = 0;
@@ -111,7 +130,8 @@ export class BacklogStore {
     this.events.events.pipe(takeUntilDestroyed(inject(DestroyRef))).subscribe((event) => {
       if (event.kind === 'updated') this.applyServerTicket(event.ticket);
       else if (event.kind === 'deleted') this.removeLocal([event.key]);
-      else if (event.kind === 'created' && event.ticket.projectKey === this.projectKey()) this.addCreated(event.ticket, null);
+      else if (event.kind === 'created' && event.ticket.projectKey === this.projectKey())
+        this.addCreated(event.ticket, null);
     });
   }
 
@@ -189,7 +209,9 @@ export class BacklogStore {
     const next = step(this.order(), this.focusId(), delta);
     const focus = this.focusId();
     if (next && extend) {
-      const state = this.selection().anchor ? this.selection() : { selected: new Set(focus ? [focus] : []), anchor: focus };
+      const state = this.selection().anchor
+        ? this.selection()
+        : { selected: new Set(focus ? [focus] : []), anchor: focus };
       this.selection.set(select(state, this.order(), next, 'range'));
     }
     this.focusId.set(next);
@@ -208,10 +230,18 @@ export class BacklogStore {
   // Edits
 
   /// Applies a field change to several tickets: optimistic, one PATCH per ticket, rollback per failure.
-  async update(ids: readonly string[], patch: TicketPatch, local: (item: BacklogItem) => Partial<BacklogItem>): Promise<void> {
-    const before = new Map(ids.map((id) => [id, this.item(id)]).filter((e): e is [string, BacklogItem] => !!e[1]));
+  async update(
+    ids: readonly string[],
+    patch: TicketPatch,
+    local: (item: BacklogItem) => Partial<BacklogItem>,
+  ): Promise<void> {
+    const before = new Map(
+      ids.map((id) => [id, this.item(id)]).filter((e): e is [string, BacklogItem] => !!e[1]),
+    );
     if (before.size === 0) return;
-    this.items.update((items) => items.map((item) => (before.has(item.id) ? { ...item, ...local(item) } : item)));
+    this.items.update((items) =>
+      items.map((item) => (before.has(item.id) ? { ...item, ...local(item) } : item)),
+    );
     const results = await Promise.allSettled(
       [...before.values()].map(async (item) => {
         const ticket = await firstValueFrom(this.api.update(item.key, patch));
@@ -221,13 +251,18 @@ export class BacklogStore {
       }),
     );
     const failed = [...before.values()].filter((_, i) => results[i].status === 'rejected');
-    if (patch.labels || patch.addLabels || patch.version !== undefined) this.hints.invalidate(this.projectKey());
+    if (patch.labels || patch.addLabels || patch.version !== undefined)
+      this.hints.invalidate(this.projectKey());
     if (failed.length === 0) return;
     const failedIds = new Set(failed.map((i) => i.id));
-    this.items.update((items) => items.map((item) => (failedIds.has(item.id) ? (before.get(item.id) ?? item) : item)));
+    this.items.update((items) =>
+      items.map((item) => (failedIds.has(item.id) ? (before.get(item.id) ?? item) : item)),
+    );
     const reason = (results.find((r) => r.status === 'rejected') as PromiseRejectedResult).reason;
     this.toast.error(
-      failed.length === 1 ? `${failed[0].key}: ${toApiError(reason).title}` : `${failed.length} tickets were not updated: ${toApiError(reason).title}`,
+      failed.length === 1
+        ? `${failed[0].key}: ${toApiError(reason).title}`
+        : `${failed.length} tickets were not updated: ${toApiError(reason).title}`,
       { action: { label: 'Retry', run: () => void this.update([...failedIds], patch, local) } },
     );
   }
@@ -250,19 +285,28 @@ export class BacklogStore {
 
   setAssignee(ids: readonly string[], user: UserRef | null): Promise<void> {
     if (user) this.users.update((map) => new Map(map).set(user.id, user));
-    return this.update(ids, { assignee: user?.id ?? null }, () => ({ assigneeId: user?.id ?? null }));
+    return this.update(ids, { assignee: user?.id ?? null }, () => ({
+      assigneeId: user?.id ?? null,
+    }));
   }
 
   assignToMe(ids: readonly string[]): Promise<void> {
     const me = this.auth.currentUser();
     if (!me) return Promise.resolve();
-    return this.setAssignee(ids, { id: me.id, email: me.email, displayName: me.displayName, isActive: true });
+    return this.setAssignee(ids, {
+      id: me.id,
+      email: me.email,
+      displayName: me.displayName,
+      isActive: true,
+    });
   }
 
   toggleLabel(ids: readonly string[], label: string, add: boolean): Promise<void> {
     const value = label.trim().toLowerCase();
     return this.update(ids, add ? { addLabels: [value] } : { removeLabels: [value] }, (item) => ({
-      labels: add ? [...new Set([...item.labels, value])].sort() : item.labels.filter((l) => l !== value),
+      labels: add
+        ? [...new Set([...item.labels, value])].sort()
+        : item.labels.filter((l) => l !== value),
     }));
   }
 
@@ -271,7 +315,9 @@ export class BacklogStore {
     const snapshot = this.items();
     this.items.update((items) => items.filter((i) => !ids.includes(i.id)));
     this.clearSelection();
-    const results = await Promise.allSettled(removed.map((item) => firstValueFrom(this.api.delete(item.key))));
+    const results = await Promise.allSettled(
+      removed.map((item) => firstValueFrom(this.api.delete(item.key))),
+    );
     const failed = removed.filter((_, i) => results[i].status === 'rejected');
     for (const item of removed.filter((i) => !failed.includes(i))) {
       this.cache.evict(item.key);
@@ -282,9 +328,13 @@ export class BacklogStore {
       const present = new Set(this.items().map((i) => i.id));
       this.items.set(snapshot.filter((i) => keep.has(i.id) || present.has(i.id)));
       const reason = (results.find((r) => r.status === 'rejected') as PromiseRejectedResult).reason;
-      this.toast.error(`${failed.map((i) => i.key).join(', ')} not deleted: ${toApiError(reason).title}`);
+      this.toast.error(
+        `${failed.map((i) => i.key).join(', ')} not deleted: ${toApiError(reason).title}`,
+      );
     } else {
-      this.toast.success(removed.length === 1 ? `${removed[0].key} deleted` : `${removed.length} tickets deleted`);
+      this.toast.success(
+        removed.length === 1 ? `${removed[0].key} deleted` : `${removed.length} tickets deleted`,
+      );
     }
   }
 
@@ -310,11 +360,19 @@ export class BacklogStore {
     local: { beforeId?: string; afterId?: string; position?: 'Top' | 'Bottom' },
   ): Promise<void> {
     const snapshot = this.items();
-    const ordered = this.items().filter((i) => ids.includes(i.id)).map((i) => i.id);
-    const block = this.sortBy() === 'rank' ? this.order().filter((id) => ids.includes(id)) : ordered;
+    const ordered = this.items()
+      .filter((i) => ids.includes(i.id))
+      .map((i) => i.id);
+    const block =
+      this.sortBy() === 'rank' ? this.order().filter((id) => ids.includes(id)) : ordered;
     this.items.set(moveBlock(snapshot, block, local));
     try {
-      await firstValueFrom(this.api.rank(this.projectKey(), { tickets: block.map((id) => this.item(id)!.key), ...anchor }));
+      await firstValueFrom(
+        this.api.rank(this.projectKey(), {
+          tickets: block.map((id) => this.item(id)!.key),
+          ...anchor,
+        }),
+      );
     } catch (error) {
       this.items.set(snapshot);
       this.toast.error(`Couldn't reorder: ${toApiError(error).title}`, {
@@ -330,8 +388,15 @@ export class BacklogStore {
   // Quick create
 
   openCreate(groupId: string | null): void {
-    const target = groupId ?? (this.groupBy() === 'none' ? 'all' : this.groupBy() === 'status' ? 'status:ToDo' : (this.groupOf(this.focusId()) ?? this.firstGroupId()));
-    if (target !== 'all') this.collapsed.update((set) => new Set([...set].filter((g) => g !== target)));
+    const target =
+      groupId ??
+      (this.groupBy() === 'none'
+        ? 'all'
+        : this.groupBy() === 'status'
+          ? 'status:ToDo'
+          : (this.groupOf(this.focusId()) ?? this.firstGroupId()));
+    if (target !== 'all')
+      this.collapsed.update((set) => new Set([...set].filter((g) => g !== target)));
     this.creatingIn.set(target);
   }
 
@@ -340,7 +405,11 @@ export class BacklogStore {
   }
 
   /// Creates a ticket in the quick-create group and places it at the top of that group.
-  async quickCreate(title: string, type: TicketType, row: CreateRow): Promise<TicketSummary | null> {
+  async quickCreate(
+    title: string,
+    type: TicketType,
+    row: CreateRow,
+  ): Promise<TicketSummary | null> {
     const body: NewTicket = { title: title.trim(), type };
     const groupBy = this.groupBy();
     if (row.value !== null) {
@@ -349,14 +418,23 @@ export class BacklogStore {
       if (groupBy === 'assignee') body.assignee = row.value;
       if (groupBy === 'epic') body.parentKey = row.value;
     }
-    const firstInGroup = this.rows().find((r) => r.kind === 'ticket' && (row.groupId === 'all' || r.groupId === row.groupId));
+    const firstInGroup = this.rows().find(
+      (r) => r.kind === 'ticket' && (row.groupId === 'all' || r.groupId === row.groupId),
+    );
     try {
-      const created = await firstValueFrom(this.api.create(this.projectKey(), body, crypto.randomUUID()));
+      const created = await firstValueFrom(
+        this.api.create(this.projectKey(), body, crypto.randomUUID()),
+      );
       this.addCreated(created, firstInGroup?.kind === 'ticket' ? firstInGroup.id : null);
       this.lastCreatedId.set(created.id);
       this.events.emit({ kind: 'created', ticket: created });
       if (firstInGroup?.kind === 'ticket' && this.sortBy() === 'rank') {
-        void firstValueFrom(this.api.rank(this.projectKey(), { tickets: [created.key], beforeKey: firstInGroup.item.key })).catch(() => undefined);
+        void firstValueFrom(
+          this.api.rank(this.projectKey(), {
+            tickets: [created.key],
+            beforeKey: firstInGroup.item.key,
+          }),
+        ).catch(() => undefined);
       }
       return created;
     } catch (error) {
@@ -366,8 +444,10 @@ export class BacklogStore {
   }
 
   private addCreated(summary: TicketSummary, beforeId: string | null): void {
-    if (this.items().some((i) => i.id === summary.id) || summary.location.kind !== 'Backlog') return;
-    if (summary.assignee) this.users.update((map) => new Map(map).set(summary.assignee!.id, summary.assignee!));
+    if (this.items().some((i) => i.id === summary.id) || summary.location.kind !== 'Backlog')
+      return;
+    if (summary.assignee)
+      this.users.update((map) => new Map(map).set(summary.assignee!.id, summary.assignee!));
     const item: BacklogItem = {
       id: summary.id,
       key: summary.key,
@@ -380,14 +460,20 @@ export class BacklogStore {
       version: summary.version,
       labels: summary.labels,
       assigneeId: summary.assignee?.id ?? null,
-      parentId: summary.parentKey ? (this.items().find((i) => i.key === summary.parentKey)?.id ?? [...this.parents().values()].find((p) => p.key === summary.parentKey)?.id ?? null) : null,
+      parentId: summary.parentKey
+        ? (this.items().find((i) => i.key === summary.parentKey)?.id ??
+          [...this.parents().values()].find((p) => p.key === summary.parentKey)?.id ??
+          null)
+        : null,
       updatedAt: summary.updatedAt,
       childCount: 0,
       childDoneCount: 0,
       commentCount: 0,
       testCaseCount: 0,
     };
-    this.items.update((items) => moveBlock([...items, item], [item.id], beforeId ? { beforeId } : { position: 'Bottom' }));
+    this.items.update((items) =>
+      moveBlock([...items, item], [item.id], beforeId ? { beforeId } : { position: 'Bottom' }),
+    );
   }
 
   private applyServerTicket(ticket: Ticket): void {
@@ -396,10 +482,18 @@ export class BacklogStore {
       this.removeLocal([ticket.key]);
       return;
     }
-    if (ticket.assignee) this.users.update((map) => new Map(map).set(ticket.assignee!.id, ticket.assignee!));
+    if (ticket.assignee)
+      this.users.update((map) => new Map(map).set(ticket.assignee!.id, ticket.assignee!));
     if (ticket.parent) {
       const parent = ticket.parent;
-      this.parents.update((map) => new Map(map).set(parent.id, { id: parent.id, key: parent.key, title: parent.title, type: parent.type }));
+      this.parents.update((map) =>
+        new Map(map).set(parent.id, {
+          id: parent.id,
+          key: parent.key,
+          title: parent.title,
+          type: parent.type,
+        }),
+      );
     }
     this.items.update((items) =>
       items.map((item) =>
@@ -434,7 +528,12 @@ export class BacklogStore {
     this.users.set(new Map(backlog.users.map((u) => [u.id, u])));
     this.parents.set(new Map(backlog.parents.map((p) => [p.id, p])));
     this.items.set(backlog.items);
-    this.selection.update((state) => prune(state, backlog.items.map((i) => i.id)));
+    this.selection.update((state) =>
+      prune(
+        state,
+        backlog.items.map((i) => i.id),
+      ),
+    );
   }
 
   private async changeGroupField(ids: readonly string[], group: GroupRow): Promise<void> {
@@ -446,8 +545,12 @@ export class BacklogStore {
       case 'assignee':
         return this.setAssignee(ids, group.value ? (this.users().get(group.value) ?? null) : null);
       case 'epic': {
-        const parent = group.value ? [...this.parents().values()].find((p) => p.key === group.value) : null;
-        return this.update(ids, { parentKey: group.value }, () => ({ parentId: parent?.id ?? null }));
+        const parent = group.value
+          ? [...this.parents().values()].find((p) => p.key === group.value)
+          : null;
+        return this.update(ids, { parentKey: group.value }, () => ({
+          parentId: parent?.id ?? null,
+        }));
       }
     }
   }

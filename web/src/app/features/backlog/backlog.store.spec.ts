@@ -59,7 +59,12 @@ describe('BacklogStore', () => {
         BacklogStore,
         { provide: TicketsApi, useValue: api },
         { provide: ToastService, useValue: toast },
-        { provide: AuthService, useValue: { currentUser: signal({ id: 'me', email: 'me@x', displayName: 'Me', globalRole: 'User' }) } },
+        {
+          provide: AuthService,
+          useValue: {
+            currentUser: signal({ id: 'me', email: 'me@x', displayName: 'Me', globalRole: 'User' }),
+          },
+        },
       ],
     });
     store = TestBed.inject(BacklogStore);
@@ -115,7 +120,9 @@ describe('BacklogStore', () => {
 
   it('assigns the focused ticket to the current user', async () => {
     // Arrange
-    api.update.mockReturnValue(of({ key: 'WEB-1', projectKey: 'WEB', location: { kind: 'Backlog' } } as Ticket));
+    api.update.mockReturnValue(
+      of({ key: 'WEB-1', projectKey: 'WEB', location: { kind: 'Backlog' } } as Ticket),
+    );
 
     // Act
     await store.assignToMe(['id-1']);

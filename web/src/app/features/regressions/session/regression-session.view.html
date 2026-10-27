@@ -2,13 +2,19 @@
   <tk-empty-state
     icon="tablerAlertCircle"
     tone="danger"
-    [title]="store.error()?.isNotFound ? sessionKey().toUpperCase() + ' doesn\'t exist or was moved' : 'Couldn\'t load the session'"
+    [title]="
+      store.error()?.isNotFound
+        ? sessionKey().toUpperCase() + ' doesn\'t exist or was moved'
+        : 'Couldn\'t load the session'
+    "
     [description]="store.error()?.title ?? null"
   >
     <a mat-stroked-button [routerLink]="['/projects', projectKey(), 'regressions']">All sessions</a>
   </tk-empty-state>
 } @else if (!store.session()) {
-  <header class="tk-page-header"><h1>{{ sessionKey().toUpperCase() }}</h1></header>
+  <header class="tk-page-header">
+    <h1>{{ sessionKey().toUpperCase() }}</h1>
+  </header>
   <tk-skeleton-rows [count]="10" />
 } @else {
   @let s = store.session()!;
@@ -23,15 +29,29 @@
     <div class="tk-page-actions">
       @if (store.permissions().canComplete) {
         <button mat-flat-button type="button" data-testid="session-complete" (click)="complete()">
-          <tk-icon name="tablerCheck" [size]="14" />{{ sum.waiting > 0 ? 'Complete…' : 'Complete session' }}
+          <tk-icon name="tablerCheck" [size]="14" />{{
+            sum.waiting > 0 ? 'Complete…' : 'Complete session'
+          }}
         </button>
       }
       @if (store.permissions().canCancel) {
-        <button type="button" class="tk-icon-btn" aria-label="More session actions" data-testid="session-menu" [matMenuTriggerFor]="more">
+        <button
+          type="button"
+          class="tk-icon-btn"
+          aria-label="More session actions"
+          data-testid="session-menu"
+          [matMenuTriggerFor]="more"
+        >
           <tk-icon name="tablerDots" [size]="16" />
         </button>
         <mat-menu #more="matMenu" xPosition="before">
-          <button mat-menu-item type="button" class="danger" data-testid="session-cancel" (click)="cancel()">
+          <button
+            mat-menu-item
+            type="button"
+            class="danger"
+            data-testid="session-cancel"
+            (click)="cancel()"
+          >
             <tk-icon name="tablerBan" [size]="16" />Cancel session
           </button>
         </mat-menu>
@@ -42,29 +62,63 @@
   <section class="progress" aria-label="Progress" data-testid="session-progress">
     <tk-session-progress size="lg" [summary]="sum" />
     <div class="legend tnum">
-      <span><i class="dot passed"></i>Passed <b>{{ sum.passed }}</b>@if (sum.passedAutomatic > 0) { <span class="sub">({{ sum.passedAutomatic }} auto)</span>}</span>
-      <span><i class="dot failed"></i>Failed <b data-testid="summary-failed">{{ sum.failed }}</b></span>
-      <span><i class="dot skipped"></i>Skipped <b>{{ sum.skipped }}</b></span>
-      <span><i class="dot waiting"></i>Waiting <b data-testid="summary-waiting">{{ sum.waiting }}</b></span>
+      <span
+        ><i class="dot passed"></i>Passed <b>{{ sum.passed }}</b>
+        @if (sum.passedAutomatic > 0) {
+          <span class="sub">({{ sum.passedAutomatic }} auto)</span>
+        }
+      </span>
+      <span
+        ><i class="dot failed"></i>Failed <b data-testid="summary-failed">{{ sum.failed }}</b></span
+      >
+      <span
+        ><i class="dot skipped"></i>Skipped <b>{{ sum.skipped }}</b></span
+      >
+      <span
+        ><i class="dot waiting"></i>Waiting
+        <b data-testid="summary-waiting">{{ sum.waiting }}</b></span
+      >
       <span class="sep">·</span>
-      <span>Pass rate <b data-testid="summary-pass-rate">{{ passRate(sum) }}</b></span>
-      <span>Bugs <b>{{ sum.bugsCreated }}</b></span>
-      <span class="meta">Started by {{ s.startedBy.displayName }} <span [title]="s.startedAt | absoluteTime">{{ s.startedAt | relativeTime }}</span></span>
+      <span
+        >Pass rate <b data-testid="summary-pass-rate">{{ passRate(sum) }}</b></span
+      >
+      <span
+        >Bugs <b>{{ sum.bugsCreated }}</b></span
+      >
+      <span class="meta"
+        >Started by {{ s.startedBy.displayName }}
+        <span [title]="s.startedAt | absoluteTime">{{ s.startedAt | relativeTime }}</span></span
+      >
     </div>
   </section>
 
   @if (readOnlyReason(); as reason) {
-    <div class="tk-callout readonly" data-testid="session-readonly"><tk-icon name="tablerLock" [size]="14" />{{ reason }}</div>
+    <div class="tk-callout readonly" data-testid="session-readonly">
+      <tk-icon name="tablerLock" [size]="14" />{{ reason }}
+    </div>
   }
 
   <div class="tk-toolbar">
-    <tk-segmented ariaLabel="Show items" testId="item-filter" [options]="filterOptions()" [value]="store.filter()" (valueChange)="setFilter($event)" />
+    <tk-segmented
+      ariaLabel="Show items"
+      testId="item-filter"
+      [options]="filterOptions()"
+      [value]="store.filter()"
+      (valueChange)="setFilter($event)"
+    />
     <label class="search">
       <tk-icon name="tablerSearch" [size]="14" />
-      <input type="search" placeholder="Filter items" aria-label="Filter items" [value]="store.text()" (input)="store.text.set($any($event.target).value)" />
+      <input
+        type="search"
+        placeholder="Filter items"
+        aria-label="Filter items"
+        [value]="store.text()"
+        (input)="store.text.set($any($event.target).value)"
+      />
     </label>
     <span class="keys tk-subtle">
-      <tk-kbd>P</tk-kbd> pass <tk-kbd>F</tk-kbd> fail <tk-kbd>S</tk-kbd> skip <tk-kbd>N</tk-kbd> next <tk-kbd>J</tk-kbd><tk-kbd>K</tk-kbd> move
+      <tk-kbd>P</tk-kbd> pass <tk-kbd>F</tk-kbd> fail <tk-kbd>S</tk-kbd> skip
+      <tk-kbd>N</tk-kbd> next <tk-kbd>J</tk-kbd><tk-kbd>K</tk-kbd> move
     </span>
   </div>
 
@@ -72,7 +126,13 @@
     <nav class="items" aria-label="Session items" data-testid="session-items">
       @for (row of store.rows(); track trackRow($index, $any(row))) {
         @if (row.kind === 'group') {
-          <div class="ghead"><tk-icon [name]="icons[row.status].icon" [size]="14" [style.color]="icons[row.status].color" />{{ row.label }}<span class="n tnum">{{ row.count }}</span></div>
+          <div class="ghead">
+            <tk-icon
+              [name]="icons[row.status].icon"
+              [size]="14"
+              [style.color]="icons[row.status].color"
+            />{{ row.label }}<span class="n tnum">{{ row.count }}</span>
+          </div>
         } @else {
           @let it = row.item;
           <button
@@ -83,7 +143,11 @@
             [attr.data-testid]="'item-row-' + it.testCaseKey"
             (click)="store.focus(it.testCaseKey)"
           >
-            <tk-icon [name]="it.autoPassed ? 'tablerRobot' : icons[it.status].icon" [size]="16" [style.color]="icons[it.status].color" />
+            <tk-icon
+              [name]="it.autoPassed ? 'tablerRobot' : icons[it.status].icon"
+              [size]="16"
+              [style.color]="icons[it.status].color"
+            />
             <span class="t">{{ it.title }}</span>
             @if (it.bug) {
               <span class="bug tnum" [class.deleted]="it.bug.deleted">{{ it.bug.key }}</span>
@@ -105,10 +169,20 @@
       @if (store.focused(); as it) {
         <div #paneBody class="pane-body" data-testid="item-pane">
           <div class="ihead">
-            <tk-regression-item-badge [status]="it.status" [autoPassed]="it.autoPassed" data-testid="item-status" />
-            <a class="tckey tnum" [routerLink]="['/projects', projectKey(), 'test-cases', it.testCaseKey]">{{ it.testCaseKey }}</a>
+            <tk-regression-item-badge
+              [status]="it.status"
+              [autoPassed]="it.autoPassed"
+              data-testid="item-status"
+            />
+            <a
+              class="tckey tnum"
+              [routerLink]="['/projects', projectKey(), 'test-cases', it.testCaseKey]"
+              >{{ it.testCaseKey }}</a
+            >
             @if (it.executionMode === 'Automatic') {
-              <span class="mode" [matTooltip]="it.automationReference ?? 'Automatic'"><tk-icon name="tablerRobot" [size]="14" />Automatic</span>
+              <span class="mode" [matTooltip]="it.automationReference ?? 'Automatic'"
+                ><tk-icon name="tablerRobot" [size]="14" />Automatic</span
+              >
             }
           </div>
           <h2 class="ititle" data-testid="item-title">{{ it.title }}</h2>
@@ -117,36 +191,76 @@
             <span class="tk-field-label">Assignee</span>
             <tk-user [user]="it.assignee" data-testid="item-assignee" />
             @if (canAct() && it.assignee?.id !== store.meId()) {
-              <button mat-stroked-button type="button" class="sm" data-testid="item-take" (click)="take()">
-                <tk-icon name="tablerUserCheck" [size]="14" />{{ it.assignee ? 'Take over' : 'Take' }}<tk-kbd>I</tk-kbd>
+              <button
+                mat-stroked-button
+                type="button"
+                class="sm"
+                data-testid="item-take"
+                (click)="take()"
+              >
+                <tk-icon name="tablerUserCheck" [size]="14" />{{ it.assignee ? 'Take over' : 'Take'
+                }}<tk-kbd>I</tk-kbd>
               </button>
             }
             @if (store.permissions().canAssign) {
-              <button type="button" class="link" data-testid="item-assign" [tkSearchPicker]="assigneeSearch" pickerPlaceholder="Assign to…" (picked)="assign($event)">Assign…</button>
+              <button
+                type="button"
+                class="link"
+                data-testid="item-assign"
+                [tkSearchPicker]="assigneeSearch"
+                pickerPlaceholder="Assign to…"
+                (picked)="assign($event)"
+              >
+                Assign…
+              </button>
               @if (it.assignee) {
-                <button type="button" class="link" data-testid="item-unassign" (click)="assign(null)">Unassign</button>
+                <button
+                  type="button"
+                  class="link"
+                  data-testid="item-unassign"
+                  (click)="assign(null)"
+                >
+                  Unassign
+                </button>
               }
             }
             @if (it.executedAt) {
               <span class="exec tk-subtle">
-                {{ it.executedBy ? it.executedBy.displayName : 'Automatic' }} · <span [title]="it.executedAt | absoluteTime">{{ it.executedAt | relativeTime }}</span>
+                {{ it.executedBy ? it.executedBy.displayName : 'Automatic' }} ·
+                <span [title]="it.executedAt | absoluteTime">{{
+                  it.executedAt | relativeTime
+                }}</span>
               </span>
             }
           </div>
 
           @if (it.resultNote) {
             <div class="note" [class.failed]="it.status === 'Failed'" data-testid="item-note">
-              <span class="tk-field-label">{{ it.status === 'Failed' ? 'Actual result' : 'Note' }}</span>
+              <span class="tk-field-label">{{
+                it.status === 'Failed' ? 'Actual result' : 'Note'
+              }}</span>
               <tk-markdown [source]="it.resultNote" />
             </div>
           }
           @if (it.bug; as bug) {
-            <a class="bugchip" [routerLink]="[]" [queryParams]="{ peek: bug.key }" queryParamsHandling="merge" data-testid="item-bug">
+            <a
+              class="bugchip"
+              [routerLink]="[]"
+              [queryParams]="{ peek: bug.key }"
+              queryParamsHandling="merge"
+              data-testid="item-bug"
+            >
               <tk-icon name="tablerBug" [size]="14" /><span class="tnum">{{ bug.key }}</span>
               <span class="bt">{{ bug.deleted ? '(deleted)' : bug.title }}</span>
             </a>
           } @else if (it.status === 'Failed' && canAct() && !failing()) {
-            <button mat-stroked-button type="button" class="sm" data-testid="item-create-bug" (click)="store.createBug(it)">
+            <button
+              mat-stroked-button
+              type="button"
+              class="sm"
+              data-testid="item-create-bug"
+              (click)="store.createBug(it)"
+            >
               <tk-icon name="tablerBug" [size]="14" />Create bug
             </button>
           }
@@ -177,11 +291,23 @@
               />
               <div class="fail-actions">
                 @if (!it.bug) {
-                  <mat-checkbox data-testid="fail-create-bug" [checked]="createBug()" (change)="createBug.set($event.checked)">Create bug in backlog</mat-checkbox>
+                  <mat-checkbox
+                    data-testid="fail-create-bug"
+                    [checked]="createBug()"
+                    (change)="createBug.set($event.checked)"
+                    >Create bug in backlog</mat-checkbox
+                  >
                 }
                 <span class="right">
                   <button mat-button type="button" (click)="failing.set(false)">Cancel</button>
-                  <button mat-flat-button type="button" class="danger" data-testid="fail-confirm" [disabled]="!failNote().trim() || !!store.busyKey()" (click)="confirmFail()">
+                  <button
+                    mat-flat-button
+                    type="button"
+                    class="danger"
+                    data-testid="fail-confirm"
+                    [disabled]="!failNote().trim() || !!store.busyKey()"
+                    (click)="confirmFail()"
+                  >
                     Record failure<tk-kbd tone="on-solid">{{ submitKeys }}</tk-kbd>
                   </button>
                 </span>
@@ -192,27 +318,65 @@
 
         @if (canAct()) {
           <footer class="actions" data-testid="item-actions">
-            <button type="button" class="act pass" data-testid="action-pass" [class.on]="it.status === 'Passed'" [disabled]="!!store.busyKey()" (click)="result('Passed')">
+            <button
+              type="button"
+              class="act pass"
+              data-testid="action-pass"
+              [class.on]="it.status === 'Passed'"
+              [disabled]="!!store.busyKey()"
+              (click)="result('Passed')"
+            >
               <tk-icon name="tablerCircleCheck" [size]="16" />Pass<tk-kbd tone="on-solid">P</tk-kbd>
             </button>
-            <button type="button" class="act fail" data-testid="action-fail" [class.on]="it.status === 'Failed'" [disabled]="!!store.busyKey()" (click)="startFail()">
+            <button
+              type="button"
+              class="act fail"
+              data-testid="action-fail"
+              [class.on]="it.status === 'Failed'"
+              [disabled]="!!store.busyKey()"
+              (click)="startFail()"
+            >
               <tk-icon name="tablerCircleX" [size]="16" />Fail<tk-kbd tone="on-solid">F</tk-kbd>
             </button>
-            <button type="button" class="act skip" data-testid="action-skip" [class.on]="it.status === 'Skipped'" [disabled]="!!store.busyKey()" (click)="result('Skipped')">
+            <button
+              type="button"
+              class="act skip"
+              data-testid="action-skip"
+              [class.on]="it.status === 'Skipped'"
+              [disabled]="!!store.busyKey()"
+              (click)="result('Skipped')"
+            >
               <tk-icon name="tablerCircleMinus" [size]="16" />Skip<tk-kbd>S</tk-kbd>
             </button>
             @if (it.status !== 'WaitingForExecution') {
-              <button type="button" class="act ghost" data-testid="action-reset" matTooltip="Back to waiting  W" [disabled]="!!store.busyKey()" (click)="result('WaitingForExecution')">
+              <button
+                type="button"
+                class="act ghost"
+                data-testid="action-reset"
+                matTooltip="Back to waiting  W"
+                [disabled]="!!store.busyKey()"
+                (click)="result('WaitingForExecution')"
+              >
                 <tk-icon name="tablerRotate" [size]="16" />Reset
               </button>
             }
-            <button type="button" class="act ghost next" data-testid="action-next" [disabled]="sum.waiting === 0" (click)="store.focusNextWaiting()">
+            <button
+              type="button"
+              class="act ghost next"
+              data-testid="action-next"
+              [disabled]="sum.waiting === 0"
+              (click)="store.focusNextWaiting()"
+            >
               Next waiting<tk-kbd>N</tk-kbd><tk-icon name="tablerPlayerTrackNext" [size]="16" />
             </button>
           </footer>
         }
       } @else {
-        <tk-empty-state icon="tablerChecklist" title="Pick an item" description="Select an item on the left, or press N for the next waiting one." />
+        <tk-empty-state
+          icon="tablerChecklist"
+          title="Pick an item"
+          description="Select an item on the left, or press N for the next waiting one."
+        />
       }
     </section>
   </div>

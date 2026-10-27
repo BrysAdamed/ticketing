@@ -14,7 +14,13 @@ import { IconComponent } from '@shared/ui/icon/icon.component';
       <ol data-testid="item-steps">
         @for (step of steps(); track $index) {
           <li [class.checked]="checked().has($index)">
-            <button type="button" class="check" [attr.aria-pressed]="checked().has($index)" [attr.aria-label]="'Mark step ' + ($index + 1) + ' done'" (click)="toggle($index)">
+            <button
+              type="button"
+              class="check"
+              [attr.aria-pressed]="checked().has($index)"
+              [attr.aria-label]="'Mark step ' + ($index + 1) + ' done'"
+              (click)="toggle($index)"
+            >
               @if (checked().has($index)) {
                 <tk-icon name="tablerCheck" [size]="12" />
               }

@@ -1,5 +1,12 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { Priority, PRIORITY_LABELS, Severity, TICKET_STATUS_LABELS, TicketStatus, TicketType } from '../../domain/enums';
+import {
+  Priority,
+  PRIORITY_LABELS,
+  Severity,
+  TICKET_STATUS_LABELS,
+  TicketStatus,
+  TicketType,
+} from '../../domain/enums';
 import { AbsoluteTimePipe, RelativeTimePipe } from '../../pipes/relative-time.pipe';
 import { AvatarComponent } from '../domain/avatar.component';
 import { SeverityBadgeComponent } from '../domain/domain-badges';
@@ -45,11 +52,19 @@ export interface TicketRowData {
     '[attr.data-testid]': 'testIdPrefix() + ticket().key',
   },
   template: `
-    <tk-priority-icon role="gridcell" [priority]="ticket().priority" [attr.aria-label]="'Priority: ' + priorityLabel()" />
+    <tk-priority-icon
+      role="gridcell"
+      [priority]="ticket().priority"
+      [attr.aria-label]="'Priority: ' + priorityLabel()"
+    />
     <span class="key tnum" role="gridcell">{{ ticket().key }}</span>
     <tk-type-icon [type]="ticket().type" [size]="14" />
     <span class="title" role="gridcell" data-testid="row-title">{{ ticket().title }}</span>
-    @if (ticket().severity === 'Blocker' || ticket().severity === 'Critical' || ticket().severity === 'Major') {
+    @if (
+      ticket().severity === 'Blocker' ||
+      ticket().severity === 'Critical' ||
+      ticket().severity === 'Major'
+    ) {
       <tk-severity-badge [severity]="ticket().severity!" />
     }
     <span class="fill"></span>
@@ -61,9 +76,17 @@ export interface TicketRowData {
         <span class="more">+{{ ticket().labels.length - 2 }}</span>
       }
     </span>
-    <span class="status" role="gridcell"><tk-status-badge [status]="ticket().status" [attr.aria-label]="statusLabel()" /></span>
-    <tk-avatar [userId]="ticket().assignee?.id" [name]="ticket().assignee?.displayName" [showTitle]="true" />
-    <span class="date" role="gridcell" [title]="ticket().updatedAt | absoluteTime">{{ ticket().updatedAt | relativeTime }}</span>
+    <span class="status" role="gridcell"
+      ><tk-status-badge [status]="ticket().status" [attr.aria-label]="statusLabel()"
+    /></span>
+    <tk-avatar
+      [userId]="ticket().assignee?.id"
+      [name]="ticket().assignee?.displayName"
+      [showTitle]="true"
+    />
+    <span class="date" role="gridcell" [title]="ticket().updatedAt | absoluteTime">{{
+      ticket().updatedAt | relativeTime
+    }}</span>
   `,
   styles: `
     :host {

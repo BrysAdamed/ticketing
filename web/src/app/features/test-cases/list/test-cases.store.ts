@@ -5,7 +5,14 @@ import { ToastService } from '@core/notify/toast.service';
 import { LoadStatus } from '@core/projects/project-directory';
 import { TestCasesApi } from '@core/testing/testing.api';
 import { TestCase, TestCaseCounts, TestCaseSummary } from '@core/testing/testing.models';
-import { adjustCounts, EMPTY_FILTERS, matches, summaryOf, TestCaseFilters, upsertRow } from './test-case-list-logic';
+import {
+  adjustCounts,
+  EMPTY_FILTERS,
+  matches,
+  summaryOf,
+  TestCaseFilters,
+  upsertRow,
+} from './test-case-list-logic';
 
 const PAGE_SIZE = 100;
 const NO_COUNTS: TestCaseCounts = { new: 0, manual: 0, automatic: 0, archived: 0, active: 0 };
@@ -64,7 +71,9 @@ export class TestCasesStore {
     const request = this.request;
     this.loadingMore.set(true);
     try {
-      const page = await firstValueFrom(this.api.list(this.projectKey(), { ...this.query(this.filters()), cursor }));
+      const page = await firstValueFrom(
+        this.api.list(this.projectKey(), { ...this.query(this.filters()), cursor }),
+      );
       if (request !== this.request) return;
       this.items.update((items) => [...items, ...page.items]);
       this.nextCursor.set(page.nextCursor);

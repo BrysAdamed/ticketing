@@ -13,7 +13,15 @@ import { IconComponent } from '@shared/ui/icon/icon.component';
 /// (Blocker, Critical, Major), up to two labels and points.
 @Component({
   selector: 'tk-board-card',
-  imports: [MatTooltip, AvatarComponent, SeverityBadgeComponent, LabelChipComponent, PriorityIconComponent, TypeIconComponent, IconComponent],
+  imports: [
+    MatTooltip,
+    AvatarComponent,
+    SeverityBadgeComponent,
+    LabelChipComponent,
+    PriorityIconComponent,
+    TypeIconComponent,
+    IconComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     class: 'card',
@@ -48,7 +56,11 @@ import { IconComponent } from '@shared/ui/icon/icon.component';
     <div class="ct">{{ card().title }}</div>
     <div class="c3">
       <tk-priority-icon [priority]="card().priority" />
-      @if (card().severity === 'Blocker' || card().severity === 'Critical' || card().severity === 'Major') {
+      @if (
+        card().severity === 'Blocker' ||
+        card().severity === 'Critical' ||
+        card().severity === 'Major'
+      ) {
         <tk-severity-badge [severity]="card().severity!" />
       }
       <span class="labels">
@@ -61,7 +73,9 @@ import { IconComponent } from '@shared/ui/icon/icon.component';
       </span>
       <span class="end">
         @if (card().storyPoints !== null) {
-          <span class="pts tnum" [attr.aria-label]="card().storyPoints + ' story points'">{{ card().storyPoints }}</span>
+          <span class="pts tnum" [attr.aria-label]="card().storyPoints + ' story points'">{{
+            card().storyPoints
+          }}</span>
         }
       </span>
     </div>

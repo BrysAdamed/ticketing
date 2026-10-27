@@ -49,7 +49,10 @@ const SEVERITY_OPTIONS: PickerOption<Severity | null>[] = [
   { value: null, label: 'None', keywords: ['clear'] },
   ...SEVERITIES.map((s) => ({ value: s, label: SEVERITY_LABELS[s] })),
 ];
-const RESOLUTION_OPTIONS: PickerOption<Resolution>[] = RESOLUTIONS.map((r) => ({ value: r, label: RESOLUTION_LABELS[r] }));
+const RESOLUTION_OPTIONS: PickerOption<Resolution>[] = RESOLUTIONS.map((r) => ({
+  value: r,
+  label: RESOLUTION_LABELS[r],
+}));
 
 /// The ticket's property column (ticket-detail.html `dside`): every value is a ghost button that
 /// opens an inline picker. Edits are emitted as PATCH + optimistic values.
@@ -77,7 +80,12 @@ const RESOLUTION_OPTIONS: PickerOption<Resolution>[] = RESOLUTIONS.map((r) => ({
     @let t = ticket();
     @if (layout() === 'column' && canEdit()) {
       <div class="side-h">
-        <button type="button" class="assign-me" data-testid="assign-to-me" (click)="assignToMe.emit()">
+        <button
+          type="button"
+          class="assign-me"
+          data-testid="assign-to-me"
+          (click)="assignToMe.emit()"
+        >
           <tk-icon name="tablerUser" [size]="14" />Assign to me<tk-kbd>I</tk-kbd>
         </button>
       </div>
@@ -285,7 +293,10 @@ const RESOLUTION_OPTIONS: PickerOption<Resolution>[] = RESOLUTIONS.map((r) => ({
       <div class="field">
         <span class="fl">Location</span>
         <span class="fv plain" data-testid="field-location">
-          <tk-icon [name]="t.location.kind === 'Backlog' ? 'tablerList' : 'tablerLayoutKanban'" [size]="14" />
+          <tk-icon
+            [name]="t.location.kind === 'Backlog' ? 'tablerList' : 'tablerLayoutKanban'"
+            [size]="14"
+          />
           {{ t.location.kind === 'Backlog' ? 'Backlog' : t.location.boardName }}
         </span>
       </div>
@@ -293,16 +304,22 @@ const RESOLUTION_OPTIONS: PickerOption<Resolution>[] = RESOLUTIONS.map((r) => ({
     <div class="fgroup">
       <div class="field">
         <span class="fl">Created</span>
-        <span class="fv plain" [title]="t.createdAt | absoluteTime">{{ t.createdAt | relativeTime }}</span>
+        <span class="fv plain" [title]="t.createdAt | absoluteTime">{{
+          t.createdAt | relativeTime
+        }}</span>
       </div>
       <div class="field">
         <span class="fl">Updated</span>
-        <span class="fv plain" [title]="t.updatedAt | absoluteTime">{{ t.updatedAt | relativeTime }}</span>
+        <span class="fv plain" [title]="t.updatedAt | absoluteTime">{{
+          t.updatedAt | relativeTime
+        }}</span>
       </div>
       @if (t.resolvedAt) {
         <div class="field">
           <span class="fl">Resolved</span>
-          <span class="fv plain" [title]="t.resolvedAt | absoluteTime">{{ t.resolvedAt | relativeTime }}</span>
+          <span class="fv plain" [title]="t.resolvedAt | absoluteTime">{{
+            t.resolvedAt | relativeTime
+          }}</span>
         </div>
       }
     </div>
@@ -335,7 +352,8 @@ export class TicketFieldsComponent {
   private readonly people = computed(() => {
     const users = new Map(this.assignable().map((u) => [u.id, u]));
     const t = this.ticket();
-    for (const user of [t.assignee, t.reporter]) if (user && !users.has(user.id)) users.set(user.id, user);
+    for (const user of [t.assignee, t.reporter])
+      if (user && !users.has(user.id)) users.set(user.id, user);
     return [...users.values()];
   });
   protected readonly assigneeOptions = computed(() => userOptions(this.people()));
@@ -351,7 +369,8 @@ export class TicketFieldsComponent {
     return async (query: string): Promise<PickerOption<string | null>[]> => {
       const versions = await this.hints.get(projectKey, 'version', query);
       const options: PickerOption<string | null>[] = versions.map((v) => ({ value: v, label: v }));
-      if (query && !versions.includes(query)) options.unshift({ value: query, label: `Use "${query}"` });
+      if (query && !versions.includes(query))
+        options.unshift({ value: query, label: `Use "${query}"` });
       options.push({ value: null, label: 'No version' });
       return options;
     };
@@ -391,8 +410,12 @@ export class TicketFieldsComponent {
 
   protected toggleLabel(toggle: LabelToggle): void {
     const labels = this.ticket().labels;
-    const next = toggle.add ? [...new Set([...labels, toggle.label])].sort() : labels.filter((l) => l !== toggle.label);
-    this.edit(toggle.add ? { addLabels: [toggle.label] } : { removeLabels: [toggle.label] }, { labels: next });
+    const next = toggle.add
+      ? [...new Set([...labels, toggle.label])].sort()
+      : labels.filter((l) => l !== toggle.label);
+    this.edit(toggle.add ? { addLabels: [toggle.label] } : { removeLabels: [toggle.label] }, {
+      labels: next,
+    });
   }
 
   protected setParent(parent: TicketRef | null): void {

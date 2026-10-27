@@ -4,7 +4,11 @@ import { firstValueFrom, fromEvent, takeUntil } from 'rxjs';
 import { ApiClient } from '@core/api/api-client';
 import { PaletteItem, SearchProvider } from '@core/commands/command';
 import { TicketType } from '@shared/domain/enums';
-import { REGRESSION_SESSION_KEY_PATTERN, TEST_CASE_KEY_PATTERN, TICKET_KEY_PATTERN } from '@shared/domain/keys';
+import {
+  REGRESSION_SESSION_KEY_PATTERN,
+  TEST_CASE_KEY_PATTERN,
+  TICKET_KEY_PATTERN,
+} from '@shared/domain/keys';
 
 /// Item of `GET /api/v1/quick-jump?q=`.
 export interface QuickJumpItem {
@@ -18,8 +22,16 @@ export interface QuickJumpItem {
   status: string;
 }
 
-const GROUPS: Record<QuickJumpItem['kind'], string> = { Ticket: 'Tickets', TestCase: 'Test cases', RegressionSession: 'Regressions' };
-const ICONS: Record<QuickJumpItem['kind'], string> = { Ticket: 'tablerFileText', TestCase: 'tablerChecklist', RegressionSession: 'tablerListCheck' };
+const GROUPS: Record<QuickJumpItem['kind'], string> = {
+  Ticket: 'Tickets',
+  TestCase: 'Test cases',
+  RegressionSession: 'Regressions',
+};
+const ICONS: Record<QuickJumpItem['kind'], string> = {
+  Ticket: 'tablerFileText',
+  TestCase: 'tablerChecklist',
+  RegressionSession: 'tablerListCheck',
+};
 const TYPE_ICONS: Record<TicketType, string> = {
   Epic: 'tablerBolt',
   UserStory: 'tablerBookmark',
@@ -36,10 +48,18 @@ export function keyJumpItem(query: string, navigate: (url: string) => void): Pal
   let url: string | null = null;
   if (TICKET_KEY_PATTERN.test(key)) url = `/tickets/${key}`;
   else if (TEST_CASE_KEY_PATTERN.test(key)) url = `/projects/${project}/test-cases/${key}`;
-  else if (REGRESSION_SESSION_KEY_PATTERN.test(key)) url = `/projects/${project}/regressions/${key}`;
+  else if (REGRESSION_SESSION_KEY_PATTERN.test(key))
+    url = `/projects/${project}/regressions/${key}`;
   if (!url) return null;
   const target = url;
-  return { id: `jump:${key}`, label: `Go to ${key}`, group: 'Jump to', icon: 'tablerArrowRight', hint: 'Enter', run: () => navigate(target) };
+  return {
+    id: `jump:${key}`,
+    label: `Go to ${key}`,
+    group: 'Jump to',
+    icon: 'tablerArrowRight',
+    hint: 'Enter',
+    run: () => navigate(target),
+  };
 }
 
 export function toPaletteItem(item: QuickJumpItem, navigate: (url: string) => void): PaletteItem {
@@ -84,14 +104,22 @@ export function quickJumpProviders(): SearchProvider[] {
         };
         let items: QuickJumpItem[];
         try {
-          items = await firstValueFrom(api.get<QuickJumpItem[]>('/quick-jump', { q: text }).pipe(takeUntil(fromEvent(signal, 'abort'))), {
-            defaultValue: [] as QuickJumpItem[],
-          });
+          items = await firstValueFrom(
+            api
+              .get<QuickJumpItem[]>('/quick-jump', { q: text })
+              .pipe(takeUntil(fromEvent(signal, 'abort'))),
+            {
+              defaultValue: [] as QuickJumpItem[],
+            },
+          );
         } catch {
           items = [];
         }
         const jumped = keyJumpItem(text, navigate) ? text.toUpperCase() : null;
-        return [...items.filter((i) => i.key !== jumped).map((i) => toPaletteItem(i, navigate)), searchItem];
+        return [
+          ...items.filter((i) => i.key !== jumped).map((i) => toPaletteItem(i, navigate)),
+          searchItem,
+        ];
       },
     },
   ];

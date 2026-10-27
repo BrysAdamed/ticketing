@@ -1,4 +1,8 @@
-import { CdkFixedSizeVirtualScroll, CdkVirtualForOf, CdkVirtualScrollViewport } from '@angular/cdk/scrolling';
+import {
+  CdkFixedSizeVirtualScroll,
+  CdkVirtualForOf,
+  CdkVirtualScrollViewport,
+} from '@angular/cdk/scrolling';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -30,7 +34,17 @@ import { KbdComponent } from '@shared/ui/kbd/kbd.component';
 import { SkeletonRowsComponent } from '@shared/ui/skeleton/skeleton-rows.component';
 import { TicketRowComponent } from '@shared/ui/ticket-row/ticket-row.component';
 import { SearchFilterBarComponent } from './search-filter-bar.component';
-import { effectiveOrder, EMPTY_SEARCH, hasFilters, parseSearchParams, SearchFilters, SearchSort, sameFilters, SORTS, toSearchParams } from './search-query';
+import {
+  effectiveOrder,
+  EMPTY_SEARCH,
+  hasFilters,
+  parseSearchParams,
+  SearchFilters,
+  SearchSort,
+  sameFilters,
+  SORTS,
+  toSearchParams,
+} from './search-query';
 import { SearchStore } from './search.store';
 
 const TEXT_DEBOUNCE_MS = 250;
@@ -76,7 +90,9 @@ export class SearchView {
   protected readonly text = signal('');
   protected readonly filtered = computed(() => hasFilters(this.store.filters()));
   protected readonly order = computed(() => effectiveOrder(this.store.filters()));
-  protected readonly sortLabel = computed(() => SORTS.find((s) => s.value === this.store.filters().sort)?.label ?? 'Updated');
+  protected readonly sortLabel = computed(
+    () => SORTS.find((s) => s.value === this.store.filters().sort)?.label ?? 'Updated',
+  );
   protected readonly countLabel = computed(() => {
     const total = this.store.total();
     if (total === null) return '';
@@ -84,10 +100,13 @@ export class SearchView {
   });
   protected readonly resultUsers = computed<UserRef[]>(() => {
     const users = new Map<string, UserRef>();
-    for (const ticket of this.store.items()) if (ticket.assignee) users.set(ticket.assignee.id, ticket.assignee);
+    for (const ticket of this.store.items())
+      if (ticket.assignee) users.set(ticket.assignee.id, ticket.assignee);
     return [...users.values()].sort((a, b) => a.displayName.localeCompare(b.displayName));
   });
-  protected readonly invalidFields = computed(() => Object.keys(this.store.error()?.fieldErrors ?? {}).join(', '));
+  protected readonly invalidFields = computed(() =>
+    Object.keys(this.store.error()?.fieldErrors ?? {}).join(', '),
+  );
   protected readonly trackKey = (_: number, ticket: TicketSummary) => ticket.id;
 
   private readonly params = toSignal(this.route.queryParams, { initialValue: {} as Params });
@@ -104,7 +123,11 @@ export class SearchView {
       const filters = parseSearchParams(this.params());
       untracked(() => {
         if (this.store.status() !== 'idle' && sameFilters(filters, this.store.filters())) return;
-        if (document.activeElement !== this.textInput().nativeElement || filters.q !== this.text().trim()) this.text.set(filters.q);
+        if (
+          document.activeElement !== this.textInput().nativeElement ||
+          filters.q !== this.text().trim()
+        )
+          this.text.set(filters.q);
         this.store.search(filters);
       });
     });
@@ -133,20 +156,58 @@ export class SearchView {
     });
 
     inject(ShortcutService).registerScoped([
-      { keys: 'j', section: 'Search', description: 'Next result', handler: () => this.store.move(1) },
-      { keys: 'k', section: 'Search', description: 'Previous result', handler: () => this.store.move(-1) },
-      { keys: 'arrowdown', description: 'Next result', handler: () => this.store.move(1), showInHelp: false },
-      { keys: 'arrowup', description: 'Previous result', handler: () => this.store.move(-1), showInHelp: false },
-      { keys: 'enter', section: 'Search', description: 'Peek ticket', handler: () => this.openFocused(false) },
-      { keys: 'shift+enter', section: 'Search', description: 'Open ticket full page', handler: () => this.openFocused(true) },
-      { keys: '/', section: 'Search', description: 'Focus the search text', handler: () => this.focusText() },
+      {
+        keys: 'j',
+        section: 'Search',
+        description: 'Next result',
+        handler: () => this.store.move(1),
+      },
+      {
+        keys: 'k',
+        section: 'Search',
+        description: 'Previous result',
+        handler: () => this.store.move(-1),
+      },
+      {
+        keys: 'arrowdown',
+        description: 'Next result',
+        handler: () => this.store.move(1),
+        showInHelp: false,
+      },
+      {
+        keys: 'arrowup',
+        description: 'Previous result',
+        handler: () => this.store.move(-1),
+        showInHelp: false,
+      },
+      {
+        keys: 'enter',
+        section: 'Search',
+        description: 'Peek ticket',
+        handler: () => this.openFocused(false),
+      },
+      {
+        keys: 'shift+enter',
+        section: 'Search',
+        description: 'Open ticket full page',
+        handler: () => this.openFocused(true),
+      },
+      {
+        keys: '/',
+        section: 'Search',
+        description: 'Focus the search text',
+        handler: () => this.focusText(),
+      },
     ]);
   }
 
   protected onText(value: string): void {
     this.text.set(value);
     if (this.textTimer) clearTimeout(this.textTimer);
-    this.textTimer = setTimeout(() => this.navigate({ ...this.store.filters(), q: value.trim() }, true), TEXT_DEBOUNCE_MS);
+    this.textTimer = setTimeout(
+      () => this.navigate({ ...this.store.filters(), q: value.trim() }, true),
+      TEXT_DEBOUNCE_MS,
+    );
   }
 
   protected submitText(): void {
@@ -165,17 +226,24 @@ export class SearchView {
   }
 
   protected toggleOrder(): void {
-    this.navigate({ ...this.store.filters(), order: this.order() === 'asc' ? 'desc' : 'asc' }, false);
+    this.navigate(
+      { ...this.store.filters(), order: this.order() === 'asc' ? 'desc' : 'asc' },
+      false,
+    );
   }
 
   protected clearAll(): void {
     this.text.set('');
-    this.navigate({ ...EMPTY_SEARCH, sort: this.store.filters().sort, order: this.store.filters().order }, false);
+    this.navigate(
+      { ...EMPTY_SEARCH, sort: this.store.filters().sort, order: this.store.filters().order },
+      false,
+    );
   }
 
   protected open(index: number, ticket: TicketSummary, event?: MouseEvent): void {
     this.store.focusIndex.set(index);
-    if (event?.ctrlKey || event?.metaKey || event?.shiftKey) void this.router.navigateByUrl(ticket.url);
+    if (event?.ctrlKey || event?.metaKey || event?.shiftKey)
+      void this.router.navigateByUrl(ticket.url);
     else this.peek.open(ticket.key);
   }
 
@@ -209,7 +277,9 @@ export class SearchView {
   }
 
   private measure(element: HTMLElement): void {
-    requestAnimationFrame(() => this.listHeight.set(Math.max(240, window.innerHeight - element.getBoundingClientRect().top)));
+    requestAnimationFrame(() =>
+      this.listHeight.set(Math.max(240, window.innerHeight - element.getBoundingClientRect().top)),
+    );
   }
 
   private scrollIntoView(viewport: CdkVirtualScrollViewport, index: number): void {

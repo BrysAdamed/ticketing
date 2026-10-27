@@ -8,7 +8,10 @@ import {
   viewChild,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { MarkdownEditorComponent, MarkdownUploadHandler } from '@shared/markdown/markdown-editor.component';
+import {
+  MarkdownEditorComponent,
+  MarkdownUploadHandler,
+} from '@shared/markdown/markdown-editor.component';
 import { MarkdownViewerComponent } from '@shared/markdown/markdown-viewer.component';
 import { IconComponent } from '@shared/ui/icon/icon.component';
 
@@ -145,19 +148,35 @@ export class TicketTitleComponent {
         (cancelled)="cancel()"
       >
         <button mat-button type="button" (click)="cancel()">Cancel</button>
-        <button mat-flat-button type="button" data-testid="description-save" [disabled]="saving()" (click)="commit()">Save</button>
+        <button
+          mat-flat-button
+          type="button"
+          data-testid="description-save"
+          [disabled]="saving()"
+          (click)="commit()"
+        >
+          Save
+        </button>
       </tk-markdown-editor>
     } @else if (value()) {
       <div class="body" data-testid="ticket-description">
         <tk-markdown [source]="value()" />
         @if (canEdit()) {
-          <button type="button" class="tk-icon-btn edit" aria-label="Edit description" data-testid="description-edit" (click)="start()">
+          <button
+            type="button"
+            class="tk-icon-btn edit"
+            aria-label="Edit description"
+            data-testid="description-edit"
+            (click)="start()"
+          >
             <tk-icon name="tablerPencil" [size]="14" />
           </button>
         }
       </div>
     } @else if (canEdit()) {
-      <button type="button" class="placeholder" data-testid="description-edit" (click)="start()">Add a description…</button>
+      <button type="button" class="placeholder" data-testid="description-edit" (click)="start()">
+        Add a description…
+      </button>
     } @else {
       <p class="none">No description.</p>
     }

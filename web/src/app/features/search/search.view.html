@@ -38,14 +38,25 @@
 </div>
 
 <div class="tk-toolbar filters">
-  <tk-search-filter-bar [filters]="store.filters()" [users]="resultUsers()" (filtersChange)="setFilters($event)" />
+  <tk-search-filter-bar
+    [filters]="store.filters()"
+    [users]="resultUsers()"
+    (filtersChange)="setFilters($event)"
+  />
   <span class="right">
     <button type="button" class="tbtn" [matMenuTriggerFor]="sortMenu" data-testid="search-sort">
       Sort: <b>{{ sortLabel() }}</b>
     </button>
     <mat-menu #sortMenu="matMenu">
       @for (sort of sorts; track sort.value) {
-        <button mat-menu-item type="button" [attr.data-testid]="'search-sort-' + sort.value" (click)="setSort(sort.value)">{{ sort.label }}</button>
+        <button
+          mat-menu-item
+          type="button"
+          [attr.data-testid]="'search-sort-' + sort.value"
+          (click)="setSort(sort.value)"
+        >
+          {{ sort.label }}
+        </button>
       }
     </mat-menu>
     <button
@@ -56,18 +67,30 @@
       [matTooltip]="order() === 'asc' ? 'Ascending' : 'Descending'"
       (click)="toggleOrder()"
     >
-      <tk-icon [name]="order() === 'asc' ? 'tablerSortAscending' : 'tablerSortDescending'" [size]="14" />
+      <tk-icon
+        [name]="order() === 'asc' ? 'tablerSortAscending' : 'tablerSortDescending'"
+        [size]="14"
+      />
     </button>
   </span>
 </div>
 
 @if (store.status() === 'error') {
   @if (store.error()?.isValidation) {
-    <tk-empty-state icon="tablerAlertTriangle" title="This search link has invalid filters" [description]="'Check: ' + invalidFields()">
+    <tk-empty-state
+      icon="tablerAlertTriangle"
+      title="This search link has invalid filters"
+      [description]="'Check: ' + invalidFields()"
+    >
       <button mat-stroked-button type="button" (click)="clearAll()">Clear filters</button>
     </tk-empty-state>
   } @else {
-    <tk-empty-state icon="tablerAlertCircle" tone="danger" title="Couldn't search" [description]="store.error()?.title ?? null">
+    <tk-empty-state
+      icon="tablerAlertCircle"
+      tone="danger"
+      title="Couldn't search"
+      [description]="store.error()?.title ?? null"
+    >
       <button mat-stroked-button type="button" (click)="store.reload()">Retry</button>
     </tk-empty-state>
   }
@@ -75,14 +98,29 @@
   <tk-skeleton-rows [count]="12" />
 } @else if (!store.items().length) {
   @if (filtered()) {
-    <tk-empty-state icon="tablerSearch" title="No tickets match" description="Try fewer filters or other words.">
-      <button mat-stroked-button type="button" data-testid="search-clear" (click)="clearAll()">Clear search</button>
+    <tk-empty-state
+      icon="tablerSearch"
+      title="No tickets match"
+      description="Try fewer filters or other words."
+    >
+      <button mat-stroked-button type="button" data-testid="search-clear" (click)="clearAll()">
+        Clear search
+      </button>
     </tk-empty-state>
   } @else {
-    <tk-empty-state icon="tablerInbox" title="No tickets yet" description="Tickets from every project you can read show up here." />
+    <tk-empty-state
+      icon="tablerInbox"
+      title="No tickets yet"
+      description="Tickets from every project you can read show up here."
+    />
   }
 } @else {
-  <div #listWrap class="list-wrap" [class.stale]="store.status() === 'loading'" [style.height.px]="listHeight()">
+  <div
+    #listWrap
+    class="list-wrap"
+    [class.stale]="store.status() === 'loading'"
+    [style.height.px]="listHeight()"
+  >
     <cdk-virtual-scroll-viewport
       class="list"
       role="grid"

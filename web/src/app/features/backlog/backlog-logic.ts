@@ -67,16 +67,26 @@ export function activeFilterCount(filters: BacklogFilters): number {
 
 /// Client-side mirror of the server filter, so optimistic edits (for example status → Done)
 /// immediately add or remove rows without a refetch.
-export function matchesFilters(item: BacklogItem, filters: BacklogFilters, meId: string | null): boolean {
+export function matchesFilters(
+  item: BacklogItem,
+  filters: BacklogFilters,
+  meId: string | null,
+): boolean {
   if (!filters.showDone && filters.statuses.length === 0 && item.status === 'Done') return false;
   if (filters.types.length && !filters.types.includes(item.type)) return false;
   if (filters.statuses.length && !filters.statuses.includes(item.status)) return false;
   if (filters.priorities.length && !filters.priorities.includes(item.priority)) return false;
   if (filters.version && item.version !== filters.version) return false;
-  if (filters.labels.length && !filters.labels.every((l) => item.labels.includes(l.toLowerCase()))) return false;
+  if (filters.labels.length && !filters.labels.every((l) => item.labels.includes(l.toLowerCase())))
+    return false;
   if (filters.assignee === 'unassigned' && item.assigneeId !== null) return false;
   if (filters.assignee === 'me' && item.assigneeId !== meId) return false;
-  if (filters.assignee && !['me', 'unassigned'].includes(filters.assignee) && item.assigneeId !== filters.assignee) return false;
+  if (
+    filters.assignee &&
+    !['me', 'unassigned'].includes(filters.assignee) &&
+    item.assigneeId !== filters.assignee
+  )
+    return false;
   const text = filters.text.trim().toLowerCase();
   if (text) {
     const number = keyNumber(text);
@@ -138,7 +148,9 @@ export function sortItems(items: readonly BacklogItem[], sortBy: SortBy): Backlo
   const result = [...items];
   switch (sortBy) {
     case 'priority':
-      return result.sort((a, b) => (PRIORITY_RANK.get(a.priority) ?? 0) - (PRIORITY_RANK.get(b.priority) ?? 0));
+      return result.sort(
+        (a, b) => (PRIORITY_RANK.get(a.priority) ?? 0) - (PRIORITY_RANK.get(b.priority) ?? 0),
+      );
     case 'updated':
       return result.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
     case 'created':
@@ -158,10 +170,18 @@ export interface GroupContext {
 }
 
 /// Flattens items into header + ticket rows for the virtual-scroll list.
-export function buildRows(items: readonly BacklogItem[], groupBy: GroupBy, context: GroupContext): BacklogRow[] {
-  if (groupBy === 'none') return items.map((item) => ({ kind: 'ticket', id: item.id, item, groupId: 'all' }));
+export function buildRows(
+  items: readonly BacklogItem[],
+  groupBy: GroupBy,
+  context: GroupContext,
+): BacklogRow[] {
+  if (groupBy === 'none')
+    return items.map((item) => ({ kind: 'ticket', id: item.id, item, groupId: 'all' }));
 
-  const groups = new Map<string, { header: Omit<GroupRow, 'count' | 'points' | 'collapsed'>; items: BacklogItem[] }>();
+  const groups = new Map<
+    string,
+    { header: Omit<GroupRow, 'count' | 'points' | 'collapsed'>; items: BacklogItem[] }
+  >();
   for (const definition of groupDefinitions(groupBy, items, context)) {
     groups.set(definition.id, { header: definition, items: [] });
   }
@@ -215,14 +235,20 @@ function groupDefinitions(
 ): Omit<GroupRow, 'count' | 'points' | 'collapsed'>[] {
   switch (groupBy) {
     case 'status':
-      return STATUS_GROUP_ORDER.map((status) => describeGroup('status', `status:${status}`, context));
+      return STATUS_GROUP_ORDER.map((status) =>
+        describeGroup('status', `status:${status}`, context),
+      );
     case 'type':
       return TICKET_TYPES.map((type) => describeGroup('type', `type:${type}`, context));
     case 'assignee': {
       const ids = [...new Set(items.map((i) => i.assigneeId ?? ''))];
       const named = ids
         .filter((id) => id !== '')
-        .sort((a, b) => (context.users.get(a)?.displayName ?? '').localeCompare(context.users.get(b)?.displayName ?? ''));
+        .sort((a, b) =>
+          (context.users.get(a)?.displayName ?? '').localeCompare(
+            context.users.get(b)?.displayName ?? '',
+          ),
+        );
       return [...named, ''].map((id) => describeGroup('assignee', `assignee:${id}`, context));
     }
     case 'epic': {
@@ -234,16 +260,32 @@ function groupDefinitions(
   }
 }
 
-function describeGroup(groupBy: GroupBy, id: string, context: GroupContext): Omit<GroupRow, 'count' | 'points' | 'collapsed'> {
+function describeGroup(
+  groupBy: GroupBy,
+  id: string,
+  context: GroupContext,
+): Omit<GroupRow, 'count' | 'points' | 'collapsed'> {
   const value = id.slice(id.indexOf(':') + 1);
   switch (groupBy) {
     case 'status': {
       const status = value as TicketStatus;
-      return { kind: 'group', id, label: TICKET_STATUS_LABELS[status], value: status, icon: { kind: 'status', status } };
+      return {
+        kind: 'group',
+        id,
+        label: TICKET_STATUS_LABELS[status],
+        value: status,
+        icon: { kind: 'status', status },
+      };
     }
     case 'type': {
       const type = value as TicketType;
-      return { kind: 'group', id, label: TICKET_TYPE_LABELS[type], value: type, icon: { kind: 'type', type } };
+      return {
+        kind: 'group',
+        id,
+        label: TICKET_TYPE_LABELS[type],
+        value: type,
+        icon: { kind: 'type', type },
+      };
     }
     case 'assignee': {
       const user = value ? (context.users.get(value) ?? null) : null;
@@ -300,8 +342,18 @@ export interface DropPlan {
 
 /// Works out where a block dropped at `targetIndex` of the visible rows goes. The anchor is the next
 /// visible ticket in the same group, or failing that the previous one; an empty group keeps the rank.
-export function planDrop(rows: readonly { kind: string }[], movingIds: ReadonlySet<string>, targetIndex: number, groupId: string): DropPlan | null {
-  const visible = rows.filter((r): r is TicketRow => r.kind === 'ticket' && (r as TicketRow).groupId === groupId && !movingIds.has((r as TicketRow).id));
+export function planDrop(
+  rows: readonly { kind: string }[],
+  movingIds: ReadonlySet<string>,
+  targetIndex: number,
+  groupId: string,
+): DropPlan | null {
+  const visible = rows.filter(
+    (r): r is TicketRow =>
+      r.kind === 'ticket' &&
+      (r as TicketRow).groupId === groupId &&
+      !movingIds.has((r as TicketRow).id),
+  );
   const indexInRows = (row: TicketRow) => rows.indexOf(row);
   const next = visible.find((r) => indexInRows(r) >= targetIndex);
   if (next) return { anchor: { beforeKey: next.item.key }, local: { beforeId: next.id } };

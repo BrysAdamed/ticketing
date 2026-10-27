@@ -16,7 +16,15 @@ import { MyWorkStore, REGRESSIONS_GROUP } from './my-work.store';
 /// ordered by priority, then my waiting regression items. `J`/`K` move, `Enter` opens.
 @Component({
   selector: 'tk-my-work-view',
-  imports: [MatButtonModule, RouterLink, ProjectTileComponent, EmptyStateComponent, IconComponent, SkeletonRowsComponent, TicketRowComponent],
+  imports: [
+    MatButtonModule,
+    RouterLink,
+    ProjectTileComponent,
+    EmptyStateComponent,
+    IconComponent,
+    SkeletonRowsComponent,
+    TicketRowComponent,
+  ],
   providers: [MyWorkStore],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'tk-page', 'data-testid': 'view-my-work.list' },
@@ -24,23 +32,39 @@ import { MyWorkStore, REGRESSIONS_GROUP } from './my-work.store';
     <header class="tk-page-header">
       <h1>My work</h1>
       @if (store.work(); as work) {
-        <span class="tk-page-count" data-testid="my-work-count">{{ work.ticketCount + work.regressionItems.length }}</span>
+        <span class="tk-page-count" data-testid="my-work-count">{{
+          work.ticketCount + work.regressionItems.length
+        }}</span>
       }
       <div class="tk-page-actions">
-        <a mat-stroked-button routerLink="/search" [queryParams]="searchParams" data-testid="my-work-search">
+        <a
+          mat-stroked-button
+          routerLink="/search"
+          [queryParams]="searchParams"
+          data-testid="my-work-search"
+        >
           <tk-icon name="tablerSearch" [size]="14" />Open in search
         </a>
       </div>
     </header>
 
     @if (store.status() === 'error' && !store.work()) {
-      <tk-empty-state icon="tablerAlertCircle" tone="danger" title="Couldn't load your work" [description]="store.error()?.title ?? null">
+      <tk-empty-state
+        icon="tablerAlertCircle"
+        tone="danger"
+        title="Couldn't load your work"
+        [description]="store.error()?.title ?? null"
+      >
         <button mat-stroked-button type="button" (click)="store.load()">Retry</button>
       </tk-empty-state>
     } @else if (!store.work()) {
       <tk-skeleton-rows [count]="10" />
     } @else if (store.isEmpty()) {
-      <tk-empty-state icon="tablerInbox" title="Nothing assigned to you" description="Open tickets assigned to you and your waiting regression tests show up here.">
+      <tk-empty-state
+        icon="tablerInbox"
+        title="Nothing assigned to you"
+        description="Open tickets assigned to you and your waiting regression tests show up here."
+      >
         <a mat-stroked-button routerLink="/projects">Browse projects</a>
       </tk-empty-state>
     } @else {
@@ -51,13 +75,25 @@ import { MyWorkStore, REGRESSIONS_GROUP } from './my-work.store';
               type="button"
               class="chev"
               [attr.aria-expanded]="!store.collapsed().has(group.projectKey)"
-              [attr.aria-label]="(store.collapsed().has(group.projectKey) ? 'Expand ' : 'Collapse ') + group.projectName"
+              [attr.aria-label]="
+                (store.collapsed().has(group.projectKey) ? 'Expand ' : 'Collapse ') +
+                group.projectName
+              "
               (click)="store.toggle(group.projectKey)"
             >
-              <tk-icon [name]="store.collapsed().has(group.projectKey) ? 'tablerChevronRight' : 'tablerChevronDown'" [size]="14" />
+              <tk-icon
+                [name]="
+                  store.collapsed().has(group.projectKey)
+                    ? 'tablerChevronRight'
+                    : 'tablerChevronDown'
+                "
+                [size]="14"
+              />
             </button>
             <tk-project-tile [projectKey]="group.projectKey" />
-            <a class="glabel" [routerLink]="['/projects', group.projectKey, 'backlog']">{{ group.projectName }}</a>
+            <a class="glabel" [routerLink]="['/projects', group.projectKey, 'backlog']">{{
+              group.projectName
+            }}</a>
             <span class="gcount tnum">{{ group.tickets.length }}</span>
           </div>
           @if (!store.collapsed().has(group.projectKey)) {
@@ -82,8 +118,19 @@ import { MyWorkStore, REGRESSIONS_GROUP } from './my-work.store';
 
         @if (store.items().length) {
           <div class="ghead" role="row" data-testid="my-work-group-regressions">
-            <button type="button" class="chev" [attr.aria-expanded]="!store.collapsed().has(regressions)" aria-label="Toggle regression items" (click)="store.toggle(regressions)">
-              <tk-icon [name]="store.collapsed().has(regressions) ? 'tablerChevronRight' : 'tablerChevronDown'" [size]="14" />
+            <button
+              type="button"
+              class="chev"
+              [attr.aria-expanded]="!store.collapsed().has(regressions)"
+              aria-label="Toggle regression items"
+              (click)="store.toggle(regressions)"
+            >
+              <tk-icon
+                [name]="
+                  store.collapsed().has(regressions) ? 'tablerChevronRight' : 'tablerChevronDown'
+                "
+                [size]="14"
+              />
             </button>
             <tk-icon name="tablerListCheck" [size]="14" />
             <span class="glabel">Regression tests waiting for me</span>
@@ -105,7 +152,8 @@ import { MyWorkStore, REGRESSIONS_GROUP } from './my-work.store';
                 <span class="fill"></span>
                 <span class="mode">{{ modeLabels[item.executionMode] }}</span>
                 <span class="session">
-                  <tk-project-tile [projectKey]="item.projectKey" />{{ item.sessionKey }} · {{ item.sessionName }}
+                  <tk-project-tile [projectKey]="item.projectKey" />{{ item.sessionKey }} ·
+                  {{ item.sessionName }}
                   @if (item.sessionVersion) {
                     · {{ item.sessionVersion }}
                   }
@@ -127,27 +175,58 @@ export class MyWorkView {
 
   protected readonly regressions = REGRESSIONS_GROUP;
   protected readonly modeLabels = EXECUTION_MODE_LABELS;
-  protected readonly searchParams = { assignee: 'me', category: 'ToDo,InProgress', sort: 'priority' };
+  protected readonly searchParams = {
+    assignee: 'me',
+    category: 'ToDo,InProgress',
+    sort: 'priority',
+  };
   protected readonly focusedId = computed(() => {
     const entry = this.store.focused();
-    return entry?.kind === 'ticket' ? entry.ticket.id : entry?.kind === 'item' ? entry.item.itemId : null;
+    return entry?.kind === 'ticket'
+      ? entry.ticket.id
+      : entry?.kind === 'item'
+        ? entry.item.itemId
+        : null;
   });
 
   constructor() {
     void this.store.load();
     inject(ShortcutService).registerScoped([
-      { keys: 'j', section: 'My work', description: 'Next item', handler: () => this.store.move(1) },
-      { keys: 'k', section: 'My work', description: 'Previous item', handler: () => this.store.move(-1) },
-      { keys: 'arrowdown', description: 'Next item', handler: () => this.store.move(1), showInHelp: false },
-      { keys: 'arrowup', description: 'Previous item', handler: () => this.store.move(-1), showInHelp: false },
+      {
+        keys: 'j',
+        section: 'My work',
+        description: 'Next item',
+        handler: () => this.store.move(1),
+      },
+      {
+        keys: 'k',
+        section: 'My work',
+        description: 'Previous item',
+        handler: () => this.store.move(-1),
+      },
+      {
+        keys: 'arrowdown',
+        description: 'Next item',
+        handler: () => this.store.move(1),
+        showInHelp: false,
+      },
+      {
+        keys: 'arrowup',
+        description: 'Previous item',
+        handler: () => this.store.move(-1),
+        showInHelp: false,
+      },
       { keys: 'enter', section: 'My work', description: 'Open', handler: () => this.openFocused() },
     ]);
   }
 
   protected openTicket(key: string, event: MouseEvent): void {
-    const index = this.store.entries().findIndex((e) => e.kind === 'ticket' && e.ticket.key === key);
+    const index = this.store
+      .entries()
+      .findIndex((e) => e.kind === 'ticket' && e.ticket.key === key);
     this.store.focusIndex.set(index);
-    if (event.ctrlKey || event.metaKey || event.shiftKey) void this.router.navigate(['/tickets', key]);
+    if (event.ctrlKey || event.metaKey || event.shiftKey)
+      void this.router.navigate(['/tickets', key]);
     else this.peek.open(key);
   }
 

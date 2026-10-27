@@ -1,4 +1,14 @@
-import { ChangeDetectionStrategy, Component, computed, ElementRef, inject, input, output, signal, viewChild } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  input,
+  output,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { PeekService } from '@core/layout/peek/peek';
@@ -21,7 +31,14 @@ export interface NewChild {
 /// rows, and Add (create a new child inline, or adopt an existing ticket of the project).
 @Component({
   selector: 'tk-ticket-children',
-  imports: [RouterLink, AvatarComponent, StatusIconComponent, TypeIconComponent, IconComponent, SearchPickerDirective],
+  imports: [
+    RouterLink,
+    AvatarComponent,
+    StatusIconComponent,
+    TypeIconComponent,
+    IconComponent,
+    SearchPickerDirective,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'sec', 'data-testid': 'ticket-children' },
   template: `
@@ -56,7 +73,14 @@ export interface NewChild {
     </div>
     <div class="box">
       @for (child of children(); track child.id) {
-        <a class="lrow" [class.done]="child.status === 'Done'" [routerLink]="[]" [queryParams]="{ peek: child.key }" queryParamsHandling="merge" [attr.data-testid]="'child-' + child.key">
+        <a
+          class="lrow"
+          [class.done]="child.status === 'Done'"
+          [routerLink]="[]"
+          [queryParams]="{ peek: child.key }"
+          queryParamsHandling="merge"
+          [attr.data-testid]="'child-' + child.key"
+        >
           <tk-status-icon [status]="child.status" />
           <span class="key tnum">{{ child.key }}</span>
           <tk-type-icon [type]="child.type" [size]="14" />
@@ -100,13 +124,17 @@ export class TicketChildrenComponent {
   private readonly newInput = viewChild<ElementRef<HTMLInputElement>>('title');
   protected readonly children = computed(() => this.ticket().children ?? []);
   protected readonly progress = computed<Progress | null>(() => this.ticket().childProgress);
-  protected readonly childType = computed<TicketType>(() => (this.ticket().type === 'Epic' ? 'UserStory' : 'Technical'));
+  protected readonly childType = computed<TicketType>(() =>
+    this.ticket().type === 'Epic' ? 'UserStory' : 'Technical',
+  );
   protected readonly search = computed(() => {
     const t = this.ticket();
     const existing = new Set((t.children ?? []).map((c) => c.id));
     return async (query: string): Promise<PickerOption<TicketRef>[]> =>
       (await firstValueFrom(this.api.find(t.projectKey, query)))
-        .filter((x) => x.id !== t.id && x.id !== t.parent?.id && !existing.has(x.id) && x.type !== 'Epic')
+        .filter(
+          (x) => x.id !== t.id && x.id !== t.parent?.id && !existing.has(x.id) && x.type !== 'Epic',
+        )
         .map((x) => ({ value: x, label: `${x.key} ${x.title}` }));
   });
 

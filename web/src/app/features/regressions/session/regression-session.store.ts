@@ -5,11 +5,25 @@ import { AuthService } from '@core/auth/auth.service';
 import { ToastService } from '@core/notify/toast.service';
 import { LoadStatus } from '@core/projects/project-directory';
 import { RegressionsApi } from '@core/testing/testing.api';
-import { BugOverrides, RegressionItem, RegressionItemChange, RegressionSession, RegressionSummary } from '@core/testing/testing.models';
+import {
+  BugOverrides,
+  RegressionItem,
+  RegressionItemChange,
+  RegressionSession,
+  RegressionSummary,
+} from '@core/testing/testing.models';
 import { TicketCreator } from '@core/tickets/create-ticket';
 import { NewTicket, TicketSummary, UserRef } from '@core/tickets/ticket.models';
 import { RegressionItemStatus } from '@shared/domain/enums';
-import { buildRows, filterCounts, ItemFilter, matchesFilter, nextWaiting, orderedItems, replaceItem } from './session-logic';
+import {
+  buildRows,
+  filterCounts,
+  ItemFilter,
+  matchesFilter,
+  nextWaiting,
+  orderedItems,
+  replaceItem,
+} from './session-logic';
 
 /// State of the regression execution view (spec 6.11, layout-and-screens §3.8). Results are applied
 /// optimistically and rolled back on failure; every server answer carries the refreshed summary.
@@ -33,11 +47,25 @@ export class RegressionSessionStore {
 
   readonly meId = computed(() => this.auth.currentUser()?.id ?? null);
   readonly hasData = computed(() => this.session() !== null);
-  readonly permissions = computed(() => this.session()?.permissions ?? { canExecute: false, canAssign: false, canComplete: false, canCancel: false });
+  readonly permissions = computed(
+    () =>
+      this.session()?.permissions ?? {
+        canExecute: false,
+        canAssign: false,
+        canComplete: false,
+        canCancel: false,
+      },
+  );
   readonly counts = computed(() => filterCounts(this.items(), this.meId()));
-  readonly rows = computed(() => buildRows(this.items().filter((i) => matchesFilter(i, this.filter(), this.meId(), this.text()))));
+  readonly rows = computed(() =>
+    buildRows(
+      this.items().filter((i) => matchesFilter(i, this.filter(), this.meId(), this.text())),
+    ),
+  );
   readonly visible = computed(() => orderedItems(this.rows()));
-  readonly focused = computed(() => this.items().find((i) => i.testCaseKey === this.focusedKey()) ?? null);
+  readonly focused = computed(
+    () => this.items().find((i) => i.testCaseKey === this.focusedKey()) ?? null,
+  );
 
   async load(sessionKey: string, focusKey: string | null): Promise<void> {
     const key = sessionKey.toUpperCase();
@@ -52,7 +80,11 @@ export class RegressionSessionStore {
       this.summary.set(session.summary);
       this.error.set(null);
       this.status.set('loaded');
-      this.focus(focusKey && session.items.some((i) => i.testCaseKey === focusKey) ? focusKey : this.firstToDo());
+      this.focus(
+        focusKey && session.items.some((i) => i.testCaseKey === focusKey)
+          ? focusKey
+          : this.firstToDo(),
+      );
     } catch (error) {
       if (this.sessionKey() !== key) return;
       this.error.set(toApiError(error));
@@ -89,23 +121,40 @@ export class RegressionSessionStore {
   }
 
   async take(item: RegressionItem): Promise<boolean> {
-    return this.run(item, () => this.api.take(this.sessionKey(), item.testCaseKey), this.me() ? { assignee: this.me() } : {});
+    return this.run(
+      item,
+      () => this.api.take(this.sessionKey(), item.testCaseKey),
+      this.me() ? { assignee: this.me() } : {},
+    );
   }
 
   async assign(item: RegressionItem, user: UserRef | null): Promise<boolean> {
-    return this.run(item, () => this.api.assign(this.sessionKey(), item.testCaseKey, user?.id ?? null), { assignee: user });
+    return this.run(
+      item,
+      () => this.api.assign(this.sessionKey(), item.testCaseKey, user?.id ?? null),
+      { assignee: user },
+    );
   }
 
   /// Records a result (taking an item someone else holds first, when `takeOver` is set).
-  async record(item: RegressionItem, status: RegressionItemStatus, note: string | null = null, takeOver = false): Promise<RegressionItem | null> {
+  async record(
+    item: RegressionItem,
+    status: RegressionItemStatus,
+    note: string | null = null,
+    takeOver = false,
+  ): Promise<RegressionItem | null> {
     if (takeOver && !(await this.take(item))) return null;
     const current = this.items().find((i) => i.id === item.id) ?? item;
-    const ok = await this.run(current, () => this.api.record(this.sessionKey(), current.testCaseKey, { status, note }), {
-      status,
-      resultNote: note,
-      assignee: current.assignee ?? this.me(),
-      autoPassed: false,
-    });
+    const ok = await this.run(
+      current,
+      () => this.api.record(this.sessionKey(), current.testCaseKey, { status, note }),
+      {
+        status,
+        resultNote: note,
+        assignee: current.assignee ?? this.me(),
+        autoPassed: false,
+      },
+    );
     return ok ? (this.items().find((i) => i.id === item.id) ?? null) : null;
   }
 
@@ -129,7 +178,9 @@ export class RegressionSessionStore {
       version: draft.version,
       labels: draft.labels,
       submit: async (_projectKey: string, ticket: NewTicket) => {
-        const change = await firstValueFrom(this.api.createBug(this.sessionKey(), item.testCaseKey, overridesOf(ticket)));
+        const change = await firstValueFrom(
+          this.api.createBug(this.sessionKey(), item.testCaseKey, overridesOf(ticket)),
+        );
         this.apply(change);
         if (!change.createdBug) throw new Error('The bug was not created.');
         this.toast.success(`${change.createdBug.key} created in the backlog.`);
@@ -162,7 +213,11 @@ export class RegressionSessionStore {
     }
   }
 
-  private async run(item: RegressionItem, call: () => ReturnType<RegressionsApi['take']>, optimistic: Partial<RegressionItem>): Promise<boolean> {
+  private async run(
+    item: RegressionItem,
+    call: () => ReturnType<RegressionsApi['take']>,
+    optimistic: Partial<RegressionItem>,
+  ): Promise<boolean> {
     const before = this.items();
     this.items.set(replaceItem(before, { ...item, ...optimistic }));
     this.busyKey.set(item.testCaseKey);
@@ -173,7 +228,8 @@ export class RegressionSessionStore {
       this.items.set(before);
       const apiError = toApiError(error);
       this.toast.error(apiError);
-      if (apiError.code === 'regression.notInProgress' || apiError.code === 'concurrency.conflict') await this.reload();
+      if (apiError.code === 'regression.notInProgress' || apiError.code === 'concurrency.conflict')
+        await this.reload();
       return false;
     } finally {
       this.busyKey.set(null);
@@ -187,12 +243,16 @@ export class RegressionSessionStore {
 
   private me(): UserRef | null {
     const user = this.auth.currentUser();
-    return user ? { id: user.id, email: user.email, displayName: user.displayName, isActive: true } : null;
+    return user
+      ? { id: user.id, email: user.email, displayName: user.displayName, isActive: true }
+      : null;
   }
 
   private firstToDo(): string | null {
     const visible = this.visible();
-    return (visible.find((i) => i.status === 'WaitingForExecution') ?? visible[0])?.testCaseKey ?? null;
+    return (
+      (visible.find((i) => i.status === 'WaitingForExecution') ?? visible[0])?.testCaseKey ?? null
+    );
   }
 }
 

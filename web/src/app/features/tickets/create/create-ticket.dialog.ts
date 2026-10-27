@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  signal,
+  untracked,
+} from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -15,8 +23,20 @@ import { ProjectPeople } from '@core/tickets/project-people';
 import { TicketEvents } from '@core/tickets/ticket-events';
 import { NewTicket, TicketRef, TicketSummary, UserRef } from '@core/tickets/ticket.models';
 import { TicketsApi } from '@core/tickets/tickets.api';
-import { Priority, PRIORITY_LABELS, Severity, SEVERITY_LABELS, TICKET_TYPE_LABELS, TicketType } from '@shared/domain/enums';
-import { PRIORITY_OPTIONS, SEVERITY_OPTIONS, TICKET_TYPE_OPTIONS, userOptions } from '@shared/domain/picker-options';
+import {
+  Priority,
+  PRIORITY_LABELS,
+  Severity,
+  SEVERITY_LABELS,
+  TICKET_TYPE_LABELS,
+  TicketType,
+} from '@shared/domain/enums';
+import {
+  PRIORITY_OPTIONS,
+  SEVERITY_OPTIONS,
+  TICKET_TYPE_OPTIONS,
+  userOptions,
+} from '@shared/domain/picker-options';
 import { MarkdownEditorComponent } from '@shared/markdown/markdown-editor.component';
 import { LabelChipComponent } from '@shared/ui/domain/label-chip.component';
 import { PriorityIconComponent } from '@shared/ui/domain/priority-icon.component';
@@ -67,18 +87,24 @@ export class CreateTicketDialog {
   private readonly hints = inject(FieldHints);
   private readonly events = inject(TicketEvents);
   private readonly peek = inject(PeekService);
-  private readonly ref = inject<MatDialogRef<CreateTicketDialog, TicketSummary | null>>(MatDialogRef);
+  private readonly ref =
+    inject<MatDialogRef<CreateTicketDialog, TicketSummary | null>>(MatDialogRef);
   protected readonly data = inject<CreateTicketPrefill>(MAT_DIALOG_DATA, { optional: true }) ?? {};
 
   protected readonly submitKeys = IS_MAC ? '⌘↵' : 'Ctrl ↵';
   protected readonly typeOptions = TICKET_TYPE_OPTIONS;
   protected readonly priorityOptions = PRIORITY_OPTIONS;
-  protected readonly severityOptions: PickerOption<Severity | null>[] = [{ value: null, label: 'None' }, ...SEVERITY_OPTIONS];
+  protected readonly severityOptions: PickerOption<Severity | null>[] = [
+    { value: null, label: 'None' },
+    ...SEVERITY_OPTIONS,
+  ];
   protected readonly typeLabels = TICKET_TYPE_LABELS;
   protected readonly priorityLabels = PRIORITY_LABELS;
   protected readonly severityLabels = SEVERITY_LABELS;
 
-  protected readonly projects = computed(() => this.directory.activeProjects().filter((p) => p.myRole !== 'Viewer'));
+  protected readonly projects = computed(() =>
+    this.directory.activeProjects().filter((p) => p.myRole !== 'Viewer'),
+  );
   protected readonly projectKey = signal(this.data.projectKey ?? '');
   protected readonly title = signal(this.data.title ?? '');
   protected readonly type = signal<TicketType>(this.data.type ?? 'UserStory');
@@ -95,12 +121,20 @@ export class CreateTicketDialog {
   protected readonly fieldErrors = signal<Record<string, string>>({});
 
   protected readonly assigneeOptions = computed(() => userOptions(this.assignable()));
-  protected readonly canSubmit = computed(() => !!this.projectKey() && !!this.title().trim() && !this.saving());
-  protected readonly labelSuggestions = (prefix: string) => this.hints.get(this.projectKey(), 'labels', prefix);
-  protected readonly parentSearch = async (query: string): Promise<PickerOption<TicketRef | null>[]> => {
+  protected readonly canSubmit = computed(
+    () => !!this.projectKey() && !!this.title().trim() && !this.saving(),
+  );
+  protected readonly labelSuggestions = (prefix: string) =>
+    this.hints.get(this.projectKey(), 'labels', prefix);
+  protected readonly parentSearch = async (
+    query: string,
+  ): Promise<PickerOption<TicketRef | null>[]> => {
     if (!this.projectKey()) return [];
     const found = await firstValueFrom(this.api.find(this.projectKey(), query));
-    const options: PickerOption<TicketRef | null>[] = found.map((t) => ({ value: t, label: `${t.key} ${t.title}` }));
+    const options: PickerOption<TicketRef | null>[] = found.map((t) => ({
+      value: t,
+      label: `${t.key} ${t.title}`,
+    }));
     if (this.parentKey()) options.unshift({ value: null, label: 'No parent' });
     return options;
   };
@@ -113,10 +147,17 @@ export class CreateTicketDialog {
       const key = this.projectKey();
       if (!key) return;
       untracked(() => {
-        void this.people.assignable(key).then((users) => {
-          this.assignable.set(users);
-          if (this.data.assignee) this.assignee.set(users.find((u) => u.id === this.data.assignee || u.email === this.data.assignee) ?? null);
-        }).catch(() => this.assignable.set([]));
+        void this.people
+          .assignable(key)
+          .then((users) => {
+            this.assignable.set(users);
+            if (this.data.assignee)
+              this.assignee.set(
+                users.find((u) => u.id === this.data.assignee || u.email === this.data.assignee) ??
+                  null,
+              );
+          })
+          .catch(() => this.assignable.set([]));
       });
     });
   }
@@ -139,7 +180,11 @@ export class CreateTicketDialog {
   }
 
   protected toggleLabel(toggle: LabelToggle): void {
-    this.labels.update((labels) => (toggle.add ? [...new Set([...labels, toggle.label])].sort() : labels.filter((l) => l !== toggle.label)));
+    this.labels.update((labels) =>
+      toggle.add
+        ? [...new Set([...labels, toggle.label])].sort()
+        : labels.filter((l) => l !== toggle.label),
+    );
   }
 
   protected onKeydown(event: KeyboardEvent): void {
@@ -176,7 +221,9 @@ export class CreateTicketDialog {
     } catch (error) {
       const apiError = toApiError(error);
       this.error.set(apiError.title);
-      this.fieldErrors.set(Object.fromEntries(Object.entries(apiError.fieldErrors).map(([k, v]) => [k, v[0] ?? ''])));
+      this.fieldErrors.set(
+        Object.fromEntries(Object.entries(apiError.fieldErrors).map(([k, v]) => [k, v[0] ?? ''])),
+      );
     } finally {
       this.saving.set(false);
     }

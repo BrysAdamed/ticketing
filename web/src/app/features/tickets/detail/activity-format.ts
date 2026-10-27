@@ -67,7 +67,11 @@ export function userName(user: UserRef | null | undefined): string {
   return user.isActive ? user.displayName : `${user.displayName} (deactivated)`;
 }
 
-export function formatValue(field: string, value: unknown, users: ReadonlyMap<string, UserRef>): string | null {
+export function formatValue(
+  field: string,
+  value: unknown,
+  users: ReadonlyMap<string, UserRef>,
+): string | null {
   if (value === null || value === undefined || value === '') return null;
   switch (field) {
     case 'status':
@@ -82,15 +86,20 @@ export function formatValue(field: string, value: unknown, users: ReadonlyMap<st
       return RESOLUTION_LABELS[value as Resolution] ?? String(value);
     case 'assignee':
     case 'reporter':
-      return userName(users.get(String(value))) ;
+      return userName(users.get(String(value)));
     case 'labels':
       return Array.isArray(value) ? value.join(', ') : String(value);
     default:
-      return typeof value === 'string' || typeof value === 'number' ? String(value) : JSON.stringify(value);
+      return typeof value === 'string' || typeof value === 'number'
+        ? String(value)
+        : JSON.stringify(value);
   }
 }
 
-export function describeEntry(entry: ActivityEntry, users: ReadonlyMap<string, UserRef>): ActivityLine {
+export function describeEntry(
+  entry: ActivityEntry,
+  users: ReadonlyMap<string, UserRef>,
+): ActivityLine {
   const base = {
     id: entry.id,
     occurredAt: entry.occurredAt,
@@ -108,13 +117,21 @@ export function describeEntry(entry: ActivityEntry, users: ReadonlyMap<string, U
     case 'ticket.deleted':
       return { ...base, icon: 'tablerTrash', verb: 'deleted the ticket' };
     case 'ticket.moved':
-      return { ...base, icon: 'tablerArrowsExchange', verb: entry.newValue ? 'moved the ticket to a board' : 'moved the ticket to the backlog' };
+      return {
+        ...base,
+        icon: 'tablerArrowsExchange',
+        verb: entry.newValue ? 'moved the ticket to a board' : 'moved the ticket to the backlog',
+      };
     case 'comment.added':
       return { ...base, icon: 'tablerMessage', verb: 'commented' };
     case 'attachment.added':
       return { ...base, icon: 'tablerPlus', verb: `attached ${attachmentName(entry.newValue)}` };
     case 'attachment.removed':
-      return { ...base, icon: 'tablerTrash', verb: `removed the attachment ${attachmentName(entry.newValue)}` };
+      return {
+        ...base,
+        icon: 'tablerTrash',
+        verb: `removed the attachment ${attachmentName(entry.newValue)}`,
+      };
     case 'comment.edited':
       return { ...base, icon: 'tablerPencil', verb: 'edited a comment' };
     case 'comment.deleted':
@@ -122,8 +139,14 @@ export function describeEntry(entry: ActivityEntry, users: ReadonlyMap<string, U
     case 'ticket.link.added':
     case 'ticket.link.removed': {
       const label = linkLabel(String(value['type'] ?? ''), String(value['direction'] ?? 'Outward'));
-      const verb = entry.action === 'ticket.link.added' ? `linked: ${label}` : `removed link: ${label}`;
-      return { ...base, icon: 'tablerLink', verb, ticketKey: typeof value['key'] === 'string' ? value['key'] : null };
+      const verb =
+        entry.action === 'ticket.link.added' ? `linked: ${label}` : `removed link: ${label}`;
+      return {
+        ...base,
+        icon: 'tablerLink',
+        verb,
+        ticketKey: typeof value['key'] === 'string' ? value['key'] : null,
+      };
     }
     case 'ticket.field.changed':
       return describeFieldChange(entry, users, base);
@@ -140,35 +163,73 @@ function describeFieldChange(
   const field = entry.field ?? '';
   const label = FIELD_LABELS[field] ?? field;
   const icon = FIELD_ICONS[field] ?? 'tablerPencil';
-  if (field === 'description') return { ...base, icon, verb: entry.newValue ? 'updated the description' : 'cleared the description' };
+  if (field === 'description')
+    return {
+      ...base,
+      icon,
+      verb: entry.newValue ? 'updated the description' : 'cleared the description',
+    };
   if (field === 'labels') {
     const before = asStrings(entry.oldValue);
     const after = asStrings(entry.newValue);
     const added = after.filter((l) => !before.includes(l));
     const removed = before.filter((l) => !after.includes(l));
-    const parts = [added.length ? `added ${plural('label', added)} ${added.join(', ')}` : '', removed.length ? `removed ${plural('label', removed)} ${removed.join(', ')}` : ''];
+    const parts = [
+      added.length ? `added ${plural('label', added)} ${added.join(', ')}` : '',
+      removed.length ? `removed ${plural('label', removed)} ${removed.join(', ')}` : '',
+    ];
     return { ...base, icon, verb: parts.filter(Boolean).join(' and ') || 'changed labels' };
   }
   const from = formatValue(field, entry.oldValue, users);
   const to = formatValue(field, entry.newValue, users);
-  if (from === null && to !== null) return { ...base, icon, verb: `set ${label} to`, to, ticketKey: field === 'parent' ? to : null };
+  if (from === null && to !== null)
+    return {
+      ...base,
+      icon,
+      verb: `set ${label} to`,
+      to,
+      ticketKey: field === 'parent' ? to : null,
+    };
   if (to === null) return { ...base, icon, verb: `cleared ${label}`, from };
-  return { ...base, icon, verb: `changed ${label}`, from, to, ticketKey: field === 'parent' ? to : null };
+  return {
+    ...base,
+    icon,
+    verb: `changed ${label}`,
+    from,
+    to,
+    ticketKey: field === 'parent' ? to : null,
+  };
 }
 
 export function groupEntries(lines: readonly ActivityLine[]): ActivityGroup[] {
   const groups: ActivityGroup[] = [];
   for (const line of lines) {
     const last = groups[groups.length - 1];
-    if (last && last.occurredAt === line.occurredAt && last.actor === line.actor) last.lines.push(line);
-    else groups.push({ key: line.id, occurredAt: line.occurredAt, actor: line.actor, channel: line.channel, lines: [line] });
+    if (last && last.occurredAt === line.occurredAt && last.actor === line.actor)
+      last.lines.push(line);
+    else
+      groups.push({
+        key: line.id,
+        occurredAt: line.occurredAt,
+        actor: line.actor,
+        channel: line.channel,
+        lines: [line],
+      });
   }
   return groups;
 }
 
 function linkLabel(type: string, direction: string): string {
-  const outward: Record<string, string> = { Blocks: 'blocks', RelatesTo: 'relates to', Duplicates: 'duplicates' };
-  const inward: Record<string, string> = { Blocks: 'is blocked by', RelatesTo: 'relates to', Duplicates: 'is duplicated by' };
+  const outward: Record<string, string> = {
+    Blocks: 'blocks',
+    RelatesTo: 'relates to',
+    Duplicates: 'duplicates',
+  };
+  const inward: Record<string, string> = {
+    Blocks: 'is blocked by',
+    RelatesTo: 'relates to',
+    Duplicates: 'is duplicated by',
+  };
   return (direction === 'Inward' ? inward : outward)[type] ?? type;
 }
 
@@ -180,7 +241,8 @@ function plural(word: string, items: readonly unknown[]): string {
   return items.length === 1 ? word : `${word}s`;
 }
 
-
 function attachmentName(value: unknown): string {
-  return typeof value === 'object' && value !== null && 'fileName' in value ? String((value as { fileName: unknown }).fileName) : 'a file';
+  return typeof value === 'object' && value !== null && 'fileName' in value
+    ? String((value as { fileName: unknown }).fileName)
+    : 'a file';
 }

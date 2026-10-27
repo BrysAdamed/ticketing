@@ -1,6 +1,13 @@
 import { CdkDrag, CdkDragDrop, CdkDragHandle, CdkDropList } from '@angular/cdk/drag-drop';
 import { CdkTextareaAutosize } from '@angular/cdk/text-field';
-import { ChangeDetectionStrategy, Component, ElementRef, input, model, viewChildren } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  input,
+  model,
+  viewChildren,
+} from '@angular/core';
 import { MatTooltip } from '@angular/material/tooltip';
 import { IconComponent } from '@shared/ui/icon/icon.component';
 import { FormStep, MAX_STEPS, moveStep, newStep, STEP_MAX } from './test-case-form';
@@ -13,10 +20,17 @@ import { FormStep, MAX_STEPS, moveStep, newStep, STEP_MAX } from './test-case-fo
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { 'data-testid': 'steps-editor' },
   template: `
-    <ol class="steps" cdkDropList [cdkDropListDisabled]="disabled()" (cdkDropListDropped)="dropped($event)">
+    <ol
+      class="steps"
+      cdkDropList
+      [cdkDropListDisabled]="disabled()"
+      (cdkDropListDropped)="dropped($event)"
+    >
       @for (step of steps(); track step.id; let i = $index) {
         <li class="step" cdkDrag cdkDragLockAxis="y" [attr.data-testid]="'step-' + i">
-          <span class="grip" cdkDragHandle [class.hidden]="disabled()" aria-hidden="true"><tk-icon name="tablerGripVertical" [size]="14" /></span>
+          <span class="grip" cdkDragHandle [class.hidden]="disabled()" aria-hidden="true"
+            ><tk-icon name="tablerGripVertical" [size]="14"
+          /></span>
           <span class="n tnum">{{ i + 1 }}.</span>
           <textarea
             #stepInput
@@ -35,13 +49,34 @@ import { FormStep, MAX_STEPS, moveStep, newStep, STEP_MAX } from './test-case-fo
           ></textarea>
           @if (!disabled()) {
             <span class="acts">
-              <button type="button" class="tk-icon-btn tk-icon-btn-sm" matTooltip="Move up  Alt ↑" [attr.aria-label]="'Move step ' + (i + 1) + ' up'" [disabled]="i === 0" (click)="move(i, -1)">
+              <button
+                type="button"
+                class="tk-icon-btn tk-icon-btn-sm"
+                matTooltip="Move up  Alt ↑"
+                [attr.aria-label]="'Move step ' + (i + 1) + ' up'"
+                [disabled]="i === 0"
+                (click)="move(i, -1)"
+              >
                 <tk-icon name="tablerArrowUp" [size]="14" />
               </button>
-              <button type="button" class="tk-icon-btn tk-icon-btn-sm" matTooltip="Move down  Alt ↓" [attr.aria-label]="'Move step ' + (i + 1) + ' down'" [disabled]="i === steps().length - 1" (click)="move(i, 1)">
+              <button
+                type="button"
+                class="tk-icon-btn tk-icon-btn-sm"
+                matTooltip="Move down  Alt ↓"
+                [attr.aria-label]="'Move step ' + (i + 1) + ' down'"
+                [disabled]="i === steps().length - 1"
+                (click)="move(i, 1)"
+              >
                 <tk-icon name="tablerArrowDown" [size]="14" />
               </button>
-              <button type="button" class="tk-icon-btn tk-icon-btn-sm" matTooltip="Remove step" [attr.aria-label]="'Remove step ' + (i + 1)" [attr.data-testid]="'step-remove-' + i" (click)="remove(i)">
+              <button
+                type="button"
+                class="tk-icon-btn tk-icon-btn-sm"
+                matTooltip="Remove step"
+                [attr.aria-label]="'Remove step ' + (i + 1)"
+                [attr.data-testid]="'step-remove-' + i"
+                (click)="remove(i)"
+              >
                 <tk-icon name="tablerTrash" [size]="14" />
               </button>
             </span>
@@ -191,7 +226,13 @@ export class StepsEditorComponent {
 
   protected onKeydown(event: KeyboardEvent, index: number): void {
     const target = event.target as HTMLTextAreaElement;
-    if (event.key === 'Enter' && !event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey) {
+    if (
+      event.key === 'Enter' &&
+      !event.shiftKey &&
+      !event.ctrlKey &&
+      !event.metaKey &&
+      !event.altKey
+    ) {
       event.preventDefault();
       this.add(index + 1);
     } else if (event.key === 'Backspace' && target.value === '' && this.steps().length > 0) {

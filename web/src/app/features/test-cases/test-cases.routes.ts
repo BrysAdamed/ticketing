@@ -9,7 +9,10 @@ export default [
       viewRoute(TEST_CASE_EDITOR_VIEW, { path: 'new', data: { breadcrumb: 'New' } }),
       viewRoute(TEST_CASE_EDITOR_VIEW, {
         path: ':testCaseKey',
-        data: { breadcrumb: (route: ActivatedRouteSnapshot) => (route.paramMap.get('testCaseKey') ?? '').toUpperCase() },
+        data: {
+          breadcrumb: (route: ActivatedRouteSnapshot) =>
+            (route.paramMap.get('testCaseKey') ?? '').toUpperCase(),
+        },
       }),
     ],
   }),

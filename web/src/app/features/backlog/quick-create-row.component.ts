@@ -1,4 +1,13 @@
-import { afterNextRender, ChangeDetectionStrategy, Component, ElementRef, input, output, signal, viewChild } from '@angular/core';
+import {
+  afterNextRender,
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  input,
+  output,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { TicketType, TICKET_TYPE_LABELS } from '@shared/domain/enums';
 import { TICKET_TYPE_OPTIONS } from '@shared/domain/picker-options';
 import { TypeIconComponent } from '@shared/ui/domain/type-icon.component';
@@ -49,7 +58,10 @@ const LAST_TYPE_KEY = 'tk-quick-create-type';
       (blur)="onBlur()"
     />
     <span class="hints">
-      <tk-kbd>↵</tk-kbd>create<span class="sep">·</span><tk-kbd>⇧↵</tk-kbd>create &amp; open<span class="sep">·</span><tk-kbd>Esc</tk-kbd>
+      <tk-kbd>↵</tk-kbd>create<span class="sep">·</span><tk-kbd>⇧↵</tk-kbd>create &amp; open<span
+        class="sep"
+        >·</span
+      ><tk-kbd>Esc</tk-kbd>
     </span>
   `,
   styles: `
@@ -152,9 +164,15 @@ export class QuickCreateRowComponent {
   }
 
   protected onBlur(): void {
-    if (!this.title().trim() && !this.busy()) setTimeout(() => {
-      if (!this.title().trim() && document.activeElement !== this.input().nativeElement && !document.querySelector('[data-testid="inline-picker"]')) this.closed.emit();
-    }, 150);
+    if (!this.title().trim() && !this.busy())
+      setTimeout(() => {
+        if (
+          !this.title().trim() &&
+          document.activeElement !== this.input().nativeElement &&
+          !document.querySelector('[data-testid="inline-picker"]')
+        )
+          this.closed.emit();
+      }, 150);
   }
 }
 

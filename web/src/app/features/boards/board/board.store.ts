@@ -4,7 +4,14 @@ import { firstValueFrom } from 'rxjs';
 import { ApiError, toApiError } from '@core/api/api-error';
 import { AuthService } from '@core/auth/auth.service';
 import { BoardDirectory } from '@core/boards/board-directory';
-import { ArchiveBoardResult, Board, BoardCard, BoardColumn, BoardPatch, CarryOverTarget } from '@core/boards/board.models';
+import {
+  ArchiveBoardResult,
+  Board,
+  BoardCard,
+  BoardColumn,
+  BoardPatch,
+  CarryOverTarget,
+} from '@core/boards/board.models';
 import { BoardsApi } from '@core/boards/boards.api';
 import { ToastService } from '@core/notify/toast.service';
 import { LoadStatus } from '@core/projects/project-directory';
@@ -63,19 +70,27 @@ export class BoardStore {
   readonly visibleCount = computed(() => this.lanes().reduce((sum, lane) => sum + lane.count, 0));
   readonly totalCount = computed(() => this.columns().reduce((sum, c) => sum + c.cards.length, 0));
   readonly totalPoints = computed(() =>
-    this.columns().reduce((sum, c) => sum + c.cards.reduce((s, card) => s + (card.storyPoints ?? 0), 0), 0),
+    this.columns().reduce(
+      (sum, c) => sum + c.cards.reduce((s, card) => s + (card.storyPoints ?? 0), 0),
+      0,
+    ),
   );
   readonly columnCounts = computed(() => {
     const counts = new Map<TicketStatus, number>();
-    for (const lane of this.lanes()) for (const status of TICKET_STATUSES) counts.set(status, (counts.get(status) ?? 0) + lane.cells[status].length);
+    for (const lane of this.lanes())
+      for (const status of TICKET_STATUSES)
+        counts.set(status, (counts.get(status) ?? 0) + lane.cells[status].length);
     return counts;
   });
-  readonly labelOptions = computed(() => [...new Set(this.columns().flatMap((c) => c.cards.flatMap((card) => card.labels)))].sort());
+  readonly labelOptions = computed(() =>
+    [...new Set(this.columns().flatMap((c) => c.cards.flatMap((card) => card.labels)))].sort(),
+  );
   /// Cards in visual order (lane by lane, column by column), for J/K/H/L navigation.
   readonly visualOrder = computed(() => {
     const result: { id: string; status: TicketStatus; lane: string }[] = [];
     for (const lane of this.lanes())
-      for (const status of TICKET_STATUSES) for (const card of lane.cells[status]) result.push({ id: card.id, status, lane: lane.key });
+      for (const status of TICKET_STATUSES)
+        for (const card of lane.cells[status]) result.push({ id: card.id, status, lane: lane.key });
     return result;
   });
 
@@ -86,7 +101,8 @@ export class BoardStore {
     this.events.events.pipe(takeUntilDestroyed(inject(DestroyRef))).subscribe((event) => {
       if (event.kind === 'updated') this.applyTicket(event.ticket);
       else if (event.kind === 'deleted') this.removeCards((card) => card.key === event.key);
-      else if (event.kind === 'created' && event.ticket.location.boardId === this.boardId()) void this.reload(true);
+      else if (event.kind === 'created' && event.ticket.location.boardId === this.boardId())
+        void this.reload(true);
     });
   }
 
@@ -153,9 +169,12 @@ export class BoardStore {
       await firstValueFrom(this.api.move({ keys, target: board.id, status, beforeKey, afterKey }));
       return true;
     } catch (error) {
-      if (seq === this.moveSeq && this.board()) this.board.set({ ...this.board()!, columns: before });
+      if (seq === this.moveSeq && this.board())
+        this.board.set({ ...this.board()!, columns: before });
       else void this.reload(true);
-      this.toast.error(`Couldn't move ${keys.length === 1 ? keys[0] : `${keys.length} tickets`}: ${toApiError(error).title}`);
+      this.toast.error(
+        `Couldn't move ${keys.length === 1 ? keys[0] : `${keys.length} tickets`}: ${toApiError(error).title}`,
+      );
       return false;
     } finally {
       if (seq === this.moveSeq) this.moving.set(false);
@@ -180,11 +199,18 @@ export class BoardStore {
     const keys = ids.map((id) => findCard(board.columns, id)?.key).filter((k): k is string => !!k);
     const before = board.columns;
     const moving = new Set(ids);
-    this.board.set({ ...board, columns: before.map((c) => ({ ...c, cards: c.cards.filter((card) => !moving.has(card.id)) })) });
+    this.board.set({
+      ...board,
+      columns: before.map((c) => ({ ...c, cards: c.cards.filter((card) => !moving.has(card.id)) })),
+    });
     this.selection.set(new Set());
     try {
       await firstValueFrom(this.api.move({ keys, target: 'backlog' }));
-      this.toast.success(keys.length === 1 ? `${keys[0]} moved to the backlog` : `${keys.length} tickets moved to their backlogs`);
+      this.toast.success(
+        keys.length === 1
+          ? `${keys[0]} moved to the backlog`
+          : `${keys.length} tickets moved to their backlogs`,
+      );
       void this.reload(true);
     } catch (error) {
       this.board.set({ ...this.board()!, columns: before });
@@ -197,7 +223,11 @@ export class BoardStore {
     if (!board || keys.length === 0) return false;
     try {
       await firstValueFrom(this.api.move({ keys: [...keys], target: board.id }));
-      this.toast.success(keys.length === 1 ? `${keys[0]} added to the board` : `${keys.length} tickets added to the board`);
+      this.toast.success(
+        keys.length === 1
+          ? `${keys[0]} added to the board`
+          : `${keys.length} tickets added to the board`,
+      );
       await this.reload(true);
       return true;
     } catch (error) {
@@ -296,9 +326,14 @@ export class BoardStore {
       if (direction === 'down') next = sameCell[index + 1] ?? current;
       else if (direction === 'up') next = sameCell[index - 1] ?? current;
       else {
-        const statuses = TICKET_STATUSES.filter((s) => order.some((c) => c.lane === current.lane && c.status === s));
-        const target = statuses[statuses.indexOf(current.status) + (direction === 'right' ? 1 : -1)];
-        const cell = target ? order.filter((c) => c.lane === current.lane && c.status === target) : [];
+        const statuses = TICKET_STATUSES.filter((s) =>
+          order.some((c) => c.lane === current.lane && c.status === s),
+        );
+        const target =
+          statuses[statuses.indexOf(current.status) + (direction === 'right' ? 1 : -1)];
+        const cell = target
+          ? order.filter((c) => c.lane === current.lane && c.status === target)
+          : [];
         next = cell[Math.min(index, cell.length - 1)] ?? current;
       }
     }
@@ -314,7 +349,8 @@ export class BoardStore {
     this.board.set(board);
     this.directory.visited({ id: board.id, name: board.name });
     const ids = new Set(board.columns.flatMap((c) => c.cards.map((card) => card.id)));
-    if ([...this.selection()].some((id) => !ids.has(id))) this.selection.update((set) => new Set([...set].filter((id) => ids.has(id))));
+    if ([...this.selection()].some((id) => !ids.has(id)))
+      this.selection.update((set) => new Set([...set].filter((id) => ids.has(id))));
   }
 
   /// Applies an edit made elsewhere (peek panel): fields change in place; a new status or location reloads
@@ -327,7 +363,10 @@ export class BoardStore {
       if (ticket.location.boardId === board.id) void this.reload(true);
       return;
     }
-    if (ticket.location.boardId !== board.id || statusOf(board.columns, ticket.id) !== ticket.status) {
+    if (
+      ticket.location.boardId !== board.id ||
+      statusOf(board.columns, ticket.id) !== ticket.status
+    ) {
       void this.reload(true);
       return;
     }
@@ -342,12 +381,19 @@ export class BoardStore {
       assigneeId: ticket.assignee?.id ?? null,
       parentId: ticket.parent?.id ?? null,
     };
-    const users = ticket.assignee && !board.users.some((u) => u.id === ticket.assignee!.id) ? [...board.users, ticket.assignee] : board.users;
+    const users =
+      ticket.assignee && !board.users.some((u) => u.id === ticket.assignee!.id)
+        ? [...board.users, ticket.assignee]
+        : board.users;
     const parentKnown = !ticket.parent || board.parents.some((p) => p.id === ticket.parent!.id);
     this.board.set({
       ...board,
       users,
-      columns: board.columns.map((c) => (c.cards.includes(current) ? { ...c, cards: c.cards.map((card) => (card === current ? updated : card)) } : c)),
+      columns: board.columns.map((c) =>
+        c.cards.includes(current)
+          ? { ...c, cards: c.cards.map((card) => (card === current ? updated : card)) }
+          : c,
+      ),
     });
     if (!parentKnown) void this.reload(true);
   }
@@ -355,7 +401,13 @@ export class BoardStore {
   private removeCards(predicate: (card: BoardCard) => boolean): void {
     const board = this.board();
     if (!board) return;
-    this.board.set({ ...board, columns: board.columns.map((c) => ({ ...c, cards: c.cards.filter((card) => !predicate(card)) })) });
+    this.board.set({
+      ...board,
+      columns: board.columns.map((c) => ({
+        ...c,
+        cards: c.cards.filter((card) => !predicate(card)),
+      })),
+    });
   }
 }
 
@@ -369,7 +421,10 @@ function findCard(columns: readonly BoardColumn[], id: string): BoardCard | unde
 
 function readCollapsed(boardId: string): ReadonlySet<TicketStatus> {
   try {
-    const all = JSON.parse(localStorage.getItem(COLLAPSED_KEY) ?? '{}') as Record<string, TicketStatus[]>;
+    const all = JSON.parse(localStorage.getItem(COLLAPSED_KEY) ?? '{}') as Record<
+      string,
+      TicketStatus[]
+    >;
     return new Set((all[boardId] ?? []).filter((s) => TICKET_STATUSES.includes(s)));
   } catch {
     return new Set();
@@ -379,7 +434,10 @@ function readCollapsed(boardId: string): ReadonlySet<TicketStatus> {
 function writeCollapsed(boardId: string | null, collapsed: ReadonlySet<TicketStatus>): void {
   if (!boardId) return;
   try {
-    const all = JSON.parse(localStorage.getItem(COLLAPSED_KEY) ?? '{}') as Record<string, TicketStatus[]>;
+    const all = JSON.parse(localStorage.getItem(COLLAPSED_KEY) ?? '{}') as Record<
+      string,
+      TicketStatus[]
+    >;
     all[boardId] = [...collapsed];
     localStorage.setItem(COLLAPSED_KEY, JSON.stringify(all));
   } catch {

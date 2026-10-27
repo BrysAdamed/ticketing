@@ -5,7 +5,18 @@ import {
   OverlayRef,
 } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
-import { ComponentRef, DestroyRef, Directive, effect, ElementRef, inject, Injector, input, output, signal } from '@angular/core';
+import {
+  ComponentRef,
+  DestroyRef,
+  Directive,
+  effect,
+  ElementRef,
+  inject,
+  Injector,
+  input,
+  output,
+  signal,
+} from '@angular/core';
 import { LabelsPickerPanelComponent, LabelToggle } from './labels-picker-panel.component';
 
 /// Opens the labels picker below the host element. Suggestions come from `labelSuggestions`, a
@@ -22,7 +33,9 @@ export class LabelsPickerDirective {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   readonly tkLabelsPicker = input.required<readonly string[]>();
-  readonly labelSuggestions = input<(prefix: string) => Promise<readonly string[]>>(() => Promise.resolve([]));
+  readonly labelSuggestions = input<(prefix: string) => Promise<readonly string[]>>(() =>
+    Promise.resolve([]),
+  );
   readonly labelsDisabled = input(false);
 
   readonly labelToggled = output<LabelToggle>();
@@ -55,7 +68,9 @@ export class LabelsPickerDirective {
       hasBackdrop: true,
       backdropClass: 'cdk-overlay-transparent-backdrop',
     });
-    const panel = overlayRef.attach(new ComponentPortal(LabelsPickerPanelComponent, null, this.injector));
+    const panel = overlayRef.attach(
+      new ComponentPortal(LabelsPickerPanelComponent, null, this.injector),
+    );
     panel.setInput('selected', this.tkLabelsPicker());
     const load = (prefix: string) =>
       void this.labelSuggestions()(prefix).then((labels) => {

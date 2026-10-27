@@ -30,7 +30,11 @@ function card(n: number, overrides: Partial<BoardCard> = {}): BoardCard {
 }
 
 function columns(layout: Partial<Record<TicketStatus, BoardCard[]>>): BoardColumn[] {
-  return TICKET_STATUSES.map((status) => ({ status, category: statusCategory(status), cards: layout[status] ?? [] }));
+  return TICKET_STATUSES.map((status) => ({
+    status,
+    category: statusCategory(status),
+    cards: layout[status] ?? [],
+  }));
 }
 
 function board(cols: BoardColumn[], parents: BoardParent[] = []): Board {
@@ -100,7 +104,9 @@ describe('anchorFor', () => {
 
   it('skips other moving cards as neighbours', () => {
     // Act / Assert
-    expect(anchorFor(cell, 'id-9', 1, new Set(['id-9', 'id-2', 'id-3']))).toEqual({ beforeId: 'id-4' });
+    expect(anchorFor(cell, 'id-9', 1, new Set(['id-9', 'id-2', 'id-3']))).toEqual({
+      beforeId: 'id-4',
+    });
     expect(anchorFor(cell, 'id-9', 4, new Set(['id-9', 'id-4']))).toEqual({ afterId: 'id-3' });
   });
 });
@@ -115,7 +121,9 @@ describe('filters', () => {
     expect(cardMatches(mine, { ...EMPTY_FILTERS, mine: true }, 'u1')).toBe(true);
     expect(cardMatches(nobody, { ...EMPTY_FILTERS, mine: true }, 'u1')).toBe(false);
     expect(cardMatches(nobody, { ...EMPTY_FILTERS, assignees: ['unassigned'] }, 'u1')).toBe(true);
-    expect(cardMatches(mine, { ...EMPTY_FILTERS, types: ['Bug'], labels: ['ui', 'api'] }, null)).toBe(true);
+    expect(
+      cardMatches(mine, { ...EMPTY_FILTERS, types: ['Bug'], labels: ['ui', 'api'] }, null),
+    ).toBe(true);
     expect(cardMatches(mine, { ...EMPTY_FILTERS, projects: ['API'] }, null)).toBe(false);
     expect(cardMatches(nobody, { ...EMPTY_FILTERS, text: 'login' }, null)).toBe(true);
     expect(cardMatches(nobody, { ...EMPTY_FILTERS, text: 'web-2' }, null)).toBe(true);
@@ -123,11 +131,23 @@ describe('filters', () => {
 
   it('round-trips through URL params', () => {
     // Arrange
-    const filters = { assignees: ['u1', 'unassigned'], types: ['Bug' as const], labels: ['ui'], projects: [], mine: true, text: 'pay' };
+    const filters = {
+      assignees: ['u1', 'unassigned'],
+      types: ['Bug' as const],
+      labels: ['ui'],
+      projects: [],
+      mine: true,
+      text: 'pay',
+    };
 
     // Act
     const params = filtersToParams(filters);
-    const back = filtersFromParams(Object.fromEntries(Object.entries(params).filter(([, v]) => v !== null)) as Record<string, string>);
+    const back = filtersFromParams(
+      Object.fromEntries(Object.entries(params).filter(([, v]) => v !== null)) as Record<
+        string,
+        string
+      >,
+    );
 
     // Assert
     expect(params['project']).toBeNull();
@@ -136,8 +156,20 @@ describe('filters', () => {
 });
 
 describe('swimlanes', () => {
-  const epic: BoardParent = { id: 'e1', key: 'WEB-10', title: 'Checkout', type: 'Epic', parentId: null };
-  const story: BoardParent = { id: 's1', key: 'WEB-11', title: 'Pay', type: 'UserStory', parentId: 'e1' };
+  const epic: BoardParent = {
+    id: 'e1',
+    key: 'WEB-10',
+    title: 'Checkout',
+    type: 'Epic',
+    parentId: null,
+  };
+  const story: BoardParent = {
+    id: 's1',
+    key: 'WEB-11',
+    title: 'Pay',
+    type: 'UserStory',
+    parentId: 'e1',
+  };
 
   it('finds the epic one or two levels up', () => {
     // Arrange
@@ -151,7 +183,16 @@ describe('swimlanes', () => {
 
   it('groups by assignee with Unassigned last and keeps the board order per cell', () => {
     // Arrange
-    const b = board(columns({ ToDo: [card(1), card(2, { assigneeId: 'u2' }), card(3, { assigneeId: 'u1', storyPoints: 3 })], Done: [card(4, { assigneeId: 'u1' })] }));
+    const b = board(
+      columns({
+        ToDo: [
+          card(1),
+          card(2, { assigneeId: 'u2' }),
+          card(3, { assigneeId: 'u1', storyPoints: 3 }),
+        ],
+        Done: [card(4, { assigneeId: 'u1' })],
+      }),
+    );
 
     // Act
     const lanes = buildLanes(b, EMPTY_FILTERS, 'assignee', null);
@@ -165,7 +206,12 @@ describe('swimlanes', () => {
 
   it('groups by epic with "No epic" last and drops lanes emptied by filters', () => {
     // Arrange
-    const b = board(columns({ ToDo: [card(1), card(2, { parentId: 's1' }), card(3, { parentId: 'e1', assigneeId: 'u1' })] }), [epic, story]);
+    const b = board(
+      columns({
+        ToDo: [card(1), card(2, { parentId: 's1' }), card(3, { parentId: 'e1', assigneeId: 'u1' })],
+      }),
+      [epic, story],
+    );
 
     // Act
     const all = buildLanes(b, EMPTY_FILTERS, 'epic', null);

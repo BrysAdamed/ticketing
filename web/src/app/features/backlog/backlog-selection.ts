@@ -9,7 +9,12 @@ export const EMPTY_SELECTION: SelectionState = { selected: new Set(), anchor: nu
 
 export type SelectMode = 'single' | 'toggle' | 'range';
 
-export function select(state: SelectionState, order: readonly string[], id: string, mode: SelectMode): SelectionState {
+export function select(
+  state: SelectionState,
+  order: readonly string[],
+  id: string,
+  mode: SelectMode,
+): SelectionState {
   switch (mode) {
     case 'toggle': {
       const selected = new Set(state.selected);
@@ -44,13 +49,21 @@ export function prune(state: SelectionState, visible: readonly string[]): Select
 }
 
 /// The ids to act on, in list order: the selection when it contains `focusId`, otherwise just `focusId`.
-export function targets(state: SelectionState, order: readonly string[], focusId: string | null): string[] {
+export function targets(
+  state: SelectionState,
+  order: readonly string[],
+  focusId: string | null,
+): string[] {
   if (focusId && !state.selected.has(focusId)) return [focusId];
   return order.filter((id) => state.selected.has(id));
 }
 
 /// j/k navigation: the next or previous id, clamped to the list.
-export function step(order: readonly string[], current: string | null, delta: 1 | -1): string | null {
+export function step(
+  order: readonly string[],
+  current: string | null,
+  delta: 1 | -1,
+): string | null {
   if (order.length === 0) return null;
   const index = current ? order.indexOf(current) : -1;
   if (index < 0) return delta > 0 ? order[0] : order[order.length - 1];

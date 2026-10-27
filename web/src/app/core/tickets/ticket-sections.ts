@@ -19,13 +19,18 @@ export interface TicketDetailSectionInputs {
   projectKey: string;
 }
 
-export const TICKET_DETAIL_SECTIONS = new InjectionToken<readonly TicketDetailSection[]>('TICKET_DETAIL_SECTIONS', {
-  factory: () => [],
-});
+export const TICKET_DETAIL_SECTIONS = new InjectionToken<readonly TicketDetailSection[]>(
+  'TICKET_DETAIL_SECTIONS',
+  {
+    factory: () => [],
+  },
+);
 
 /// Registers a ticket view section. Call it in `app.config.ts` (or any environment injector) of the
 /// contributing feature: `provideTicketDetailSection({ id: 'test-cases', order: 10, title: 'Test cases', loadComponent: () => import(...).then(m => m.X) })`.
-export function provideTicketDetailSection(section: TicketDetailSection): ReturnType<typeof makeEnvironmentProviders> {
+export function provideTicketDetailSection(
+  section: TicketDetailSection,
+): ReturnType<typeof makeEnvironmentProviders> {
   const provider: Provider = { provide: TICKET_DETAIL_SECTIONS, useValue: section, multi: true };
   return makeEnvironmentProviders([provider]);
 }

@@ -24,7 +24,9 @@ export interface CreateTicketPrefill extends Partial<NewTicket> {
   submit?: (projectKey: string, ticket: NewTicket) => Promise<TicketSummary>;
 }
 
-export const CREATE_TICKET_DIALOG = new InjectionToken<() => Promise<Type<unknown>>>('CREATE_TICKET_DIALOG');
+export const CREATE_TICKET_DIALOG = new InjectionToken<() => Promise<Type<unknown>>>(
+  'CREATE_TICKET_DIALOG',
+);
 
 /// Opens the create-ticket dialog from anywhere (global `c`, the top bar "New ticket" button, or another
 /// feature, for example the regressions slice for a bug from a failed test). Resolves with the created
@@ -39,7 +41,10 @@ export class TicketCreator {
     if (!this.loadDialog) throw new Error('provideTicketCreation() is missing.');
     if (this.dialog.getDialogById('tk-create-ticket')) return null;
     const component = await this.loadDialog();
-    const data: CreateTicketPrefill = { ...prefill, projectKey: prefill.projectKey ?? this.context.projectKey() ?? undefined };
+    const data: CreateTicketPrefill = {
+      ...prefill,
+      projectKey: prefill.projectKey ?? this.context.projectKey() ?? undefined,
+    };
     const ref = this.dialog.open<unknown, CreateTicketPrefill, TicketSummary | null>(component, {
       id: 'tk-create-ticket',
       data,
@@ -52,7 +57,9 @@ export class TicketCreator {
 
 /// Wires the create dialog (lazy-loaded) and registers the `ticket.create` command, which also shows
 /// the top bar "New ticket" button and binds the global `c` shortcut.
-export function provideTicketCreation(loadDialog: () => Promise<Type<unknown>>): EnvironmentProviders {
+export function provideTicketCreation(
+  loadDialog: () => Promise<Type<unknown>>,
+): EnvironmentProviders {
   return makeEnvironmentProviders([
     { provide: CREATE_TICKET_DIALOG, useValue: loadDialog },
     provideEnvironmentInitializer(() => {

@@ -58,7 +58,9 @@ export class RegressionsStore {
     const request = this.request;
     this.loadingMore.set(true);
     try {
-      const page = await firstValueFrom(this.api.list(this.projectKey(), { ...this.query(this.filter()), cursor }));
+      const page = await firstValueFrom(
+        this.api.list(this.projectKey(), { ...this.query(this.filter()), cursor }),
+      );
       if (request !== this.request) return;
       this.sessions.update((sessions) => [...sessions, ...page.items]);
       this.nextCursor.set(page.nextCursor);

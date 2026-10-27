@@ -43,7 +43,11 @@ export class BoardsStore {
     return this.items().filter((b) => {
       if (filter === 'archived' ? !b.archivedAt : b.archivedAt) return false;
       if (filter === 'mine' && b.owner.id !== me) return false;
-      return !text || b.name.toLowerCase().includes(text) || b.projects.some((p) => p.key.toLowerCase().includes(text));
+      return (
+        !text ||
+        b.name.toLowerCase().includes(text) ||
+        b.projects.some((p) => p.key.toLowerCase().includes(text))
+      );
     });
   });
 
@@ -53,7 +57,9 @@ export class BoardsStore {
       const items: BoardSummary[] = [];
       let cursor: string | null = null;
       for (let page = 0; page < MAX_PAGES; page++) {
-        const result: Page<BoardSummary> = await firstValueFrom(this.api.list({ includeArchived: true }, { limit: PAGE_SIZE, cursor }));
+        const result: Page<BoardSummary> = await firstValueFrom(
+          this.api.list({ includeArchived: true }, { limit: PAGE_SIZE, cursor }),
+        );
         items.push(...result.items);
         cursor = result.nextCursor;
         if (!cursor) break;

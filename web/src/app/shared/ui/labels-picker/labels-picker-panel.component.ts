@@ -70,7 +70,9 @@ export interface LabelToggle {
           <tk-label-chip [label]="option.label" />
         </div>
       } @empty {
-        <div class="empty">{{ query() ? 'Labels use a-z, 0-9, ".", "_" or "-"' : 'No labels yet' }}</div>
+        <div class="empty">
+          {{ query() ? 'Labels use a-z, 0-9, ".", "_" or "-"' : 'No labels yet' }}
+        </div>
       }
     </div>
   `,
@@ -158,7 +160,8 @@ export class LabelsPickerPanelComponent {
     const matches = all
       .filter((label) => !q || label.includes(q))
       .map((label) => ({ label, selected: selected.has(label), isNew: false }));
-    if (q && LABEL_PATTERN.test(q) && !all.includes(q)) matches.unshift({ label: q, selected: false, isNew: true });
+    if (q && LABEL_PATTERN.test(q) && !all.includes(q))
+      matches.unshift({ label: q, selected: false, isNew: true });
     return matches;
   });
 

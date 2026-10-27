@@ -37,8 +37,14 @@ export class TicketsApi {
     return this.api.get<Ticket>(`/tickets/${encodeURIComponent(key)}`);
   }
 
-  create(projectKey: string, ticket: NewTicket, idempotencyKey?: string): Observable<TicketSummary> {
-    return this.api.post<TicketSummary>(`/projects/${projectKey}/tickets`, ticket, { idempotencyKey });
+  create(
+    projectKey: string,
+    ticket: NewTicket,
+    idempotencyKey?: string,
+  ): Observable<TicketSummary> {
+    return this.api.post<TicketSummary>(`/projects/${projectKey}/tickets`, ticket, {
+      idempotencyKey,
+    });
   }
 
   /// `rowVersion` is sent as If-Match; the web UI does that only for title and description (D-43).
@@ -90,7 +96,10 @@ export class TicketsApi {
   }
 
   link(key: string, targetKey: string, type: TicketLinkType): Observable<TicketLink> {
-    return this.api.post<TicketLink>(`/tickets/${encodeURIComponent(key)}/links`, { targetKey, type });
+    return this.api.post<TicketLink>(`/tickets/${encodeURIComponent(key)}/links`, {
+      targetKey,
+      type,
+    });
   }
 
   unlink(key: string, linkId: string): Observable<void> {

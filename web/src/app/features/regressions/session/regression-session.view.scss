@@ -340,7 +340,6 @@ h3 {
   font-weight: var(--tk-weight-semibold);
 }
 
-
 .fail {
   margin-top: 20px;
   padding: 12px;
@@ -421,14 +420,15 @@ h3 {
   }
 
   &.on {
-    box-shadow: 0 0 0 2px var(--tk-surface), 0 0 0 4px var(--tk-focus);
+    box-shadow:
+      0 0 0 2px var(--tk-surface),
+      0 0 0 4px var(--tk-focus);
   }
 
   &.next {
     margin-left: auto;
   }
 }
-
 
 .fail .danger {
   --mat-button-filled-container-color: var(--tk-danger);

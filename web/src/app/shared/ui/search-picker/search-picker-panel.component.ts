@@ -39,7 +39,13 @@ let nextPanelId = 0;
         (keydown)="onKeydown($event)"
       />
     </div>
-    <div class="list" role="listbox" [id]="listId" [attr.aria-label]="placeholder()" [attr.aria-busy]="loading()">
+    <div
+      class="list"
+      role="listbox"
+      [id]="listId"
+      [attr.aria-label]="placeholder()"
+      [attr.aria-busy]="loading()"
+    >
       @for (option of options(); track $index; let i = $index) {
         <div
           class="option"
@@ -55,7 +61,10 @@ let nextPanelId = 0;
           (keydown.enter)="choose(option)"
         >
           @if (optionTemplate(); as tpl) {
-            <ng-container [ngTemplateOutlet]="tpl" [ngTemplateOutletContext]="{ $implicit: option, selected: false }" />
+            <ng-container
+              [ngTemplateOutlet]="tpl"
+              [ngTemplateOutletContext]="{ $implicit: option, selected: false }"
+            />
           } @else {
             <span class="label">{{ option.label }}</span>
           }

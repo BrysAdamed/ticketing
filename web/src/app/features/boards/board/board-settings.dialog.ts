@@ -1,6 +1,11 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import {
+  MAT_DIALOG_DATA,
+  MatDialog,
+  MatDialogModule,
+  MatDialogRef,
+} from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
@@ -23,7 +28,16 @@ const MAX_PROJECTS = 20;
 /// that project's cards back to its backlog, confirmed with the count), ownership, archive and delete.
 @Component({
   selector: 'tk-board-settings-dialog',
-  imports: [MatButtonModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatSelectModule, ProjectTileComponent, UserDisplayComponent, IconComponent],
+  imports: [
+    MatButtonModule,
+    MatDialogModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSelectModule,
+    ProjectTileComponent,
+    UserDisplayComponent,
+    IconComponent,
+  ],
   viewProviders: [provideIcons(BOARD_ICONS)],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { 'data-testid': 'board-settings-dialog' },
@@ -35,7 +49,14 @@ const MAX_PROJECTS = 20;
           <section>
             <label class="tk-field-label" for="board-name">Name</label>
             <mat-form-field>
-              <input matInput id="board-name" data-testid="settings-name" maxlength="100" [value]="name()" (input)="name.set($any($event.target).value)" />
+              <input
+                matInput
+                id="board-name"
+                data-testid="settings-name"
+                maxlength="100"
+                [value]="name()"
+                (input)="name.set($any($event.target).value)"
+              />
             </mat-form-field>
             <label class="tk-field-label" for="board-description">Description</label>
             <mat-form-field>
@@ -50,7 +71,15 @@ const MAX_PROJECTS = 20;
               ></textarea>
             </mat-form-field>
             <div class="row-end">
-              <button mat-stroked-button type="button" data-testid="settings-save" [disabled]="!dirty() || !name().trim() || busy()" (click)="save()">Save</button>
+              <button
+                mat-stroked-button
+                type="button"
+                data-testid="settings-save"
+                [disabled]="!dirty() || !name().trim() || busy()"
+                (click)="save()"
+              >
+                Save
+              </button>
             </div>
           </section>
 
@@ -61,7 +90,9 @@ const MAX_PROJECTS = 20;
                 <li [attr.data-testid]="'settings-project-' + project.key">
                   <tk-project-tile [projectKey]="project.key" />
                   <span class="pname">{{ project.name }}</span>
-                  <span class="muted tnum">{{ project.cardCount }} {{ project.cardCount === 1 ? 'card' : 'cards' }}</span>
+                  <span class="muted tnum"
+                    >{{ project.cardCount }} {{ project.cardCount === 1 ? 'card' : 'cards' }}</span
+                  >
                   <button
                     type="button"
                     class="tk-icon-btn tk-icon-btn-sm"
@@ -78,13 +109,28 @@ const MAX_PROJECTS = 20;
             @if (linkable().length && b.projects.length < maxProjects) {
               <div class="add">
                 <mat-form-field>
-                  <mat-select placeholder="Link a project" data-testid="settings-link-project" [value]="toLink()" (valueChange)="toLink.set($event)">
+                  <mat-select
+                    placeholder="Link a project"
+                    data-testid="settings-link-project"
+                    [value]="toLink()"
+                    (valueChange)="toLink.set($event)"
+                  >
                     @for (project of linkable(); track project.id) {
-                      <mat-option [value]="project.key">{{ project.key }} · {{ project.name }}</mat-option>
+                      <mat-option [value]="project.key"
+                        >{{ project.key }} · {{ project.name }}</mat-option
+                      >
                     }
                   </mat-select>
                 </mat-form-field>
-                <button mat-stroked-button type="button" data-testid="settings-link" [disabled]="!toLink() || busy()" (click)="link()">Link</button>
+                <button
+                  mat-stroked-button
+                  type="button"
+                  data-testid="settings-link"
+                  [disabled]="!toLink() || busy()"
+                  (click)="link()"
+                >
+                  Link
+                </button>
               </div>
             }
           </section>
@@ -94,9 +140,24 @@ const MAX_PROJECTS = 20;
             <div class="owner"><tk-user [user]="b.owner" /></div>
             <div class="add">
               <mat-form-field>
-                <input matInput type="email" placeholder="New owner's email" data-testid="settings-owner" [value]="ownerEmail()" (input)="ownerEmail.set($any($event.target).value)" />
+                <input
+                  matInput
+                  type="email"
+                  placeholder="New owner's email"
+                  data-testid="settings-owner"
+                  [value]="ownerEmail()"
+                  (input)="ownerEmail.set($any($event.target).value)"
+                />
               </mat-form-field>
-              <button mat-stroked-button type="button" data-testid="settings-transfer" [disabled]="!ownerEmail().trim() || busy()" (click)="transfer()">Transfer</button>
+              <button
+                mat-stroked-button
+                type="button"
+                data-testid="settings-transfer"
+                [disabled]="!ownerEmail().trim() || busy()"
+                (click)="transfer()"
+              >
+                Transfer
+              </button>
             </div>
           </section>
         }
@@ -109,7 +170,12 @@ const MAX_PROJECTS = 20;
                 <b>Unarchive</b>
                 <p>Make the board writable again. Tickets carried over stay where they went.</p>
               </div>
-              <button mat-stroked-button type="button" data-testid="settings-unarchive" (click)="unarchive()">
+              <button
+                mat-stroked-button
+                type="button"
+                data-testid="settings-unarchive"
+                (click)="unarchive()"
+              >
                 <tk-icon name="tablerArchiveOff" [size]="14" />Unarchive
               </button>
             </div>
@@ -117,9 +183,17 @@ const MAX_PROJECTS = 20;
             <div class="action">
               <div>
                 <b>Archive</b>
-                <p>Make the board read-only. Done tickets stay; unfinished ones go to their backlogs or another board.</p>
+                <p>
+                  Make the board read-only. Done tickets stay; unfinished ones go to their backlogs
+                  or another board.
+                </p>
               </div>
-              <button mat-stroked-button type="button" data-testid="settings-archive" (click)="archive()">
+              <button
+                mat-stroked-button
+                type="button"
+                data-testid="settings-archive"
+                (click)="archive()"
+              >
                 <tk-icon name="tablerArchive" [size]="14" />Archive…
               </button>
             </div>
@@ -129,7 +203,13 @@ const MAX_PROJECTS = 20;
               <b>Delete</b>
               <p>Every ticket on it, Done included, goes back to the top of its backlog.</p>
             </div>
-            <button mat-stroked-button type="button" class="danger-btn" data-testid="settings-delete" (click)="remove()">
+            <button
+              mat-stroked-button
+              type="button"
+              class="danger-btn"
+              data-testid="settings-delete"
+              (click)="remove()"
+            >
               <tk-icon name="tablerTrash" [size]="14" />Delete…
             </button>
           </div>
@@ -219,7 +299,8 @@ const MAX_PROJECTS = 20;
 })
 export class BoardSettingsDialog {
   private readonly store = inject<BoardStore>(MAT_DIALOG_DATA);
-  private readonly ref = inject<MatDialogRef<BoardSettingsDialog, BoardSettingsResult>>(MatDialogRef);
+  private readonly ref =
+    inject<MatDialogRef<BoardSettingsDialog, BoardSettingsResult>>(MatDialogRef);
   private readonly dialog = inject(MatDialog);
   private readonly confirm = inject(ConfirmService);
   private readonly toast = inject(ToastService);
@@ -235,7 +316,11 @@ export class BoardSettingsDialog {
 
   protected readonly dirty = computed(() => {
     const b = this.board();
-    return !!b && (this.name().trim() !== b.name || (this.description().trim() || null) !== (b.description ?? null));
+    return (
+      !!b &&
+      (this.name().trim() !== b.name ||
+        (this.description().trim() || null) !== (b.description ?? null))
+    );
   });
   protected readonly linkable = computed(() => {
     const linked = new Set(this.board()?.projects.map((p) => p.key));
@@ -249,13 +334,21 @@ export class BoardSettingsDialog {
   }
 
   protected async save(): Promise<void> {
-    await this.run(() => this.store.update({ name: this.name().trim(), description: this.description().trim() || null }), 'Board saved');
+    await this.run(
+      () =>
+        this.store.update({
+          name: this.name().trim(),
+          description: this.description().trim() || null,
+        }),
+      'Board saved',
+    );
   }
 
   protected async link(): Promise<void> {
     const key = this.toLink();
     if (!key) return;
-    if (await this.run(() => this.store.update({ addProjectKeys: [key] }), `${key} linked`)) this.toLink.set(null);
+    if (await this.run(() => this.store.update({ addProjectKeys: [key] }), `${key} linked`))
+      this.toLink.set(null);
   }
 
   protected async unlink(key: string, name: string, cardCount: number): Promise<void> {
@@ -267,7 +360,8 @@ export class BoardSettingsDialog {
       confirmLabel: 'Unlink',
       danger: cardCount > 0,
     });
-    if (confirmed) await this.run(() => this.store.update({ removeProjectKeys: [key] }), `${key} unlinked`);
+    if (confirmed)
+      await this.run(() => this.store.update({ removeProjectKeys: [key] }), `${key} unlinked`);
   }
 
   protected async transfer(): Promise<void> {
@@ -285,7 +379,11 @@ export class BoardSettingsDialog {
   }
 
   protected archive(): void {
-    const ref = this.dialog.open(ArchiveBoardDialog, { data: this.store, width: '480px', autoFocus: 'first-tabbable' });
+    const ref = this.dialog.open(ArchiveBoardDialog, {
+      data: this.store,
+      width: '480px',
+      autoFocus: 'first-tabbable',
+    });
     ref.afterClosed().subscribe((archived) => {
       if (archived) this.ref.close();
     });
@@ -300,7 +398,8 @@ export class BoardSettingsDialog {
     if (!b) return;
     const confirmed = await this.confirm.confirm({
       title: `Delete ${b.name}?`,
-      message: 'Every ticket on this board, Done included, goes back to the top of its project backlog. This cannot be undone.',
+      message:
+        'Every ticket on this board, Done included, goes back to the top of its project backlog. This cannot be undone.',
       confirmLabel: 'Delete board',
       danger: true,
       requireText: b.name,

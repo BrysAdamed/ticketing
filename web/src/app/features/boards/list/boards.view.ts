@@ -9,7 +9,10 @@ import { AvatarComponent } from '@shared/ui/domain/avatar.component';
 import { ProjectTileComponent } from '@shared/ui/domain/project-tile.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { IconComponent } from '@shared/ui/icon/icon.component';
-import { SegmentedControlComponent, SegmentOption } from '@shared/ui/segmented/segmented-control.component';
+import {
+  SegmentedControlComponent,
+  SegmentOption,
+} from '@shared/ui/segmented/segmented-control.component';
 import { SkeletonRowsComponent } from '@shared/ui/skeleton/skeleton-rows.component';
 import { BoardsFilter, BoardsStore } from './boards.store';
 import { CreateBoardDialog, CreateBoardDialogData } from './create-board.dialog';
@@ -54,11 +57,22 @@ import { CreateBoardDialog, CreateBoardDialogData } from './create-board.dialog'
           (input)="store.query.set($any($event.target).value)"
         />
       </label>
-      <tk-segmented ariaLabel="Board filter" testId="boards-segment" [options]="filterOptions()" [value]="store.filter()" (valueChange)="store.filter.set($event)" />
+      <tk-segmented
+        ariaLabel="Board filter"
+        testId="boards-segment"
+        [options]="filterOptions()"
+        [value]="store.filter()"
+        (valueChange)="store.filter.set($event)"
+      />
     </div>
 
     @if (store.status() === 'error' && !store.hasData()) {
-      <tk-empty-state icon="tablerAlertCircle" tone="danger" title="Couldn't load boards" [description]="store.error()?.title ?? null">
+      <tk-empty-state
+        icon="tablerAlertCircle"
+        tone="danger"
+        title="Couldn't load boards"
+        [description]="store.error()?.title ?? null"
+      >
         <button mat-stroked-button type="button" (click)="store.load()">Retry</button>
       </tk-empty-state>
     } @else if (!store.hasData()) {
@@ -66,7 +80,12 @@ import { CreateBoardDialog, CreateBoardDialogData } from './create-board.dialog'
     } @else {
       <div class="grid">
         @for (board of store.boards(); track board.id) {
-          <a class="board" [class.archived]="board.archivedAt" [routerLink]="['/boards', board.id]" [attr.data-testid]="'board-row-' + board.name">
+          <a
+            class="board"
+            [class.archived]="board.archivedAt"
+            [routerLink]="['/boards', board.id]"
+            [attr.data-testid]="'board-row-' + board.name"
+          >
             <div class="top">
               <tk-icon name="tablerLayoutKanban" [size]="16" />
               <span class="name">{{ board.name }}</span>
@@ -79,7 +98,9 @@ import { CreateBoardDialog, CreateBoardDialogData } from './create-board.dialog'
             }
             <div class="projects">
               @for (project of board.projects; track project.id) {
-                <span class="pchip" [matTooltip]="project.name"><tk-project-tile [projectKey]="project.key" />{{ project.key }}</span>
+                <span class="pchip" [matTooltip]="project.name"
+                  ><tk-project-tile [projectKey]="project.key" />{{ project.key }}</span
+                >
               }
             </div>
             <div class="bottom">
@@ -102,9 +123,17 @@ import { CreateBoardDialog, CreateBoardDialogData } from './create-board.dialog'
         } @empty {
           <div class="empty">
             @if (store.query() || store.filter() !== 'active') {
-              <tk-empty-state icon="tablerSearch" title="No boards match" description="Try another filter." />
+              <tk-empty-state
+                icon="tablerSearch"
+                title="No boards match"
+                description="Try another filter."
+              />
             } @else {
-              <tk-empty-state icon="tablerLayoutKanban" title="No boards yet" description="A board pulls tickets from one or more project backlogs, like a sprint.">
+              <tk-empty-state
+                icon="tablerLayoutKanban"
+                title="No boards yet"
+                description="A board pulls tickets from one or more project backlogs, like a sprint."
+              >
                 <button mat-flat-button type="button" (click)="openCreate()">New board</button>
               </tk-empty-state>
             }
@@ -286,11 +315,14 @@ export class BoardsView {
 
   protected openCreate(): void {
     const data: CreateBoardDialogData = { create: (board, key) => this.store.create(board, key) };
-    const ref = this.dialog.open<CreateBoardDialog, CreateBoardDialogData, Board>(CreateBoardDialog, {
-      data,
-      width: '520px',
-      autoFocus: 'first-tabbable',
-    });
+    const ref = this.dialog.open<CreateBoardDialog, CreateBoardDialogData, Board>(
+      CreateBoardDialog,
+      {
+        data,
+        width: '520px',
+        autoFocus: 'first-tabbable',
+      },
+    );
     ref.afterClosed().subscribe((board) => {
       if (board) void this.router.navigate(['/boards', board.id]);
     });

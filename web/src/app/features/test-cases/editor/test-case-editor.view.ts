@@ -1,4 +1,13 @@
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, input, untracked } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  DestroyRef,
+  effect,
+  inject,
+  input,
+  untracked,
+} from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltip } from '@angular/material/tooltip';
@@ -21,7 +30,10 @@ import { IconComponent } from '@shared/ui/icon/icon.component';
 import { PickerOption } from '@shared/ui/inline-picker/picker-option';
 import { KbdComponent } from '@shared/ui/kbd/kbd.component';
 import { SearchPickerDirective } from '@shared/ui/search-picker/search-picker.directive';
-import { SegmentedControlComponent, SegmentOption } from '@shared/ui/segmented/segmented-control.component';
+import {
+  SegmentedControlComponent,
+  SegmentOption,
+} from '@shared/ui/segmented/segmented-control.component';
 import { SkeletonRowsComponent } from '@shared/ui/skeleton/skeleton-rows.component';
 import { RUN_STATUS_ICONS, TEST_CASE_ICONS } from '../test-case-icons';
 import { AUTOMATION_MAX, MARKDOWN_MAX, TITLE_MAX } from './test-case-form';
@@ -87,7 +99,10 @@ export class TestCaseEditorView {
   protected readonly testCase = computed(() => this.store.saved());
 
   protected readonly ticketSearch = async (query: string): Promise<PickerOption<TicketRef>[]> =>
-    (await firstValueFrom(this.tickets.find(this.projectKey(), query))).map((t) => ({ value: t, label: `${t.key} ${t.title}` }));
+    (await firstValueFrom(this.tickets.find(this.projectKey(), query))).map((t) => ({
+      value: t,
+      label: `${t.key} ${t.title}`,
+    }));
 
   constructor() {
     effect(() => {
@@ -99,8 +114,19 @@ export class TestCaseEditorView {
 
     inject(ShortcutService).registerScoped(
       [
-        { keys: 'mod+enter', description: 'Save the test case', section: 'Test cases', allowInInputs: true, handler: (e) => this.save(e) },
-        { keys: 'escape', description: 'Close the editor', section: 'Test cases', handler: () => this.close() },
+        {
+          keys: 'mod+enter',
+          description: 'Save the test case',
+          section: 'Test cases',
+          allowInInputs: true,
+          handler: (e) => this.save(e),
+        },
+        {
+          keys: 'escape',
+          description: 'Close the editor',
+          section: 'Test cases',
+          handler: () => this.close(),
+        },
       ],
       inject(DestroyRef),
     );
@@ -111,7 +137,13 @@ export class TestCaseEditorView {
   }
 
   protected pickTicket(ticket: TicketRef): void {
-    this.store.linkTicket({ id: ticket.id, key: ticket.key, title: ticket.title, type: ticket.type, status: ticket.status });
+    this.store.linkTicket({
+      id: ticket.id,
+      key: ticket.key,
+      title: ticket.title,
+      type: ticket.type,
+      status: ticket.status,
+    });
   }
 
   protected openTicket(key: string): void {
@@ -123,7 +155,11 @@ export class TestCaseEditorView {
     const wasNew = this.store.isNew();
     const saved = await this.store.save();
     if (saved && wasNew) {
-      void this.router.navigate(['..', saved.key], { relativeTo: this.route, queryParamsHandling: 'merge', queryParams: { forTicket: null } });
+      void this.router.navigate(['..', saved.key], {
+        relativeTo: this.route,
+        queryParamsHandling: 'merge',
+        queryParams: { forTicket: null },
+      });
     }
   }
 
@@ -154,14 +190,31 @@ export class TestCaseEditorView {
       });
       if (!discard) return;
     }
-    void this.router.navigate(['..'], { relativeTo: this.route, queryParamsHandling: 'merge', queryParams: { forTicket: null } });
+    void this.router.navigate(['..'], {
+      relativeTo: this.route,
+      queryParamsHandling: 'merge',
+      queryParams: { forTicket: null },
+    });
   }
 
-  private async open(projectKey: string, key: string | null, forTicket: string | null): Promise<void> {
+  private async open(
+    projectKey: string,
+    key: string | null,
+    forTicket: string | null,
+  ): Promise<void> {
     let ticket: LinkedTicket | null = null;
     if (forTicket) {
-      const match = (await firstValueFrom(this.tickets.find(projectKey, forTicket))).find((t) => t.key === forTicket);
-      if (match) ticket = { id: match.id, key: match.key, title: match.title, type: match.type, status: match.status };
+      const match = (await firstValueFrom(this.tickets.find(projectKey, forTicket))).find(
+        (t) => t.key === forTicket,
+      );
+      if (match)
+        ticket = {
+          id: match.id,
+          key: match.key,
+          title: match.title,
+          type: match.type,
+          status: match.status,
+        };
     }
     await this.store.load(projectKey, key, ticket);
   }

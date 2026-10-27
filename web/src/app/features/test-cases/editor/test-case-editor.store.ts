@@ -6,7 +6,15 @@ import { LoadStatus } from '@core/projects/project-directory';
 import { TestCasesApi } from '@core/testing/testing.api';
 import { LinkedTicket, TestCase } from '@core/testing/testing.models';
 import { TestCasesStore } from '../list/test-cases.store';
-import { emptyForm, formFrom, FormErrors, TestCaseForm, toNew, toPatch, validate } from './test-case-form';
+import {
+  emptyForm,
+  formFrom,
+  FormErrors,
+  TestCaseForm,
+  toNew,
+  toPatch,
+  validate,
+} from './test-case-form';
 
 /// Editor state of one test case (create or edit). Saves send `If-Match` because the case holds long
 /// text (D-43); a conflict reloads the case and tells the user. Saves are pushed to the list store.
@@ -28,14 +36,23 @@ export class TestCaseEditorStore {
   readonly showErrors = signal(false);
 
   readonly isNew = computed(() => this.key() === null);
-  readonly errors = computed<FormErrors>(() => ({ ...validate(this.form()), ...this.serverErrors() }));
+  readonly errors = computed<FormErrors>(() => ({
+    ...validate(this.form()),
+    ...this.serverErrors(),
+  }));
   readonly dirty = computed(() => {
     const saved = this.saved();
-    return saved ? Object.keys(toPatch(saved, this.form())).length > 0 : this.form().title.trim() !== '' || this.form().steps.length > 0;
+    return saved
+      ? Object.keys(toPatch(saved, this.form())).length > 0
+      : this.form().title.trim() !== '' || this.form().steps.length > 0;
   });
   readonly canEdit = computed(() => this.isNew() || (this.saved()?.permissions.canEdit ?? false));
 
-  async load(projectKey: string, key: string | null, ticket: LinkedTicket | null = null): Promise<void> {
+  async load(
+    projectKey: string,
+    key: string | null,
+    ticket: LinkedTicket | null = null,
+  ): Promise<void> {
     this.projectKey.set(projectKey);
     this.key.set(key);
     this.serverErrors.set({});
@@ -80,8 +97,12 @@ export class TestCaseEditorStore {
     this.saving.set(true);
     try {
       const result = saved
-        ? await firstValueFrom(this.api.update(saved.key, toPatch(saved, this.form()), saved.rowVersion))
-        : await firstValueFrom(this.api.create(this.projectKey(), toNew(this.form()), crypto.randomUUID()));
+        ? await firstValueFrom(
+            this.api.update(saved.key, toPatch(saved, this.form()), saved.rowVersion),
+          )
+        : await firstValueFrom(
+            this.api.create(this.projectKey(), toNew(this.form()), crypto.randomUUID()),
+          );
       this.apply(result);
       this.key.set(result.key);
       this.list?.saved(result);
@@ -90,7 +111,9 @@ export class TestCaseEditorStore {
     } catch (error) {
       const apiError = toApiError(error);
       if (apiError.code === 'concurrency.conflict' && saved) {
-        this.toast.warning(`${saved.key} was changed by someone else. Reloaded the latest version.`);
+        this.toast.warning(
+          `${saved.key} was changed by someone else. Reloaded the latest version.`,
+        );
         await this.load(this.projectKey(), saved.key);
       } else if (apiError.isValidation) {
         this.serverErrors.set(serverErrors(apiError));
@@ -118,7 +141,11 @@ export class TestCaseEditorStore {
       const result = await firstValueFrom(this.api.update(saved.key, { archived }));
       this.saved.set(result);
       this.list?.saved(result);
-      this.toast.success(archived ? `${saved.key} archived. It is excluded from new regression sessions.` : `${saved.key} restored.`);
+      this.toast.success(
+        archived
+          ? `${saved.key} archived. It is excluded from new regression sessions.`
+          : `${saved.key} restored.`,
+      );
     } catch (error) {
       this.toast.error(error);
     }
@@ -147,7 +174,13 @@ export class TestCaseEditorStore {
 
 function serverErrors(error: ApiError): FormErrors {
   const result: FormErrors = {};
-  for (const field of ['title', 'steps', 'preconditions', 'expectedResult', 'automationReference'] as const) {
+  for (const field of [
+    'title',
+    'steps',
+    'preconditions',
+    'expectedResult',
+    'automationReference',
+  ] as const) {
     const message = error.fieldError(field);
     if (message) result[field] = message;
   }

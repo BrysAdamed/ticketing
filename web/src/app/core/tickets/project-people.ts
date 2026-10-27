@@ -5,7 +5,13 @@ import { ApiClient } from '../api/api-client';
 import { UserRef } from './ticket.models';
 
 interface ProjectMembers {
-  members: { userId: string; email: string; displayName: string; role: ProjectRole; isActive: boolean }[];
+  members: {
+    userId: string;
+    email: string;
+    displayName: string;
+    role: ProjectRole;
+    isActive: boolean;
+  }[];
 }
 
 /// Users who can be assigned in a project (active Owners and Members, I-01), cached per project for
@@ -23,7 +29,12 @@ export class ProjectPeople {
         .then((project) =>
           project.members
             .filter((m) => m.isActive && m.role !== 'Viewer')
-            .map((m) => ({ id: m.userId, email: m.email, displayName: m.displayName, isActive: m.isActive }))
+            .map((m) => ({
+              id: m.userId,
+              email: m.email,
+              displayName: m.displayName,
+              isActive: m.isActive,
+            }))
             .sort((a, b) => a.displayName.localeCompare(b.displayName)),
         )
         .catch((error: unknown) => {
@@ -39,7 +50,10 @@ export class ProjectPeople {
   /// any active user on a public project, Admins and Owner/Member members on a private one. At most 20.
   search(projectKey: string, query: string): Promise<UserRef[]> {
     return firstValueFrom(
-      this.api.get<UserRef[]>('/users', { projectKey: projectKey.toUpperCase(), query: query.trim() }),
+      this.api.get<UserRef[]>('/users', {
+        projectKey: projectKey.toUpperCase(),
+        query: query.trim(),
+      }),
     );
   }
 }

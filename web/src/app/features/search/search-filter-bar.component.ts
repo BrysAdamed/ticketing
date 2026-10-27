@@ -1,4 +1,15 @@
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, input, output, signal, untracked } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  DestroyRef,
+  effect,
+  inject,
+  input,
+  output,
+  signal,
+  untracked,
+} from '@angular/core';
 import { MatMenuModule } from '@angular/material/menu';
 import { ApiClient } from '@core/api/api-client';
 import { ProjectDirectory } from '@core/projects/project-directory';
@@ -21,7 +32,15 @@ import { ProjectTileComponent } from '@shared/ui/domain/project-tile.component';
 import { StatusIconComponent } from '@shared/ui/domain/status-icon.component';
 import { TypeIconComponent } from '@shared/ui/domain/type-icon.component';
 import { IconComponent } from '@shared/ui/icon/icon.component';
-import { EMPTY_SEARCH, hasFilters, ListField, SearchFilters, TextField, toggleValue, utcDate } from './search-query';
+import {
+  EMPTY_SEARCH,
+  hasFilters,
+  ListField,
+  SearchFilters,
+  TextField,
+  toggleValue,
+  utcDate,
+} from './search-query';
 
 interface DatePreset {
   label: string;
@@ -61,7 +80,13 @@ interface ExtraChip {
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { role: 'toolbar', 'aria-label': 'Filters' },
   template: `
-    <button type="button" class="fchip" [class.on]="f().project.length" [matMenuTriggerFor]="projectMenu" data-testid="filter-project">
+    <button
+      type="button"
+      class="fchip"
+      [class.on]="f().project.length"
+      [matMenuTriggerFor]="projectMenu"
+      data-testid="filter-project"
+    >
       @if (f().project.length) {
         Project: <b>{{ summary(f().project) }}</b>
       } @else {
@@ -70,15 +95,29 @@ interface ExtraChip {
     </button>
     <mat-menu #projectMenu="matMenu" class="tk-filter-menu">
       @for (project of projects(); track project.key) {
-        <button mat-menu-item type="button" [attr.data-testid]="'filter-project-' + project.key" (click)="$event.stopPropagation(); toggle('project', project.key)">
-          <span class="opt"><span class="box" [class.on]="f().project.includes(project.key)"></span><tk-project-tile [projectKey]="project.key" />{{ project.name }}</span>
+        <button
+          mat-menu-item
+          type="button"
+          [attr.data-testid]="'filter-project-' + project.key"
+          (click)="$event.stopPropagation(); toggle('project', project.key)"
+        >
+          <span class="opt"
+            ><span class="box" [class.on]="f().project.includes(project.key)"></span
+            ><tk-project-tile [projectKey]="project.key" />{{ project.name }}</span
+          >
         </button>
       } @empty {
         <div class="empty">No projects</div>
       }
     </mat-menu>
 
-    <button type="button" class="fchip" [class.on]="f().type.length" [matMenuTriggerFor]="typeMenu" data-testid="filter-type">
+    <button
+      type="button"
+      class="fchip"
+      [class.on]="f().type.length"
+      [matMenuTriggerFor]="typeMenu"
+      data-testid="filter-type"
+    >
       @if (f().type.length) {
         Type: <b>{{ f().type.length === 1 ? f().type[0] : f().type.length }}</b>
       } @else {
@@ -87,13 +126,27 @@ interface ExtraChip {
     </button>
     <mat-menu #typeMenu="matMenu" class="tk-filter-menu">
       @for (type of types; track type) {
-        <button mat-menu-item type="button" [attr.data-testid]="'filter-type-' + type" (click)="$event.stopPropagation(); toggle('type', type)">
-          <span class="opt"><span class="box" [class.on]="f().type.includes(type)"></span><tk-type-icon [type]="type" [size]="14" [showLabel]="true" /></span>
+        <button
+          mat-menu-item
+          type="button"
+          [attr.data-testid]="'filter-type-' + type"
+          (click)="$event.stopPropagation(); toggle('type', type)"
+        >
+          <span class="opt"
+            ><span class="box" [class.on]="f().type.includes(type)"></span
+            ><tk-type-icon [type]="type" [size]="14" [showLabel]="true"
+          /></span>
         </button>
       }
     </mat-menu>
 
-    <button type="button" class="fchip" [class.on]="f().status.length || f().category.length" [matMenuTriggerFor]="statusMenu" data-testid="filter-status">
+    <button
+      type="button"
+      class="fchip"
+      [class.on]="f().status.length || f().category.length"
+      [matMenuTriggerFor]="statusMenu"
+      data-testid="filter-status"
+    >
       @if (f().status.length || f().category.length) {
         Status: <b>{{ statusSummary() }}</b>
       } @else {
@@ -103,19 +156,41 @@ interface ExtraChip {
     <mat-menu #statusMenu="matMenu" class="tk-filter-menu">
       <div class="mhead">Category</div>
       @for (category of categories; track category) {
-        <button mat-menu-item type="button" [attr.data-testid]="'filter-category-' + category" (click)="$event.stopPropagation(); toggle('category', category)">
-          <span class="opt"><span class="box" [class.on]="f().category.includes(category)"></span>{{ categoryLabels[category] }}</span>
+        <button
+          mat-menu-item
+          type="button"
+          [attr.data-testid]="'filter-category-' + category"
+          (click)="$event.stopPropagation(); toggle('category', category)"
+        >
+          <span class="opt"
+            ><span class="box" [class.on]="f().category.includes(category)"></span
+            >{{ categoryLabels[category] }}</span
+          >
         </button>
       }
       <div class="mhead">Status</div>
       @for (status of statuses; track status) {
-        <button mat-menu-item type="button" [attr.data-testid]="'filter-status-' + status" (click)="$event.stopPropagation(); toggle('status', status)">
-          <span class="opt"><span class="box" [class.on]="f().status.includes(status)"></span><tk-status-icon [status]="status" />{{ statusLabels[status] }}</span>
+        <button
+          mat-menu-item
+          type="button"
+          [attr.data-testid]="'filter-status-' + status"
+          (click)="$event.stopPropagation(); toggle('status', status)"
+        >
+          <span class="opt"
+            ><span class="box" [class.on]="f().status.includes(status)"></span
+            ><tk-status-icon [status]="status" />{{ statusLabels[status] }}</span
+          >
         </button>
       }
     </mat-menu>
 
-    <button type="button" class="fchip" [class.on]="f().priority.length" [matMenuTriggerFor]="priorityMenu" data-testid="filter-priority">
+    <button
+      type="button"
+      class="fchip"
+      [class.on]="f().priority.length"
+      [matMenuTriggerFor]="priorityMenu"
+      data-testid="filter-priority"
+    >
       @if (f().priority.length) {
         Priority: <b>{{ f().priority.length === 1 ? f().priority[0] : f().priority.length }}</b>
       } @else {
@@ -124,13 +199,26 @@ interface ExtraChip {
     </button>
     <mat-menu #priorityMenu="matMenu" class="tk-filter-menu">
       @for (priority of priorities; track priority) {
-        <button mat-menu-item type="button" (click)="$event.stopPropagation(); toggle('priority', priority)">
-          <span class="opt"><span class="box" [class.on]="f().priority.includes(priority)"></span><tk-priority-icon [priority]="priority" />{{ priorityLabels[priority] }}</span>
+        <button
+          mat-menu-item
+          type="button"
+          (click)="$event.stopPropagation(); toggle('priority', priority)"
+        >
+          <span class="opt"
+            ><span class="box" [class.on]="f().priority.includes(priority)"></span
+            ><tk-priority-icon [priority]="priority" />{{ priorityLabels[priority] }}</span
+          >
         </button>
       }
     </mat-menu>
 
-    <button type="button" class="fchip" [class.on]="f().severity.length" [matMenuTriggerFor]="severityMenu" data-testid="filter-severity">
+    <button
+      type="button"
+      class="fchip"
+      [class.on]="f().severity.length"
+      [matMenuTriggerFor]="severityMenu"
+      data-testid="filter-severity"
+    >
       @if (f().severity.length) {
         Severity: <b>{{ f().severity.length === 1 ? f().severity[0] : f().severity.length }}</b>
       } @else {
@@ -139,16 +227,36 @@ interface ExtraChip {
     </button>
     <mat-menu #severityMenu="matMenu" class="tk-filter-menu">
       @for (severity of severities; track severity) {
-        <button mat-menu-item type="button" (click)="$event.stopPropagation(); toggle('severity', severity)">
-          <span class="opt"><span class="box" [class.on]="f().severity.includes(severity)"></span>{{ severityLabels[severity] }}</span>
+        <button
+          mat-menu-item
+          type="button"
+          (click)="$event.stopPropagation(); toggle('severity', severity)"
+        >
+          <span class="opt"
+            ><span class="box" [class.on]="f().severity.includes(severity)"></span
+            >{{ severityLabels[severity] }}</span
+          >
         </button>
       }
-      <button mat-menu-item type="button" (click)="$event.stopPropagation(); toggle('severity', 'none')">
-        <span class="opt"><span class="box" [class.on]="f().severity.includes('none')"></span>No severity</span>
+      <button
+        mat-menu-item
+        type="button"
+        (click)="$event.stopPropagation(); toggle('severity', 'none')"
+      >
+        <span class="opt"
+          ><span class="box" [class.on]="f().severity.includes('none')"></span>No severity</span
+        >
       </button>
     </mat-menu>
 
-    <button type="button" class="fchip" [class.on]="f().assignee.length" [matMenuTriggerFor]="assigneeMenu" data-testid="filter-assignee" (menuOpened)="focusInput(userInput)">
+    <button
+      type="button"
+      class="fchip"
+      [class.on]="f().assignee.length"
+      [matMenuTriggerFor]="assigneeMenu"
+      data-testid="filter-assignee"
+      (menuOpened)="focusInput(userInput)"
+    >
       @if (f().assignee.length) {
         Assignee: <b>{{ assigneeSummary() }}</b>
       } @else {
@@ -157,22 +265,58 @@ interface ExtraChip {
     </button>
     <mat-menu #assigneeMenu="matMenu" class="tk-filter-menu">
       <div class="minput">
-        <input #userInput (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" placeholder="Find people…" aria-label="Find people" data-testid="filter-assignee-input" (input)="findUsers(userInput.value)" />
+        <input
+          #userInput
+          (click)="$event.stopPropagation()"
+          (keydown)="$event.stopPropagation()"
+          placeholder="Find people…"
+          aria-label="Find people"
+          data-testid="filter-assignee-input"
+          (input)="findUsers(userInput.value)"
+        />
       </div>
-      <button mat-menu-item type="button" data-testid="filter-assignee-me" (click)="$event.stopPropagation(); toggle('assignee', 'me')">
-        <span class="opt"><span class="box" [class.on]="f().assignee.includes('me')"></span>Me</span>
+      <button
+        mat-menu-item
+        type="button"
+        data-testid="filter-assignee-me"
+        (click)="$event.stopPropagation(); toggle('assignee', 'me')"
+      >
+        <span class="opt"
+          ><span class="box" [class.on]="f().assignee.includes('me')"></span>Me</span
+        >
       </button>
-      <button mat-menu-item type="button" (click)="$event.stopPropagation(); toggle('assignee', 'unassigned')">
-        <span class="opt"><span class="box" [class.on]="f().assignee.includes('unassigned')"></span><tk-avatar />Unassigned</span>
+      <button
+        mat-menu-item
+        type="button"
+        (click)="$event.stopPropagation(); toggle('assignee', 'unassigned')"
+      >
+        <span class="opt"
+          ><span class="box" [class.on]="f().assignee.includes('unassigned')"></span
+          ><tk-avatar />Unassigned</span
+        >
       </button>
       @for (user of userOptions(); track user.id) {
-        <button mat-menu-item type="button" (click)="$event.stopPropagation(); toggle('assignee', user.id)">
-          <span class="opt"><span class="box" [class.on]="f().assignee.includes(user.id)"></span><tk-avatar [userId]="user.id" [name]="user.displayName" />{{ user.displayName }}</span>
+        <button
+          mat-menu-item
+          type="button"
+          (click)="$event.stopPropagation(); toggle('assignee', user.id)"
+        >
+          <span class="opt"
+            ><span class="box" [class.on]="f().assignee.includes(user.id)"></span
+            ><tk-avatar [userId]="user.id" [name]="user.displayName" />{{ user.displayName }}</span
+          >
         </button>
       }
     </mat-menu>
 
-    <button type="button" class="fchip" [class.on]="f().label.length" [matMenuTriggerFor]="labelMenu" data-testid="filter-label" (menuOpened)="focusInput(labelInput)">
+    <button
+      type="button"
+      class="fchip"
+      [class.on]="f().label.length"
+      [matMenuTriggerFor]="labelMenu"
+      data-testid="filter-label"
+      (menuOpened)="focusInput(labelInput)"
+    >
       @if (f().label.length) {
         Labels: <b>{{ summary(f().label) }}</b>
       } @else {
@@ -192,14 +336,25 @@ interface ExtraChip {
         />
       </div>
       @for (label of f().label; track label) {
-        <button mat-menu-item type="button" (click)="$event.stopPropagation(); toggle('label', label)">
+        <button
+          mat-menu-item
+          type="button"
+          (click)="$event.stopPropagation(); toggle('label', label)"
+        >
           <span class="opt"><span class="box on"></span><tk-label-chip [label]="label" /></span>
         </button>
       }
       <div class="mnote">Tickets must have all selected labels.</div>
     </mat-menu>
 
-    <button type="button" class="fchip" [class.on]="f().version" [matMenuTriggerFor]="versionMenu" data-testid="filter-version" (menuOpened)="focusInput(versionInput)">
+    <button
+      type="button"
+      class="fchip"
+      [class.on]="f().version"
+      [matMenuTriggerFor]="versionMenu"
+      data-testid="filter-version"
+      (menuOpened)="focusInput(versionInput)"
+    >
       @if (f().version) {
         Version: <b>{{ f().version === 'none' ? 'none' : f().version }}</b>
       } @else {
@@ -208,13 +363,27 @@ interface ExtraChip {
     </button>
     <mat-menu #versionMenu="matMenu" class="tk-filter-menu">
       <div class="minput">
-        <input #versionInput (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" placeholder="Exact version, Enter" aria-label="Version" [value]="f().version === 'none' ? '' : f().version" (keydown.enter)="setText('version', versionInput.value); versionInput.blur()" />
+        <input
+          #versionInput
+          (click)="$event.stopPropagation()"
+          (keydown)="$event.stopPropagation()"
+          placeholder="Exact version, Enter"
+          aria-label="Version"
+          [value]="f().version === 'none' ? '' : f().version"
+          (keydown.enter)="setText('version', versionInput.value); versionInput.blur()"
+        />
       </div>
       <button mat-menu-item type="button" (click)="setText('version', 'none')">No version</button>
       <button mat-menu-item type="button" (click)="setText('version', '')">Any version</button>
     </mat-menu>
 
-    <button type="button" class="fchip" [class.on]="f().location" [matMenuTriggerFor]="locationMenu" data-testid="filter-location">
+    <button
+      type="button"
+      class="fchip"
+      [class.on]="f().location"
+      [matMenuTriggerFor]="locationMenu"
+      data-testid="filter-location"
+    >
       @if (f().location) {
         Location: <b>{{ locationLabel() }}</b>
       } @else {
@@ -223,11 +392,19 @@ interface ExtraChip {
     </button>
     <mat-menu #locationMenu="matMenu" class="tk-filter-menu">
       <button mat-menu-item type="button" (click)="setText('location', '')">Anywhere</button>
-      <button mat-menu-item type="button" (click)="setText('location', 'backlog')">In a backlog</button>
+      <button mat-menu-item type="button" (click)="setText('location', 'backlog')">
+        In a backlog
+      </button>
       <button mat-menu-item type="button" (click)="setText('location', 'board')">On a board</button>
     </mat-menu>
 
-    <button type="button" class="fchip" [class.on]="f().updatedFrom || f().updatedTo" [matMenuTriggerFor]="updatedMenu" data-testid="filter-updated">
+    <button
+      type="button"
+      class="fchip"
+      [class.on]="f().updatedFrom || f().updatedTo"
+      [matMenuTriggerFor]="updatedMenu"
+      data-testid="filter-updated"
+    >
       @if (f().updatedFrom || f().updatedTo) {
         Updated: <b>{{ rangeLabel(f().updatedFrom, f().updatedTo) }}</b>
       } @else {
@@ -236,12 +413,20 @@ interface ExtraChip {
     </button>
     <mat-menu #updatedMenu="matMenu" class="tk-filter-menu">
       @for (preset of presets; track preset.label) {
-        <button mat-menu-item type="button" (click)="setRange('updated', preset)">{{ preset.label }}</button>
+        <button mat-menu-item type="button" (click)="setRange('updated', preset)">
+          {{ preset.label }}
+        </button>
       }
       <button mat-menu-item type="button" (click)="setRange('updated', null)">Any time</button>
     </mat-menu>
 
-    <button type="button" class="fchip" [class.on]="f().createdFrom || f().createdTo" [matMenuTriggerFor]="createdMenu" data-testid="filter-created">
+    <button
+      type="button"
+      class="fchip"
+      [class.on]="f().createdFrom || f().createdTo"
+      [matMenuTriggerFor]="createdMenu"
+      data-testid="filter-created"
+    >
       @if (f().createdFrom || f().createdTo) {
         Created: <b>{{ rangeLabel(f().createdFrom, f().createdTo) }}</b>
       } @else {
@@ -250,7 +435,9 @@ interface ExtraChip {
     </button>
     <mat-menu #createdMenu="matMenu" class="tk-filter-menu">
       @for (preset of presets; track preset.label) {
-        <button mat-menu-item type="button" (click)="setRange('created', preset)">{{ preset.label }}</button>
+        <button mat-menu-item type="button" (click)="setRange('created', preset)">
+          {{ preset.label }}
+        </button>
       }
       <button mat-menu-item type="button" (click)="setRange('created', null)">Any time</button>
     </mat-menu>
@@ -258,12 +445,21 @@ interface ExtraChip {
     @for (chip of extraChips(); track chip.id) {
       <span class="fchip on fixed" [attr.data-testid]="'filter-extra-' + chip.id">
         {{ chip.label }}
-        <button type="button" class="x" [attr.aria-label]="'Remove ' + chip.label" (click)="patch(chip.clear)"><tk-icon name="tablerX" [size]="12" /></button>
+        <button
+          type="button"
+          class="x"
+          [attr.aria-label]="'Remove ' + chip.label"
+          (click)="patch(chip.clear)"
+        >
+          <tk-icon name="tablerX" [size]="12" />
+        </button>
       </span>
     }
 
     @if (active()) {
-      <button type="button" class="clear" data-testid="filters-clear" (click)="clear()">Clear</button>
+      <button type="button" class="clear" data-testid="filters-clear" (click)="clear()">
+        Clear
+      </button>
     }
   `,
   styles: `
@@ -415,8 +611,17 @@ export class SearchFilterBarComponent {
 
   protected readonly statusSummary = computed(() => {
     const { status, category } = this.f();
-    if (status.length === 0 && category.length === 2 && category.includes('ToDo') && category.includes('InProgress')) return 'Open';
-    const parts = [...category.map((c) => STATUS_CATEGORY_LABELS[c as keyof typeof STATUS_CATEGORY_LABELS] ?? c), ...status.map((s) => TICKET_STATUS_LABELS[s as keyof typeof TICKET_STATUS_LABELS] ?? s)];
+    if (
+      status.length === 0 &&
+      category.length === 2 &&
+      category.includes('ToDo') &&
+      category.includes('InProgress')
+    )
+      return 'Open';
+    const parts = [
+      ...category.map((c) => STATUS_CATEGORY_LABELS[c as keyof typeof STATUS_CATEGORY_LABELS] ?? c),
+      ...status.map((s) => TICKET_STATUS_LABELS[s as keyof typeof TICKET_STATUS_LABELS] ?? s),
+    ];
     return parts.length === 1 ? parts[0] : `${parts.length}`;
   });
 
@@ -428,7 +633,9 @@ export class SearchFilterBarComponent {
   protected readonly userOptions = computed(() => {
     const found = this.found();
     if (found) return found;
-    const selected = this.f().assignee.map((id) => this.known().get(id)).filter((u): u is UserRef => !!u);
+    const selected = this.f()
+      .assignee.map((id) => this.known().get(id))
+      .filter((u): u is UserRef => !!u);
     const users = new Map([...selected, ...this.users()].map((u) => [u.id, u]));
     return [...users.values()];
   });
@@ -439,7 +646,8 @@ export class SearchFilterBarComponent {
     const value = values[0];
     if (value === 'me') return 'Me';
     if (value === 'unassigned') return 'Unassigned';
-    const user = this.known().get(value) ?? this.users().find((u) => u.id === value || u.email === value);
+    const user =
+      this.known().get(value) ?? this.users().find((u) => u.id === value || u.email === value);
     return user?.displayName ?? value;
   });
 
@@ -484,10 +692,26 @@ export class SearchFilterBarComponent {
     const f = this.f();
     const chips: ExtraChip[] = [];
     if (f.parent) chips.push({ id: 'parent', label: `Parent: ${f.parent}`, clear: { parent: '' } });
-    if (f.reporter.length) chips.push({ id: 'reporter', label: `Reporter: ${f.reporter.length === 1 ? (f.reporter[0] === 'me' ? 'Me' : f.reporter[0]) : f.reporter.length}`, clear: { reporter: [] } });
-    if (f.assigneeNot.length) chips.push({ id: 'assigneeNot', label: `Not assigned to ${f.assigneeNot.length}`, clear: { assigneeNot: [] } });
-    if (f.resolvedFrom || f.resolvedTo) chips.push({ id: 'resolved', label: `Resolved: ${this.rangeLabel(f.resolvedFrom, f.resolvedTo)}`, clear: { resolvedFrom: '', resolvedTo: '' } });
-    if (f.fromRegression) chips.push({ id: 'regression', label: 'From regressions', clear: { fromRegression: false } });
+    if (f.reporter.length)
+      chips.push({
+        id: 'reporter',
+        label: `Reporter: ${f.reporter.length === 1 ? (f.reporter[0] === 'me' ? 'Me' : f.reporter[0]) : f.reporter.length}`,
+        clear: { reporter: [] },
+      });
+    if (f.assigneeNot.length)
+      chips.push({
+        id: 'assigneeNot',
+        label: `Not assigned to ${f.assigneeNot.length}`,
+        clear: { assigneeNot: [] },
+      });
+    if (f.resolvedFrom || f.resolvedTo)
+      chips.push({
+        id: 'resolved',
+        label: `Resolved: ${this.rangeLabel(f.resolvedFrom, f.resolvedTo)}`,
+        clear: { resolvedFrom: '', resolvedTo: '' },
+      });
+    if (f.fromRegression)
+      chips.push({ id: 'regression', label: 'From regressions', clear: { fromRegression: false } });
     return chips;
   });
 
@@ -504,7 +728,10 @@ export class SearchFilterBarComponent {
   }
 
   protected addLabel(input: HTMLInputElement): void {
-    const labels = input.value.split(',').map((l) => l.trim().toLowerCase()).filter(Boolean);
+    const labels = input.value
+      .split(',')
+      .map((l) => l.trim().toLowerCase())
+      .filter(Boolean);
     input.value = '';
     if (labels.length) this.patch({ label: [...new Set([...this.f().label, ...labels])] });
   }
@@ -532,6 +759,11 @@ export class SearchFilterBarComponent {
   }
 
   protected clear(): void {
-    this.filtersChange.emit({ ...EMPTY_SEARCH, q: this.f().q, sort: this.f().sort, order: this.f().order });
+    this.filtersChange.emit({
+      ...EMPTY_SEARCH,
+      q: this.f().q,
+      sort: this.f().sort,
+      order: this.f().order,
+    });
   }
 }

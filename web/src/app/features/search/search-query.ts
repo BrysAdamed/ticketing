@@ -30,7 +30,9 @@ export interface SearchFilters {
 
 export type SearchSort = 'updated' | 'created' | 'priority' | 'key' | 'rank';
 export type SortOrder = 'asc' | 'desc';
-export type ListField = { [K in keyof SearchFilters]: SearchFilters[K] extends string[] ? K : never }[keyof SearchFilters];
+export type ListField = {
+  [K in keyof SearchFilters]: SearchFilters[K] extends string[] ? K : never;
+}[keyof SearchFilters];
 export type TextField =
   | 'q'
   | 'version'
@@ -108,8 +110,13 @@ export const EMPTY_SEARCH: SearchFilters = {
 export function parseSearchParams(params: Params): SearchFilters {
   const filters: SearchFilters = { ...EMPTY_SEARCH };
   for (const field of LIST_FIELDS) {
-    const values = valuesOf(params[field]).flatMap((v) => v.split(',')).map((v) => v.trim()).filter(Boolean);
-    const normalized = values.map((v) => (UPPER_CASE.has(field) ? v.toUpperCase() : LOWER_CASE.has(field) ? v.toLowerCase() : v));
+    const values = valuesOf(params[field])
+      .flatMap((v) => v.split(','))
+      .map((v) => v.trim())
+      .filter(Boolean);
+    const normalized = values.map((v) =>
+      UPPER_CASE.has(field) ? v.toUpperCase() : LOWER_CASE.has(field) ? v.toLowerCase() : v,
+    );
     filters[field] = [...new Set(normalized)];
   }
   for (const field of TEXT_FIELDS) {
@@ -159,14 +166,23 @@ export function sameFilters(a: SearchFilters, b: SearchFilters): boolean {
   return searchQueryString(a) === searchQueryString(b);
 }
 
-export function toggleValue(filters: SearchFilters, field: ListField, value: string): SearchFilters {
+export function toggleValue(
+  filters: SearchFilters,
+  field: ListField,
+  value: string,
+): SearchFilters {
   const current = filters[field];
-  return { ...filters, [field]: current.includes(value) ? current.filter((v) => v !== value) : [...current, value] };
+  return {
+    ...filters,
+    [field]: current.includes(value) ? current.filter((v) => v !== value) : [...current, value],
+  };
 }
 
 /// `YYYY-MM-DD` of `daysAgo` days before `now` in UTC (plain dates cover whole UTC days in the API).
 export function utcDate(now: Date, daysAgo: number): string {
-  const date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - daysAgo));
+  const date = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - daysAgo),
+  );
   return date.toISOString().slice(0, 10);
 }
 

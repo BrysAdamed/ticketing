@@ -6,7 +6,12 @@ export type ItemFilter = 'mine' | 'waiting' | 'failed' | 'all';
 export const ITEM_FILTERS: readonly ItemFilter[] = ['mine', 'waiting', 'failed', 'all'];
 
 /// Group order in the execution list: what still needs doing first.
-const GROUP_ORDER: readonly RegressionItemStatus[] = ['WaitingForExecution', 'Failed', 'Passed', 'Skipped'];
+const GROUP_ORDER: readonly RegressionItemStatus[] = [
+  'WaitingForExecution',
+  'Failed',
+  'Passed',
+  'Skipped',
+];
 
 export interface GroupRow {
   kind: 'group';
@@ -26,9 +31,15 @@ export function parseFilter(value: string | null | undefined): ItemFilter {
   return (ITEM_FILTERS as readonly string[]).includes(value ?? '') ? (value as ItemFilter) : 'all';
 }
 
-export function matchesFilter(item: RegressionItem, filter: ItemFilter, meId: string | null, text = ''): boolean {
+export function matchesFilter(
+  item: RegressionItem,
+  filter: ItemFilter,
+  meId: string | null,
+  text = '',
+): boolean {
   const q = text.trim().toLowerCase();
-  if (q && !item.title.toLowerCase().includes(q) && !item.testCaseKey.toLowerCase().includes(q)) return false;
+  if (q && !item.title.toLowerCase().includes(q) && !item.testCaseKey.toLowerCase().includes(q))
+    return false;
   switch (filter) {
     case 'mine':
       return meId !== null && item.assignee?.id === meId;
@@ -41,7 +52,10 @@ export function matchesFilter(item: RegressionItem, filter: ItemFilter, meId: st
   }
 }
 
-export function filterCounts(items: readonly RegressionItem[], meId: string | null): Record<ItemFilter, number> {
+export function filterCounts(
+  items: readonly RegressionItem[],
+  meId: string | null,
+): Record<ItemFilter, number> {
   return {
     mine: items.filter((i) => meId !== null && i.assignee?.id === meId).length,
     waiting: items.filter((i) => i.status === 'WaitingForExecution').length,
@@ -56,7 +70,12 @@ export function buildRows(items: readonly RegressionItem[]): SessionRow[] {
   for (const status of GROUP_ORDER) {
     const group = items.filter((i) => i.status === status).sort((a, b) => a.order - b.order);
     if (group.length === 0) continue;
-    rows.push({ kind: 'group', status, label: REGRESSION_ITEM_STATUS_LABELS[status], count: group.length });
+    rows.push({
+      kind: 'group',
+      status,
+      label: REGRESSION_ITEM_STATUS_LABELS[status],
+      count: group.length,
+    });
     for (const item of group) rows.push({ kind: 'item', item });
   }
   return rows;
@@ -69,16 +88,24 @@ export function orderedItems(rows: readonly SessionRow[]): RegressionItem[] {
 
 /// The next waiting item after `currentKey` in snapshot order (wrapping), preferring my own and
 /// unassigned items over items someone else has taken; null when nothing is waiting.
-export function nextWaiting(items: readonly RegressionItem[], currentKey: string | null, meId: string | null): RegressionItem | null {
+export function nextWaiting(
+  items: readonly RegressionItem[],
+  currentKey: string | null,
+  meId: string | null,
+): RegressionItem | null {
   const sorted = [...items].sort((a, b) => a.order - b.order);
   const start = currentKey ? sorted.findIndex((i) => i.testCaseKey === currentKey) : -1;
   const rotated = [...sorted.slice(start + 1), ...sorted.slice(0, start + 1)];
-  const waiting = rotated.filter((i) => i.status === 'WaitingForExecution' && i.testCaseKey !== currentKey);
+  const waiting = rotated.filter(
+    (i) => i.status === 'WaitingForExecution' && i.testCaseKey !== currentKey,
+  );
   return waiting.find((i) => !i.assignee || i.assignee.id === meId) ?? waiting[0] ?? null;
 }
 
 /// Progress segments in the design-system order: passed, failed, skipped, waiting (percent of total).
-export function progressSegments(summary: RegressionSummary): { key: 'passed' | 'failed' | 'skipped' | 'waiting'; count: number; percent: number }[] {
+export function progressSegments(
+  summary: RegressionSummary,
+): { key: 'passed' | 'failed' | 'skipped' | 'waiting'; count: number; percent: number }[] {
   const total = summary.total || 1;
   return (
     [
@@ -95,6 +122,9 @@ export function passRateLabel(summary: RegressionSummary): string {
 }
 
 /// Applies an item change to the session's items.
-export function replaceItem(items: readonly RegressionItem[], item: RegressionItem): RegressionItem[] {
+export function replaceItem(
+  items: readonly RegressionItem[],
+  item: RegressionItem,
+): RegressionItem[] {
   return items.map((i) => (i.id === item.id ? item : i));
 }

@@ -50,23 +50,29 @@ export class SearchStore {
     this.status.set('loading');
     this.error.set(null);
     this.loadingMore.set(false);
-    this.request = this.api.get<TicketSearchPage>('/tickets/search', { ...toSearchParams(filters), limit: PAGE_SIZE }).subscribe({
-      next: (page) => {
-        this.items.set(page.items);
-        this.nextCursor.set(page.nextCursor);
-        this.total.set(page.total);
-        this.totalCapped.set(page.totalCapped);
-        this.focusIndex.set(page.items.length ? Math.min(Math.max(this.focusIndex(), 0), page.items.length - 1) : -1);
-        this.status.set('loaded');
-      },
-      error: (error: unknown) => {
-        this.items.set([]);
-        this.total.set(null);
-        this.nextCursor.set(null);
-        this.error.set(toApiError(error));
-        this.status.set('error');
-      },
-    });
+    this.request = this.api
+      .get<TicketSearchPage>('/tickets/search', { ...toSearchParams(filters), limit: PAGE_SIZE })
+      .subscribe({
+        next: (page) => {
+          this.items.set(page.items);
+          this.nextCursor.set(page.nextCursor);
+          this.total.set(page.total);
+          this.totalCapped.set(page.totalCapped);
+          this.focusIndex.set(
+            page.items.length
+              ? Math.min(Math.max(this.focusIndex(), 0), page.items.length - 1)
+              : -1,
+          );
+          this.status.set('loaded');
+        },
+        error: (error: unknown) => {
+          this.items.set([]);
+          this.total.set(null);
+          this.nextCursor.set(null);
+          this.error.set(toApiError(error));
+          this.status.set('error');
+        },
+      });
   }
 
   reload(): void {
@@ -78,7 +84,11 @@ export class SearchStore {
     if (!cursor || this.loadingMore() || this.status() !== 'loaded') return;
     this.loadingMore.set(true);
     this.request = this.api
-      .get<TicketSearchPage>('/tickets/search', { ...toSearchParams(this.filters()), limit: PAGE_SIZE, cursor })
+      .get<TicketSearchPage>('/tickets/search', {
+        ...toSearchParams(this.filters()),
+        limit: PAGE_SIZE,
+        cursor,
+      })
       .subscribe({
         next: (page) => {
           this.items.update((items) => [...items, ...page.items]);

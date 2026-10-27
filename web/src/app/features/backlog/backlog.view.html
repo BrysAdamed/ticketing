@@ -11,7 +11,12 @@
       Show done
     </mat-slide-toggle>
     @if (store.canWrite()) {
-      <button mat-flat-button type="button" data-testid="backlog-new" (click)="store.openCreate(null)">
+      <button
+        mat-flat-button
+        type="button"
+        data-testid="backlog-new"
+        (click)="store.openCreate(null)"
+      >
         <tk-icon name="tablerPlus" [size]="14" />New ticket<tk-kbd tone="on-solid">C</tk-kbd>
       </button>
     }
@@ -34,7 +39,9 @@
     </button>
     <mat-menu #groupMenu="matMenu">
       @for (option of groupOptions; track option.value) {
-        <button mat-menu-item type="button" (click)="setGroupBy(option.value)">{{ option.label }}</button>
+        <button mat-menu-item type="button" (click)="setGroupBy(option.value)">
+          {{ option.label }}
+        </button>
       }
     </mat-menu>
     <button type="button" class="tbtn" [matMenuTriggerFor]="sortMenu" data-testid="sort-by">
@@ -42,7 +49,9 @@
     </button>
     <mat-menu #sortMenu="matMenu">
       @for (option of sortOptions; track option.value) {
-        <button mat-menu-item type="button" (click)="setSortBy(option.value)">{{ option.label }}</button>
+        <button mat-menu-item type="button" (click)="setSortBy(option.value)">
+          {{ option.label }}
+        </button>
       }
     </mat-menu>
   </span>
@@ -56,27 +65,50 @@
 }
 
 @if (store.status() === 'error' && !store.hasData()) {
-  <tk-empty-state icon="tablerAlertCircle" tone="danger" title="Couldn't load the backlog" [description]="store.error()?.title ?? null">
+  <tk-empty-state
+    icon="tablerAlertCircle"
+    tone="danger"
+    title="Couldn't load the backlog"
+    [description]="store.error()?.title ?? null"
+  >
     <button mat-stroked-button type="button" (click)="store.reload()">Retry</button>
   </tk-empty-state>
 } @else if (!store.hasData()) {
   <tk-skeleton-rows [count]="12" />
 } @else if (store.rows().length === 0) {
-  @if (store.items().length > 0 || store.filters().text || store.filters().types.length || store.filters().statuses.length) {
-    <tk-empty-state icon="tablerSearch" title="No tickets match these filters" description="Try other filters or show done tickets.">
-      <button mat-stroked-button type="button" (click)="clearFilters()">
-        Clear filters
-      </button>
+  @if (
+    store.items().length > 0 ||
+    store.filters().text ||
+    store.filters().types.length ||
+    store.filters().statuses.length
+  ) {
+    <tk-empty-state
+      icon="tablerSearch"
+      title="No tickets match these filters"
+      description="Try other filters or show done tickets."
+    >
+      <button mat-stroked-button type="button" (click)="clearFilters()">Clear filters</button>
     </tk-empty-state>
   } @else {
-    <tk-empty-state icon="tablerList" title="No tickets in backlog" description="Create the first one or import from Jira.">
+    <tk-empty-state
+      icon="tablerList"
+      title="No tickets in backlog"
+      description="Create the first one or import from Jira."
+    >
       @if (store.canWrite()) {
-        <button mat-flat-button type="button" (click)="store.openCreate(null)">New ticket <tk-kbd tone="on-solid">C</tk-kbd></button>
+        <button mat-flat-button type="button" (click)="store.openCreate(null)">
+          New ticket <tk-kbd tone="on-solid">C</tk-kbd>
+        </button>
       }
     </tk-empty-state>
   }
 } @else {
-  <div #listWrap class="list-wrap" [class.selecting]="selectionCount() > 0" [style.height.px]="listHeight()">
+  <div
+    #listWrap
+    class="list-wrap"
+    [class.selecting]="selectionCount() > 0"
+    [style.height.px]="listHeight()"
+  >
     <cdk-virtual-scroll-viewport
       class="list"
       role="grid"
@@ -100,7 +132,10 @@
                 [attr.aria-label]="(row.collapsed ? 'Expand ' : 'Collapse ') + row.label"
                 (click)="store.toggleGroup(row.id)"
               >
-                <tk-icon [name]="row.collapsed ? 'tablerChevronRight' : 'tablerChevronDown'" [size]="14" />
+                <tk-icon
+                  [name]="row.collapsed ? 'tablerChevronRight' : 'tablerChevronDown'"
+                  [size]="14"
+                />
               </button>
               @switch (row.icon.kind) {
                 @case ('status') {
@@ -110,7 +145,10 @@
                   <tk-type-icon [type]="$any(row.icon).type" [size]="14" />
                 }
                 @case ('user') {
-                  <tk-avatar [userId]="$any(row.icon).user?.id" [name]="$any(row.icon).user?.displayName" />
+                  <tk-avatar
+                    [userId]="$any(row.icon).user?.id"
+                    [name]="$any(row.icon).user?.displayName"
+                  />
                 }
                 @case ('epic') {
                   @if ($any(row.icon).parent; as parent) {
@@ -150,7 +188,11 @@
               [cdkDragDisabled]="!store.canDrag()"
               [item]="$any(row).item"
               [assignee]="userOf($any(row).item.assigneeId)"
-              [parent]="$any(row).item.parentId ? (store.parents().get($any(row).item.parentId) ?? null) : null"
+              [parent]="
+                $any(row).item.parentId
+                  ? (store.parents().get($any(row).item.parentId) ?? null)
+                  : null
+              "
               [selected]="store.selection().selected.has(row.id)"
               [focused]="store.focusId() === row.id"
               [flash]="store.lastCreatedId() === row.id"
@@ -188,7 +230,10 @@
 
 @if (selectionCount() > 0) {
   <div class="bulk tk-popover" role="toolbar" aria-label="Bulk actions" data-testid="bulk-bar">
-    <span class="n"><span class="cbx"><tk-icon name="tablerCheck" [size]="12" /></span>{{ selectionCount() }} selected</span>
+    <span class="n"
+      ><span class="cbx"><tk-icon name="tablerCheck" [size]="12" /></span
+      >{{ selectionCount() }} selected</span
+    >
     @if (store.canWrite()) {
       <span class="vsep"></span>
       <button
@@ -202,19 +247,47 @@
       >
         <tk-status-icon status="ToDo" />Status
       </button>
-      <button type="button" class="bbtn" [tkInlinePicker]="priorityOptions" pickerPlaceholder="Change priority…" (picked)="bulkPriority($event)">
+      <button
+        type="button"
+        class="bbtn"
+        [tkInlinePicker]="priorityOptions"
+        pickerPlaceholder="Change priority…"
+        (picked)="bulkPriority($event)"
+      >
         <tk-icon name="tablerFlag" [size]="14" />Priority
       </button>
-      <button type="button" class="bbtn" [tkInlinePicker]="assigneeOptions()" pickerPlaceholder="Assign to…" (picked)="bulkAssignee($event)">
+      <button
+        type="button"
+        class="bbtn"
+        [tkInlinePicker]="assigneeOptions()"
+        pickerPlaceholder="Assign to…"
+        (picked)="bulkAssignee($event)"
+      >
         <tk-icon name="tablerUser" [size]="14" />Assignee
       </button>
-      <button type="button" class="bbtn" [tkLabelsPicker]="[]" [labelSuggestions]="labelSuggestions" (labelToggled)="bulkLabel($event)">
+      <button
+        type="button"
+        class="bbtn"
+        [tkLabelsPicker]="[]"
+        [labelSuggestions]="labelSuggestions"
+        (labelToggled)="bulkLabel($event)"
+      >
         <tk-icon name="tablerTag" [size]="14" />Labels
       </button>
-      <button type="button" class="bbtn" matTooltip="Move to top" (click)="store.moveToEdge(store.selectedIds(), 'Top')">
+      <button
+        type="button"
+        class="bbtn"
+        matTooltip="Move to top"
+        (click)="store.moveToEdge(store.selectedIds(), 'Top')"
+      >
         <tk-icon name="tablerArrowBarToUp" [size]="14" />Top
       </button>
-      <button type="button" class="bbtn" matTooltip="Move to bottom" (click)="store.moveToEdge(store.selectedIds(), 'Bottom')">
+      <button
+        type="button"
+        class="bbtn"
+        matTooltip="Move to bottom"
+        (click)="store.moveToEdge(store.selectedIds(), 'Bottom')"
+      >
         <tk-icon name="tablerArrowBarToDown" [size]="14" />Bottom
       </button>
       @if (project.isOwner()) {
@@ -224,7 +297,13 @@
       }
     }
     <span class="vsep"></span>
-    <button type="button" class="tk-icon-btn" aria-label="Clear selection" matTooltip="Clear selection  Esc" (click)="store.clearSelection()">
+    <button
+      type="button"
+      class="tk-icon-btn"
+      aria-label="Clear selection"
+      matTooltip="Clear selection  Esc"
+      (click)="store.clearSelection()"
+    >
       <tk-icon name="tablerX" [size]="14" />
     </button>
   </div>

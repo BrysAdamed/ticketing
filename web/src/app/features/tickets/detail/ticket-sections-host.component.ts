@@ -1,5 +1,13 @@
 import { NgComponentOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, input, signal, Type } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  input,
+  signal,
+  Type,
+} from '@angular/core';
 import { TICKET_DETAIL_SECTIONS, TicketDetailSection } from '@core/tickets/ticket-sections';
 
 interface LoadedSection {
@@ -16,7 +24,11 @@ interface LoadedSection {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @for (entry of sections(); track entry.section.id) {
-      <section class="contributed" [attr.data-testid]="'ticket-section-' + entry.section.id" [attr.aria-label]="entry.section.title">
+      <section
+        class="contributed"
+        [attr.data-testid]="'ticket-section-' + entry.section.id"
+        [attr.aria-label]="entry.section.title"
+      >
         @if (entry.component; as component) {
           <ng-container [ngComponentOutlet]="component" [ngComponentOutletInputs]="inputs()" />
         } @else if (entry.failed) {
@@ -42,7 +54,11 @@ export class TicketSectionsHostComponent {
   readonly ticketId = input.required<string>();
   readonly projectKey = input.required<string>();
 
-  protected readonly inputs = computed(() => ({ ticketKey: this.ticketKey(), ticketId: this.ticketId(), projectKey: this.projectKey() }));
+  protected readonly inputs = computed(() => ({
+    ticketKey: this.ticketKey(),
+    ticketId: this.ticketId(),
+    projectKey: this.projectKey(),
+  }));
   protected readonly sections = signal<LoadedSection[]>([]);
 
   constructor() {
@@ -57,6 +73,8 @@ export class TicketSectionsHostComponent {
   }
 
   private update(id: string, change: Partial<LoadedSection>): void {
-    this.sections.update((list) => list.map((s) => (s.section.id === id ? { ...s, ...change } : s)));
+    this.sections.update((list) =>
+      list.map((s) => (s.section.id === id ? { ...s, ...change } : s)),
+    );
   }
 }

@@ -7,7 +7,11 @@ import {
   TICKET_STATUS_LABELS,
   TicketStatus,
 } from '@shared/domain/enums';
-import { PRIORITY_OPTIONS, STORY_POINT_OPTIONS, TICKET_STATUS_OPTIONS } from '@shared/domain/picker-options';
+import {
+  PRIORITY_OPTIONS,
+  STORY_POINT_OPTIONS,
+  TICKET_STATUS_OPTIONS,
+} from '@shared/domain/picker-options';
 import { RelativeTimePipe, AbsoluteTimePipe } from '@shared/pipes/relative-time.pipe';
 import { AvatarComponent } from '@shared/ui/domain/avatar.component';
 import { SeverityBadgeComponent } from '@shared/ui/domain/domain-badges';
@@ -106,7 +110,9 @@ export type RowEdit =
       <tk-status-icon [status]="item().status" />
     </button>
     <span class="title" data-testid="row-title">{{ item().title }}</span>
-    @if (item().severity === 'Critical' || item().severity === 'Blocker' || item().severity === 'Major') {
+    @if (
+      item().severity === 'Critical' || item().severity === 'Blocker' || item().severity === 'Major'
+    ) {
       <tk-severity-badge [severity]="item().severity!" />
     }
     <span class="fill"></span>
@@ -139,14 +145,20 @@ export type RowEdit =
     <span class="metas">
       @if (item().childCount > 0) {
         <span class="cnt" matTooltip="Sub-tickets done">
-          <tk-icon name="tablerSubtask" [size]="12" />{{ item().childDoneCount }}/{{ item().childCount }}
+          <tk-icon name="tablerSubtask" [size]="12" />{{ item().childDoneCount }}/{{
+            item().childCount
+          }}
         </span>
       }
       @if (item().testCaseCount > 0) {
-        <span class="cnt" matTooltip="Test cases"><tk-icon name="tablerChecklist" [size]="12" />{{ item().testCaseCount }}</span>
+        <span class="cnt" matTooltip="Test cases"
+          ><tk-icon name="tablerChecklist" [size]="12" />{{ item().testCaseCount }}</span
+        >
       }
       @if (item().commentCount > 0) {
-        <span class="cnt" matTooltip="Comments"><tk-icon name="tablerMessage" [size]="12" />{{ item().commentCount }}</span>
+        <span class="cnt" matTooltip="Comments"
+          ><tk-icon name="tablerMessage" [size]="12" />{{ item().commentCount }}</span
+        >
       }
     </span>
     <button
@@ -161,7 +173,9 @@ export type RowEdit =
       (click)="$event.stopPropagation()"
       (picked)="edit.emit({ field: 'storyPoints', value: $event })"
     >
-      <span class="pts" [class.none]="item().storyPoints === null">{{ item().storyPoints ?? '–' }}</span>
+      <span class="pts" [class.none]="item().storyPoints === null">{{
+        item().storyPoints ?? '–'
+      }}</span>
     </button>
     <span class="ver">{{ item().version }}</span>
     <button
@@ -179,7 +193,9 @@ export type RowEdit =
     >
       <tk-avatar [userId]="assignee()?.id" [name]="assignee()?.displayName" />
     </button>
-    <span class="date" [title]="item().updatedAt | absoluteTime">{{ item().updatedAt | relativeTime }}</span>
+    <span class="date" [title]="item().updatedAt | absoluteTime">{{
+      item().updatedAt | relativeTime
+    }}</span>
   `,
   styleUrl: './backlog-row.component.scss',
 })
@@ -192,7 +208,9 @@ export class BacklogRowComponent {
   readonly flash = input(false);
   readonly canWrite = input(false);
   readonly assigneeOptions = input<readonly PickerOption<string | null>[]>([]);
-  readonly labelSuggestions = input<(prefix: string) => Promise<readonly string[]>>(() => Promise.resolve([]));
+  readonly labelSuggestions = input<(prefix: string) => Promise<readonly string[]>>(() =>
+    Promise.resolve([]),
+  );
 
   readonly edit = output<RowEdit>();
   readonly toggleSelect = output<void>();

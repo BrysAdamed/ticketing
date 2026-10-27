@@ -37,6 +37,9 @@ function doc(overrides: Partial<Doc> = {}): Doc {
     url: '/p/WEB/docs/WEB-D-1/payment-flow',
     rowVersion: 1,
     commentCount: 0,
+    references: { tickets: [], docs: [] },
+    embeds: [],
+    backlinks: { total: 0, items: [] },
     ...overrides,
   };
 }

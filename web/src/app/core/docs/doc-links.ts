@@ -47,6 +47,19 @@ export function docPathSegments(path: string): string[] {
   return segments;
 }
 
+/// Where a listed doc lives: its folder path (` / ` between folders), led by its project key when
+/// that is not `currentProjectKey`; empty for a doc at the root of the current project.
+export function docLocation(
+  path: string,
+  projectKey: string,
+  currentProjectKey: string | null,
+): string {
+  const folder = docPathSegments(path).slice(0, -1).join(' / ');
+  return projectKey === currentProjectKey
+    ? folder
+    : [projectKey, folder].filter(Boolean).join(' · ');
+}
+
 export function isDocKey(value: string): boolean {
   return DOC_KEY_PATTERN.test(value.toUpperCase());
 }

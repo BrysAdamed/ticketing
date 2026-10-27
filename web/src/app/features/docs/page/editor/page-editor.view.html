@@ -153,6 +153,8 @@
           data-testid="doc-editor-preview"
           mode="preview"
           [docKey]="doc().key"
+          [references]="doc().references"
+          [embeds]="doc().embeds"
           [source]="previewSource()"
         />
       </div>

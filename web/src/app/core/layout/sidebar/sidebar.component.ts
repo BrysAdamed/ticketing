@@ -37,6 +37,7 @@ export const PROJECT_NAV: readonly NavLink[] = [
     icon: 'tablerHistory',
     testId: 'nav-project-regressions',
   },
+  { label: 'Docs', path: 'docs', icon: 'tablerBook', testId: 'nav-project-docs' },
   {
     label: 'Settings',
     path: 'settings',

@@ -855,7 +855,7 @@ Section [1.5 of the refinement](03-docs-refinement.md#15-permissions-mapped-to-5
 | `POST /docs/{key}/restore` | Restore the delete group |
 | `GET`, `PUT`, `DELETE /docs/{key}/draft` | My draft: `{ baseVersion, title, content }`; 404 `doc.draft.notFound` when none |
 
-The doc URL in the SPA is `/p/{PK}/docs/{KEY}/{slug}`; the slug is cosmetic.
+The doc URL in the SPA is `/projects/{PK}/docs/{KEY}/{slug}`; the slug is cosmetic and replaced when stale. `/docs/{KEY}` and the `/p/{PK}/docs/{KEY}/{slug}` form that the API returns as `url` redirect to it (D-102).
 
 ### 12.7 Search
 
@@ -864,4 +864,4 @@ The doc URL in the SPA is `/p/{PK}/docs/{KEY}/{slug}`; the slug is cosmetic.
 - Sort `relevance` (the default with `q`): an exact key first, then titles containing the text, then `ts_rank`; at most 100 (`limit`), no cursor (a cursor is 400). Sort `updated` (the default without `q`): newest first by `updatedAt`, `id` with a keyset cursor. The response is `{ items, nextCursor, total, totalCapped, sort }`; `total` is counted on the first page only, capped at 1 000.
 - Each item: id, key, projectKey, kind, diagramFormat, title, path, folderPath, version, updatedBy, updatedAt, url and `snippet: { text, highlights: [{ start, length }] }` (null for folders and empty docs). The snippet is plain text, never HTML: up to 30 words around the best match (`ts_headline`), whitespace collapsed, markdown emphasis and heading marks removed, at most 240 characters; ranges are UTF-16 offsets. Without `q` it is the start of the doc.
 - Quick jump (`GET /quick-jump`, 6.8) also answers doc keys (exact match first) and lists up to 5 docs by relevance after the tickets, each with `docKind`, `diagramFormat`, `folderPath` and `snippet`.
-- p95 under 150 ms with 20 000 docs and 200 000 tickets (`DocSearchPerformanceTests`, D-102).
+- p95 under 150 ms with 20 000 docs and 200 000 tickets (`DocSearchPerformanceTests`, D-103).

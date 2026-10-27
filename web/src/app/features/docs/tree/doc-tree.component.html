@@ -323,6 +323,15 @@
       <tk-icon name="tablerLink" [size]="16" />
       Copy link
     </button>
+    <button
+      mat-menu-item
+      data-testid="doc-menu-export-pdf"
+      [disabled]="exports.isExporting(item.key)"
+      (click)="exportPdf(item)"
+    >
+      <tk-icon name="tablerFileTypePdf" [size]="16" />
+      Export PDF
+    </button>
     @if (store.canWrite()) {
       <hr class="menu-sep" />
       <button

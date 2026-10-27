@@ -30,7 +30,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
 import { Router, RouterLink } from '@angular/router';
 import { provideIcons } from '@ng-icons/core';
-import { tablerLayoutSidebarLeftCollapse } from '@ng-icons/tabler-icons';
+import { tablerFileTypePdf, tablerLayoutSidebarLeftCollapse } from '@ng-icons/tabler-icons';
+import { DocExports } from '@core/docs/doc-export';
 import { docsHomeUrl, docUrl } from '@core/docs/doc-links';
 import { DiagramFormat, DOC_ROOT, DocKind, DocTreeItem } from '@core/docs/doc.models';
 import { ToastService } from '@core/notify/toast.service';
@@ -79,7 +80,9 @@ const SKELETON = [0, 1, 1, 1, 0, 1, 2, 2, 0, 0].map((depth, i) => ({
     InlinePickerDirective,
     AutofocusSelectDirective,
   ],
-  viewProviders: [provideIcons({ ...DOCS_ICONS, tablerLayoutSidebarLeftCollapse })],
+  viewProviders: [
+    provideIcons({ ...DOCS_ICONS, tablerFileTypePdf, tablerLayoutSidebarLeftCollapse }),
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { 'data-testid': 'doc-tree' },
   templateUrl: './doc-tree.component.html',
@@ -89,6 +92,7 @@ export class DocTreeComponent {
   protected readonly store = inject(DocTreeStore);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
+  protected readonly exports = inject(DocExports);
 
   readonly collapseTitle = input('Hide the tree');
   readonly collapse = output<void>();
@@ -314,6 +318,10 @@ export class DocTreeComponent {
       .writeText(url)
       .then(() => this.toast.success(`Link to ${item.key} copied`))
       .catch(() => this.toast.error("Couldn't copy the link"));
+  }
+
+  protected exportPdf(item: DocTreeItem): void {
+    void this.exports.export({ key: item.key, title: item.title, kind: item.kind });
   }
 
   protected openMove(item: DocTreeItem, origin?: Element): void {

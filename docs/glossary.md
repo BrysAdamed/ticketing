@@ -92,6 +92,8 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Expected version**: The row version a client last saw, sent as `If-Match` (REST) or `expectedVersion` (MCP). A stale value makes the update fail with a conflict. See Row version. [§2](product/01-refined-spec.md#2-cross-cutting-conventions)
 
+**Export link**: A signed, server-relative URL to a doc's PDF (`POST /docs/{key}/export-link`, MCP `get_doc_export_link`), valid 15 minutes and bound to the user who asked and to that doc (and version). Opening it needs no other credentials; the export runs as that user, so access is checked again, and an expired or foreign link is 404 (D-116). [§12.14](product/01-refined-spec.md#1214-pdf-export-web-rest-mcp)
+
 **Feature flag**: A named switch, managed by Admins, that evaluates per user to a variant through master switch, user targets, role targets and a stable percentage rollout. [§4.15](product/01-refined-spec.md#415-featureflag), [§6.13](product/01-refined-spec.md#613-feature-flags-and-view-variants), [ADR 0007](adr/0007-feature-flags.md)
 
 **Field hints**: Suggestions of version and label values already used in a project, most recent first. Hints never restrict input. [§6.7](product/01-refined-spec.md#67-field-hints-version-labels)

@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Security.Claims;
+using Ticketing.Application.Abstractions;
 using Ticketing.Application.Auth;
 using Ticketing.Infrastructure.Auth;
 
@@ -21,6 +22,22 @@ public static class TicketingPrincipal
         new(TicketingClaims.PatScope, pat.Scope.ToString()),
         new(TicketingClaims.PatExpiresAt, pat.ExpiresAt.ToString("O", CultureInfo.InvariantCulture)),
     ]);
+
+    /// <summary>A signed export link's user, limited to one doc (and version) by <see cref="TicketingClaims.ExportDocId"/>.</summary>
+    public static ClaimsPrincipal ForExportLink(AuthenticatedUser user, DocExportGrant grant) => Create(user, AuthSchemes.ExportLink,
+    [
+        new(TicketingClaims.ExportDocId, grant.DocId.ToString()),
+        new(TicketingClaims.ExportVersion, grant.Version?.ToString(CultureInfo.InvariantCulture) ?? string.Empty),
+    ]);
+
+    /// <summary>The doc and version an export-link principal may export, or null for any other caller.</summary>
+    public static (Guid DocId, int? Version)? ExportGrant(ClaimsPrincipal principal)
+    {
+        if (!Guid.TryParse(principal.FindFirstValue(TicketingClaims.ExportDocId), out var docId))
+            return null;
+        var version = principal.FindFirstValue(TicketingClaims.ExportVersion);
+        return (docId, int.TryParse(version, NumberStyles.None, CultureInfo.InvariantCulture, out var number) ? number : null);
+    }
 
     /// <summary>The server-side session a cookie principal belongs to, or null for PATs and anonymous callers.</summary>
     public static Guid? SessionId(ClaimsPrincipal? principal) =>

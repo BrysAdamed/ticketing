@@ -6,6 +6,9 @@ public static class AuthSchemes
     public const string Smart = "Smart";
     public const string Cookie = "Cookie";
     public const string Pat = "Pat";
+
+    /// <summary>Signed PDF export links (<c>?token=</c> on <c>export.pdf</c>), see <see cref="ExportLinkAuthenticationHandler"/>.</summary>
+    public const string ExportLink = "ExportLink";
 }
 
 public static class AuthPolicies
@@ -24,4 +27,6 @@ public static class TicketingClaims
     public const string PatExpiresAt = "pat_expires_at";
     public const string SecurityStamp = "security_stamp";
     public const string SessionId = "session_id";
+    public const string ExportDocId = "export_doc";
+    public const string ExportVersion = "export_version";
 }

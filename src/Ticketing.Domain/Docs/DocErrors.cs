@@ -31,4 +31,9 @@ public static class DocErrors
     public const string DiagramTooManyElements = "doc.diagram.tooManyElements";
     public const string SnapshotInvalid = "doc.snapshot.invalid";
     public const string SnapshotNotFound = "doc.snapshot.notFound";
+    public const string ExportBusy = "doc.export.busy";
+    public const string ExportTooLarge = "doc.export.tooLarge";
+    public const string ExportUnavailable = "doc.export.unavailable";
+    public const string ExportFailed = "doc.export.failed";
+    public const string ExportTimeout = "doc.export.timeout";
 }

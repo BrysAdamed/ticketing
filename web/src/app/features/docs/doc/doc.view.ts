@@ -15,10 +15,11 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { ActivatedRoute, NavigationEnd, Router, RouterLink } from '@angular/router';
 import { provideIcons } from '@ng-icons/core';
-import { tablerDownload, tablerHistory } from '@ng-icons/tabler-icons';
+import { tablerDownload, tablerFileTypePdf, tablerHistory } from '@ng-icons/tabler-icons';
 import { filter, map } from 'rxjs';
 import { docsHomeUrl, docSlug, docUrl } from '@core/docs/doc-links';
 import { Doc, DocKind } from '@core/docs/doc.models';
+import { DocExports } from '@core/docs/doc-export';
 import { DocsApi } from '@core/docs/docs.api';
 import { RecentDocs } from '@core/docs/recent-docs';
 import { ShortcutService } from '@core/shortcuts/shortcut.service';
@@ -49,7 +50,7 @@ const PRESENCE_REFRESH_MS = 30_000;
 /// One doc (`docs.doc`): loads it (cached per key), replaces a stale or missing slug, selects it in
 /// the tree, sets the title and breadcrumbs, and renders the page bar plus the content view of its
 /// kind (`docs.page`, `docs.diagram`, `docs.folder`) with the input `doc`. The bar holds the content
-/// view's actions (`DocBarSlot`), Download .md (pages) and Edit (`E`, `?mode=edit`; in edit mode the content view's editor bar replaces
+/// view's actions (`DocBarSlot`), Export PDF (`Mod+P`, the shown version), Download .md (pages) and Edit (`E`, `?mode=edit`; in edit mode the content view's editor bar replaces
 /// it). The doc is refetched every 30 s for presence and newer versions.
 @Component({
   selector: 'tk-doc-view',
@@ -65,7 +66,9 @@ const PRESENCE_REFRESH_MS = 30_000;
     RelativeTimePipe,
   ],
   providers: [DocStore, DocBarSlot],
-  viewProviders: [provideIcons({ ...DOCS_ICONS, tablerDownload, tablerHistory })],
+  viewProviders: [
+    provideIcons({ ...DOCS_ICONS, tablerDownload, tablerFileTypePdf, tablerHistory }),
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     'data-testid': 'view-docs.doc',
@@ -116,6 +119,18 @@ const PRESENCE_REFRESH_MS = 30_000;
             @if (barSlot.actions(); as actions) {
               <ng-container *ngTemplateOutlet="actions" />
             }
+            <button
+              type="button"
+              class="tk-icon-btn"
+              [title]="exportTitle"
+              aria-label="Export PDF"
+              data-testid="doc-export-pdf"
+              [disabled]="exports.isExporting(doc.key, shownVersion())"
+              [attr.aria-busy]="exports.isExporting(doc.key, shownVersion())"
+              (click)="exportPdf(doc)"
+            >
+              <tk-icon name="tablerFileTypePdf" [size]="16" />
+            </button>
             @if (doc.kind === 'Page') {
               <a
                 class="tk-icon-btn"
@@ -229,6 +244,7 @@ export class DocView {
   private readonly api = inject(DocsApi);
   private readonly shortcuts = inject(ShortcutService);
   private readonly recentDocs = inject(RecentDocs);
+  protected readonly exports = inject(DocExports);
 
   readonly projectKey = input.required<string>();
   readonly docKey = input.required<string>();
@@ -239,6 +255,7 @@ export class DocView {
   protected readonly homeUrl = computed(() => docsHomeUrl(this.projectKey().toUpperCase()));
   protected readonly content = signal<Type<unknown> | null>(null);
   protected readonly copyLinkTitle = `Copy link (${this.shortcuts.format('mod+shift+.').join(' ')})`;
+  protected readonly exportTitle = `Export PDF (${this.shortcuts.format('mod+p').join(' ')})`;
 
   /// The loaded doc with the tree's title, so a rename in the tree shows at once.
   protected readonly viewDoc = computed<Doc | null>(() => {
@@ -259,6 +276,13 @@ export class DocView {
     initialValue: this.route.snapshot.queryParamMap,
   });
   private readonly mode = computed(() => this.query().get('mode'));
+  /// The older version shown (`?v=n`), which Export PDF exports; null for the latest.
+  protected readonly shownVersion = computed(() => {
+    const version = Number(this.query().get('v'));
+    return this.store.doc()?.kind !== 'Folder' && Number.isInteger(version) && version > 0
+      ? version
+      : null;
+  });
   private contentViewId: string | null = null;
 
   /// Docs with an editor (`hasDocEditor`) in a writable project can be edited (`E`, `?mode=edit`).
@@ -298,6 +322,15 @@ export class DocView {
         handler: () => {
           if (this.historyOpen()) this.closeHistory();
           else if (!this.editing()) this.openHistory();
+        },
+      },
+      {
+        keys: 'mod+p',
+        description: 'Export PDF',
+        section: 'Docs',
+        handler: () => {
+          const doc = this.viewDoc();
+          if (doc && !this.editing()) this.exportPdf(doc);
         },
       },
       {
@@ -427,6 +460,15 @@ export class DocView {
       relativeTo: this.route,
       queryParams: { history: null, with: null },
       queryParamsHandling: 'merge',
+    });
+  }
+
+  protected exportPdf(doc: Doc): void {
+    void this.exports.export({
+      key: doc.key,
+      title: doc.title,
+      kind: doc.kind,
+      version: this.shownVersion(),
     });
   }
 

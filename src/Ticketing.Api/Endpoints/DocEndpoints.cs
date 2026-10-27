@@ -1,5 +1,8 @@
+using System.Diagnostics;
+using System.Security.Claims;
 using System.Text;
 using Microsoft.Net.Http.Headers;
+using Ticketing.Api.Auth;
 using Ticketing.Api.Http;
 using Ticketing.Application.Common;
 using Ticketing.Application.Docs;
@@ -8,7 +11,7 @@ using Ticketing.Domain.Docs;
 namespace Ticketing.Api.Endpoints;
 
 /// <summary>Project docs (spec 1.14): tree, recent, trash and create per project; one doc by key (<c>WEB-D-12</c>) or id; versions, history and restore; markdown export; my draft.</summary>
-public sealed class DocEndpoints : IEndpointModule
+public sealed partial class DocEndpoints : IEndpointModule
 {
     /// <summary>Canvas pictures run nothing and load nothing but their own inline styles and data: fonts (ADR 0013).</summary>
     public const string SnapshotSecurityPolicy = "sandbox; default-src 'none'; style-src 'unsafe-inline'; font-src data:; img-src data:";
@@ -205,6 +208,28 @@ public sealed class DocEndpoints : IEndpointModule
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict);
 
+        doc.MapGet("/export.pdf", ExportPdfAsync)
+            .AllowAnonymous()
+            .WithSummary("Downloads a page, a diagram (version=n for an older one) or a folder (recursively, in tree order) as an A4 PDF, "
+                + "rendered for the caller: tickets, docs and diagrams the caller cannot read are left out. tz (IANA, for example Europe/Warsaw) "
+                + "sets the time zone of the dates (default UTC). Readers can export, archived projects included. token= instead of a session "
+                + "or bearer token: a signed link from export-link (version and time zone come from the link; UTC). At most 300 documents and "
+                + "100 MB (doc.export.tooLarge); 429 doc.export.busy with Retry-After while 2 exports run and 10 wait; 503 doc.export.unavailable "
+                + "or doc.export.timeout (2 minutes).")
+            .Produces(StatusCodes.Status200OK, contentType: "application/pdf")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status429TooManyRequests)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        doc.MapPost("/export-link", async (string keyOrId, CreateDocExportLink.Command? command, CreateDocExportLink.Handler handler, CancellationToken ct) =>
+            TypedResults.Ok(await handler.HandleAsync((command ?? new CreateDocExportLink.Command(keyOrId)) with { KeyOrId = keyOrId }, ct)))
+            .WithSummary("A signed GET link to the doc's PDF (optional body { version }), valid 15 minutes, bound to the caller and the doc: "
+                + "{ docKey, version, url, expiresAt }. Access is checked again when it is used; an expired link or one of a deactivated user is 404.")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
         doc.MapGet("/draft", async (string keyOrId, GetMyDocDraft.Handler handler, CancellationToken ct) =>
             TypedResults.Ok(await handler.HandleAsync(new GetMyDocDraft.Query(keyOrId), ct)))
             .WithSummary("My unpublished draft of the doc; 404 doc.draft.notFound when I have none.")
@@ -224,4 +249,40 @@ public sealed class DocEndpoints : IEndpointModule
             })
             .WithSummary("Discards my draft (no-op when there is none).");
     }
+
+    private static async Task<IResult> ExportPdfAsync(
+        string keyOrId, int? version, string? tz, HttpContext http, ExportDocPdf.Handler handler, ILoggerFactory loggers, CancellationToken ct)
+    {
+        Guid? linkedDocId = null;
+        if (http.Request.Query.ContainsKey(ExportLinkAuthenticationHandler.TokenParameter))
+        {
+            if (TicketingPrincipal.ExportGrant(http.User) is not { } grant)
+                throw AppException.NotFound(DocErrors.NotFound, $"Doc '{keyOrId}' was not found, or the export link has expired.");
+            (linkedDocId, version, tz) = (grant.DocId, grant.Version, null);
+        }
+        else if (http.User.Identity?.IsAuthenticated != true)
+        {
+            return Problems.Create(StatusCodes.Status401Unauthorized, AppErrors.Unauthenticated, "Sign in to export.");
+        }
+
+        var started = Stopwatch.GetTimestamp();
+        var request = http.Request;
+        var file = await handler.HandleAsync(
+            new ExportDocPdf.Query(keyOrId, version, tz, $"{request.Scheme}://{request.Host}") { LinkedDocId = linkedDocId }, ct);
+        LogExport(
+            loggers.CreateLogger<DocEndpoints>(), http.User.FindFirstValue(ClaimTypes.NameIdentifier), file.DocKey, version, file.Documents,
+            file.Content.Length, (long)Stopwatch.GetElapsedTime(started).TotalMilliseconds, linkedDocId is not null);
+
+        var disposition = new ContentDispositionHeaderValue("attachment");
+        disposition.SetHttpFileName(file.FileName);
+        http.Response.Headers.ContentDisposition = disposition.ToString();
+        http.Response.Headers.XContentTypeOptions = "nosniff";
+        http.Response.Headers.CacheControl = "private, no-store";
+        return TypedResults.File(file.Content, "application/pdf");
+    }
+
+    [LoggerMessage(Level = LogLevel.Information,
+        Message = "PDF export of {DocKey} (version {Version}) by {UserId}: {Documents} documents, {Bytes} bytes in {ElapsedMs} ms, link {ViaLink}.")]
+    private static partial void LogExport(
+        ILogger logger, string? userId, string docKey, int? version, int documents, int bytes, long elapsedMs, bool viaLink);
 }

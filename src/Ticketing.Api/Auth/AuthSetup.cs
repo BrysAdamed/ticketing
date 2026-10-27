@@ -36,7 +36,9 @@ internal static class AuthSetup
                 o.ForwardDefaultSelector = context =>
                     context.Request.Headers.Authorization.ToString().StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
                         ? AuthSchemes.Pat
-                        : AuthSchemes.Cookie;
+                        : ExportLinkAuthenticationHandler.Applies(context.Request)
+                            ? AuthSchemes.ExportLink
+                            : AuthSchemes.Cookie;
             })
             .AddCookie(AuthSchemes.Cookie, o =>
             {
@@ -50,7 +52,8 @@ internal static class AuthSetup
                 o.Events.OnRedirectToAccessDenied = context => SetStatus(context.Response, StatusCodes.Status403Forbidden);
                 o.Events.OnValidatePrincipal = RevalidateSessionAsync;
             })
-            .AddScheme<AuthenticationSchemeOptions, PatAuthenticationHandler>(AuthSchemes.Pat, null);
+            .AddScheme<AuthenticationSchemeOptions, PatAuthenticationHandler>(AuthSchemes.Pat, null)
+            .AddScheme<AuthenticationSchemeOptions, ExportLinkAuthenticationHandler>(AuthSchemes.ExportLink, null);
 
         services.AddAuthorizationBuilder()
             .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build())

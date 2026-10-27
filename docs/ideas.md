@@ -45,6 +45,10 @@ Items triaged as LATER in [product/02-improvements-triage.md](product/02-improve
 | --- | --- | --- | --- |
 | I-38 | Saved and shared filters | Named searches beyond bookmarks. | S |
 | I-65 | Search in comments | Finds discussions, not just descriptions. | S |
+| - | Relevance sort for text search | 	s_rank ordering needs a cursor on a float; v1 sorts by updated. | S |
+| - | Custom date ranges in the search UI | v1 offers presets; any range works through the URL. | S |
+| - | Server-side image thumbnails | The attachments list scales full images down in the browser. | S |
+| - | Attachment upload over MCP | Spec 9.3 LATER; needs a size-safe transport. | S |
 | I-42 | Clone ticket | Convenience for repeated work. | S |
 | I-43 | Description templates per ticket type | Better bug reports. | S |
 | I-46 | Due dates | Some teams track deadlines. | S |
@@ -72,6 +76,8 @@ Items triaged as LATER in [product/02-improvements-triage.md](product/02-improve
 | --- | --- | --- | --- |
 | I-61 | Burndown, cumulative flow, cycle time | Activity history already holds the data. | M |
 | I-71 | Cross-project dashboards | Portfolio view for managers. | M |
+| I-80 | Dashboard deltas and period selector | KPI tiles with "vs previous period" deltas and sparklines, and a 30/90-day range for created vs resolved (layout-and-screens §3.5 sketches them; spec §7 does not define them). | S |
+| I-81 | Version filter for regression widgets | Sessions have a version too, so "how did 1.4 regress" could filter the regression summary like the ticket widgets (spec §7 limits the filter to tickets). | S |
 
 ## Integrations and LLM
 

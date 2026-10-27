@@ -15,6 +15,7 @@ Every write described below runs inside one application handler, in one database
 7. [User onboarding](#7-user-onboarding)
 8. [Feature flag evaluation and view variants](#8-feature-flag-evaluation-and-view-variants)
 9. [MCP request flow](#9-mcp-request-flow)
+10. [Attachment upload](#10-attachment-upload)
 
 ## 1. Ticket lifecycle and status side effects
 
@@ -184,7 +185,7 @@ sequenceDiagram
 - Status changes on a move only when the move targets a specific column.
 - Reordering inside the backlog (D-48) moves the selected tickets as one block, in the order sent, right before or after another backlog ticket or to the top or bottom. The neighbours are read under the container lock, and the block gets consecutive ranks; a too-long key rebalances the backlog with free slots. Rank changes write no history.
 - Placing on a board requires: the board links the ticket's project, the board is not archived, and the actor can write to the project.
-- Every move is one call, `POST /tickets/move` or MCP `move_ticket` (D-60): 1..50 keys in their final order, a target (`backlog` or a board id), an optional status (the column) and an optional `beforeKey` / `afterKey`. Without an anchor, tickets go to the bottom of the board (so the bottom of their column) or to the top of their own project backlog. With target `backlog`, tickets of several projects each go to their own backlog; an anchor then requires them all to be in the anchor's project.
+- Every move is one call, `POST /tickets/move` or MCP `move_ticket` (D-66): 1..50 keys in their final order, a target (`backlog` or a board id), an optional status (the column) and an optional `beforeKey` / `afterKey`. Without an anchor, tickets go to the bottom of the board (so the bottom of their column) or to the top of their own project backlog. With target `backlog`, tickets of several projects each go to their own backlog; an anchor then requires them all to be in the anchor's project.
 - On a board, a column is the board order filtered by status, so "before WEB-7" in the Review column means right before WEB-7 in board order; cards of other columns in between do not matter.
 - Tickets on an archived board cannot be moved by users (the board is read-only). They only leave it when they leave `Done` (backlog top), when the board is deleted, or when their project is archived.
 - History: a container change writes `ticket.moved` (field `boardId`, old and new board id, null for the backlog); a status change writes the usual `ticket.field.changed` entries for `status` and `resolution`; a reorder inside the same container writes nothing and does not bump `UpdatedAt`.
@@ -215,7 +216,7 @@ Other cascades:
 - **Delete a board:** all its tickets, Done included, go to their backlogs (top); the board is soft-deleted. Archived boards can be deleted too.
 - **Project becomes private:** its tickets stay on boards and simply disappear for users who lose access ([§6.5](../product/01-refined-spec.md#65-private-projects-on-shared-boards)).
 
-Board archive, unlink and delete move tickets of projects the acting board owner may not be able to read or write. They only change placement, so they do not check per-ticket write access; each moved ticket gets a `ticket.moved` entry with the actor (D-44). The archive result counts only tickets the actor can read (D-61).
+Board archive, unlink and delete move tickets of projects the acting board owner may not be able to read or write. They only change placement, so they do not check per-ticket write access; each moved ticket gets a `ticket.moved` entry with the actor (D-44). The archive result counts only tickets the actor can read (D-67).
 
 ## 4. Test case lifecycle
 
@@ -588,3 +589,27 @@ sequenceDiagram
 - A browser cookie on `/mcp` gets `401`: MCP accepts PATs only.
 - Every call is one HTTP request; there is no MCP session to keep.
 - User administration, PAT management, feature flags, project deletion and board deletion are not exposed over MCP.
+
+## 10. Attachment upload
+
+Spec [§4.8](../product/01-refined-spec.md#48-attachment-i-07), D-63. The same flow serves the Attach button, drag and drop on the attachments section, and paste or drop into a markdown editor (which then inserts `![name](/api/v1/attachments/{id})`).
+
+```mermaid
+sequenceDiagram
+    participant B as Browser
+    participant A as API (UploadAttachment)
+    participant DB as PostgreSQL
+    B->>A: POST /tickets/WEB-42/attachments (multipart "file")
+    A->>A: Write access to the ticket's project (404 unreadable, 403 viewer, 409 archived)
+    A->>A: Size 1 B..10 MiB, allow-listed type, bytes match the type
+    A->>DB: BEGIN; SELECT ticket FOR UPDATE; count attachments
+    alt 50 already
+        A-->>B: 409 attachment.limitReached
+    else
+        A->>DB: INSERT attachment + attachment_content, bump ticket UpdatedAt, activity attachment.added
+        A-->>B: 201 attachment (url /api/v1/attachments/{id})
+    end
+```
+
+- Delete: the uploader (with write access) or a project Owner. It removes the metadata and the content and records `attachment.removed`.
+- Read: anyone who can read the ticket. Attachments of deleted tickets answer 404 like the ticket.

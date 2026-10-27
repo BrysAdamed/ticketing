@@ -809,6 +809,13 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                 column: "created_by_id");
 
             migrationBuilder.CreateIndex(
+                name: "ix_tickets_created_search",
+                table: "tickets",
+                columns: new[] { "created_at", "id" },
+                descending: new bool[0],
+                filter: "deleted_at IS NULL");
+
+            migrationBuilder.CreateIndex(
                 name: "ix_tickets_labels",
                 table: "tickets",
                 column: "labels")
@@ -845,6 +852,12 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                 filter: "deleted_at IS NULL");
 
             migrationBuilder.CreateIndex(
+                name: "ix_tickets_project_id_type",
+                table: "tickets",
+                columns: new[] { "project_id", "type" },
+                filter: "deleted_at IS NULL");
+
+            migrationBuilder.CreateIndex(
                 name: "ix_tickets_project_id_updated_at",
                 table: "tickets",
                 columns: new[] { "project_id", "updated_at" },
@@ -873,6 +886,13 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                 column: "title")
                 .Annotation("Npgsql:IndexMethod", "gin")
                 .Annotation("Npgsql:IndexOperators", new[] { "gin_trgm_ops" });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_tickets_updated_search",
+                table: "tickets",
+                columns: new[] { "updated_at", "id" },
+                descending: new bool[0],
+                filter: "deleted_at IS NULL");
 
             migrationBuilder.CreateIndex(
                 name: "ix_users_email",

@@ -310,18 +310,51 @@ Format: question, options considered, decision, rationale. "PO" marks decisions 
 - Decision: for `user.lastProjectOwner`, another Owner must be an active member with the `Owner` role; an Admin's implicit Owner access does not count. The error lists the project keys in `errors.projects`. User search (`GET /users`, MCP `find_users`) matches an email prefix or the start of any word of the display name, returns at most 20, and hides deactivated users on REST unless `includeInactive=true`. MCP `find_users` without `projectKey` includes them (with `isActive`), so an LLM can resolve names on old tickets. With a project, only active users who can write there are returned.
 - Rationale: an implicit Admin owner would let a project become ownerless as soon as the Admin is demoted.
 
-### D-59 Board read is one lean response
+### D-59 How the dashboard is computed
+
+- Question: spec §7 asks for every widget in under 500 ms for a 50 000-ticket project without precomputed tables.
+- Decision: one handler (`GetProjectDashboard`) runs eight SQL aggregates in sequence on one connection: a single `GROUP BY status, type, priority, severity, unassigned, stale` scan feeds widgets 1 to 5 and the stale count, then weekly created/resolved, top assignees, the 10 oldest stale tickets, epics (top 50 picked through a new `(project_id, type)` index, children aggregated per epic through the parent index), test cases, sessions and regression bugs. Queries do not run in parallel on separate connections. The perf test (`DashboardPerformanceTests`, 2 × 50 000 tickets) measures p95 ≈ 55 ms for the whole endpoint; parallelism would save at most ~20 ms at the cost of extra pooled connections per request.
+- Rationale: few, index-friendly scans keep the endpoint far below the budget; domain rules (what "open" means) stay in C# over the small grouped result.
+
+### D-60 Dashboard scope rules
+
+- Decision: the version filter (I-23) is an exact, case-sensitive match on the ticket version and applies to widgets 1 to 9 and 12. With a filter, an epic is listed when it or one of its direct children has that version, and its progress counts only the children with that version. Test cases and regressions ignore the filter. The regression summary skips cancelled sessions; "regression bugs" counts open bugs from items of any session, cancelled ones included, because the bug is still real work. Epic progress lists at most 50 open epics (priority, then key) and reports the total, so a huge project cannot bloat the response. Week buckets are ISO weeks in UTC; the current, partial week is the last bucket.
+- Rationale: matches "how is release 1.4 looking" without making the regression history disappear, and keeps every number reproducible by a search link (docs/architecture/search-url-format.md).
+
+### D-61 Dashboard visual forms
+
+- Decision: the four totals are stat tiles; status is a 100% category bar over a per-status bar list; type, priority, severity and assignee are compact bar lists (glyph, label, bar, linked count); created vs resolved is a two-line Chart.js chart with a table view; epic progress uses two meters per epic; regression pass rates are a five-point sparkline on a zoomed scale that is printed under the title. Domain colours come from the design tokens (status, category, type, priority, severity, test case and run tokens); the two chart series are `--tk-palette-0` and `--tk-category-done`. The KPI row follows spec §7 (open, done, open points, unassigned open), not the six tiles sketched in layout-and-screens §3.5, which need period deltas (I-80). Test case counts link to `/projects/{key}/test-cases?status=`; session names link to the session page.
+- Rationale: small categorical counts read best as bars with exact numbers next to them; one chart library chunk (Chart.js) loads lazily for the only real time series.
+
+
+### D-62 Search URL format, references and counts
+
+- Question: how are search filters encoded so the search page, the API, the CSV export and dashboard links share them, and what happens to references the caller cannot read?
+- Decision: one query-string format ([search-url-format.md](architecture/search-url-format.md)): short parameter names, comma-separated lists, plain dates meaning whole UTC days. The SPA copies its URL to `GET /tickets/search` unchanged. Project keys, users, parents and boards that are unknown or unreadable match nothing instead of failing, so a link never reveals that a private project exists. The dashboard needs got their own filters: `resolvedFrom/To`, `assigneeNot`, `fromRegression`, `severity=none` and `version=none`. The first page carries `total`, counted up to 1000 (`totalCapped`); counting to 10 000 cost up to 190 ms for common words at 200 000 tickets. Pages use keyset cursors on (sort key, id) that are bound to the sort. Text matching is OR-ed: full text (`websearch_to_tsquery('english')`, title A, description B), a title substring through the trigram index (3+ characters), and an exact ticket key.
+- Rationale: one format means one parser (`SearchQueryParser`), which REST and MCP both use. The capped count keeps every search under 150 ms (verified with EXPLAIN ANALYZE on 200 000 seeded tickets, `SearchPerformanceTests`). That needed two global sort indexes, `(updated_at DESC, id DESC)` and `(created_at DESC, id DESC)` where not deleted.
+
+### D-63 Attachment URLs and content checks
+
+- Decision: attachment content lives at `/api/v1/attachments/{id}`, and markdown embeds it as `![name](/api/v1/attachments/{id})` (the spec said `/attachments/{id}`, which nginx would route to the SPA). The stored type is the declared type when it is allow-listed (common aliases such as `image/jpg` are mapped). For generic declarations (`application/octet-stream`, empty, Excel's CSV type) it comes from the extension. The bytes must then agree: binary types by signature, text types as UTF-8 with no binary signature, and JSON must parse. SVG and HTML are never accepted. Downloads send `nosniff`, a `sandbox` CSP and a private cache header. Images are inline unless `?download=true`. The ticket row is locked (`FOR UPDATE`) while counting toward the 50-file limit.
+- Rationale: the URL works through the existing `/api` proxy and cookie session. Mapping by extension accepts what browsers actually send (Windows labels `.csv` as `application/vnd.ms-excel`) without trusting it.
+
+### D-64 My work bounds
+
+- Decision: `GET /me/work` returns at most 500 open tickets (projects by key, then priority, then most recently updated) with `truncated`, plus up to 200 waiting regression items from running sessions. Projects the user can no longer read are left out, even when tickets there are still assigned to them.
+- Rationale: the page stays fast. The full list is the search link `assignee=me&category=ToDo,InProgress`.
+
+### D-65 Board read is one lean response
 
 - Question: §2 pages lists, but a board shows up to 500 cards (D-04) in 8 columns, and quick filters and swimlanes regroup them instantly.
 - Decision: `GET /boards/{id}` returns all 8 columns (or the `status` ones asked for) with every card the caller can read, in rank order, without paging. A card carries ids for its assignee and parent; users and parents (with the parent's own parent, so the UI can find the epic two levels up) are listed once beside the columns. One query loads the cards with parent and grandparent through the `(board_id, rank)` index. Quick filters (assignee, "only mine", type, label, project) and swimlanes run in the browser. MCP `get_board` inlines assignee and parent key into each card, because a model reads it once.
 - Rationale: 500 lean cards are about 120 KB before gzip and one round trip; regrouping on the client keeps filters instant and the URL-driven filter state simple.
 
-### D-60 One move endpoint for every placement
+### D-66 One move endpoint for every placement
 
 - Decision: `POST /tickets/move` (MCP `move_ticket`) covers backlog to board, board to board, board to backlog and reorders in either container. It reuses the backlog block-ranking primitive (D-48, `ITicketRanker.PlaceManyAsync`) and `Ticket.ChangeStatus` for the column's status, so moves and edits share the same side effects. Board rows touched by a move are share-locked; archive, delete and project changes lock the board exclusively, so no ticket lands on a board that is being archived. Users cannot move tickets onto or off an archived board.
 - Rationale: one primitive for drag and drop and the model keeps ordering rules in one place, and lets a multi-select drag (I-11) be a single, all-or-nothing call.
 
-### D-61 Board management details
+### D-67 Board management details
 
 - Decision:
   - Linking a project needs write access to it for the acting user (Admins always have it). Unlinking needs only read access, so an owner can't unlink a private project they cannot see, but an Admin can.
@@ -331,7 +364,6 @@ Format: question, options considered, decision, rationale. "PO" marks decisions 
   - Archived boards are read-only for renames, project changes and ownership transfer as well; unarchive and delete stay possible.
   - Board deletion is REST only (no MCP tool, spec 9.3) but is allowed to PATs, like other owner actions.
 - Rationale: keeps D-44's "placement, not content" rule and the per-viewer counting rule of spec 5.4 consistent across every board operation.
-
 ## Needs product owner
 
 None of these block v1. The implementation follows each recommendation provisionally; the product owner confirms or overrides them at the v1 review.

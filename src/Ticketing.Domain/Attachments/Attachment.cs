@@ -43,9 +43,9 @@ public sealed class Attachment
     public static Attachment Create(Guid ticketId, string fileName, string contentType, long sizeBytes, string sha256, Guid uploadedById, DateTimeOffset now)
     {
         if (!AllowedContentTypes.Contains(contentType))
-            throw DomainException.Invalid("file", "attachment.type.notAllowed", $"Files of type '{contentType}' are not allowed.");
+            throw DomainException.Invalid("file", AttachmentErrors.TypeNotAllowed, $"Files of type '{contentType}' are not allowed.");
         if (sizeBytes is < 1 or > MaxSizeBytes)
-            throw DomainException.Invalid("file", "attachment.size.invalid", "Files must be between 1 byte and 10 MiB.");
+            throw DomainException.Invalid("file", AttachmentErrors.SizeInvalid, "Files must be between 1 byte and 10 MiB.");
 
         return new Attachment
         {

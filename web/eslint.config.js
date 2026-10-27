@@ -62,7 +62,7 @@ module.exports = defineConfig([
               message: 'shared/ must not depend on features.',
             },
             {
-              group: ['@core/*', '**/core/**'],
+              group: ['@core/*', '**/core/**', '!@angular/**'],
               message: 'shared/ is a leaf UI kit; it must not depend on core/.',
             },
           ],

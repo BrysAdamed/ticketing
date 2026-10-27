@@ -1,0 +1,345 @@
+@let page = doc();
+@let pair = compared();
+<div class="main">
+  <div class="pbar" data-testid="doc-history-bar">
+    <span class="meta">
+      <tk-icon class="i" name="tablerHistory" [size]="16" />
+      @if (mode() === 'rendered') {
+        Viewing <b>v{{ selected() }}</b>
+        @if (selected() === page.version) {
+          (current)
+        }
+      } @else if (pair.from === null) {
+        <b>v{{ pair.to }}</b
+        >, the first version
+      } @else if (pair.to === page.version && pair.from === pair.to - 1 && !other()) {
+        Changes in <b>v{{ pair.to }}</b>
+      } @else {
+        Comparing <b>v{{ pair.from }}</b> with
+        @if (pair.to === page.version) {
+          current
+        }
+        <b>v{{ pair.to }}</b>
+      }
+    </span>
+    <div class="right">
+      <tk-segmented
+        [options]="modes"
+        [(value)]="mode"
+        ariaLabel="Show changes or the rendered version"
+        testId="doc-history-mode"
+      />
+      @if (mode() === 'changes' && !isCanvas()) {
+        <tk-segmented
+          [options]="layouts"
+          [(value)]="layout"
+          ariaLabel="Diff layout"
+          testId="doc-history-layout"
+        />
+      }
+      <span class="vsep"></span>
+      <button
+        type="button"
+        class="tk-icon-btn"
+        title="Copy link to this version"
+        aria-label="Copy link to this version"
+        data-testid="doc-history-copy-link"
+        (click)="copyLink()"
+      >
+        <tk-icon name="tablerLink" [size]="16" />
+      </button>
+      @if (canRestore()) {
+        <button
+          mat-stroked-button
+          type="button"
+          class="restore"
+          data-testid="doc-history-restore"
+          [disabled]="restoring()"
+          (click)="restore()"
+        >
+          <tk-icon name="tablerRestore" [size]="16" />Restore v{{ selected() }}
+        </button>
+      }
+    </div>
+  </div>
+
+  <div class="body">
+    @if (versionError()) {
+      <tk-empty-state
+        icon="tablerAlertCircle"
+        tone="danger"
+        title="Couldn't load these versions"
+        data-testid="doc-history-version-error"
+      />
+    } @else if (mode() === 'rendered') {
+      @if (selectedVersion(); as shown) {
+        <tk-doc-version-content [doc]="page" [version]="shown" />
+      } @else {
+        <ng-container [ngTemplateOutlet]="skeleton" />
+      }
+    } @else if (isCanvas()) {
+      @if (to(); as after) {
+        <div class="side-by-side" data-testid="doc-history-canvas">
+          <section>
+            <div class="side-label">
+              {{ from() ? 'v' + from()!.number : 'No earlier version' }}
+            </div>
+            @if (from(); as before) {
+              <tk-doc-version-content [doc]="page" [version]="before" />
+            }
+          </section>
+          <section>
+            <div class="side-label">v{{ after.number }}</div>
+            <tk-doc-version-content [doc]="page" [version]="after" />
+          </section>
+        </div>
+      } @else {
+        <ng-container [ngTemplateOutlet]="skeleton" />
+      }
+    } @else if (diff(); as d) {
+      <h1 class="ptitle" data-testid="doc-history-title">{{ to()?.title }}</h1>
+      <div class="dmeta" data-testid="doc-history-stats">
+        <span class="add tnum">+{{ d.added }}</span>
+        <span class="del tnum">−{{ d.removed }}</span>
+        <span>lines</span>
+        @if (titleChange(); as change) {
+          <span class="dot">·</span>
+          <span data-testid="doc-history-title-change"
+            >Title changed from <del>{{ change.from }}</del> to <ins>{{ change.to }}</ins></span
+          >
+        }
+        @if (d.approximate) {
+          <span class="dot">·</span>
+          <span class="warn"
+            >Too many changes to match lines; showing the changed part as replaced</span
+          >
+        }
+      </div>
+      @if (d.added === 0 && d.removed === 0) {
+        <p class="dmeta" data-testid="doc-history-no-changes">
+          The content of these versions is identical.
+        </p>
+      }
+      <div class="diff" [class.split]="layout() === 'split'" data-testid="doc-diff">
+        @if (layout() === 'unified') {
+          @for (row of d.rows; track $index) {
+            @if (row.kind === 'fold') {
+              @if (expanded().has(row)) {
+                @for (line of row.lines; track $index) {
+                  <ng-container
+                    [ngTemplateOutlet]="unifiedLine"
+                    [ngTemplateOutletContext]="{ $implicit: line }"
+                  />
+                }
+              } @else {
+                <button type="button" class="dl fold" (click)="expand(row)">
+                  ··· {{ row.lines.length }} unchanged
+                  {{ row.lines.length === 1 ? 'line' : 'lines' }}
+                </button>
+              }
+            } @else {
+              <ng-container
+                [ngTemplateOutlet]="unifiedLine"
+                [ngTemplateOutletContext]="{ $implicit: row }"
+              />
+            }
+          }
+        } @else {
+          @for (row of splitRows(); track $index) {
+            @if (row.kind === 'fold') {
+              @if (expanded().has(row)) {
+                @for (line of row.lines; track $index) {
+                  <div class="sr">
+                    <ng-container
+                      [ngTemplateOutlet]="splitCell"
+                      [ngTemplateOutletContext]="{ $implicit: line, no: line.oldNo }"
+                    />
+                    <ng-container
+                      [ngTemplateOutlet]="splitCell"
+                      [ngTemplateOutletContext]="{ $implicit: line, no: line.newNo }"
+                    />
+                  </div>
+                }
+              } @else {
+                <button type="button" class="dl fold" (click)="expand(row)">
+                  ··· {{ row.lines.length }} unchanged
+                  {{ row.lines.length === 1 ? 'line' : 'lines' }}
+                </button>
+              }
+            } @else {
+              <div class="sr">
+                <ng-container
+                  [ngTemplateOutlet]="splitCell"
+                  [ngTemplateOutletContext]="{ $implicit: row.left, no: row.left?.oldNo }"
+                />
+                <ng-container
+                  [ngTemplateOutlet]="splitCell"
+                  [ngTemplateOutletContext]="{ $implicit: row.right, no: row.right?.newNo }"
+                />
+              </div>
+            }
+          }
+        }
+      </div>
+    } @else {
+      <ng-container [ngTemplateOutlet]="skeleton" />
+    }
+  </div>
+</div>
+
+<aside class="hist" aria-label="Version history" data-testid="doc-history-panel">
+  <div class="hist-h">
+    <tk-icon name="tablerHistory" [size]="16" />History
+    <button
+      type="button"
+      class="tk-icon-btn close"
+      title="Close history (Esc)"
+      aria-label="Close history"
+      data-testid="doc-history-close"
+      (click)="close()"
+    >
+      <tk-icon name="tablerX" [size]="16" />
+    </button>
+  </div>
+  <div class="hist-list" role="list" (keydown)="onListKeydown($event)">
+    @if (store.status() === 'loaded') {
+      @for (day of days(); track day.label) {
+        <div class="hday" role="presentation">{{ day.label }}</div>
+        @for (item of day.items; track item.id) {
+          @if (item.type === 'Version') {
+            <button
+              type="button"
+              role="listitem"
+              class="hv"
+              [class.sel]="isSelected(item)"
+              [class.cmp]="isCompared(item)"
+              [attr.aria-current]="isSelected(item) ? 'true' : null"
+              [attr.data-testid]="'doc-history-v' + item.version"
+              [title]="'Click to select, Shift+click to compare with v' + selected()"
+              (click)="pick($event, item)"
+            >
+              @if (item.channel === 'Mcp') {
+                <span class="bot"><tk-icon name="tablerRobot" [size]="14" /></span>
+              } @else {
+                <tk-avatar
+                  [userId]="item.actor?.id ?? ''"
+                  [name]="item.actor?.displayName ?? '?'"
+                  [size]="24"
+                />
+              }
+              <span class="hv-t">
+                <span class="w">
+                  v{{ item.version }} · {{ item.actor?.displayName ?? 'Unknown user' }}
+                  @if (item.version === page.version) {
+                    <span class="badge current">Current</span>
+                  }
+                </span>
+                <span class="s">
+                  <span [title]="item.at | absoluteTime">{{ item.at | relativeTime }}</span>
+                  @if (via(item.channel); as channel) {
+                    · {{ channel }}
+                  }
+                  @if (item.restoredFrom) {
+                    · Restored from v{{ item.restoredFrom }}
+                  }
+                  @if (item.changeNote) {
+                    · <span class="note">{{ item.changeNote }}</span>
+                  }
+                </span>
+              </span>
+            </button>
+          } @else {
+            @let line = describe(item);
+            <div class="ha" role="listitem" [attr.data-testid]="'doc-history-' + item.action">
+              <tk-icon [name]="line.icon" [size]="14" />
+              <span class="ha-t">
+                {{ line.text }}
+                <span class="s">
+                  · {{ item.actor?.displayName ?? 'Someone' }} ·
+                  <span [title]="item.at | absoluteTime">{{ item.at | relativeTime }}</span>
+                  @if (via(item.channel); as channel) {
+                    · {{ channel }}
+                  }
+                </span>
+              </span>
+            </div>
+          }
+        }
+      }
+      @if (store.nextCursor()) {
+        <button
+          mat-button
+          type="button"
+          class="more"
+          data-testid="doc-history-more"
+          [disabled]="store.loadingMore()"
+          (click)="store.loadMore()"
+        >
+          Load older entries
+        </button>
+      }
+    } @else if (store.status() === 'error') {
+      <p class="hist-error">
+        Couldn't load the history.
+        <button mat-button type="button" (click)="store.load(page.key)">Retry</button>
+      </p>
+    } @else {
+      @for (width of [70, 55, 80, 60, 75]; track $index) {
+        <div class="hv-sk" role="status" aria-label="Loading the history">
+          <span class="sk av"></span>
+          <span class="sk-lines">
+            <span class="sk" [style.width.%]="width"></span>
+            <span class="sk" [style.width.%]="width - 25"></span>
+          </span>
+        </div>
+      }
+    }
+  </div>
+  <div class="hist-f">Shift+click a second version to compare · <tk-kbd>Esc</tk-kbd> closes</div>
+</aside>
+
+<ng-template #unifiedLine let-line>
+  <div class="dl" [class.add]="line.kind === 'add'" [class.del]="line.kind === 'del'">
+    <span class="g">{{ lineNo(line) }}</span>
+    <span class="m">{{ line.kind === 'add' ? '+' : line.kind === 'del' ? '−' : ' ' }}</span>
+    <ng-container [ngTemplateOutlet]="lineText" [ngTemplateOutletContext]="{ $implicit: line }" />
+  </div>
+</ng-template>
+
+<ng-template #splitCell let-line let-no="no">
+  @if (line) {
+    <div class="dl" [class.add]="line.kind === 'add'" [class.del]="line.kind === 'del'">
+      <span class="g">{{ no }}</span>
+      <ng-container [ngTemplateOutlet]="lineText" [ngTemplateOutletContext]="{ $implicit: line }" />
+    </div>
+  } @else {
+    <div class="dl blank"></div>
+  }
+</ng-template>
+
+<ng-template #lineText let-line>
+  <span class="t">
+    @if (line.segments) {
+      @for (segment of line.segments; track $index) {
+        @if (!segment.changed) {
+          <span>{{ segment.text }}</span>
+        } @else if (line.kind === 'add') {
+          <ins>{{ segment.text }}</ins>
+        } @else {
+          <del>{{ segment.text }}</del>
+        }
+      }
+    } @else {
+      <span>{{ line.text }}</span>
+    }
+  </span>
+</ng-template>
+
+<ng-template #skeleton>
+  <div class="skeleton" role="status" aria-label="Loading the versions">
+    <span class="sk sk-title"></span>
+    @for (width of [92, 80, 64, 88, 70, 76]; track $index) {
+      <span class="sk" [style.width.%]="width"></span>
+    }
+  </div>
+</ng-template>

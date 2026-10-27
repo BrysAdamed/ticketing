@@ -82,6 +82,16 @@
   font-weight: var(--tk-weight-medium);
 }
 
+button.badge {
+  border: 0;
+  font-family: inherit;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--tk-text);
+  }
+}
+
 .right {
   margin-left: auto;
   display: flex;

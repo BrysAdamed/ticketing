@@ -75,11 +75,11 @@ export class ProjectContext {
     const navigation = inject(NavigationContext);
     effect(() => {
       const project = this.project();
-      navigation.archivedProject.set(
-        project?.archivedAt ? { key: project.key, name: project.name } : null,
+      navigation.openProject.set(
+        project ? { key: project.key, name: project.name, archived: !!project.archivedAt } : null,
       );
     });
-    inject(DestroyRef).onDestroy(() => navigation.archivedProject.set(null));
+    inject(DestroyRef).onDestroy(() => navigation.openProject.set(null));
   }
 
   /// Shows the cached project at once (stale-while-revalidate) and fetches it once per key: calling

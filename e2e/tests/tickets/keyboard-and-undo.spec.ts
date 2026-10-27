@@ -89,7 +89,7 @@ test.describe('keyboard, optimistic edits and undo', () => {
         await backlog.goto(projectKey);
         await page.keyboard.press('j');
         await page.keyboard.press('?');
-        await expect(page.getByRole('dialog')).toBeVisible();
+        await expect(page.getByTestId('shortcut-help-search')).toBeVisible();
 
         // Act
         await page.keyboard.press('Enter');
@@ -146,7 +146,7 @@ test.describe('keyboard, optimistic edits and undo', () => {
         await expect(page.getByTestId('peek-panel')).toHaveCount(0);
         const toast = page.getByTestId('toast').filter({ hasText: `${keys[1]} deleted` });
         await expect(toast).toBeVisible();
-        await expect(page.getByRole('dialog')).toHaveCount(0);
+        await expect(page.locator('mat-dialog-container')).toHaveCount(0);
 
         // Act: undo
         await toast.getByRole('button', { name: 'Undo' }).click();

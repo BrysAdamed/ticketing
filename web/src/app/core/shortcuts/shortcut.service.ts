@@ -93,6 +93,7 @@ export class ShortcutService {
       arrowleft: '←',
       arrowright: '→',
       backspace: '⌫',
+      delete: 'Del',
       space: 'Space',
     };
     return (

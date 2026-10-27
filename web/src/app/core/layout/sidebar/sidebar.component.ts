@@ -81,11 +81,12 @@ export class SidebarComponent {
 
   protected readonly currentProjectKey = this.context.projectKey;
   protected readonly projects = computed(() => {
-    const archived = this.context.archivedProject();
+    const open = this.context.openProject();
+    const listed = this.directory.activeProjects();
     const all: readonly NavProject[] =
-      archived && archived.key === this.currentProjectKey()
-        ? [...this.directory.activeProjects(), { id: archived.key, ...archived, archived: true }]
-        : this.directory.activeProjects();
+      open && open.key === this.currentProjectKey() && !listed.some((p) => p.key === open.key)
+        ? [...listed, { id: open.key, ...open }]
+        : listed;
     const current = this.currentProjectKey();
     const shown = all.slice(0, MAX_PROJECTS);
     const active = all.find((p) => p.key === current);

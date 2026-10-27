@@ -198,6 +198,7 @@ export class BacklogView {
   private readonly queryParams = toSignal(this.route.queryParams, { initialValue: {} as Params });
   private readonly injector = inject(Injector);
   private movingIds: string[] = [];
+  private followTimer: ReturnType<typeof setTimeout> | null = null;
   private prefetchTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
@@ -238,16 +239,8 @@ export class BacklogView {
       untracked(() => this.scrollIntoView(viewport, focus));
     });
 
-    let followTimer: ReturnType<typeof setTimeout> | null = null;
-    effect(() => {
-      const focus = this.store.focusId();
-      const open = this.peek.isOpen();
-      if (followTimer) clearTimeout(followTimer);
-      followTimer = null;
-      const key = focus && !isPending(focus) ? this.store.item(focus)?.key : undefined;
-      if (!open || !key || untracked(() => this.peek.ticketKey()) === key) return;
-      this.cache.prefetch(key);
-      followTimer = setTimeout(() => this.peek.open(key), PEEK_FOLLOW_MS);
+    inject(DestroyRef).onDestroy(() => {
+      if (this.followTimer) clearTimeout(this.followTimer);
     });
 
     effect(() => {
@@ -262,24 +255,24 @@ export class BacklogView {
         keys: 'j',
         section: 'Backlog',
         description: 'Next ticket',
-        handler: () => this.store.move(1),
+        handler: () => this.step(1),
       },
       {
         keys: 'k',
         section: 'Backlog',
         description: 'Previous ticket',
-        handler: () => this.store.move(-1),
+        handler: () => this.step(-1),
       },
       {
         keys: 'arrowdown',
         description: 'Next ticket',
-        handler: () => this.store.move(1),
+        handler: () => this.step(1),
         showInHelp: false,
       },
       {
         keys: 'arrowup',
         description: 'Previous ticket',
-        handler: () => this.store.move(-1),
+        handler: () => this.step(-1),
         showInHelp: false,
       },
       {
@@ -591,6 +584,20 @@ export class BacklogView {
   }
 
   // Keyboard
+
+  /// j / k / ↑ / ↓: moves the focus; an open peek follows it after a short pause.
+  private step(delta: 1 | -1): void {
+    this.store.move(delta);
+    if (this.followTimer) clearTimeout(this.followTimer);
+    this.followTimer = null;
+    const focus = this.store.focusId();
+    const key = focus && !isPending(focus) ? this.store.item(focus)?.key : undefined;
+    if (!this.peek.isOpen() || !key || this.peek.ticketKey() === key) return;
+    this.cache.prefetch(key);
+    this.followTimer = setTimeout(() => {
+      if (this.peek.isOpen()) this.peek.open(key);
+    }, PEEK_FOLLOW_MS);
+  }
 
   private openFocused(fullPage: boolean): void {
     const id = this.store.focusId();

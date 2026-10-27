@@ -10,6 +10,7 @@ import {
 import { Title } from '@angular/platform-browser';
 import { ActivatedRouteSnapshot, RouterStateSnapshot, TitleStrategy } from '@angular/router';
 import { ProjectDirectory } from '../projects/project-directory';
+import { NavigationContext } from './navigation-context';
 
 export const APP_NAME = 'Ticketing';
 
@@ -28,6 +29,7 @@ export class PageTitleStrategy extends TitleStrategy {
   private readonly title = inject(Title);
   private readonly injector = inject(Injector);
   private readonly directory = inject(ProjectDirectory);
+  private readonly navigation = inject(NavigationContext);
   private readonly page = signal<string | null>(null);
   private readonly pageFn = signal<{ fn: PageTitleFn; route: ActivatedRouteSnapshot } | null>(null);
   private readonly projectKey = signal<string | null>(null);
@@ -39,7 +41,12 @@ export class PageTitleStrategy extends TitleStrategy {
       ? runInInjectionContext(this.injector, () => dynamic.fn(dynamic.route))
       : this.page();
     const key = this.projectKey();
-    const project = key ? (this.directory.byKey(key)?.name ?? key) : null;
+    const open = this.navigation.openProject();
+    const project = !key
+      ? null
+      : open?.key === key
+        ? open.name
+        : (this.directory.byKey(key)?.name ?? key);
     return [this.subject() ?? page, project, APP_NAME]
       .filter((part): part is string => !!part)
       .join(' · ');

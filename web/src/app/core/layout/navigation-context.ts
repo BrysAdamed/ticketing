@@ -4,6 +4,12 @@ import { NavigationEnd, Router } from '@angular/router';
 import { filter, map } from 'rxjs';
 import { projectKeyOf, TICKET_KEY_PATTERN } from '@shared/domain/keys';
 
+export interface OpenProject {
+  key: string;
+  name: string;
+  archived: boolean;
+}
+
 /// Where the user is: current URL and the project in context (from /projects/:key or a ticket
 /// key in /tickets/:key or ?peek=KEY).
 @Injectable({ providedIn: 'root' })
@@ -32,9 +38,10 @@ export class NavigationContext {
     return null;
   });
 
-  /// The open project when it is archived, so the sidebar can keep it (and its sections) while the
-  /// user is in it; the readable-projects list leaves archived projects out.
-  readonly archivedProject = signal<{ key: string; name: string } | null>(null);
+  /// The open project as loaded by the project frame, so the breadcrumb shows its current name and
+  /// the sidebar keeps it (and its sections) while the user is in it, even when the readable-projects
+  /// list leaves it out (archived, or beyond the list's first page).
+  readonly openProject = signal<OpenProject | null>(null);
 
   projectUrl(view?: string): string | null {
     const key = this.projectKey();

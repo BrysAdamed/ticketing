@@ -85,19 +85,23 @@ let nextPanelId = 0;
               }"
             />
           } @else {
-            @switch (option.icon?.kind) {
-              @case ('status') {
-                <tk-status-icon [status]="$any(option.icon).status" />
-              }
-              @case ('type') {
-                <tk-type-icon [type]="$any(option.icon).type" [size]="14" />
-              }
-              @case ('priority') {
-                <tk-priority-icon [priority]="$any(option.icon).priority" [showTitle]="false" />
-              }
-              @case ('icon') {
-                <tk-icon class="glyph" [name]="$any(option.icon).name" [size]="14" />
-              }
+            @if (option.icon && option.icon.kind !== 'severity') {
+              <span class="lead" aria-hidden="true">
+                @switch (option.icon.kind) {
+                  @case ('status') {
+                    <tk-status-icon [status]="$any(option.icon).status" />
+                  }
+                  @case ('type') {
+                    <tk-type-icon [type]="$any(option.icon).type" [size]="14" />
+                  }
+                  @case ('priority') {
+                    <tk-priority-icon [priority]="$any(option.icon).priority" [showTitle]="false" />
+                  }
+                  @case ('icon') {
+                    <tk-icon class="glyph" [name]="$any(option.icon).name" [size]="14" />
+                  }
+                }
+              </span>
             }
             @if (option.icon?.kind === 'severity') {
               <tk-severity-badge [severity]="$any(option.icon).severity" />
@@ -169,6 +173,11 @@ let nextPanelId = 0;
     .label {
       overflow: hidden;
       text-overflow: ellipsis;
+    }
+    .lead {
+      display: inline-flex;
+      align-items: center;
+      flex: none;
     }
     .glyph {
       color: var(--tk-text-subtle);

@@ -1,6 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { toApiError } from '../api/api-error';
+import { PeekService } from '../layout/peek/peek';
 import { ToastService } from '../notify/toast.service';
 import { TicketCache } from './ticket-cache';
 import { TicketEvents } from './ticket-events';
@@ -16,11 +17,14 @@ export class TicketDeletion {
   private readonly cache = inject(TicketCache);
   private readonly events = inject(TicketEvents);
   private readonly toast = inject(ToastService);
+  private readonly peek = inject(PeekService);
 
   /// Resolves with the keys the server deleted.
   async delete(keys: readonly string[]): Promise<string[]> {
     if (keys.length === 0) return [];
     for (const key of keys) this.events.emit({ kind: 'deleted', key });
+    const peeked = this.peek.ticketKey();
+    if (peeked && keys.some((key) => key.toUpperCase() === peeked)) this.peek.close();
     const results = await Promise.allSettled(
       keys.map((key) => firstValueFrom(this.api.delete(key))),
     );

@@ -1,6 +1,7 @@
-import { provideZonelessChangeDetection } from '@angular/core';
+import { provideZonelessChangeDetection, signal, WritableSignal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
+import { PeekService } from '../layout/peek/peek';
 import { ToastService } from '../notify/toast.service';
 import { TicketCache } from './ticket-cache';
 import { TicketDeletion } from './ticket-deletion';
@@ -16,6 +17,7 @@ describe('TicketDeletion', () => {
     put: ReturnType<typeof vi.fn>;
     fetch: ReturnType<typeof vi.fn>;
   };
+  let peek: { ticketKey: WritableSignal<string | null>; close: ReturnType<typeof vi.fn> };
   let events: TicketEvent[];
   let deletion: TicketDeletion;
 
@@ -23,12 +25,14 @@ describe('TicketDeletion', () => {
     api = { delete: vi.fn(), restore: vi.fn() };
     toast = { success: vi.fn(), error: vi.fn() };
     cache = { evict: vi.fn(), put: vi.fn(), fetch: vi.fn() };
+    peek = { ticketKey: signal<string | null>(null), close: vi.fn() };
     TestBed.configureTestingModule({
       providers: [
         provideZonelessChangeDetection(),
         { provide: TicketsApi, useValue: api },
         { provide: ToastService, useValue: toast },
         { provide: TicketCache, useValue: cache },
+        { provide: PeekService, useValue: peek },
       ],
     });
     events = [];
@@ -50,6 +54,18 @@ describe('TicketDeletion', () => {
     expect(cache.evict).toHaveBeenCalledWith('PAY-1');
     expect(toast.success.mock.calls[0][0]).toBe('PAY-1 deleted');
     expect(toast.success.mock.calls[0][1].action.label).toBe('Undo');
+  });
+
+  it('closes the peek panel when it shows a deleted ticket', async () => {
+    // Arrange
+    peek.ticketKey.set('PAY-1');
+    api.delete.mockReturnValue(of(undefined));
+
+    // Act
+    await deletion.delete(['pay-1']);
+
+    // Assert
+    expect(peek.close).toHaveBeenCalledOnce();
   });
 
   it('restores on the server when Undo is clicked', async () => {

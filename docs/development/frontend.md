@@ -58,6 +58,7 @@ ESLint enforces the boundaries: `core` and `shared` may not import `@features/*`
 | `/projects/:projectKey/backlog` | `backlog` | `backlog.list` |
 | `/projects/:projectKey/test-cases`, `…/test-cases/:testCaseKey`, `…/test-cases/new?forTicket=KEY` (filters `?status=&q=&ticket=&archived=`) | `test-cases` | `testcases.list`, `testcases.editor` (side pane) |
 | `/projects/:projectKey/regressions[/:sessionKey]` (`?status=`; session `?item=KEY&show=mine`, `waiting` or `failed`) | `regressions` | `regressions.list`, `regressions.session` |
+| `/projects/:projectKey/docs`, `…/docs/trash`, `…/docs/:docKey[/:slug]` (`/docs/:docKey` and `/p/:projectKey/docs/…` redirect; D-99) | `docs` | `docs.layout`, `docs.home`, `docs.trash`, `docs.doc` (frame) with content views `docs.page`, `docs.diagram`, `docs.folder` |
 | `/projects/:projectKey/settings` | `project-settings` | `project.settings` |
 | `/tickets/:ticketKey` | `tickets` | `ticket.detail` (presentation `page`) |
 | `?peek=KEY` on any shell URL | `tickets` | `ticket.detail` (presentation `peek`) |
@@ -128,7 +129,7 @@ Inside project sections, `inject(ProjectContext)` gives the current project (`pr
 | Theme | `ThemeService.setPreference('light' \| 'dark' \| 'system')`, `toggle()`, `setDensity('compact')`. Stored in localStorage (`tk-theme`, `tk-density`) and applied as `data-theme` / `data-density` on `<html>` before Angular boots. |
 | Notifications | `NotificationCenter` (`core/notifications/`): `unreadCount()` for the top bar bell, polled every 60 s and on window focus while signed in (no push), and the panel state (`open/close/toggle`, `filter` all \| unread, `groups()` by day, `loadMore()`). `markRead(n)` / `markAllRead()` are optimistic with rollback and a toast; `activate(n)` marks read and opens the ticket peek (or navigates to a regression item). REST calls go through `NotificationsApi` (`/me/notifications`). |
 
-Built-in shortcuts: `Ctrl/⌘ K` and `/` open the palette, `?` opens the shortcut sheet, `[` toggles the sidebar, `C` creates a ticket (once registered). With `G` then a letter: `M` My work, `P` Projects, `O` Boards, `N` notifications panel, and, inside a project, `D` dashboard, `B` backlog, `T` test cases, `R` regressions. `Esc` closes the notifications panel, then the peek panel.
+Built-in shortcuts: `Ctrl/⌘ K` and `/` open the palette, `?` opens the shortcut sheet, `[` toggles the sidebar, `C` creates a ticket (once registered). With `G` then a letter: `M` My work, `P` Projects, `O` Boards, `N` notifications panel, and, inside a project, `D` dashboard, `B` backlog, `T` test cases, `R` regressions, `W` docs. `Esc` closes the notifications panel, then the peek panel.
 
 ## Tickets: shared services and extension points
 
@@ -158,6 +159,16 @@ provideTicketDetailSection({
 ```
 
 The component is lazily loaded, receives the inputs `ticketKey`, `ticketId` and `projectKey` (declare all three, for example `input.required<string>()`, because unknown inputs are reported as errors), and renders its own heading. Reuse the look of the built-in sections (`sec-h` header with an `h2`, a bordered `box` of 34 px rows). While no section with id `test-cases` is registered, the ticket view shows a read-only test case list from `GET /tickets/{key}` itself.
+
+## Docs: shared client and extension points
+
+| Need | Use |
+| --- | --- |
+| Docs REST calls | `DocsApi` (`core/docs/docs.api.ts`): `tree`, `recent`, `trash`, `get`, `create`, `rename`, `move`, `duplicate`, `delete`, `restore`. Wire types in `doc.models.ts` (`Doc`, `DocTreeItem`, `DocSummary`, `DocTrashItem`, `DocPlacement`, `DOC_TREE_LIMITS`). |
+| Doc links | `docUrl(key, title)` → `/projects/{PK}/docs/{KEY}/{slug}`, `docSlug` (same as the server's `DocPaths.Slug`), `docsHomeUrl`, `docPathSegments(path)`, `projectKeyOfDoc`, `DOC_KEY_PATTERN` (`shared/domain/keys.ts`). |
+| The tree inside the Docs section | `DocTreeStore` (`features/docs/tree/`, provided by `docs.layout`): `items`, `rows`, `canWrite`, `canManageTrash`, `activeKey`, `cursorKey`, `startCreate(kind, parent)`, `startRename`, `move`, `duplicate`, `delete` (Undo toast), `restore`, `patchFromDoc(doc)` after a write, `structureVersion` (bumped after renames and moves). Pure rules in `doc-tree-logic.ts`. |
+| The open doc | `DocStore` (`features/docs/doc/`, provided by the `docs.doc` frame): `doc`, `status`, `load`, `refresh`, `set(doc)` after a write. |
+| A content view for a doc kind | Change the loader of `DOCS_PAGE_VIEW`, `DOCS_DIAGRAM_VIEW` or `DOCS_FOLDER_VIEW` in `features/docs/docs.views.ts` (or add a flagged variant). The component takes `doc = input.required<Doc>()` and renders below the page bar. |
 
 ## UI kit (`shared/`)
 

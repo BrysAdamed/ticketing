@@ -538,6 +538,17 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
   - Drafts may have an empty title while it is being typed; publishing still requires one.
 - Rationale: a docs tree is small (at most 5 000 nodes) and written rarely compared with how often it is read, so one lock per project costs nothing and makes every multi-row rule exact, including cycle checks of concurrent moves, which per-folder locks could not guarantee. Reusing the ranker and the counters keeps one implementation of ordering and numbering.
 
+### D-99 Docs SPA: routes under `/projects/{PK}/docs`, one doc frame with content views per kind, a client-side tree (TKT-13)
+
+- Question: the refinement writes doc URLs as `/p/{PK}/docs/{KEY}/{slug}` and lists one view id per kind, but a doc URL does not say its kind, and every other project section lives under `/projects/{PK}/…`. How should the SPA route docs, where do later stories (page editor, diagrams) plug in, and how much of the tree logic runs in the browser?
+- Decision:
+  - The Docs section is `/projects/{PK}/docs` (home), `…/docs/trash` (Owners) and `…/docs/{KEY}[/{slug}]`, like the other sidebar sections (D-83). `/docs/{KEY}` and `/p/{PK}/docs/…` (the form `DocQueries.Url` and MCP return) redirect there. A missing, stale or wrongly cased slug or key is replaced in place (`replaceUrl`).
+  - View ids: `docs.layout` (tree + outlet), `docs.home`, `docs.trash`, and `docs.doc`, the routed frame of one doc (load, slug, title, breadcrumbs, page bar). The frame renders the content view for the doc's kind through the view registry: `docs.page`, `docs.diagram`, `docs.folder`, each taking the input `doc` and able to inject `DocStore`. TKT-14 replaces `docs.page`, TKT-17 and TKT-18 `docs.diagram`, without touching routes.
+  - The tree is loaded whole (`GET …/docs/tree`, at most 5 000 nodes) into one `DocTreeStore` shared by every Docs view, cached with stale-while-revalidate, and rendered with fixed 28 px rows in a virtual scroll viewport. Expanded folders are kept per project in localStorage (`tk-docs-expanded:{PK}`), the panel width in `tk-docs-tree-width`.
+  - Moves are checked in the browser with the server's rules (cycle, depth 6 counting the moved subtree, 500 per folder, sibling title, folder-only parents) before anything is sent, then applied optimistically; a refusal from the server rolls back only the moved subtree, keeping other changes made meanwhile. Creates show a pending row replaced by the server's node; renames and deletes are optimistic; Undo restores the delete group and reloads the tree, since a restore may rename or move it.
+  - `Shift+D` drafts a Mermaid diagram; the inline row has a Mermaid | Canvas toggle. Single-key tree shortcuts (`N`, `Shift+N`, `Shift+D`, `F2`, `M`, `Del`, `J`/`K`, `Alt+↑/↓`) act on the tree cursor, which follows the open doc; arrow keys and `Enter` act only while the tree has focus, so they never take scrolling away from a page.
+- Rationale: one URL shape for every project section keeps the sidebar, breadcrumbs and `G` shortcuts working unchanged, and the redirects keep the server's links valid. Resolving the content view by kind inside one frame gives every kind its own A/B seam without routing on data the URL does not carry. A 5 000-node tree is small enough to hold in memory, which makes the drop feedback (an invalid drop shows red) and the rollback exact without extra requests.
+
 ## Product owner answers (v1 review, 2026-10-27)
 
 These were open questions (Q-01..Q-05); the product owner resolved them as follows.

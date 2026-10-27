@@ -42,5 +42,19 @@ public sealed class AgentEndpoints : IEndpointModule
             .WithSummary("The prompt Delegate to agent would start Claude Code with for this ticket (the same as MCP get_agent_prompt). Read access is enough; nothing is written.")
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict);
+
+        api.MapPost("/tickets/{ticketKeyOrId}/agent-delegations", async (
+                string ticketKeyOrId, RecordAgentDelegation.Command? command, RecordAgentDelegation.Handler handler, HttpResponse response, CancellationToken ct) =>
+            {
+                var ticket = await handler.HandleAsync((command ?? new RecordAgentDelegation.Command()) with { TicketKeyOrId = ticketKeyOrId }, ct);
+                response.SetRowVersion(ticket.RowVersion);
+                return TypedResults.Ok(ticket);
+            })
+            .WithTags("Agent prompts")
+            .WithSummary("Web session only: records that the caller opened Claude on this ticket (`app`: ClaudeCode or ClaudeDesktop) and applies "
+                + "the project's on-delegate settings (assign the caller if unassigned, To Do → In Progress). Returns the updated ticket.")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
     }
 }

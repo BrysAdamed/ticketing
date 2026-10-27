@@ -7,6 +7,7 @@ public static class AgentErrors
     public const string ProjectDisabled = "agent.project.disabled";
     public const string RepositoryRequired = "agent.project.repositoryRequired";
     public const string TypeOff = "agent.type.off";
+    public const string TicketDone = "agent.ticket.done";
     public const string PromptNotFound = "agent.prompt.notFound";
     public const string VersionNotFound = "agent.prompt.versionNotFound";
     public const string VersionConflict = "agent.prompt.versionConflict";

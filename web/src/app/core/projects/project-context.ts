@@ -38,6 +38,19 @@ export interface ProjectDetail {
   members: ProjectMember[];
   boards: { id: string; name: string }[];
   rowVersion: number;
+  agent?: ProjectAgentSettings | null;
+}
+
+/// `GET /api/v1/projects/{key}/agent`, also `ProjectDetail.agent` (null while agent delegation is unavailable to the caller).
+export interface ProjectAgentSettings {
+  enabled: boolean;
+  repositoryUrl: string | null;
+  normalizedRepositoryUrl: string | null;
+  defaultBranch: string;
+  mergePolicy: 'Review' | 'MergeWhenVerified';
+  assignOnDelegate: boolean;
+  startProgressOnDelegate: boolean;
+  rowVersion: number;
 }
 
 /// Project in context, shared by every project tab. Provided by the project layout view, so tab
@@ -134,6 +147,7 @@ export class ProjectContext {
   }
 }
 
-function projectCacheKey(key: string): string {
+/// SwrCache key (and tag) of `GET /projects/{key}`, shared by every reader of the project detail.
+export function projectCacheKey(key: string): string {
   return `project:${key}`;
 }

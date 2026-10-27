@@ -150,6 +150,8 @@ export function describeEntry(
     }
     case 'ticket.field.changed':
       return describeFieldChange(entry, users, base);
+    case 'ticket.agent.delegated':
+      return { ...base, icon: 'tablerRobot', verb: 'delegated to agent', to: delegation(value) };
     default:
       return { ...base, icon: 'tablerPoint', verb: entry.action };
   }
@@ -239,6 +241,15 @@ function asStrings(value: unknown): string[] {
 
 function plural(word: string, items: readonly unknown[]): string {
   return items.length === 1 ? word : `${word}s`;
+}
+
+/// "Bug prompt v3 (custom) · Claude Code" from `{ templateSource, templateVersion, app }` (D-100).
+function delegation(value: Record<string, unknown>): string | null {
+  const version = value['templateVersion'];
+  if (typeof version !== 'number') return null;
+  const source = value['templateSource'] === 'Custom' ? 'custom' : 'default';
+  const app = value['app'] === 'ClaudeDesktop' ? 'Claude Desktop' : 'Claude Code';
+  return `prompt v${version} (${source}) · ${app}`;
 }
 
 function attachmentName(value: unknown): string {

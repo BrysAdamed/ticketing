@@ -74,13 +74,17 @@ test.describe('move with sub-tickets', () => {
 
         // Act
         await moveEpicToBoard(page, s.epic, s.boardName);
-        const dialog = page.getByRole('dialog');
+        const dialog = page.locator('tk-confirm-dialog');
         await expect(dialog).toContainText(
             `${s.epic} has 4 sub-tickets in the backlog. Move them to ${s.boardName} too?`,
         );
         await expect(dialog.getByTestId('confirm-detail')).toHaveText('1 is Done');
         await expect(dialog.getByRole('button', { name: 'Move with sub-tickets' })).toBeFocused();
+        const moved = page.waitForResponse(
+            (r) => r.url().endsWith('/api/v1/tickets/move') && r.request().method() === 'POST',
+        );
         await dialog.getByRole('button', { name: 'Move with sub-tickets' }).click();
+        expect((await moved).ok()).toBe(true);
 
         // Assert
         await expect(backlog.row(s.epic)).toBeHidden();
@@ -105,8 +109,12 @@ test.describe('move with sub-tickets', () => {
 
         // Act
         await moveEpicToBoard(page, s.epic, s.boardName);
-        const dialog = page.getByRole('dialog');
+        const dialog = page.locator('tk-confirm-dialog');
+        const moved = page.waitForResponse(
+            (r) => r.url().endsWith('/api/v1/tickets/move') && r.request().method() === 'POST',
+        );
         await dialog.getByRole('button', { name: 'Only the selected tickets' }).click();
+        expect((await moved).ok()).toBe(true);
 
         // Assert
         await expect(backlog.row(s.epic)).toBeHidden();

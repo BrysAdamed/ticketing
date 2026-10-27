@@ -79,17 +79,34 @@ public sealed class NotificationTests
         // Act
         var results = new[]
         {
-            notification.Absorbs(Recipient, Actor, Ticket, null, Now.AddMinutes(5)),
-            notification.Absorbs(Recipient, Actor, Ticket, null, Now.AddMinutes(5).AddTicks(1)),
-            notification.Absorbs(Recipient, Guid.CreateVersion7(), Ticket, null, Now.AddMinutes(1)),
-            notification.Absorbs(Recipient, null, Ticket, null, Now.AddMinutes(1)),
-            notification.Absorbs(Guid.CreateVersion7(), Actor, Ticket, null, Now.AddMinutes(1)),
-            notification.Absorbs(Recipient, Actor, Guid.CreateVersion7(), null, Now.AddMinutes(1)),
-            read.Absorbs(Recipient, Actor, Ticket, null, Now.AddMinutes(1)),
+            notification.Absorbs(Recipient, Actor, Ticket, null, null, Now.AddMinutes(5)),
+            notification.Absorbs(Recipient, Actor, Ticket, null, null, Now.AddMinutes(5).AddTicks(1)),
+            notification.Absorbs(Recipient, Guid.CreateVersion7(), Ticket, null, null, Now.AddMinutes(1)),
+            notification.Absorbs(Recipient, null, Ticket, null, null, Now.AddMinutes(1)),
+            notification.Absorbs(Guid.CreateVersion7(), Actor, Ticket, null, null, Now.AddMinutes(1)),
+            notification.Absorbs(Recipient, Actor, Guid.CreateVersion7(), null, null, Now.AddMinutes(1)),
+            read.Absorbs(Recipient, Actor, Ticket, null, null, Now.AddMinutes(1)),
         };
 
         // Assert
         Assert.Equal([true, false, false, false, false, false, false], results);
+    }
+
+    [Fact]
+    public void A_doc_notification_absorbs_only_events_of_the_same_doc()
+    {
+        // Arrange
+        var doc = Guid.CreateVersion7();
+        var notification = Notification.AboutDoc(Recipient, Project, doc, Actor, NotificationKind.Commented, "commented", Now);
+
+        // Act
+        var sameDoc = notification.Absorbs(Recipient, Actor, null, null, doc, Now.AddMinutes(1));
+        var otherDoc = notification.Absorbs(Recipient, Actor, null, null, Guid.CreateVersion7(), Now.AddMinutes(1));
+        var ticket = notification.Absorbs(Recipient, Actor, Ticket, null, null, Now.AddMinutes(1));
+
+        // Assert
+        Assert.Equal((doc, null, null), (notification.DocNodeId, notification.TicketId, notification.RegressionSessionId));
+        Assert.Equal([true, false, false], new[] { sameDoc, otherDoc, ticket });
     }
 
     [Fact]

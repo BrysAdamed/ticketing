@@ -283,6 +283,10 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<Guid?>("DocNodeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("doc_node_id");
+
                     b.Property<int>("EventCount")
                         .HasColumnType("integer")
                         .HasColumnName("event_count");
@@ -334,6 +338,10 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("CreatedAt")
                         .HasDatabaseName("ix_notifications_created_at");
+
+                    b.HasIndex("DocNodeId")
+                        .HasDatabaseName("ix_notifications_doc_node_id")
+                        .HasFilter("doc_node_id IS NOT NULL");
 
                     b.HasIndex("ProjectId")
                         .HasDatabaseName("ix_notifications_project_id");
@@ -404,6 +412,10 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("deleted_by_id");
 
+                    b.Property<Guid?>("DocNodeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("doc_node_id");
+
                     b.Property<DateTimeOffset?>("EditedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("edited_at");
@@ -414,7 +426,7 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                         .HasColumnType("xid")
                         .HasColumnName("xmin");
 
-                    b.Property<Guid>("TicketId")
+                    b.Property<Guid?>("TicketId")
                         .HasColumnType("uuid")
                         .HasColumnName("ticket_id");
 
@@ -424,10 +436,17 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                     b.HasIndex("AuthorId")
                         .HasDatabaseName("ix_comments_author_id");
 
+                    b.HasIndex("DocNodeId", "CreatedAt")
+                        .HasDatabaseName("ix_comments_doc_node_id_created_at")
+                        .HasFilter("doc_node_id IS NOT NULL");
+
                     b.HasIndex("TicketId", "CreatedAt")
                         .HasDatabaseName("ix_comments_ticket_id_created_at");
 
-                    b.ToTable("comments", (string)null);
+                    b.ToTable("comments", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_comments_owner", "num_nonnulls(ticket_id, doc_node_id) = 1");
+                        });
                 });
 
             modelBuilder.Entity("Ticketing.Domain.Docs.DocDraft", b =>
@@ -1778,6 +1797,12 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("fk_notifications_users_actor_id");
 
+                    b.HasOne("Ticketing.Domain.Docs.DocNode", null)
+                        .WithMany()
+                        .HasForeignKey("DocNodeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("fk_notifications_doc_nodes_doc_node_id");
+
                     b.HasOne("Ticketing.Domain.Projects.Project", null)
                         .WithMany()
                         .HasForeignKey("ProjectId")
@@ -1831,11 +1856,16 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasConstraintName("fk_comments_users_author_id");
 
+                    b.HasOne("Ticketing.Domain.Docs.DocNode", null)
+                        .WithMany()
+                        .HasForeignKey("DocNodeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_comments_doc_nodes_doc_node_id");
+
                     b.HasOne("Ticketing.Domain.Tickets.Ticket", null)
                         .WithMany()
                         .HasForeignKey("TicketId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
                         .HasConstraintName("fk_comments_tickets_ticket_id");
                 });
 

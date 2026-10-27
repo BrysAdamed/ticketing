@@ -45,10 +45,15 @@ export class DocPageSectionsComponent {
   readonly doc = input.required<Doc>();
   readonly placement = input.required<DocPageSectionPlacement>();
 
+  private readonly kind = computed(() => this.doc().kind);
   protected readonly components = signal<Readonly<Record<string, Type<unknown>>>>({});
   protected readonly sections = computed<readonly DocPageSection[]>(() =>
     this.all
-      .filter((section) => section.placement === this.placement())
+      .filter(
+        (section) =>
+          section.placement === this.placement() &&
+          (!section.kinds || section.kinds.includes(this.kind())),
+      )
       .sort((a, b) => a.order - b.order),
   );
 

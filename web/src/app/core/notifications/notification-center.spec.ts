@@ -21,6 +21,7 @@ function notification(id: string, overrides: Partial<UserNotification> = {}): Us
     projectKey: 'PAY',
     ticket: { key: `PAY-${id}`, title: `Ticket ${id}`, deleted: false },
     regression: null,
+    doc: null,
     url: `/tickets/PAY-${id}`,
     createdAt: at,
     updatedAt: at,

@@ -120,6 +120,12 @@ import { NotificationFilter, UserNotification } from './notification.models';
                         } @else if (n.regression; as regression) {
                           <span class="key">{{ regression.sessionKey }}</span>
                           <span class="title">{{ regression.sessionName }}</span>
+                        } @else if (n.doc; as doc) {
+                          <span class="key">{{ doc.key }}</span>
+                          <span class="title" [class.deleted]="doc.deleted">{{ doc.title }}</span>
+                          @if (doc.deleted) {
+                            <span class="tag">deleted</span>
+                          }
                         }
                       </span>
                     </span>

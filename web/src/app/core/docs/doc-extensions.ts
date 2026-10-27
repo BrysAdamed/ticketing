@@ -5,7 +5,7 @@ import {
   makeEnvironmentProviders,
   Type,
 } from '@angular/core';
-import { Doc } from './doc.models';
+import { Doc, DocKind } from './doc.models';
 
 /// Where a page section is rendered: below the page content (`footer`, full width of the body)
 /// or in the right rail under "On this page" (`rail`, hidden below 1200 px).
@@ -19,6 +19,8 @@ export interface DocPageSection {
   readonly id: string;
   readonly order: number;
   readonly placement: DocPageSectionPlacement;
+  /// The kinds of doc the section is shown for; every kind that renders sections when omitted.
+  readonly kinds?: readonly DocKind[];
   readonly loadComponent: () => Promise<Type<unknown>>;
 }
 

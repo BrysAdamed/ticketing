@@ -75,6 +75,26 @@ export interface TicketLink {
   createdAt: string;
 }
 
+/// `GET /tickets/{key}/children/graph`: the children plus readable linked tickets outside the
+/// parent (`external`), and the links between them. A `Blocks` edge goes from the blocking ticket.
+export interface TicketGraph {
+  key: string;
+  nodes: TicketGraphNode[];
+  edges: TicketGraphEdge[];
+}
+
+export interface TicketGraphNode extends TicketRef {
+  external: boolean;
+  blocked: boolean;
+}
+
+export interface TicketGraphEdge {
+  linkId: string;
+  type: TicketLinkType;
+  from: string;
+  to: string;
+}
+
 export interface TestCaseRef {
   id: string;
   key: string;

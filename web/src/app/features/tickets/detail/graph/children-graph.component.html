@@ -1,0 +1,183 @@
+@if (model(); as m) {
+  <div class="gbar">
+    <span class="legend" data-testid="graph-legend">
+      <span class="lg ready"><i></i>{{ m.counts.ready }} ready</span>
+      <span class="lg blocked"><i></i>{{ m.counts.blocked }} blocked</span>
+      <span class="lg done"><i></i>{{ m.counts.done }} done</span>
+      @if (m.criticalPath.length > 0) {
+        <span class="lg crit" [title]="criticalTitle()" data-testid="graph-critical"
+          ><i></i>Critical path · {{ m.criticalPath.length }}</span
+        >
+      }
+    </span>
+    <span class="tools">
+      <button
+        type="button"
+        class="tk-icon-btn"
+        aria-label="Zoom out"
+        title="Zoom out  −"
+        (click)="zoomBy(0.8)"
+      >
+        <tk-icon name="tablerZoomOut" [size]="14" />
+      </button>
+      <span class="zoom tnum" aria-live="polite">{{ (scale() * 100).toFixed(0) }}%</span>
+      <button
+        type="button"
+        class="tk-icon-btn"
+        aria-label="Zoom in"
+        title="Zoom in  +"
+        (click)="zoomBy(1.25)"
+      >
+        <tk-icon name="tablerZoomIn" [size]="14" />
+      </button>
+      <button
+        type="button"
+        class="tk-icon-btn"
+        aria-label="Fit to view"
+        title="Fit to view  0"
+        data-testid="graph-fit"
+        (click)="fit()"
+      >
+        <tk-icon name="tablerFocusCentered" [size]="14" />
+      </button>
+    </span>
+  </div>
+  @if (m.cycles.length > 0) {
+    <div class="warn" role="status" data-testid="graph-cycles">
+      <tk-icon name="tablerAlertTriangle" [size]="14" />
+      <span
+        >Circular blocking:
+        @for (cycle of m.cycles; track $index) {
+          <span class="tnum">{{ cycle.join(' ⇄ ') }}</span
+          >{{ $last ? '' : '; ' }}
+        }
+      </span>
+    </div>
+  }
+}
+
+<div
+  #viewport
+  class="viewport"
+  role="group"
+  aria-roledescription="dependency graph"
+  aria-label="Sub-tickets by what blocks what. Arrow keys move between tickets, Enter opens one, plus and minus zoom, 0 fits."
+  [class.panning]="panning()"
+  [style.height.px]="height()"
+  (wheel)="onWheel($event)"
+  (pointerdown)="onPointerDown($event)"
+  (pointermove)="onPointerMove($event)"
+  (pointerup)="onPointerUp($event)"
+  (pointercancel)="onPointerUp($event)"
+  (keydown)="onKeydown($event)"
+  (scroll)="resetScroll()"
+>
+  @switch (store.status()) {
+    @case ('loading') {
+      <tk-skeleton-rows [count]="4" />
+    }
+    @case ('error') {
+      <div class="msg">
+        Couldn't load the graph.
+        <button type="button" class="retry" (click)="store.load(ticketKey())">Retry</button>
+      </div>
+    }
+    @default {
+      @if (layout(); as l) {
+        @if (placed().length === 0) {
+          <div class="msg">No sub-tickets.</div>
+        }
+        <div
+          class="canvas"
+          [style.width.px]="l.width"
+          [style.height.px]="l.height"
+          [style.transform]="transform()"
+        >
+          <svg class="edges" [attr.width]="l.width" [attr.height]="l.height" aria-hidden="true">
+            <defs>
+              @for (kind of ['open', 'done', 'crit', 'cycle']; track kind) {
+                <marker
+                  [attr.id]="uid + '-' + kind"
+                  viewBox="0 0 10 10"
+                  refX="9"
+                  refY="5"
+                  markerWidth="8"
+                  markerHeight="8"
+                  markerUnits="userSpaceOnUse"
+                  orient="auto"
+                >
+                  <path d="M0,1 L9,5 L0,9 Z" [attr.class]="'tip ' + kind" />
+                </marker>
+              }
+            </defs>
+            @for (edge of model()!.related; track edge.linkId) {
+              <path
+                class="edge related"
+                [class.dim]="around() !== null"
+                [attr.d]="l.edges.get(edge.linkId)"
+              />
+            }
+            @for (edge of model()!.blocks; track edge.linkId) {
+              @let kind =
+                edge.inCycle ? 'cycle' : edge.critical ? 'crit' : edge.satisfied ? 'done' : 'open';
+              <path
+                class="edge"
+                [class]="'edge ' + kind"
+                [class.dim]="around() !== null && !around()!.edges.has(edge.linkId)"
+                [class.lit]="around()?.edges?.has(edge.linkId)"
+                [attr.d]="l.edges.get(edge.linkId)"
+                [attr.marker-end]="'url(#' + uid + '-' + kind + ')'"
+                [attr.data-edge]="edge.from + '>' + edge.to"
+              />
+            }
+          </svg>
+          @if (l.unlinkedLabel; as at) {
+            <div class="ulabel" [style.left.px]="at.x" [style.top.px]="at.y">No blocking links</div>
+          }
+          @for (item of placed(); track item.node.key) {
+            @let n = item.node;
+            <a
+              [class]="'gnode ' + n.state"
+              [class.crit]="n.critical"
+              [class.ext]="n.external"
+              [class.dim]="around() !== null && !around()!.nodes.has(n.key)"
+              [style.left.px]="item.at.x"
+              [style.top.px]="item.at.y"
+              [style.width.px]="nodeWidth"
+              [style.height.px]="nodeHeight"
+              [routerLink]="[]"
+              [queryParams]="{ peek: n.key }"
+              queryParamsHandling="merge"
+              [tabIndex]="n.key === tabStop() ? 0 : -1"
+              [attr.aria-label]="nodeLabel(n)"
+              [attr.data-key]="n.key"
+              [attr.data-state]="n.state"
+              [attr.data-testid]="'graph-node-' + n.key"
+              (mouseenter)="hovered.set(n.key)"
+              (mouseleave)="hovered.set(null)"
+              (focus)="onNodeFocus(n.key)"
+              (blur)="onNodeBlur(n.key)"
+            >
+              <span class="l1">
+                <tk-status-icon [status]="n.status" />
+                <span class="key tnum">{{ n.key }}</span>
+                <tk-type-icon [type]="n.type" [size]="12" />
+                <span class="fill"></span>
+                @if (n.state === 'blocked') {
+                  <tk-icon
+                    class="lock"
+                    name="tablerLock"
+                    [size]="12"
+                    [title]="'Blocked by ' + n.blockedBy.join(', ')"
+                  />
+                }
+                <tk-avatar [userId]="n.assignee?.id" [name]="n.assignee?.displayName" />
+              </span>
+              <span class="t" [title]="n.title">{{ n.title }}</span>
+            </a>
+          }
+        </div>
+      }
+    }
+  }
+</div>

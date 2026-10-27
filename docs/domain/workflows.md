@@ -463,11 +463,11 @@ sequenceDiagram
         API-->>N: Link no longer valid, ask the Admin for a new one
     else Valid
         API->>API: Policy: 12 to 128 chars, not the email, not in the 10 000 most common
-        API->>DB: PasswordHash set, token cleared, lockout lifted, SecurityStamp rotated (other sessions end)
+        API->>DB: PasswordHash set, token cleared, lockouts lifted, SecurityStamp rotated (other sessions end)
         API-->>N: Password set
         N->>API: Sign in (email, password)
-        API->>DB: Not locked, active, password verifies?
-        API->>DB: FailedLoginCount = 0, LastLoginAt = now
+        API->>DB: Active, password verifies, this address not locked?
+        API->>DB: Address throttle cleared, LastLoginAt = now, session row inserted
         API-->>N: tkt_session cookie, XSRF-TOKEN cookie
     end
 ```
@@ -480,8 +480,8 @@ stateDiagram-v2
     [*] --> AwaitingPassword: Admin creates user (72 h link)
     AwaitingPassword --> AwaitingPassword: Admin issues a new link
     AwaitingPassword --> Active: set password via link
-    Active --> Locked: 5 failed logins
-    Locked --> Active: 15 minutes pass
+    Active --> Locked: 5 failed logins from one address
+    Locked --> Active: 15 minutes pass (other addresses unaffected)
     Active --> Active: reset link used (24 h link), old password valid until then
     Active --> Deactivated: Admin deactivates
     AwaitingPassword --> Deactivated: Admin deactivates
@@ -494,7 +494,7 @@ stateDiagram-v2
     end note
 ```
 
-`AwaitingPassword` and `Locked` are not stored states: they follow from `PasswordHash` being null and from `LockedUntil` being in the future. A reactivated user who never set a password still needs a set-password link: deactivation clears a pending one.
+`AwaitingPassword` and `Locked` are not stored states: they follow from `PasswordHash` being null and from a `LoginThrottle` of the user with `LockedUntil` in the future. `Locked` applies per client address only, and sign-in answers it exactly like a wrong password (D-74). A reactivated user who never set a password still needs a set-password link: deactivation clears a pending one.
 
 Users change their own password with the current one. That rotates the security stamp: every other cookie session ends at its next request, and the current session is re-issued with the new stamp (D-55). Unknown, used, expired and deactivated users' links all give the same 404 (D-56).
 

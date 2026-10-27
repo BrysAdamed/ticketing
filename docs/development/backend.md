@@ -20,7 +20,7 @@ docker compose up -d db             # PostgreSQL on localhost:5433 (published by
 dotnet run --project src/Ticketing.Api   # http://localhost:5080, Development settings
 ```
 
-Or run everything in containers: `docker compose up --build db api`. The API is then also on http://localhost:5080. `web` (nginx + SPA, port 8080) is built from `./web`.
+Or run everything in containers: `docker compose up --build db api`. The API is then also on http://localhost:5080 (published by `docker-compose.override.yml` only; `docker compose -f docker-compose.yml up` publishes just `web`). `web` (nginx + SPA, port 8080) is built from `./web`.
 
 `docker-compose.override.yml` holds development-only additions: it publishes the database port, and compose loads it automatically. On a server, start only the base file so the database stays private to the compose network:
 
@@ -31,7 +31,7 @@ docker compose -f docker-compose.yml up -d --build
 | URL | What |
 | --- | --- |
 | `/api/v1/...` | REST API |
-| `/api/v1/openapi.json` | OpenAPI document |
+| `/api/v1/openapi.json` | OpenAPI document (needs a cookie or PAT in Production) |
 | `/scalar` | API reference UI (not in Production) |
 | `/mcp` | MCP server (PAT only) |
 | `/health/live`, `/health/ready` | Liveness; readiness (database reachable) |
@@ -46,7 +46,8 @@ Configuration (environment variables override `appsettings*.json`):
 | `Auth__CookieSecurePolicy` | `Always` (default) or `SameAsRequest` (Development, compose over plain HTTP) |
 | `RateLimiting__PatPermitsPerMinute` | Per-token rate limit (default 600) |
 | `RateLimiting__LoginPermitsPerMinute` | `POST /auth/login` attempts per client IP (default 20) |
-| `ASPNETCORE_FORWARDEDHEADERS_ENABLED` | `true` behind nginx/TLS so `https` and client IPs are seen correctly |
+| `ForwardedHeaders__KnownNetworks` | Comma-separated CIDR ranges of proxies whose `X-Forwarded-For`/`-Proto` are believed (compose: `TICKETING_TRUSTED_PROXIES`, default Docker's private pools). Loopback is always trusted. |
+| `ForwardedHeaders__ForwardLimit` | Proxy hops to unwrap (default 1 = nginx; 2 with a TLS proxy in front, whose address must then be trusted too) |
 
 Logs are JSON on the console (`simple` in Development).
 
@@ -178,7 +179,7 @@ Performance tests carry `[Trait("Category", "Performance")]`. `DashboardPerforma
 
 ## Error codes
 
-Every error response is RFC 9457 problem details with a stable `code`. MCP returns the same code. Codes look like `<area>.<subject>[.<problem>]` in camelCase, for example `ticket.parent.cycle`, `project.key.taken` or `auth.lockedOut`. Feature codes are constants in `Domain/<Feature>/<Feature>Errors.cs`. Cross-cutting codes are in `Application/Common/AppErrors`.
+Every error response is RFC 9457 problem details with a stable `code`. MCP returns the same code. Codes look like `<area>.<subject>[.<problem>]` in camelCase, for example `ticket.parent.cycle`, `project.key.taken` or `auth.invalidCredentials`. Feature codes are constants in `Domain/<Feature>/<Feature>Errors.cs`. Cross-cutting codes are in `Application/Common/AppErrors`.
 
 | Source | Status | Code |
 | --- | --- | --- |
@@ -186,11 +187,10 @@ Every error response is RFC 9457 problem details with a stable `code`. MCP retur
 | `DomainException` validation kind | 400 | specific (`ticket.labels.invalid`), `errors` when the field is known |
 | Missing or invalid XSRF token | 400 | `xsrf.invalid` |
 | Not signed in, or a bad, expired or revoked PAT | 401 | `auth.unauthenticated` (PAT failures also send `WWW-Authenticate: Bearer`) |
-| Wrong email or password on login | 401 | `auth.invalidCredentials` |
+| Wrong email or password, unknown or locked account, on login | 401 | `auth.invalidCredentials` |
 | Role or credentials insufficient | 403 | `project.forbidden`, `pat.readOnlyScope`, `auth.cookieSessionRequired`, ... |
 | Not found or not readable | 404 | `project.notFound`, `ticket.notFound`, ... |
 | Business rule, archived, duplicate, stale version | 409 | specific, `conflict.duplicate`, `concurrency.conflict` |
-| Locked account | 423 | `auth.lockedOut` |
 | PAT or login rate limit | 429 | `rateLimited`, with `Retry-After` |
 
 A `hint` (how to fix the problem) is included when the domain provides one. MCP clients rely on it.
@@ -216,13 +216,14 @@ After v1, migrations are additive and never edited once merged. Feature branches
 
 ## Authentication in short
 
-- **Cookie session `tkt_session`** for the SPA: HttpOnly, SameSite=Lax, 12 hour sliding expiry. The user is re-read on every request, so deactivation, role changes and renames apply immediately.
+- **Cookie session `tkt_session`** for the SPA: HttpOnly, SameSite=Lax, 12 hour sliding expiry. It names a `user_sessions` row; the row and the user are re-read on every request, so sign-out (which deletes the row), deactivation, role changes and renames apply immediately (D-75).
 - **XSRF:** `GET /api/v1/auth/csrf` issues `XSRF-TOKEN`. Cookie-authenticated unsafe requests must echo it in `X-XSRF-TOKEN`. PAT requests are exempt.
 - **PAT:** `Authorization: Bearer tkt_<40 base62>`, stored as a SHA-256 hash, with last use recorded at most every 5 minutes.
   - Read-only tokens get 403 on writes.
   - Each token is limited to 600 requests per minute.
   - `/mcp` accepts PATs only; a cookie gets 401.
-- **Lockout:** the 5th failed login locks the account for 15 minutes, and the locking attempt already answers 423.
+- **Lockout:** the 5th failed login in a row from one client address locks the account for that address for 15 minutes (`login_throttles`, D-74). Locked, unknown and wrong-password attempts all answer `401 auth.invalidCredentials` after the same hashing work.
   - Attempts on one account are serialized by a row lock, so parallel guesses all count.
-  - Login is also limited per client IP (20 per minute).
+  - Login is also limited per client address (20 per minute).
+  - The client address is the TCP peer, or the last `X-Forwarded-For` hop when the peer is in `ForwardedHeaders__KnownNetworks` (D-73).
 - **Data Protection keys** (which sign cookies and antiforgery tokens) are stored in the `data_protection_keys` table, so sessions survive restarts and work across instances.

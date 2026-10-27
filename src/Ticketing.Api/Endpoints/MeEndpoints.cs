@@ -27,7 +27,7 @@ public sealed class MeEndpoints : IEndpointModule
         me.MapPost("/password", async (ChangeMyPassword.Command command, ChangeMyPassword.Handler handler, HttpContext http, CancellationToken ct) =>
             {
                 var session = await handler.HandleAsync(command, ct);
-                await AuthEndpoints.StartSessionAsync(http, session);
+                await AuthEndpoints.StartSessionAsync(http, session, ct);
                 return TypedResults.NoContent();
             })
             .RequireCookieSession()

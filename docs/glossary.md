@@ -74,7 +74,7 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **MCP (Model Context Protocol)**: The protocol LLM clients such as Claude Code use to call tools. Ticketing serves it at `/mcp` over Streamable HTTP, authenticated with a PAT, exposing the same use cases as REST. [§9](product/01-refined-spec.md#9-mcp-server), [ADR 0004](adr/0004-in-process-mcp-server.md)
 
-**Lockout**: After 5 failed logins an account is locked for 15 minutes (`LockedUntil`). [§6.14](product/01-refined-spec.md#614-user-and-authentication-lifecycle-d-01)
+**Lockout**: After 5 failed logins in a row from one client address, the account is locked for that address for 15 minutes (`LoginThrottle.LockedUntil`, D-74). It looks like a wrong password to the caller. [§6.14](product/01-refined-spec.md#614-user-and-authentication-lifecycle-d-01)
 
 **Member**: Project role that can read and write tickets, test cases and regressions, but not delete tickets, moderate comments or manage the project. Every signed-in user has Member access to a public project. [§5.3](product/01-refined-spec.md#53-project-actions)
 

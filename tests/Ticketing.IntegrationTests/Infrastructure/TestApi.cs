@@ -116,7 +116,7 @@ public static class TestApi
         var accessor = scope.ServiceProvider.GetRequiredService<IHttpContextAccessor>();
         var identity = new AuthenticatedUser(user.Id, user.Email, user.DisplayName, user.Role);
         var principal = patScope is null
-            ? TicketingPrincipal.ForSession(identity, securityStamp: string.Empty)
+            ? TicketingPrincipal.ForSession(identity, securityStamp: string.Empty, sessionId: Guid.Empty)
             : TicketingPrincipal.ForPat(new PatAuthentication(identity, Guid.NewGuid(), patScope.Value, DateTimeOffset.UtcNow.AddDays(1)));
         accessor.HttpContext = new DefaultHttpContext { User = principal, RequestServices = scope.ServiceProvider };
         try

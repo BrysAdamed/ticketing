@@ -7,15 +7,26 @@ namespace Ticketing.Api.Auth;
 
 public static class TicketingPrincipal
 {
-    public static ClaimsPrincipal ForSession(SessionIdentity session) =>
-        ForSession(new AuthenticatedUser(session.User.Id, session.User.Email, session.User.DisplayName, session.User.GlobalRole), session.SecurityStamp);
+    public static ClaimsPrincipal ForSession(SessionIdentity session, Guid sessionId) =>
+        ForSession(new AuthenticatedUser(session.User.Id, session.User.Email, session.User.DisplayName, session.User.GlobalRole), session.SecurityStamp, sessionId);
 
     /// <param name="securityStamp">The user's stamp when the session starts; revalidation rejects the session once it changes.</param>
-    public static ClaimsPrincipal ForSession(AuthenticatedUser user, string securityStamp) => Create(user, AuthSchemes.Cookie, securityStamp);
+    /// <param name="sessionId">The server-side session (D-75); revalidation rejects the cookie once it is gone.</param>
+    public static ClaimsPrincipal ForSession(AuthenticatedUser user, string securityStamp, Guid sessionId) =>
+        Create(user, AuthSchemes.Cookie, [new(TicketingClaims.SecurityStamp, securityStamp), new(TicketingClaims.SessionId, sessionId.ToString())]);
 
-    public static ClaimsPrincipal ForPat(PatAuthentication pat) => Create(pat.User, AuthSchemes.Pat, securityStamp: null, pat);
+    public static ClaimsPrincipal ForPat(PatAuthentication pat) => Create(pat.User, AuthSchemes.Pat,
+    [
+        new(TicketingClaims.PatId, pat.TokenId.ToString()),
+        new(TicketingClaims.PatScope, pat.Scope.ToString()),
+        new(TicketingClaims.PatExpiresAt, pat.ExpiresAt.ToString("O", CultureInfo.InvariantCulture)),
+    ]);
 
-    private static ClaimsPrincipal Create(AuthenticatedUser user, string authenticationType, string? securityStamp, PatAuthentication? pat = null)
+    /// <summary>The server-side session a cookie principal belongs to, or null for PATs and anonymous callers.</summary>
+    public static Guid? SessionId(ClaimsPrincipal? principal) =>
+        Guid.TryParse(principal?.FindFirstValue(TicketingClaims.SessionId), out var id) ? id : null;
+
+    private static ClaimsPrincipal Create(AuthenticatedUser user, string authenticationType, IEnumerable<Claim> extraClaims)
     {
         var claims = new List<Claim>
         {
@@ -24,14 +35,7 @@ public static class TicketingPrincipal
             new(ClaimTypes.Name, user.DisplayName),
             new(ClaimTypes.Role, user.Role.ToString()),
         };
-        if (securityStamp is not null)
-            claims.Add(new Claim(TicketingClaims.SecurityStamp, securityStamp));
-        if (pat is not null)
-        {
-            claims.Add(new Claim(TicketingClaims.PatId, pat.TokenId.ToString()));
-            claims.Add(new Claim(TicketingClaims.PatScope, pat.Scope.ToString()));
-            claims.Add(new Claim(TicketingClaims.PatExpiresAt, pat.ExpiresAt.ToString("O", CultureInfo.InvariantCulture)));
-        }
+        claims.AddRange(extraClaims);
         return new ClaimsPrincipal(new ClaimsIdentity(claims, authenticationType));
     }
 }

@@ -27,7 +27,7 @@ internal static class AdminUsers
             u.IsActive,
             u.PasswordHash != null,
             u.SetPasswordTokenHash != null && u.SetPasswordTokenExpiresAt > now ? u.SetPasswordTokenExpiresAt : null,
-            u.LockedUntil > now ? u.LockedUntil : null,
+            db.LoginThrottles.Where(t => t.UserId == u.Id && t.LockedUntil > now).Max(t => t.LockedUntil),
             u.LastLoginAt,
             u.CreatedAt,
             u.DeactivatedAt,

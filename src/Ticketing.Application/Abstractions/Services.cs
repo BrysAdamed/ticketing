@@ -20,6 +20,12 @@ public enum PasswordCheck
     SuccessRehashNeeded = 2,
 }
 
+/// <summary>The caller's network address after trusted proxies are unwrapped (D-73), used for per-client sign-in limits.</summary>
+public interface IClientAddress
+{
+    string Value { get; }
+}
+
 /// <summary>Personal access token secrets: <c>tkt_</c> + 40 base62 characters, stored only as a SHA-256 hex hash (spec 4.2).</summary>
 public interface IPatTokenGenerator
 {

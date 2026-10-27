@@ -1,5 +1,5 @@
 import { expect, test } from '../support/fixtures';
-import { ADMIN } from '../support/env';
+import { ADMIN, BASE_URL } from '../support/env';
 
 test.describe('anonymous', () => {
     test.use({ storageState: { cookies: [], origins: [] } });
@@ -27,6 +27,32 @@ test.describe('anonymous', () => {
         await expect(page).toHaveURL(/\/login/);
         await page.goto('/my-work');
         await expect(page).toHaveURL(/\/login\?returnUrl=%2Fmy-work$/);
+    });
+
+    test('a copied session cookie stops working after sign-out', async ({
+        page,
+        playwright,
+        loginPage,
+        shell,
+    }) => {
+        // Arrange
+        await loginPage.goto();
+        await loginPage.signIn(ADMIN.email, ADMIN.password);
+        await shell.expectVisible();
+        const copied = await page.context().storageState();
+
+        // Act
+        await shell.signOut();
+        await expect(page).toHaveURL(/\/login/);
+        const replay = await playwright.request.newContext({
+            baseURL: BASE_URL,
+            storageState: copied,
+        });
+        const me = await replay.get('/api/v1/me');
+
+        // Assert
+        expect(me.status()).toBe(401);
+        await replay.dispose();
     });
 
     test('wrong password shows an error', async ({ loginPage }) => {

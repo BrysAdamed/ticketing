@@ -96,7 +96,7 @@ public sealed class PasswordTests(TicketingApiFactory api)
         var admin = await api.LoginAsync(await api.CreateUserAsync(GlobalRole.Admin));
         var user = await api.CreateUserAsync();
         var session = await api.LoginAsync(user);
-        for (var i = 0; i < User.MaxFailedLogins; i++)
+        for (var i = 0; i < LoginThrottle.MaxFailedLogins; i++)
             await api.TryLoginAsync(user.Email, "wrong-password-123");
         var link = await (await admin.PostAsync($"/api/v1/admin/users/{user.Id}/set-password-link", null, _ct)).ReadAsync<Application.Users.SetPasswordLinkDto>();
 

@@ -26,7 +26,7 @@ public static class RateLimiting
                     ? RateLimitPartition.GetFixedWindowLimiter(patId, _ => PerMinute(patPermits))
                     : RateLimitPartition.GetNoLimiter(string.Empty));
             options.AddPolicy(LoginPolicy, context =>
-                RateLimitPartition.GetFixedWindowLimiter(context.Connection.RemoteIpAddress?.ToString() ?? "unknown", _ => PerMinute(loginPermits)));
+                RateLimitPartition.GetFixedWindowLimiter(ForwardedHeadersSetup.ClientAddress(context), _ => PerMinute(loginPermits)));
             options.OnRejected = async (rejected, cancellationToken) =>
             {
                 var retryAfter = rejected.Lease.TryGetMetadata(MetadataName.RetryAfter, out var delay) ? delay : TimeSpan.FromMinutes(1);

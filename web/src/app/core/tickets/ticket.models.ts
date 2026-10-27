@@ -188,6 +188,8 @@ export interface NewTicket {
   labels?: string[];
   parentKey?: string | null;
   assignee?: string | null;
+  /// Creates the ticket on this board (bottom of its status column) instead of the backlog (spec 6.4).
+  boardId?: string | null;
 }
 
 export type HintField = 'labels' | 'version';

@@ -401,6 +401,34 @@ public sealed class BoardEndpointTests(TicketingApiFactory api)
     }
 
     [Fact]
+    public async Task Creating_a_ticket_on_a_board_lands_at_the_bottom_of_its_column_and_needs_an_active_linked_board()
+    {
+        // Arrange
+        var client = await api.LoginAsync(await api.CreateUserAsync());
+        await client.CreateProjectAsync("WEB");
+        await client.CreateProjectAsync("API");
+        var board = await client.CreateBoardAsync("Sprint", "WEB");
+        var archived = await client.CreateBoardAsync("Old", "WEB");
+        await (await client.PostAsJsonAsync($"/api/v1/boards/{archived.Id}/archive", new { carryOverTo = "backlog" }, _ct)).ShouldHaveStatusAsync(HttpStatusCode.OK);
+        await client.CreateTicketAsync("WEB", "First", extra: new { boardId = board.Id, status = "Review" });
+
+        // Act
+        var second = await client.CreateTicketAsync("WEB", "Second", extra: new { boardId = board.Id, status = "Review" });
+        var unlinked = await client.PostAsJsonAsync("/api/v1/projects/API/tickets", new { title = "Api", type = "Bug", boardId = board.Id }, _ct);
+        var onArchived = await client.PostAsJsonAsync("/api/v1/projects/WEB/tickets", new { title = "Old", type = "Bug", boardId = archived.Id }, _ct);
+
+        // Assert
+        Assert.Equal(
+            (Application.Tickets.TicketLocationKind.Board, board.Id, TicketStatus.Review),
+            (second.Location.Kind, second.Location.BoardId!.Value, second.Status));
+        Assert.Equal(["Review: WEB-1, WEB-2"], (await client.GetBoardAsync(board.Id)).Layout());
+        await unlinked.ShouldBeProblemAsync(HttpStatusCode.BadRequest, TicketErrors.BoardInvalid);
+        await onArchived.ShouldBeProblemAsync(HttpStatusCode.Conflict, TicketErrors.BoardInvalid);
+        var backlog = await (await client.GetAsync("/api/v1/projects/WEB/backlog", _ct)).ReadAsync<BacklogDto>();
+        Assert.Empty(backlog.Items);
+    }
+
+    [Fact]
     public async Task Read_only_tokens_can_read_boards_but_not_manage_them()
     {
         // Arrange

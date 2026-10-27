@@ -210,6 +210,8 @@ export class CreateTicketDialog {
       assignee: this.assignee()?.id ?? null,
       storyPoints: this.data.storyPoints ?? null,
       version: this.data.version ?? null,
+      ...(this.data.status ? { status: this.data.status } : {}),
+      ...(this.data.boardId ? { boardId: this.data.boardId } : {}),
     };
     try {
       const created = this.data.submit

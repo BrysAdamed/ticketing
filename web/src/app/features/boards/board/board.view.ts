@@ -31,7 +31,6 @@ import { PeekService } from '@core/layout/peek/peek';
 import { ShortcutService } from '@core/shortcuts/shortcut.service';
 import { TicketCreator } from '@core/tickets/create-ticket';
 import { TicketCache } from '@core/tickets/ticket-cache';
-import { TicketsApi } from '@core/tickets/tickets.api';
 import {
   STATUS_CATEGORY_LABELS,
   statusCategory,
@@ -46,7 +45,7 @@ import { StatusIconComponent } from '@shared/ui/domain/status-icon.component';
 import { TypeIconComponent } from '@shared/ui/domain/type-icon.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { IconComponent } from '@shared/ui/icon/icon.component';
-import { filter, firstValueFrom } from 'rxjs';
+import { filter } from 'rxjs';
 import { BOARD_ICONS } from '../board-icons';
 import { AddTicketsDialog, AddTicketsDialogData } from './add-tickets.dialog';
 import { BoardCardComponent } from './board-card.component';
@@ -117,7 +116,6 @@ export class BoardView {
   private readonly cache = inject(TicketCache);
   private readonly dialog = inject(MatDialog);
   private readonly creator = inject(TicketCreator);
-  private readonly ticketsApi = inject(TicketsApi);
   private readonly breadcrumbs = inject(Breadcrumbs);
 
   readonly boardId = input.required<string>();
@@ -375,16 +373,12 @@ export class BoardView {
     const board = this.store.board();
     const project = board?.projects.find((p) => p.canWrite && !p.isArchived);
     if (!board || !project) return;
-    const created = await this.creator.open({
+    await this.creator.open({
       projectKey: project.key,
       status,
+      boardId: board.id,
       heading: `New ticket on ${board.name}`,
-      submit: (projectKey, ticket) =>
-        firstValueFrom(
-          this.ticketsApi.create(projectKey, { ...ticket, boardId: board.id } as typeof ticket),
-        ),
     });
-    if (created) await this.store.reload(true);
   }
 
   protected sendSelectionToBacklog(): void {

@@ -2,13 +2,32 @@ import { fnv1a } from '@shared/util/hash';
 import { rememberedHeight, rememberHeight } from '../diagram-heights';
 import { DiagramTheme } from '../diagram-theme';
 import { whenVisible } from '../when-visible';
-import { cachedMermaid, MermaidRender, renderMermaid } from './mermaid-renderer';
+import {
+  cachedMermaid,
+  MermaidRender,
+  mermaidDiagramType,
+  renderMermaid,
+} from './mermaid-renderer';
 
 /// What `renderMarkdown` emits for a ```` ```mermaid ```` fence.
 export const MERMAID_BLOCK_SELECTOR = 'pre > code.language-mermaid';
 
-/// Height reserved for a diagram that was never rendered on this device.
+/// Height reserved for a diagram of an unknown type that was never rendered on this device.
 export const MERMAID_PLACEHOLDER_HEIGHT = 200;
+
+/// Rough rendered heights (px, at prose width) by diagram type and statement count, measured on
+/// the templates; only used before a diagram was ever rendered on this device.
+const HEIGHT_ESTIMATES: Record<string, (statements: number) => number> = {
+  'flowchart-horizontal': (n) => 60 + 18 * n,
+  flowchart: (n) => 80 + 80 * (n - 1),
+  sequence: (n) => 250 + 15 * n,
+  class: (n) => 200 + 15 * n,
+  state: (n) => 200 + 35 * n,
+  ER: (n) => 150 + 80 * n,
+  gantt: (n) => 40 + 8 * n,
+  mindmap: () => 280,
+  pie: () => 480,
+};
 
 export interface MermaidBlockOptions {
   /// Render each block only when it comes near the viewport; until then it is a skeleton of the
@@ -58,8 +77,26 @@ export function mermaidHeightId(source: string): string {
   return `mermaid:${fnv1a(source).toString(36)}:${source.length}`;
 }
 
+/// The height a never-rendered diagram probably takes, from its type, direction and number of
+/// statements, between 80 and 600 px.
+export function estimateMermaidHeight(source: string): number {
+  const type = mermaidDiagramType(source);
+  const statements = source.split('\n').filter((line) => {
+    const text = line.trim();
+    return text && !text.startsWith('%%');
+  }).length;
+  const horizontal = /^\s*(flowchart|graph)\s+(LR|RL)\b/m.test(source);
+  const estimate =
+    type === null
+      ? undefined
+      : HEIGHT_ESTIMATES[type === 'flowchart' && horizontal ? 'flowchart-horizontal' : type];
+  return Math.round(
+    Math.min(600, Math.max(80, estimate ? estimate(statements) : MERMAID_PLACEHOLDER_HEIGHT)),
+  );
+}
+
 function reserve(pre: HTMLElement, source: string): void {
-  const height = rememberedHeight(mermaidHeightId(source)) ?? MERMAID_PLACEHOLDER_HEIGHT;
+  const height = rememberedHeight(mermaidHeightId(source)) ?? estimateMermaidHeight(source);
   pre.classList.add('tk-mermaid-pending');
   pre.style.height = `${height}px`;
   pre.setAttribute('aria-busy', 'true');

@@ -1,5 +1,10 @@
 import { rememberHeight } from '../diagram-heights';
-import { MERMAID_PLACEHOLDER_HEIGHT, mermaidHeightId, renderMermaidBlocks } from './mermaid-blocks';
+import {
+  estimateMermaidHeight,
+  MERMAID_PLACEHOLDER_HEIGHT,
+  mermaidHeightId,
+  renderMermaidBlocks,
+} from './mermaid-blocks';
 import { loadMermaid, renderMermaid } from './mermaid-renderer';
 import { MERMAID_SECURITY_SAMPLES, unsafeSvgFindings } from './mermaid-security.samples';
 
@@ -139,7 +144,9 @@ describe('renderMermaidBlocks', { timeout: 30_000 }, () => {
       // Assert
       expect(first.classList).toContain('tk-mermaid-pending');
       expect(first.style.height).toBe('321px');
-      expect(second.style.height).toBe(`${MERMAID_PLACEHOLDER_HEIGHT}px`);
+      expect(second.style.height).toBe(
+        `${estimateMermaidHeight('flowchart LR\n  Never --> Seen')}px`,
+      );
       expect(root.querySelector('figure')).toBeNull();
 
       ManualObserver.instances.at(-1)!.show(first);
@@ -164,5 +171,26 @@ describe('renderMermaidBlocks', { timeout: 30_000 }, () => {
       // Assert
       expect(root.querySelector('figure')).toBeNull();
     });
+  });
+});
+
+describe('estimateMermaidHeight', () => {
+  it('reserves a short box for horizontal flowcharts and a tall one for vertical ones', () => {
+    // Act
+    const horizontal = estimateMermaidHeight('flowchart LR\n  A --> B --> C');
+    const vertical = estimateMermaidHeight('flowchart TD\n  A --> B\n  B --> C\n  C --> D');
+
+    // Assert
+    expect(horizontal).toBeLessThan(120);
+    expect(vertical).toBeGreaterThan(250);
+  });
+
+  it('stays between 80 and 600 px and falls back for unknown types', () => {
+    // Act + Assert
+    expect(estimateMermaidHeight(`flowchart TD\n${'  A --> B\n'.repeat(40)}`)).toBe(600);
+    expect(estimateMermaidHeight('gantt')).toBe(80);
+    expect(estimateMermaidHeight('quadrantChart\n  x-axis Low --> High')).toBe(
+      MERMAID_PLACEHOLDER_HEIGHT,
+    );
   });
 });

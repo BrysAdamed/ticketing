@@ -45,6 +45,7 @@ The SPA copies its query string to the API unchanged (minus UI-only parameters),
 | `updatedFrom`, `updatedTo` | date or timestamp | Updated in range. Stale tickets (dashboard widget 8): `category=ToDo,InProgress&updatedTo=<now − 30 days as a UTC timestamp>&sort=updated&order=asc`. |
 | `resolvedFrom`, `resolvedTo` | date or timestamp | Entered Done in range (`ResolvedAt`). For the dashboard's created-vs-resolved widget. |
 | `fromRegression` | `true` | Only tickets created as bugs from a regression session item, from any session, cancelled ones included (dashboard widget 12). |
+| `watching` | `true` | Only tickets the caller watches (I-32, D-93). `false` or absent = no filter. Like every filter it applies only within readable projects. |
 
 Deleted tickets are never returned (spec §6.8 "include deleted = no").
 
@@ -78,7 +79,8 @@ Not sent to the API: `peek=<ticket key>` (open peek panel, layout-and-screens §
 | Children of epic WEB-12 | `/search?parent=WEB-12&sort=rank` |
 | Text search, newest first | `/search?q=login%20timeout&sort=created` |
 | Open regression bugs | `/search?project=WEB&fromRegression=true&category=ToDo,InProgress` |
+| Open tickets I watch | `/search?watching=true&category=ToDo,InProgress` |
 
 ## MCP mapping
 
-`search_tickets` (spec §9.3) takes the same filters as JSON with these names: `projectKeys` ← `project`, `text` ← `q`, `types`, `statuses`, `statusCategory` (list) ← `category`, `priorities`, `severities`, `assignee` (list), `assigneeNot` (list), `reporter` (list), `labels`, `version`, `parentKey`, `location`, `createdFrom`/`createdTo`, `updatedFrom`/`updatedTo`, `resolvedFrom`/`resolvedTo`, `fromRegression`, `sort`, `order`, `limit`, `cursor`.
+`search_tickets` (spec §9.3) takes the same filters as JSON with these names: `projectKeys` ← `project`, `text` ← `q`, `types`, `statuses`, `statusCategory` (list) ← `category`, `priorities`, `severities`, `assignee` (list), `assigneeNot` (list), `reporter` (list), `labels`, `version`, `parentKey`, `location`, `createdFrom`/`createdTo`, `updatedFrom`/`updatedTo`, `resolvedFrom`/`resolvedTo`, `fromRegression`, `watching`, `sort`, `order`, `limit`, `cursor`.

@@ -139,6 +139,7 @@ Rules:
    - Use `activity.Record(...)` / `activity.RecordChange(...)` for each changed field. Use action codes such as `ticket.created` and `ticket.field.changed`.
    - Then call one `db.SaveChangesAsync`.
    - `IClock.Now` is fixed for the request, so the entity and its activity entries share one timestamp.
+   - Collaboration side effects (watchers now, notifications later) are derived from these entries inside the save by `IActivityObserver`s (`Collaboration/CollaborationProjector`, D-93). Don't call them from handlers; record the activity and add a rule there. Activity is saved with `SaveChangesAsync` only.
 6. **Use the shared helpers for numbering, ranking and retries.**
    - Numbered entities (tickets, test cases, sessions): call `IProjectCounters.NextAsync(projectId, CounterKind.X)` inside `db.InTransactionAsync(...)`, together with the insert.
    - Placement: every user-driven placement change (backlog reorder, backlog to board and back, board to board, column change) goes through `MoveTickets.Handler` (`POST /tickets/move`, MCP `move_ticket`, D-77). Don't add another endpoint that ranks or moves tickets; extend `MoveTickets.Command` instead. Board-level relocations (archive carry-over, unlink, delete, project archive) use `BoardRelocation`.

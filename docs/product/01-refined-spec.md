@@ -323,6 +323,16 @@ One user operation that changes several fields writes one entry per field with t
 
 Evaluation in 6.13.
 
+### 4.16 TicketWatcher (I-32)
+
+| Field | Type | Constraints |
+| --- | --- | --- |
+| TicketId | uuid | FK Ticket, cascade. |
+| UserId | uuid | FK User. |
+| CreatedAt | timestamptz | |
+
+Primary key (TicketId, UserId), index (UserId, TicketId). Rows stay when the user loses access or is deactivated; readers filter them (6.15).
+
 ## 5. Permissions
 
 ### 5.1 Effective project access
@@ -358,6 +368,7 @@ Columns are effective access from 5.1. "Owner" includes Admins. A public project
 | Action | Owner | Member | Viewer (private only) | No access |
 | --- | --- | --- | --- | --- |
 | See the project, its tickets, comments, attachments, test cases, regression sessions, dashboard, history | Yes | Yes | Yes | No (404) |
+| Watch or unwatch a ticket (write-scoped credentials; archived projects too) | Yes | Yes | Yes | No (404) |
 | Create tickets; edit any ticket field; change status; rank; move between backlog and boards; add or remove links | Yes | Yes | No | No |
 | Delete a ticket | Yes | No | No | No |
 | Upload attachments | Yes | Yes | No | No |
@@ -374,7 +385,7 @@ Columns are effective access from 5.1. "Owner" includes Admins. A public project
 | Archive or unarchive the project | Yes | No | No | No |
 | Delete the project | Admin only | No | No | No |
 
-On an archived project every write action above is denied for everyone, except unarchive.
+On an archived project every write action above is denied for everyone, except unarchive and watching, which only changes the caller's own state.
 
 Ticket deletion and moderating other people's comments stay with Owners even on public projects. The product owner's rule opens "create/edit" to everyone; deletion is destructive and not editing (D-02).
 
@@ -464,11 +475,11 @@ Rules in 5.4. Additionally:
 ### 6.8 Search, lists and export
 
 - Quick jump (Ctrl+K or `/`): typing a ticket or test case key opens it directly. Otherwise it searches ticket titles across readable projects and shows the top 10 (I-03, I-04).
-- Ticket search filters: projects, text, type, status, status category, priority, severity, assignee (including "unassigned" and "me"), reporter, labels (all of), version, parent, location (backlog, any board, a given board), created and updated date ranges, include deleted = no. Sort: updated, created, priority, key, rank.
+- Ticket search filters: projects, text, type, status, status category, priority, severity, assignee (including "unassigned" and "me"), reporter, labels (all of), version, parent, location (backlog, any board, a given board), created and updated date ranges, watching (tickets I watch, 6.15), include deleted = no. Sort: updated, created, priority, key, rank.
 - Text search uses PostgreSQL full text (`websearch_to_tsquery('english', ...)`) over title (weight A) and description (weight B), plus a trigram index on title for partial words. Comments are not searched in v1.
 - Every filter state is in the URL, so searches can be bookmarked and shared (I-21).
 - CSV export of the current search result, at most 10 000 rows, all scalar fields plus labels joined by `;` (I-12).
-- "My work" page: open tickets assigned to me across all projects, grouped by project, and my assigned waiting regression items (I-08).
+- "My work" page: open tickets assigned to me across all projects, grouped by project, and my assigned waiting regression items (I-08); plus "Watching": open tickets I watch but am not assigned to, most recently updated first, at most 100 (the full list is the `watching=true` search).
 
 ### 6.9 Comments
 
@@ -574,6 +585,13 @@ Flag changes write ActivityEntries. Admin UI: list, create, edit, delete; shows 
 - Users change their own display name and password (current password required).
 - Deactivate and reactivate per 4.1. No hard delete.
 
+### 6.15 Watchers (I-32, D-93)
+
+- Anyone who can read a ticket can watch or unwatch it: viewers too, and on archived projects too. Both are idempotent and need write-scoped credentials. The ticket view has a Watch/Unwatch toggle (shortcut `w`) with the watcher count and avatars.
+- Automatic watching, applied in the same transaction as the write that triggers it, whatever the channel: the reporter and the assignee of a new ticket, each new assignee, and anyone who comments (and, with I-33, anyone newly @mentioned). Users who cannot read the project or are deactivated are skipped. Unwatching holds until the next such trigger.
+- Watcher lists show only active users who can currently read the project, by display name. A watcher who loses access or is deactivated is hidden (and will get no notifications) but is shown again if access returns. Watcher data is never visible for an unreadable ticket (404).
+- REST: `GET /tickets/{key}/watchers`, `PUT /tickets/{key}/watchers/me`, `DELETE /tickets/{key}/watchers/me`, each returning `{ count, watching, users }`. The ticket (`GET /tickets/{key}`, `include=watchers`, part of the default) carries the same object as `watchers`.
+
 ## 7. Project dashboard
 
 Shown on the project's home page. All numbers exclude deleted tickets. A single optional version filter applies to ticket-based widgets (I-23).
@@ -644,8 +662,10 @@ Tickets
 
 | Tool | Inputs | Output |
 | --- | --- | --- |
-| `search_tickets` | any filter from 6.8 (`projectKeys`, `text`, `types`, `statuses`, `statusCategory`, `priorities`, `severities`, `assignee` (email, `me` or `unassigned`), `reporter`, `labels`, `version`, `parentKey`, `location` (`backlog`, `board`, or a board id), date ranges), `sort`, `limit`, `cursor` | Ticket summaries. |
-| `get_ticket` | `key`, optional `include` (any of `comments`, `children`, `links`, `testCases`, `attachments`; default all) | Full ticket incl. description, resolution, reporter, timestamps, rowVersion, and the included collections (latest 50 comments). |
+| `search_tickets` | any filter from 6.8 (`projectKeys`, `text`, `types`, `statuses`, `statusCategory`, `priorities`, `severities`, `assignee` (email, `me` or `unassigned`), `reporter`, `labels`, `version`, `parentKey`, `location` (`backlog`, `board`, or a board id), date ranges, `watching`), `sort`, `limit`, `cursor` | Ticket summaries. |
+| `get_ticket` | `key`, optional `include` (any of `comments`, `children`, `links`, `testCases`, `attachments`, `watchers`; default all) | Full ticket incl. description, resolution, reporter, timestamps, rowVersion, and the included collections (latest 50 comments; watchers as `{ count, watching, users }`). |
+| `watch_ticket` | `key` | `{ count, watching, users }`. Read access is enough (6.15). |
+| `unwatch_ticket` | `key` | `{ count, watching, users }`. |
 | `create_ticket` | `projectKey`, `title`, `type`, optional `description`, `status`, `priority`, `severity`, `storyPoints`, `version`, `labels`, `parentKey`, `assignee`, `boardId`, `idempotencyKey` | Created ticket (summary + rowVersion). |
 | `create_tickets` | `projectKey`, `tickets` (1..50 objects with the `create_ticket` fields except `projectKey`; `parentKey` may also reference an earlier item in the batch as `#index`) | Created ticket summaries in input order. All-or-nothing (I-26). |
 | `update_ticket` | `key`, any of `title`, `description`, `type`, `status`, `resolution`, `priority`, `severity`, `storyPoints`, `version`, `labels` (replace), `addLabels`, `removeLabels`, `parentKey` (null to clear), `assignee` (null to clear), `reporter`, optional `expectedVersion` | Updated ticket. Null clears an optional field; omitted leaves it. |

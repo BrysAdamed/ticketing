@@ -78,7 +78,7 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Member**: Project role that can read and write tickets, test cases and regressions, but not delete tickets, moderate comments or manage the project. Every signed-in user has Member access to a public project. [§5.3](product/01-refined-spec.md#53-project-actions)
 
-**My work**: Page listing the current user's open tickets across projects and their waiting regression items. [§6.8](product/01-refined-spec.md#68-search-lists-and-export)
+**My work**: Page listing the current user's open tickets across projects, their waiting regression items and the open tickets they watch. [§6.8](product/01-refined-spec.md#68-search-lists-and-export)
 
 **Open**: A ticket whose status category is not `Done`. Used in dashboards and filters. [§3](product/01-refined-spec.md#3-enumerations)
 
@@ -171,5 +171,7 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 **Viewer**: Project role with read-only access to a private project. It has no effect on a public project, where everyone has Member access (D-16). [§5.1](product/01-refined-spec.md#51-effective-project-access)
 
 **Visibility**: `Private` (default) or `Public`; decides who can access a project without membership. [§3](product/01-refined-spec.md#3-enumerations)
+
+**Watcher**: A user who follows a ticket. Anyone who can read the ticket may watch it; the reporter, the assignee (on each assignment) and commenters start watching automatically. Only active watchers who can still read the project are shown or notified; the others stay stored but hidden (D-93). [§6.15](product/01-refined-spec.md#615-watchers-i-32-d-93)
 
 **Write channel**: How a write arrived: `Web` (browser session), `Api` (PAT over REST) or `Mcp` (PAT over MCP). Recorded on every activity entry. [§2](product/01-refined-spec.md#2-cross-cutting-conventions)

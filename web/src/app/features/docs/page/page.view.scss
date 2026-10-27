@@ -14,24 +14,49 @@
   grid-template-columns: minmax(0, 1fr);
 }
 
-.rail {
-  display: none;
+.layout.with-rail {
+  grid-template-columns: minmax(0, 1fr) 220px;
 }
 
-@media (min-width: 1440px) {
-  .layout {
-    grid-template-columns: minmax(0, 1fr) 220px;
-  }
+.rail {
+  position: sticky;
+  top: 40px;
+  align-self: start;
+  max-height: calc(100vh - var(--tk-topbar-h) - 40px);
+  overflow: auto;
+  padding: 24px 12px 24px 0;
+}
 
-  .rail {
-    display: block;
-    position: sticky;
-    top: 40px;
-    align-self: start;
-    max-height: calc(100vh - var(--tk-topbar-h) - 40px);
-    overflow: auto;
-    padding: 24px 12px 24px 0;
+.hide {
+  width: 22px;
+  height: 22px;
+  margin-left: auto;
+  opacity: 0;
+
+  .rlabel:hover &,
+  &:focus-visible {
+    opacity: 1;
   }
+}
+
+.outline-pop {
+  width: 260px;
+  max-height: min(480px, calc(100vh - 120px));
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 8px 6px;
+  outline: none;
+
+  .rsec {
+    margin-bottom: 0;
+  }
+}
+
+.tk-icon-btn.on {
+  background: var(--tk-bg-active);
+  color: var(--tk-text);
 }
 
 .pbody {

@@ -48,9 +48,9 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Child**: See Parent / child.
 
-**Collapsing (notifications)**: Merging rapid changes into one notification: an event by the same actor on the same ticket (or regression session) within 5 minutes of the first event of an unread notification raises its event count instead of adding a row; the highest-ranked kind becomes the headline (D-94). [§6.16](product/01-refined-spec.md#616-in-app-notifications-i-30-d-94)
+**Collapsing (notifications)**: Merging rapid changes into one notification: an event by the same actor on the same ticket (or regression session, or doc) within 5 minutes of the first event of an unread notification raises its event count instead of adding a row; the highest-ranked kind becomes the headline (D-94). [§6.16](product/01-refined-spec.md#616-in-app-notifications-i-30-d-94)
 
-**Comment**: Markdown text on a ticket, listed oldest first. Authors edit or delete their own; Owners delete any; a deleted comment leaves a placeholder. [§4.7](product/01-refined-spec.md#47-comment), [§6.9](product/01-refined-spec.md#69-comments)
+**Comment**: Markdown text on a ticket, or below a page or diagram (doc comment, D-106), listed oldest first. Authors edit or delete their own; Owners delete any; a deleted comment leaves a placeholder. [§4.7](product/01-refined-spec.md#47-comment), [§6.9](product/01-refined-spec.md#69-comments)
 
 **Conflict view (docs)**: What the page editor shows when my edit and a version published meanwhile change the same or touching lines: theirs and mine side by side, with Keep editing on latest, Overwrite with mine and Discard mine. Edits to different parts merge on their own (D-105). [§12.8](product/01-refined-spec.md#128-reading-and-editing-pages-web)
 
@@ -108,7 +108,7 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Mention**: A reference to a user in a ticket description or comment, written with the `@` people picker or as `@email`, stored as `@[Name](user:<id>)` so it survives renames. Only active users who can read the project can be newly mentioned; a new mention notifies them once and makes them a watcher, and readers see it as a chip with the current name (others see plain text) (D-96). [§6.9](product/01-refined-spec.md#69-comments)
 
-**Notification**: An in-app message to one user about a change someone else made: assigned to them (ticket or regression item), mentioned, or a comment, status change, priority raised to High/Highest, move or deletion on a ticket they watch. Created in the same transaction as the change, shown under the bell, listed only while the user can read the project, purged after 90 days (D-94). See Collapsing. [§6.16](product/01-refined-spec.md#616-in-app-notifications-i-30-d-94)
+**Notification**: An in-app message to one user about a change someone else made: assigned to them (ticket or regression item), mentioned, or a comment, status change, priority raised to High/Highest, move or deletion on a ticket they watch, or a new comment on a doc they wrote or commented on. Created in the same transaction as the change, shown under the bell, listed only while the user can read the project, purged after 90 days (D-94). See Collapsing. [§6.16](product/01-refined-spec.md#616-in-app-notifications-i-30-d-94)
 
 **Open**: A ticket whose status category is not `Done`. Used in dashboards and filters. [§3](product/01-refined-spec.md#3-enumerations)
 

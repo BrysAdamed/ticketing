@@ -51,6 +51,7 @@ function doc(key: string, overrides: Partial<Doc> = {}): Doc {
     children: null,
     url: `/p/WEB/docs/${key}/x`,
     rowVersion: 1,
+    commentCount: 0,
     ...overrides,
   };
 }

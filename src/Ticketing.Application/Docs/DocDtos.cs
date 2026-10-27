@@ -28,6 +28,7 @@ public sealed record DocMyDraftDto(int BaseVersion, DateTimeOffset UpdatedAt);
 /// <summary>
 /// A doc with its latest published content. <see cref="Version"/> is the content version (0 for folders) that content
 /// writes send back as <c>baseVersion</c>; <see cref="RowVersion"/> changes on any write (rename and move included).
+/// <see cref="CommentCount"/> counts the comments that are not deleted (always 0 for folders).
 /// </summary>
 public sealed record DocDto(
     Guid Id,
@@ -52,7 +53,8 @@ public sealed record DocDto(
     DocMyDraftDto? MyDraft,
     IReadOnlyList<DocTreeItemDto>? Children,
     string Url,
-    uint RowVersion);
+    uint RowVersion,
+    int CommentCount);
 
 /// <summary>One node of the flat, depth-first tree (root children have depth 1), in the manual order of each folder.</summary>
 public sealed record DocTreeItemDto(

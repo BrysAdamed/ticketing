@@ -36,6 +36,7 @@ function doc(overrides: Partial<Doc> = {}): Doc {
     children: null,
     url: '/p/WEB/docs/WEB-D-1/payment-flow',
     rowVersion: 1,
+    commentCount: 0,
     ...overrides,
   };
 }

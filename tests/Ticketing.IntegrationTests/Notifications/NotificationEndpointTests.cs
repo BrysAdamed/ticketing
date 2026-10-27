@@ -55,7 +55,7 @@ public sealed class NotificationEndpointTests(TicketingApiFactory api)
         // Assert
         var item = json.GetProperty("items")[0];
         Assert.Equal(
-            ["id", "kind", "summary", "eventCount", "actor", "projectKey", "ticket", "regression", "url", "createdAt", "updatedAt", "readAt"],
+            ["id", "kind", "summary", "eventCount", "actor", "projectKey", "ticket", "regression", "doc", "url", "createdAt", "updatedAt", "readAt"],
             item.EnumerateObject().Select(p => p.Name));
         Assert.Equal("Assigned", item.GetProperty("kind").GetString());
         Assert.Equal(world.Owner.Email, item.GetProperty("actor").GetProperty("email").GetString());
@@ -63,6 +63,7 @@ public sealed class NotificationEndpointTests(TicketingApiFactory api)
         Assert.Equal("Contract", item.GetProperty("ticket").GetProperty("title").GetString());
         Assert.False(item.GetProperty("ticket").GetProperty("deleted").GetBoolean());
         Assert.Equal(JsonValueKind.Null, item.GetProperty("regression").ValueKind);
+        Assert.Equal(JsonValueKind.Null, item.GetProperty("doc").ValueKind);
         Assert.Equal("/tickets/WEB-1", item.GetProperty("url").GetString());
         Assert.Equal(JsonValueKind.Null, item.GetProperty("readAt").ValueKind);
         Assert.Equal(JsonValueKind.Null, json.GetProperty("nextCursor").ValueKind);

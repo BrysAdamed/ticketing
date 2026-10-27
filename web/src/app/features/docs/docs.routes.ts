@@ -14,9 +14,20 @@ export default [
         id: 'attachments',
         order: 50,
         placement: 'footer',
+        kinds: ['Page'],
         loadComponent: () =>
           import('./page/attachments/doc-attachments-section.component').then(
             (m) => m.DocAttachmentsSectionComponent,
+          ),
+      }),
+      provideDocPageSection({
+        id: 'comments',
+        order: 90,
+        placement: 'footer',
+        kinds: ['Page', 'Diagram'],
+        loadComponent: () =>
+          import('./page/comments/doc-comments-section.component').then(
+            (m) => m.DocCommentsSectionComponent,
           ),
       }),
     ],

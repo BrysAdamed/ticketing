@@ -54,6 +54,18 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Deactivation**: The only way to remove a user. It blocks login, revokes all their PATs and hides them from pickers, while their name stays on history as "Name (deactivated)" (D-12). [§4.1](product/01-refined-spec.md#41-user)
 
+**Delete group (docs)**: The docs deleted by one delete: a doc, or a folder with its whole subtree. Its members share `DeletedRootId`; restore and the trash work on whole groups. [§12.5](product/01-refined-spec.md#125-delete-and-restore)
+
+**Doc**: A node of a project's docs tree: a `Folder`, a markdown `Page` or a `Diagram` (`Mermaid` or `Canvas`). Pages and diagrams have versions; folders hold other docs, up to 6 levels deep. [§12](product/01-refined-spec.md#12-docs)
+
+**Doc draft**: A user's private, unpublished edit of a page or diagram, autosaved by the editor. Others only see that the user is editing. Publishing creates a version and deletes the draft. [§12.4](product/01-refined-spec.md#124-content-versions-and-drafts)
+
+**Doc key**: `{ProjectKey}-D-{n}`, for example `WEB-D-12`, for every kind of doc. Numbered per project from one counter, never reused, case-insensitive on lookup. [§12.1](product/01-refined-spec.md#121-model-and-keys)
+
+**Doc path**: A doc's titles from the root joined by `/` (`Architecture/ADRs/0001 Use Postgres`), case-insensitive; `/` inside a title is written `\/`. Unique because titles are unique within a folder. [§12.1](product/01-refined-spec.md#121-model-and-keys)
+
+**Doc version**: An immutable full snapshot of a page or diagram's title and content, numbered 1..n, created by every publish. `baseVersion` names the version an edit started from. [§12.4](product/01-refined-spec.md#124-content-versions-and-drafts)
+
 **Effective access**: A user's resulting role on a project, computed from global role, membership and visibility. It decides every project permission. [§5.1](product/01-refined-spec.md#51-effective-project-access)
 
 **Epic**: Ticket type for a large body of work. An epic cannot have a parent; it is usually the top of a hierarchy. [§6.3](product/01-refined-spec.md#63-parent-and-child)

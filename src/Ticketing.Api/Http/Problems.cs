@@ -85,6 +85,8 @@ internal sealed partial class ApiExceptionHandler(IProblemDetailsService problem
             problem.Extensions["hint"] = error.Hint;
         if (error.Errors.Count > 0)
             problem.Extensions["errors"] = error.Errors;
+        foreach (var (name, value) in error.Details ?? new Dictionary<string, object?>())
+            problem.Extensions.TryAdd(name, value);
         return await problemDetails.TryWriteAsync(new ProblemDetailsContext { HttpContext = httpContext, ProblemDetails = problem, Exception = exception });
     }
 

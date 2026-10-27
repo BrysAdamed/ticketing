@@ -25,7 +25,8 @@ public sealed class TicketTools
     [McpServerTool(Name = "get_ticket", ReadOnly = true, Idempotent = true, Title = "Get ticket")]
     [Description("Gets a ticket by key (for example WEB-42) or id: all fields incl. description, resolution, reporter, timestamps and rowVersion, "
         + "plus the included collections: children (with progress by status category), links, the latest 50 comments, test cases and "
-        + "watchers ({ count, watching, users }).")]
+        + "watchers ({ count, watching, users }). mentions lists the users mentioned in the description who are active and can read the project "
+        + "(each comment has its own mentions).")]
     public static Task<TicketDto> GetTicket(
         GetTicket.Handler handler,
         [Description("Ticket key (for example WEB-42) or id.")] string key,
@@ -41,7 +42,7 @@ public sealed class TicketTools
         [Description("Project key, for example WEB.")] string projectKey,
         [Description("Single-line title, at most 255 characters.")] string title,
         [Description("Ticket type: " + Types + ".")] TicketType type,
-        [Description("Markdown description, at most 50000 characters.")] string? description = null,
+        [Description("Markdown description, at most 50000 characters. " + McpDescriptions.Mentions)] string? description = null,
         [Description("Status: " + Statuses + ". Default ToDo.")] TicketStatus? status = null,
         [Description("Priority: " + Priorities + ".")] Priority? priority = null,
         [Description("Severity: " + Severities + ".")] Severity? severity = null,
@@ -67,7 +68,8 @@ public sealed class TicketTools
     public static Task<IReadOnlyList<TicketSummaryDto>> CreateTickets(
         CreateTickets.Handler handler,
         [Description("Project key, for example WEB.")] string projectKey,
-        [Description("The tickets: objects with title, type and optional description, status, priority, severity, storyPoints, version, labels, parentKey, assignee, boardId.")]
+        [Description("The tickets: objects with title, type and optional description, status, priority, severity, storyPoints, version, labels, parentKey, assignee, boardId. "
+            + "Descriptions take mentions as in create_ticket.")]
         CreateTicket.Command[] tickets,
         [Description("Optional key that makes retries safe.")] string? idempotencyKey = null,
         CancellationToken cancellationToken = default) =>
@@ -82,7 +84,7 @@ public sealed class TicketTools
         UpdateTicket.Handler handler,
         [Description("Ticket key (for example WEB-42) or id.")] string key,
         [Description("New single-line title.")] string? title = null,
-        [Description("Markdown description; null clears.")] Optional<string?> description = default,
+        [Description("Markdown description; null clears. " + McpDescriptions.Mentions)] Optional<string?> description = default,
         [Description("Type: " + Types + ".")] TicketType? type = null,
         [Description("Status: " + Statuses + ".")] TicketStatus? status = null,
         [Description("Resolution: " + Resolutions + ". Only with status Done.")] Optional<Resolution?> resolution = default,

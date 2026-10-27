@@ -12,7 +12,8 @@ namespace Ticketing.Api.Mcp;
 public sealed class CommentTools
 {
     [McpServerTool(Name = "list_comments", ReadOnly = true, Idempotent = true, Title = "List comments")]
-    [Description("Comments of a ticket, oldest first: id, author, markdown body, createdAt, editedAt, deleted (deleted comments have an empty body). Returns { items, nextCursor }.")]
+    [Description("Comments of a ticket, oldest first: id, author, markdown body, createdAt, editedAt, deleted (deleted comments have an empty body) and mentions "
+        + "(the mentioned users who are active and can read the project; other mentions read as plain text). Returns { items, nextCursor }.")]
     public static Task<CursorPage<CommentDto>> ListComments(
         ListComments.Handler handler,
         [Description("Ticket key (for example WEB-42) or id.")] string key,
@@ -27,7 +28,7 @@ public sealed class CommentTools
     public static Task<CommentDto> AddComment(
         AddComment.Handler handler,
         [Description("Ticket key (for example WEB-42) or id.")] string key,
-        [Description("Markdown body.")] string body,
+        [Description("Markdown body. " + McpDescriptions.Mentions)] string body,
         CancellationToken cancellationToken = default) =>
         handler.HandleAsync(new AddComment.Command(body, key), cancellationToken);
 
@@ -37,7 +38,7 @@ public sealed class CommentTools
     public static Task<CommentDto> UpdateComment(
         UpdateComment.Handler handler,
         [Description("Comment id (from list_comments).")] Guid commentId,
-        [Description("New markdown body.")] string body,
+        [Description("New markdown body. " + McpDescriptions.Mentions)] string body,
         CancellationToken cancellationToken = default) =>
         handler.HandleAsync(new UpdateComment.Command(body, commentId), cancellationToken);
 

@@ -21,7 +21,7 @@ public static class NotificationRules
     public static IReadOnlyList<NotificationCandidate> Candidates(
         IEnumerable<CollaborationEvent> events, ILookup<Guid, Guid> watchersByTicket, IReadOnlyList<MentionCandidate> mentions)
     {
-        var mentioned = mentions.ToLookup(m => m.Event, m => m.UserId);
+        var mentioned = mentions.ToLookup(m => (CollaborationEvent)m.Event, m => m.UserId);
         var candidates = new List<NotificationCandidate>();
         foreach (var e in events)
         {

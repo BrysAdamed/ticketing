@@ -707,7 +707,7 @@ Out of MCP in v1: user administration, PAT management, feature flags, project de
 | Scale assumption | Up to 500 users, 200 projects, 200 000 tickets in total, 50 000 in one project, 500 cards on one board (D-04). |
 | API latency | p95 under 150 ms for reads and under 250 ms for writes at the scale above, measured at the API. |
 | UI | Ticket view opens in under 300 ms after navigation (data cached or fetched). Board with 500 cards renders in under 1 s. Drag and drop updates optimistically and rolls back on error. Initial JS bundle under 500 KB gzipped. |
-| Keyboard | `c` create, `/` or Ctrl+K quick jump, `j`/`k` next/previous in lists, `Enter` open, `e` edit, `a` assign to me, `m` move, `?` shortcut help (I-04). |
+| Keyboard | `c` create, `/` or Ctrl+K quick jump, `j`/`k` next/previous in lists, `Enter` open, `e` edit, `a` assign to me, `s`/`p`/`i` status, priority and assignee picker (D-78), `m` move, `?` shortcut help (I-04). |
 | Browsers | Latest Chrome, Edge and Firefox. Desktop first, minimum width 1280 px. |
 | Accessibility | All actions reachable by keyboard; visible focus; WCAG 2.1 AA colour contrast. |
 | Operations | Docker Compose with `api`, `web` and `db` services. `/health/live` and `/health/ready` endpoints. Structured JSON logs. Database migrations applied on API start. Documented `pg_dump` backup procedure, attachments included. |

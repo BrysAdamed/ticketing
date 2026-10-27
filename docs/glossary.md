@@ -74,6 +74,8 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Doc version**: An immutable full snapshot of a page or diagram's title and content, numbered 1..n, created by every publish. `baseVersion` names the version an edit started from. [§12.4](product/01-refined-spec.md#124-content-versions-and-drafts)
 
+**Doc history**: A doc's versions merged with its other activity (renames, moves, deletes, attachments, comments), newest first: the History panel (`H`) and MCP `get_doc_history`. Any two versions can be compared as a line diff with word highlights. [§12.9](product/01-refined-spec.md#129-version-history), D-106
+
 **Effective access**: A user's resulting role on a project, computed from global role, membership and visibility. It decides every project permission. [§5.1](product/01-refined-spec.md#51-effective-project-access)
 
 **Epic**: Ticket type for a large body of work. An epic cannot have a parent; it is usually the top of a hierarchy. [§6.3](product/01-refined-spec.md#63-parent-and-child)
@@ -153,6 +155,8 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 **Reporter**: The user who reported a ticket; defaults to its creator and can be changed. [§4.5](product/01-refined-spec.md#45-ticket)
 
 **Resolution**: Why a ticket is done: `Done`, `WontDo`, `Duplicate`, `CannotReproduce`. Set if and only if the status is `Done`. [§3](product/01-refined-spec.md#3-enumerations), [§6.2](product/01-refined-spec.md#62-ticket-lifecycle)
+
+**Restore (doc version)**: Publishing an older version's title and content again as a new version with `restoredFrom` set, so nothing is lost; not the same as restoring a deleted doc from the trash. [§12.9](product/01-refined-spec.md#129-version-history)
 
 **Row version**: PostgreSQL `xmin` exposed as `rowVersion`, used for optimistic concurrency on every mutable aggregate. [§2](product/01-refined-spec.md#2-cross-cutting-conventions), [ADR 0005](adr/0005-postgresql-and-ef-core.md)
 

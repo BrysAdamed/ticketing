@@ -2,7 +2,10 @@
 @let pair = compared();
 <div class="main">
   <div class="pbar" data-testid="doc-history-bar">
-    <span class="meta">
+    <span
+      class="meta"
+      [title]="pair.from === null ? '' : 'Comparing v' + pair.from + ' with v' + pair.to"
+    >
       <tk-icon class="i" name="tablerHistory" [size]="16" />
       @if (mode() === 'rendered') {
         Viewing <b>v{{ selected() }}</b>
@@ -15,11 +18,10 @@
       } @else if (pair.to === page.version && pair.from === pair.to - 1 && !other()) {
         Changes in <b>v{{ pair.to }}</b>
       } @else {
-        Comparing <b>v{{ pair.from }}</b> with
+        <b>v{{ pair.from }}</b> → <b>v{{ pair.to }}</b>
         @if (pair.to === page.version) {
-          current
+          · current
         }
-        <b>v{{ pair.to }}</b>
       }
     </span>
     <div class="right">

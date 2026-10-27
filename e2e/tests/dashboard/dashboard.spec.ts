@@ -79,6 +79,45 @@ test.describe('project dashboard', () => {
         });
     });
 
+    test('recent docs list the latest pages and diagrams and open them', async ({ page, api }) => {
+        // Arrange
+        const projectKey = await seed(api, [{ title: 'Checkout redesign', type: 'UserStory' }]);
+        const folder = await api.post<{ key: string }>(`/projects/${projectKey}/docs`, {
+            kind: 'Folder',
+            title: 'Guides',
+        });
+        await api.post(`/projects/${projectKey}/docs`, {
+            kind: 'Page',
+            title: 'Old notes',
+            content: 'Old',
+        });
+        const flow = await api.post<{ key: string }>(`/projects/${projectKey}/docs`, {
+            kind: 'Diagram',
+            diagramFormat: 'Mermaid',
+            title: 'Checkout flow',
+            parent: folder.key,
+            content: 'flowchart LR\n  a --> b',
+        });
+        const dashboard = new DashboardPage(page);
+
+        // Act
+        await dashboard.goto(projectKey);
+        const card = page.getByTestId('dashboard-recent-docs');
+        await card.scrollIntoViewIfNeeded();
+
+        // Assert
+        await expect(page.getByTestId('recent-docs-count')).toHaveText('2 docs');
+        const first = page.getByTestId(`dashboard-doc-${flow.key}`);
+        await expect(first).toContainText('Checkout flow');
+        await expect(first).toContainText('Guides');
+
+        // Act
+        await first.click();
+
+        // Assert
+        await expect(page).toHaveURL(new RegExp(`/projects/${projectKey}/docs/${flow.key}/`));
+    });
+
     test('the version filter narrows ticket widgets, lives in the URL and carries into search links', async ({
         page,
         api,

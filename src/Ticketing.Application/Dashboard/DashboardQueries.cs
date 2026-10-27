@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Ticketing.Application.Abstractions;
+using Ticketing.Domain.Docs;
 using Ticketing.Domain.Regressions;
 using Ticketing.Domain.TestCases;
 using Ticketing.Domain.Tickets;
@@ -13,6 +14,9 @@ namespace Ticketing.Application.Dashboard;
 /// </summary>
 internal static class DashboardQueries
 {
+    public static Task<int> DocCountAsync(ITicketingDbContext db, Guid projectId, CancellationToken ct) =>
+        db.DocNodes.CountAsync(n => n.ProjectId == projectId && n.DeletedAt == null && n.Kind != DocKind.Folder, ct);
+
     public static Task<List<TicketGroupRow>> TicketGroupsAsync(
         ITicketingDbContext db, Guid projectId, string? version, DateTimeOffset staleBefore, CancellationToken ct) =>
         db.Database.SqlQuery<TicketGroupRow>($"""

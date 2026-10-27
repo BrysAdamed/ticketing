@@ -40,7 +40,7 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Bootstrap admin**: The first Admin, created at startup from `TICKETING_BOOTSTRAP_ADMIN_EMAIL` and `TICKETING_BOOTSTRAP_ADMIN_PASSWORD` when the user table is empty. [§6.14](product/01-refined-spec.md#614-user-and-authentication-lifecycle-d-01)
 
-**Built-in prompt**: A default agent prompt shipped inside the application, one per ticket type plus the guardrails, with a release number (`BuiltInVersion`). Instance defaults nobody edited follow new releases automatically. [§13.3](product/01-refined-spec.md#133-domain-model)
+**Built-in prompt**: A default agent prompt shipped inside the application, one per ticket type plus the guardrails, with a release number (`BuiltInVersion`). Instance defaults nobody edited follow new releases automatically. What each type asks for is in [§13.10](product/01-refined-spec.md#1310-default-prompts). [§13.3](product/01-refined-spec.md#133-domain-model)
 
 **Bug**: Ticket type for a defect. Severity is shown prominently for bugs. Bugs can be created from a failed regression item. [§3](product/01-refined-spec.md#3-enumerations), [§6.11](product/01-refined-spec.md#611-regression-session-lifecycle)
 
@@ -62,6 +62,10 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Deactivation**: The only way to remove a user. It blocks login, revokes all their PATs and hides them from pickers, while their name stays on history as "Name (deactivated)" (D-12). [§4.1](product/01-refined-spec.md#41-user)
 
+**Delegated run comment**: The one comment a delegated agent ends with, starting `Delegated run · <Type> v<n> / <D|C>` so it names the prompt template and version that ran. [§13.10](product/01-refined-spec.md#1310-default-prompts)
+
+**Destructive MCP tool**: A tool that deletes, unlinks, cancels or archives (`delete_ticket`, `delete_comment`, `unlink_tickets`, `cancel_regression_session`, `archive_board`). It carries `destructiveHint` and `anthropic/requiresUserInteraction`, so Claude Code asks the user before every call. [§9.1](product/01-refined-spec.md#91-transport-and-auth), [D-102](decisions.md)
+
 **Effective access**: A user's resulting role on a project, computed from global role, membership and visibility. It decides every project permission. [§5.1](product/01-refined-spec.md#51-effective-project-access)
 
 **Epic**: Ticket type for a large body of work. An epic cannot have a parent; it is usually the top of a hierarchy. [§6.3](product/01-refined-spec.md#63-parent-and-child)
@@ -73,6 +77,8 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 **Feature flag**: A named switch, managed by Admins, that evaluates per user to a variant through master switch, user targets, role targets and a stable percentage rollout. [§4.15](product/01-refined-spec.md#415-featureflag), [§6.13](product/01-refined-spec.md#613-feature-flags-and-view-variants), [ADR 0007](adr/0007-feature-flags.md)
 
 **Field hints**: Suggestions of version and label values already used in a project, most recent first. Hints never restrict input. [§6.7](product/01-refined-spec.md#67-field-hints-version-labels)
+
+**Folder check**: The first rule of every agent prompt: compare `git remote get-url origin` with the project's repository URL, normalised, and stop on a mismatch, so a deep link opened in the wrong folder changes nothing. [§13.10](product/01-refined-spec.md#1310-default-prompts)
 
 **Global role**: `Admin` or `User`; exactly one per user. [§3](product/01-refined-spec.md#3-enumerations)
 
@@ -92,7 +98,7 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Lockout**: After 5 failed logins in a row from one client address, the account is locked for that address for 15 minutes (`LoginThrottle.LockedUntil`, D-74). It looks like a wrong password to the caller. [§6.14](product/01-refined-spec.md#614-user-and-authentication-lifecycle-d-01)
 
-**Merge policy**: Per project, how far a delegated run may go: `Review` (push a branch, set Review, a person merges; default) or `MergeWhenVerified` (also merge to main). It picks the sentence the `{{finish}}` placeholder renders. [§13.3](product/01-refined-spec.md#133-domain-model)
+**Merge policy**: Per project, how far a delegated run may go: `Review` (push a branch, set Review, a person merges; default) or `MergeWhenVerified` (also merge back into the default branch once the checks pass). It picks the sentence the `{{finish}}` placeholder renders. [§13.3](product/01-refined-spec.md#133-domain-model)
 
 **Member**: Project role that can read and write tickets, test cases and regressions, but not delete tickets, moderate comments or manage the project. Every signed-in user has Member access to a public project. [§5.3](product/01-refined-spec.md#53-project-actions)
 

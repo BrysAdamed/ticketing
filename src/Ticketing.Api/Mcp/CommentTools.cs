@@ -43,6 +43,7 @@ public sealed class CommentTools
         handler.HandleAsync(new UpdateComment.Command(body, commentId), cancellationToken);
 
     [Authorize(Policy = AuthPolicies.CanWrite)]
+    [McpMeta(McpToolMeta.RequiresUserInteraction, true)]
     [McpServerTool(Name = "delete_comment", Destructive = true, Title = "Delete comment")]
     [Description("Deletes your own comment, or any comment if you are a project Owner. A 'Comment deleted' placeholder stays in place.")]
     public static Task<CommentDto> DeleteComment(

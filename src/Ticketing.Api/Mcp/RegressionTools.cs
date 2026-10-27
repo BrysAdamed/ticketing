@@ -121,6 +121,7 @@ public sealed class RegressionTools
         handler.HandleAsync(new CompleteRegressionSession.Command(skipRemaining, sessionKey), cancellationToken);
 
     [Authorize(Policy = AuthPolicies.CanWrite)]
+    [McpMeta(McpToolMeta.RequiresUserInteraction, true)]
     [McpServerTool(Name = "cancel_regression_session", Destructive = true, Title = "Cancel regression session")]
     [Description("Cancels an in-progress session (project Owners or the person who started it). Cancelled sessions are read-only.")]
     public static Task<RegressionSessionSummaryDto> CancelRegressionSession(

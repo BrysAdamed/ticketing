@@ -19,7 +19,13 @@
         <span class="figure">{{
           session.passRate === null ? '–' : (session.passRate | percent: '1.0-0')
         }}</span>
-        <span class="caption">pass rate</span>
+        @if (session.waiting > 0) {
+          <span class="caption" data-testid="latest-regression-rate-caption"
+            >of executed ({{ session.passed + session.failed }}/{{ session.total }})</span
+          >
+        } @else {
+          <span class="caption" data-testid="latest-regression-rate-caption">pass rate</span>
+        }
       </div>
       <div>
         <span class="figure">{{ session.total }}</span>
@@ -72,10 +78,19 @@
 
 <section class="trend" aria-label="Pass rate of the last completed sessions">
   <h3>Pass rate, last {{ recent().length || 5 }} completed</h3>
-  @if (recent().length > 0) {
+  @if (recent().length > 1) {
     <p class="scale">Scale {{ floor() | percent: '1.0-0' }}–100%</p>
   }
-  @if (recent().length > 0) {
+  @if (recent().length === 1) {
+    @let only = recent()[0];
+    <p class="single" data-testid="regression-trend-single">
+      <a [routerLink]="links().regressionSession(only.key).path" [title]="only.name"
+        ><strong>{{ only.passRate === null ? '–' : (only.passRate | percent: '1.0-0') }}</strong>
+        {{ shortKey(only.key) }}</a
+      >
+      <span>The trend shows from the second completed session.</span>
+    </p>
+  } @else if (recent().length > 1) {
     <svg
       [attr.viewBox]="'0 0 ' + width + ' ' + height"
       [attr.width]="width"

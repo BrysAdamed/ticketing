@@ -27,7 +27,6 @@ import { RegressionItemStatus } from '@shared/domain/enums';
 import { MarkdownEditorComponent } from '@shared/markdown/markdown-editor.component';
 import { MarkdownViewerComponent } from '@shared/markdown/markdown-viewer.component';
 import { AbsoluteTimePipe, RelativeTimePipe } from '@shared/pipes/relative-time.pipe';
-import { AvatarComponent } from '@shared/ui/domain/avatar.component';
 import {
   RegressionItemBadgeComponent,
   RegressionSessionBadgeComponent,
@@ -45,17 +44,11 @@ import {
 import { SkeletonRowsComponent } from '@shared/ui/skeleton/skeleton-rows.component';
 import { SessionProgressComponent } from '../session-progress.component';
 import { ChecklistStepsComponent } from './checklist-steps.component';
+import { SessionItemsComponent } from './session-items.component';
 import { ItemFilter, parseFilter, passRateLabel } from './session-logic';
 import { RegressionSessionStore } from './regression-session.store';
 
 const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
-
-const ITEM_ICONS: Record<RegressionItemStatus, { icon: string; color: string }> = {
-  WaitingForExecution: { icon: 'tablerCircle', color: 'var(--tk-run-waiting)' },
-  Passed: { icon: 'tablerCircleCheck', color: 'var(--tk-run-passed)' },
-  Failed: { icon: 'tablerCircleX', color: 'var(--tk-run-failed)' },
-  Skipped: { icon: 'tablerCircleMinus', color: 'var(--tk-run-skipped)' },
-};
 
 /// Regression session execution (layout-and-screens §3.8), built for speed of manual testing: item
 /// list on the left, the snapshot on the right, Pass / Fail / Skip with p / f / s, j / k to move,
@@ -72,7 +65,6 @@ const ITEM_ICONS: Record<RegressionItemStatus, { icon: string; color: string }> 
     MarkdownViewerComponent,
     AbsoluteTimePipe,
     RelativeTimePipe,
-    AvatarComponent,
     RegressionItemBadgeComponent,
     RegressionSessionBadgeComponent,
     UserDisplayComponent,
@@ -84,6 +76,7 @@ const ITEM_ICONS: Record<RegressionItemStatus, { icon: string; color: string }> 
     SkeletonRowsComponent,
     SessionProgressComponent,
     ChecklistStepsComponent,
+    SessionItemsComponent,
   ],
   providers: [RegressionSessionStore],
   viewProviders: [provideIcons({ tablerPlayerTrackNext, tablerRotate, tablerUserCheck })],
@@ -105,7 +98,6 @@ export class RegressionSessionView {
   readonly show = input<string | null>(null);
 
   private readonly paneBody = viewChild<ElementRef<HTMLElement>>('paneBody');
-  protected readonly icons = ITEM_ICONS;
   protected readonly submitKeys = IS_MAC ? '⌘↵' : 'Ctrl ↵';
   protected readonly passRate = passRateLabel;
   protected readonly failing = signal(false);
@@ -235,11 +227,15 @@ export class RegressionSessionView {
 
   protected async result(status: RegressionItemStatus): Promise<void> {
     const item = this.store.focused();
-    if (!item || !this.canAct() || this.store.busyKey()) return;
+    if (!item || !this.canAct()) return;
     const takeOver = this.store.takenByOther(item);
     if (takeOver && !(await this.confirmTakeOver(item))) return;
-    const recorded = await this.store.record(item, status, null, takeOver);
-    if (recorded && status !== 'WaitingForExecution') this.store.focusNextWaiting();
+    const recorded = this.store.record(item, status, null, takeOver);
+    if (status !== 'WaitingForExecution') {
+      if (takeOver) await recorded;
+      this.store.focusNextWaiting();
+    }
+    await recorded;
   }
 
   protected startFail(event?: Event): void {
@@ -257,17 +253,24 @@ export class RegressionSessionView {
   protected async confirmFail(): Promise<void> {
     const item = this.store.focused();
     const note = this.failNote().trim();
-    if (!item || !note || this.store.busyKey()) return;
+    if (!item || !note || !this.failing()) return;
     const takeOver = this.store.takenByOther(item);
     if (takeOver && !(await this.confirmTakeOver(item))) return;
-    const recorded = await this.store.record(item, 'Failed', note, takeOver);
-    if (!recorded) return;
     this.failing.set(false);
-    if (this.createBug() && !recorded.bug) await this.store.createBug(recorded);
-    this.store.focusNextWaiting();
+    const recording = this.store.record(item, 'Failed', note, takeOver);
+    if (!this.createBug() || item.bug) {
+      this.store.focusNextWaiting();
+      await recording;
+      return;
+    }
+    const recorded = await recording;
+    if (!recorded) return;
+    await this.store.createBug(recorded);
+    if (this.store.focusedKey() === recorded.testCaseKey) this.store.focusNextWaiting();
   }
 
   protected async complete(): Promise<void> {
+    await this.store.settled();
     const summary = this.store.summary();
     if (!summary) return;
     const waiting = summary.waiting;
@@ -291,13 +294,6 @@ export class RegressionSessionView {
       danger: true,
     });
     if (ok) await this.store.cancel();
-  }
-
-  protected trackRow(
-    _: number,
-    row: { kind: string; status?: string; item?: RegressionItem },
-  ): string {
-    return row.kind === 'group' ? `g-${row.status}` : row.item!.id;
   }
 
   private confirmTakeOver(item: RegressionItem): Promise<boolean> {

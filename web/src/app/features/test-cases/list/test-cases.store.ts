@@ -5,6 +5,7 @@ import { ToastService } from '@core/notify/toast.service';
 import { LoadStatus } from '@core/projects/project-directory';
 import { TestCasesApi } from '@core/testing/testing.api';
 import { TestCase, TestCaseCounts, TestCaseSummary } from '@core/testing/testing.models';
+import { TestCaseDraft } from '../editor/test-case-form';
 import {
   adjustCounts,
   EMPTY_FILTERS,
@@ -24,6 +25,7 @@ export class TestCasesStore {
   private readonly api = inject(TestCasesApi);
   private readonly toast = inject(ToastService);
   private request = 0;
+  private readonly drafts = new Map<string, TestCaseDraft>();
 
   readonly projectKey = signal('');
   readonly filters = signal<TestCaseFilters>(EMPTY_FILTERS);
@@ -92,7 +94,19 @@ export class TestCasesStore {
     this.items.update((items) => upsertRow(items, row, this.filters()));
   }
 
+  /// Unsaved editor changes, by test case key (or `new`), restored when the case is opened again.
+  keepDraft(key: string, draft: TestCaseDraft): void {
+    this.drafts.set(key, draft);
+  }
+
+  takeDraft(key: string): TestCaseDraft | null {
+    const draft = this.drafts.get(key) ?? null;
+    this.drafts.delete(key);
+    return draft;
+  }
+
   deleted(testCase: TestCase): void {
+    this.drafts.delete(testCase.key);
     const before = this.items().find((r) => r.id === testCase.id) ?? summaryOf(testCase);
     if (this.countable(before)) this.counts.update((c) => adjustCounts(c, before, null));
     this.items.update((items) => items.filter((r) => r.id !== testCase.id));

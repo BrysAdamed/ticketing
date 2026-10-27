@@ -16,6 +16,7 @@ import { provideIcons } from '@ng-icons/core';
 import { firstValueFrom } from 'rxjs';
 import { PeekService } from '@core/layout/peek/peek';
 import { ConfirmService } from '@core/notify/confirm.service';
+import { ToastService } from '@core/notify/toast.service';
 import { ShortcutService } from '@core/shortcuts/shortcut.service';
 import { LinkedTicket } from '@core/testing/testing.models';
 import { TicketRef } from '@core/tickets/ticket.models';
@@ -38,7 +39,7 @@ import { SkeletonRowsComponent } from '@shared/ui/skeleton/skeleton-rows.compone
 import { RUN_STATUS_ICONS, TEST_CASE_ICONS } from '../test-case-icons';
 import { AUTOMATION_MAX, MARKDOWN_MAX, TITLE_MAX } from './test-case-form';
 import { StepsEditorComponent } from './steps-editor.component';
-import { TestCaseEditorStore } from './test-case-editor.store';
+import { NEW_DRAFT_KEY, TestCaseEditorStore } from './test-case-editor.store';
 
 const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 
@@ -79,6 +80,7 @@ export class TestCaseEditorView {
   private readonly tickets = inject(TicketsApi);
   private readonly confirm = inject(ConfirmService);
   private readonly peek = inject(PeekService);
+  private readonly toast = inject(ToastService);
 
   readonly projectKey = input.required<string>();
   readonly testCaseKey = input<string | null>(null);
@@ -112,6 +114,9 @@ export class TestCaseEditorView {
       untracked(() => void this.open(projectKey, key, forTicket));
     });
 
+    const destroyRef = inject(DestroyRef);
+    destroyRef.onDestroy(() => void this.leave());
+
     inject(ShortcutService).registerScoped(
       [
         {
@@ -128,9 +133,26 @@ export class TestCaseEditorView {
           handler: () => this.close(),
         },
       ],
-      inject(DestroyRef),
+      destroyRef,
     );
   }
+
+  protected readonly saveState = computed(() => {
+    switch (this.store.autosave()) {
+      case 'saving':
+        return { label: 'Saving…', icon: 'tablerLoader2', tone: 'muted' };
+      case 'saved':
+        return { label: 'Saved', icon: 'tablerCheck', tone: 'success' };
+      case 'pending':
+        return { label: 'Unsaved changes', icon: 'tablerPoint', tone: 'muted' };
+      case 'invalid':
+        return { label: 'Not saved: fix the errors', icon: 'tablerAlertCircle', tone: 'danger' };
+      case 'failed':
+        return { label: 'Couldn’t save', icon: 'tablerAlertCircle', tone: 'danger' };
+      default:
+        return null;
+    }
+  });
 
   protected setStatus(status: TestCaseStatus): void {
     this.store.update({ status });
@@ -180,15 +202,22 @@ export class TestCaseEditorView {
     if (ok && (await this.store.delete())) this.close();
   }
 
+  protected flush(): void {
+    void this.store.flush();
+  }
+
   protected async close(): Promise<void> {
-    if (this.store.dirty() && this.store.canEdit()) {
+    if (this.store.canEdit() && !(await this.store.flush()) && this.store.dirty()) {
       const discard = await this.confirm.confirm({
         title: 'Discard changes?',
-        message: 'Your unsaved changes to this test case will be lost.',
+        message: this.store.isNew()
+          ? 'This new test case hasn’t been created yet.'
+          : 'Some changes to this test case couldn’t be saved and will be lost.',
         confirmLabel: 'Discard',
         danger: true,
       });
       if (!discard) return;
+      this.store.discard();
     }
     void this.router.navigate(['..'], {
       relativeTo: this.route,
@@ -202,6 +231,7 @@ export class TestCaseEditorView {
     key: string | null,
     forTicket: string | null,
   ): Promise<void> {
+    await this.leave();
     let ticket: LinkedTicket | null = null;
     if (forTicket) {
       const match = (await firstValueFrom(this.tickets.find(projectKey, forTicket))).find(
@@ -217,5 +247,26 @@ export class TestCaseEditorView {
         };
     }
     await this.store.load(projectKey, key, ticket);
+  }
+
+  private async leave(): Promise<void> {
+    const projectKey = this.store.projectKey();
+    const kept = await this.store.leave();
+    if (!kept) return;
+    const isNew = kept === NEW_DRAFT_KEY;
+    this.toast.warning(
+      isNew
+        ? 'Kept the new test case as a draft. It isn’t created yet.'
+        : `Kept your unsaved changes to ${kept} as a draft.`,
+      {
+        action: {
+          label: 'Open',
+          run: () =>
+            void this.router.navigate(['/projects', projectKey, 'test-cases', kept], {
+              queryParamsHandling: 'preserve',
+            }),
+        },
+      },
+    );
   }
 }

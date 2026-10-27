@@ -422,6 +422,24 @@ Format: question, options considered, decision, rationale. "PO" marks decisions 
 - Decision: `s`, `p` and `i` open the status, priority and assignee picker in the backlog, on the board and in the ticket view; they apply to the selection when there is one, otherwise to the focused ticket. `a` is "assign to me" everywhere (spec §10). On the board, the picker opens under the focused card; status changes there are column moves (bottom of the column, `POST /tickets/move`). Assignee pickers search `GET /users?projectKey=` as you type (any active user on public projects), never a members-only list.
 - Rationale: one meaning per key across views, matching the spec; `i` reads as "assign…" and is free in all three views.
 
+### D-90 The test case editor autosaves
+
+- Question: the editor had an explicit Save, and picking another case in the list silently threw away unsaved step edits (UX-04).
+- Decision: an existing test case saves itself like ticket fields: 800 ms after the last change, when focus leaves a field, when a ticket is linked, and before the editor switches to another case or closes. Saves are serialized and each sends the latest `If-Match`, so typing during a save is sent next. The header shows `Unsaved changes`, `Saving…`, `Saved`, `Not saved: fix the errors` or `Couldn't save · Retry`. Edits that can't be saved (invalid, or the request failed) are kept as a per-case draft in the list's store, a toast with `Open` leads back, and opening the case restores them with a `Discard them` option. A new case is still created explicitly (`Create test case`, Ctrl/⌘+Enter); leaving it unfinished keeps it as the `new` draft. Escape closes after saving and asks before discarding only what can't be saved. A conflict still reloads the case with a warning.
+- Rationale: no data loss and no extra click, consistent with the ticket view; creation stays explicit so half-typed cases don't appear in every regression session.
+
+### D-91 Regression results are optimistic per item
+
+- Question: P/F/S waited for the server and a single busy flag dropped key presses (UX-17).
+- Decision: a result applies at once (item, filter counts and the summary bar, adjusted locally) and the view moves to the next waiting item without waiting. Calls for the same item run in order; different items run in parallel. The server's summary replaces the local one only when no call is pending. A failed call puts that item back, adjusts the summary back and shows a toast naming the case. Items being saved pulse in the list; Complete stays disabled until every call has answered, and reads `Complete (skip N waiting)…` while items wait (UX-41).
+- Rationale: testers run through dozens of items with the keyboard; the server rarely rejects a result, and when it does the item is easy to find again.
+
+### D-92 Semantic solids carry white text at 4.5:1
+
+- Question: Pass/Fail used an undefined `--tk-text-on`, and white text on the success and danger solids measured 2.8:1 and 3.3:1 in dark mode, 3.2:1 and 3.9:1 in light mode (UX-19).
+- Decision: new primitives `--tk-green-solid`, `--tk-red-solid` and `--tk-blue-solid` (light `#18794e` / `#ce2c31` / `#1f63c4`, dark `#268356` / `#d93036` / `#2f6fd6`) back `--tk-success`, `--tk-danger` and `--tk-info`. White on them is 4.6:1 or more in both themes, and as icon colours they keep at least 3.3:1 on dark surfaces. The bright hues (`--tk-green`, `--tk-red`, `--tk-blue`) stay for status and run icons, chart series, dots and tints. Warning keeps its near-black `--tk-warning-on-solid` (8.8:1 or more).
+- Rationale: the semantic solid is a fill for text (Material's `error`/`on-error`, danger buttons, Pass/Fail); deeper shades of the same hues keep the palette while meeting AA.
+
 ## Needs product owner
 
 None of these block v1. The implementation follows each recommendation provisionally; the product owner confirms or overrides them at the v1 review.

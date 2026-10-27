@@ -1,5 +1,6 @@
 import { RegressionItem } from '@core/testing/testing.models';
 import {
+  adjustSummary,
   buildRows,
   filterCounts,
   matchesFilter,
@@ -118,5 +119,33 @@ describe('regression session logic', () => {
     expect(segments.map((s) => s.percent)).toEqual([50, 25, 0, 25]);
     expect(passRateLabel(summary)).toBe('67%');
     expect(passRateLabel({ ...summary, passRate: null })).toBe('–');
+  });
+
+  it('moves an item between summary buckets and recomputes the pass rate', () => {
+    // Arrange
+    const summary = {
+      total: 3,
+      passed: 1,
+      passedManual: 0,
+      passedAutomatic: 1,
+      failed: 0,
+      skipped: 0,
+      waiting: 2,
+      passRate: 1,
+      bugsCreated: 0,
+    };
+    const waiting = item(2);
+    const failed = item(2, { status: 'Failed' });
+    const auto = item(1, { status: 'Passed', autoPassed: true });
+
+    // Act
+    const afterFail = adjustSummary(summary, waiting, failed);
+    const afterRerun = adjustSummary(afterFail, auto, item(1, { status: 'Passed' }));
+    const undone = adjustSummary(afterFail, failed, waiting);
+
+    // Assert
+    expect(afterFail).toMatchObject({ failed: 1, waiting: 1, passRate: 0.5 });
+    expect(afterRerun).toMatchObject({ passed: 1, passedManual: 1, passedAutomatic: 0 });
+    expect(undone).toEqual(summary);
   });
 });

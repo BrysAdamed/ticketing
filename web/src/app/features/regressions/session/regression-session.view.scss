@@ -129,94 +129,6 @@
   padding-bottom: 24px;
 }
 
-.ghead {
-  height: 30px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 12px;
-  background: var(--tk-bg-subtle);
-  border-bottom: 1px solid var(--tk-border-subtle);
-  font-size: var(--tk-text-sm);
-  font-weight: var(--tk-weight-medium);
-  position: sticky;
-  top: 0;
-  z-index: 1;
-
-  .n {
-    color: var(--tk-text-subtle);
-  }
-}
-
-.irow {
-  width: 100%;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 12px;
-  border: 0;
-  border-bottom: 1px solid var(--tk-border-subtle);
-  background: none;
-  color: var(--tk-text);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  position: relative;
-
-  &:hover {
-    background: var(--tk-bg-hover);
-  }
-
-  &.focused {
-    background: var(--tk-selection);
-
-    &::before {
-      content: '';
-      position: absolute;
-      left: 0;
-      top: 0;
-      bottom: 0;
-      width: 2px;
-      background: var(--tk-accent);
-    }
-  }
-
-  .t {
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .key {
-    flex: none;
-    white-space: nowrap;
-    color: var(--tk-text-subtle);
-    font-size: var(--tk-text-sm);
-  }
-
-  .bug {
-    flex: none;
-    color: var(--tk-danger-fg);
-    font-size: var(--tk-text-sm);
-
-    &.deleted {
-      text-decoration: line-through;
-    }
-  }
-
-  .noav {
-    width: 20px;
-    flex: none;
-  }
-}
-
-.none {
-  padding: 16px;
-}
-
 .pane {
   flex: 1;
   min-width: 0;
@@ -340,7 +252,7 @@ h3 {
   font-weight: var(--tk-weight-semibold);
 }
 
-.fail {
+.fail-panel {
   margin-top: 20px;
   padding: 12px;
   border: 1px solid var(--tk-danger-border);
@@ -372,6 +284,9 @@ h3 {
 .actions {
   height: 52px;
   flex: none;
+  position: sticky;
+  bottom: 0;
+  z-index: var(--tk-z-sticky);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -399,12 +314,12 @@ h3 {
 
   &.pass {
     background: var(--tk-success);
-    color: var(--tk-text-on);
+    color: var(--tk-text-on-solid);
   }
 
   &.fail {
     background: var(--tk-danger);
-    color: var(--tk-text-on);
+    color: var(--tk-text-on-solid);
   }
 
   &.skip,
@@ -430,6 +345,6 @@ h3 {
   }
 }
 
-.fail .danger {
+.fail-panel .danger {
   --mat-button-filled-container-color: var(--tk-danger);
 }

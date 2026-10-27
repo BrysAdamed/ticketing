@@ -128,3 +128,35 @@ export function replaceItem(
 ): RegressionItem[] {
   return items.map((i) => (i.id === item.id ? item : i));
 }
+
+/// The summary after one item changes, so results show in the progress bar before the server answers.
+export function adjustSummary(
+  summary: RegressionSummary,
+  before: RegressionItem,
+  after: RegressionItem,
+): RegressionSummary {
+  const result = { ...summary };
+  count(result, before, -1);
+  count(result, after, 1);
+  const executed = result.passed + result.failed;
+  result.passRate = executed === 0 ? null : result.passed / executed;
+  return result;
+}
+
+function count(summary: RegressionSummary, item: RegressionItem, delta: number): void {
+  switch (item.status) {
+    case 'Passed':
+      summary.passed += delta;
+      if (item.autoPassed) summary.passedAutomatic += delta;
+      else summary.passedManual += delta;
+      break;
+    case 'Failed':
+      summary.failed += delta;
+      break;
+    case 'Skipped':
+      summary.skipped += delta;
+      break;
+    default:
+      summary.waiting += delta;
+  }
+}

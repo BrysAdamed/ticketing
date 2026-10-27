@@ -10,6 +10,7 @@ import {
   filtersFromParams,
   filtersToParams,
   inBoardOrder,
+  parseSwimlanes,
 } from './board-logic';
 
 function card(n: number, overrides: Partial<BoardCard> = {}): BoardCard {
@@ -226,6 +227,52 @@ describe('swimlanes', () => {
     expect(mine.map((l) => l.key)).toEqual(['e1']);
     expect(none).toHaveLength(1);
     expect(none[0].count).toBe(0);
+  });
+
+  it('groups by project (by key, named) and by priority (Highest first)', () => {
+    // Arrange
+    const b = {
+      ...board(
+        columns({
+          ToDo: [card(1, { projectKey: 'WEB', priority: 'Low' }), card(2, { projectKey: 'API' })],
+          Done: [card(3, { projectKey: 'WEB', priority: 'Highest' })],
+        }),
+      ),
+      projects: [
+        { id: 'p1', key: 'WEB', name: 'Web shop', canWrite: true, isArchived: false, cardCount: 2 },
+        {
+          id: 'p2',
+          key: 'API',
+          name: 'Public API',
+          canWrite: true,
+          isArchived: false,
+          cardCount: 1,
+        },
+      ],
+    };
+
+    // Act
+    const byProject = buildLanes(b, EMPTY_FILTERS, 'project', null);
+    const byPriority = buildLanes(b, EMPTY_FILTERS, 'priority', null);
+
+    // Assert
+    expect(byProject.map((l) => [l.key, l.label, l.count])).toEqual([
+      ['API', 'Public API', 1],
+      ['WEB', 'Web shop', 2],
+    ]);
+    expect(byPriority.map((l) => [l.priority, keys([...l.cells.ToDo, ...l.cells.Done])])).toEqual([
+      ['Highest', ['WEB-3']],
+      ['Medium', ['WEB-2']],
+      ['Low', ['WEB-1']],
+    ]);
+  });
+
+  it('reads swimlanes from the URL, falling back to none', () => {
+    // Act
+    const values = ['project', 'priority', 'epic', 'bogus', undefined].map(parseSwimlanes);
+
+    // Assert
+    expect(values).toEqual(['project', 'priority', 'epic', 'none', 'none']);
   });
 
   it('lists selected cards in board order', () => {

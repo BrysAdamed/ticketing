@@ -28,9 +28,15 @@
     <tk-regression-session-badge [status]="s.status" data-testid="session-status" />
     <div class="tk-page-actions">
       @if (store.permissions().canComplete) {
-        <button mat-flat-button type="button" data-testid="session-complete" (click)="complete()">
+        <button
+          mat-stroked-button
+          type="button"
+          data-testid="session-complete"
+          [disabled]="store.busy()"
+          (click)="complete()"
+        >
           <tk-icon name="tablerCheck" [size]="14" />{{
-            sum.waiting > 0 ? 'Complete…' : 'Complete session'
+            sum.waiting > 0 ? 'Complete (skip ' + sum.waiting + ' waiting)…' : 'Complete session'
           }}
         </button>
       }
@@ -124,45 +130,7 @@
 
   <div class="split">
     <nav class="items" aria-label="Session items" data-testid="session-items">
-      @for (row of store.rows(); track trackRow($index, $any(row))) {
-        @if (row.kind === 'group') {
-          <div class="ghead">
-            <tk-icon
-              [name]="icons[row.status].icon"
-              [size]="14"
-              [style.color]="icons[row.status].color"
-            />{{ row.label }}<span class="n tnum">{{ row.count }}</span>
-          </div>
-        } @else {
-          @let it = row.item;
-          <button
-            type="button"
-            class="irow"
-            [class.focused]="store.focusedKey() === it.testCaseKey"
-            [attr.aria-current]="store.focusedKey() === it.testCaseKey"
-            [attr.data-testid]="'item-row-' + it.testCaseKey"
-            (click)="store.focus(it.testCaseKey)"
-          >
-            <tk-icon
-              [name]="it.autoPassed ? 'tablerRobot' : icons[it.status].icon"
-              [size]="16"
-              [style.color]="icons[it.status].color"
-            />
-            <span class="t">{{ it.title }}</span>
-            @if (it.bug) {
-              <span class="bug tnum" [class.deleted]="it.bug.deleted">{{ it.bug.key }}</span>
-            }
-            <span class="key tnum">{{ it.testCaseKey }}</span>
-            @if (it.assignee; as a) {
-              <tk-avatar [userId]="a.id" [name]="a.displayName" />
-            } @else {
-              <span class="noav"></span>
-            }
-          </button>
-        }
-      } @empty {
-        <div class="none tk-subtle">No items match.</div>
-      }
+      <tk-session-items />
     </nav>
 
     <section class="pane" aria-label="Execution">
@@ -275,7 +243,7 @@
           <tk-markdown class="md" [source]="it.expectedResult || '_Not specified_'" />
 
           @if (failing()) {
-            <div class="fail" data-testid="fail-panel">
+            <div class="fail-panel" data-testid="fail-panel">
               <span class="tk-field-label">What went wrong?</span>
               <tk-markdown-editor
                 data-testid="fail-note"
@@ -305,7 +273,7 @@
                     type="button"
                     class="danger"
                     data-testid="fail-confirm"
-                    [disabled]="!failNote().trim() || !!store.busyKey()"
+                    [disabled]="!failNote().trim()"
                     (click)="confirmFail()"
                   >
                     Record failure<tk-kbd tone="on-solid">{{ submitKeys }}</tk-kbd>
@@ -318,12 +286,14 @@
 
         @if (canAct()) {
           <footer class="actions" data-testid="item-actions">
+            <span class="sr-status tk-sr-only" role="status">{{
+              store.isBusy(it.testCaseKey) ? 'Saving…' : ''
+            }}</span>
             <button
               type="button"
               class="act pass"
               data-testid="action-pass"
               [class.on]="it.status === 'Passed'"
-              [disabled]="!!store.busyKey()"
               (click)="result('Passed')"
             >
               <tk-icon name="tablerCircleCheck" [size]="16" />Pass<tk-kbd tone="on-solid">P</tk-kbd>
@@ -333,7 +303,6 @@
               class="act fail"
               data-testid="action-fail"
               [class.on]="it.status === 'Failed'"
-              [disabled]="!!store.busyKey()"
               (click)="startFail()"
             >
               <tk-icon name="tablerCircleX" [size]="16" />Fail<tk-kbd tone="on-solid">F</tk-kbd>
@@ -343,7 +312,6 @@
               class="act skip"
               data-testid="action-skip"
               [class.on]="it.status === 'Skipped'"
-              [disabled]="!!store.busyKey()"
               (click)="result('Skipped')"
             >
               <tk-icon name="tablerCircleMinus" [size]="16" />Skip<tk-kbd>S</tk-kbd>
@@ -354,7 +322,6 @@
                 class="act ghost"
                 data-testid="action-reset"
                 matTooltip="Back to waiting  W"
-                [disabled]="!!store.busyKey()"
                 (click)="result('WaitingForExecution')"
               >
                 <tk-icon name="tablerRotate" [size]="16" />Reset

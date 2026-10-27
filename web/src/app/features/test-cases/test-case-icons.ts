@@ -6,6 +6,8 @@ import {
   tablerGripVertical,
   tablerLink,
   tablerListNumbers,
+  tablerLoader2,
+  tablerPoint,
   tablerTrash,
 } from '@ng-icons/tabler-icons';
 import { RegressionItemStatus } from '@shared/domain/enums';
@@ -19,6 +21,8 @@ export const TEST_CASE_ICONS = {
   tablerGripVertical,
   tablerLink,
   tablerListNumbers,
+  tablerLoader2,
+  tablerPoint,
   tablerTrash,
 };
 

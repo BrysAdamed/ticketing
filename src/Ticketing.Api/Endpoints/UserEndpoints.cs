@@ -11,9 +11,9 @@ public sealed class UserEndpoints : IEndpointModule
     public void MapEndpoints(RouteGroupBuilder api)
     {
         api.MapGet("/users", async (
-                FindUsers.Handler handler, string? query, string? projectKey, bool? includeInactive, int? limit, UserSearchAccess? access, CancellationToken ct) =>
+                FindUsers.Handler handler, string? query, string? projectKey, bool? includeInactive, int? limit, string? access, CancellationToken ct) =>
             TypedResults.Ok(await handler.HandleAsync(
-                new FindUsers.Query(query, projectKey, includeInactive ?? false, limit, access ?? UserSearchAccess.Write), ct)))
+                new FindUsers.Query(query, projectKey, includeInactive ?? false, limit, FindUsers.ParseAccess(access)), ct)))
             .WithTags("Users")
             .WithSummary("Up to 20 users whose email or a word of whose name starts with the query. With projectKey: active users who can write there, or with access=read who can read it (mentions).")
             .ProducesProblem(StatusCodes.Status404NotFound);

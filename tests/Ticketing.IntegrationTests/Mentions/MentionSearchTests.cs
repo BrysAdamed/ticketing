@@ -74,6 +74,20 @@ public sealed class MentionSearchTests(TicketingApiFactory api)
         await response.ShouldBeProblemAsync(HttpStatusCode.NotFound, ProjectErrors.NotFound);
     }
 
+    [Fact]
+    public async Task An_unknown_access_value_is_a_validation_error()
+    {
+        // Arrange
+        var world = await api.SeedWorldAsync();
+
+        // Act
+        var response = await world.OwnerClient.GetAsync("/api/v1/users?projectKey=WEB&access=admin", _ct);
+
+        // Assert
+        var problem = await response.ShouldBeProblemAsync(HttpStatusCode.BadRequest, "validation");
+        Assert.True(problem.GetProperty("errors").TryGetProperty("access", out _));
+    }
+
     private static async Task<IReadOnlyList<UserLookupDto>> SearchAsync(HttpClient client, string query) =>
         await (await client.GetAsync($"/api/v1/users?{query}")).ReadAsync<IReadOnlyList<UserLookupDto>>();
 }

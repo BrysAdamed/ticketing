@@ -20,6 +20,16 @@ public static class FindUsers
     public sealed record Query(
         string? Text = null, string? ProjectKeyOrId = null, bool IncludeInactive = false, int? Limit = null, UserSearchAccess Access = UserSearchAccess.Write);
 
+    /// <summary>Parses <c>read</c> or <c>write</c> (case-insensitive); null or empty means <see cref="UserSearchAccess.Write"/>.</summary>
+    public static UserSearchAccess ParseAccess(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return UserSearchAccess.Write;
+        if (!value.All(char.IsLetter) || !Enum.TryParse<UserSearchAccess>(value, ignoreCase: true, out var access))
+            throw AppException.Invalid("access", "access must be read or write.");
+        return access;
+    }
+
     public sealed class Handler(ITicketingDbContext db, IProjectAccess access) : IHandler<Query, IReadOnlyList<UserLookupDto>>
     {
         public async Task<IReadOnlyList<UserLookupDto>> HandleAsync(Query request, CancellationToken cancellationToken)

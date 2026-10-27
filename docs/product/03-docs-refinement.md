@@ -675,10 +675,10 @@ AC:
 
 | Topic | Research | Decision for the tickets |
 | --- | --- | --- |
-| Canvas editor | Excalidraw 0.18.1 (MIT) as a lazy React 19 island; tldraw rejected (license key + watermark); draw.io kept as a later option | **Excalidraw.** Store the native JSON plus an SVG snapshot on every publish; pages and PDFs embed the SVG. Self-host assets and fonts, . D1 confirms CSP needs (). |
-| Mermaid | 12.2.0, lazy,  (ELK default is 670 KB gz) | Adopted as stated. |
-| Page editor | CodeMirror 6 + live preview, slash commands,  completion, paste upload; WYSIWYG later | Adopted: matches the split-pane editor of §1.8. |
-| PDF | Gotenberg 8.39 (MIT) Chromium sidecar on an  network; API posts a self-contained HTML bundle rendered with Markdig | **Gotenberg sidecar adopted.** Rendering source is open: this spec wants one renderer (the SPA print route) to avoid drift between  and Markdig. D1 picks one and records it in ADR 0013. |
-| PDF ToC page numbers | Not feasible (Chromium; Paged.js unmaintained) | Linked contents page + PDF bookmarks +  footers — the accepted fallback in §1.11. |
-| Attachments | Separate  table on the existing store | D2 decides between that and the nullable owner pair of §1.3, recorded as a decision. |
+| Canvas editor | Excalidraw 0.18.1 (MIT) as a lazy React 19 island; tldraw rejected (license key + watermark); draw.io kept as a later option | **Excalidraw.** Store the native JSON plus an SVG snapshot on every publish; pages and PDFs embed the SVG. Self-host assets and fonts, `aiEnabled={false}`. D1 confirms CSP needs (`wasm-unsafe-eval`). |
+| Mermaid | 12.2.0, lazy, `layout: "dagre"` (ELK default is 670 KB gz) | Adopted as stated. |
+| Page editor | CodeMirror 6 + live preview, slash commands, `[[` completion, paste upload; WYSIWYG later | Adopted: matches the split-pane editor of §1.8. |
+| PDF | Gotenberg 8.39 (MIT) Chromium sidecar on an `internal` network; API posts a self-contained HTML bundle rendered with Markdig | **Gotenberg sidecar adopted.** Rendering source is open: this spec wants one renderer (the SPA print route) to avoid drift between `marked` and Markdig. D1 picks one and records it in ADR 0013. |
+| PDF ToC page numbers | Not feasible (Chromium; Paged.js unmaintained) | Linked contents page + PDF bookmarks + `Page X of Y` footers — the accepted fallback in §1.11. |
+| Attachments | Separate `doc_attachments` table on the existing store | D2 decides between that and the nullable owner pair of §1.3, recorded as a decision. |
 | Version storage | Full copies, lz4 TOAST compression | Adopted. |

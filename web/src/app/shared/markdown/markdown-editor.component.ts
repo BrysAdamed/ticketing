@@ -296,7 +296,7 @@ export class MarkdownEditorComponent {
   readonly maxRows = input(20);
   readonly maxLength = input<number | null>(null);
   readonly uploadHandler = input<MarkdownUploadHandler | null>(null);
-  /// People search for the `@` picker; null turns mentions off (fields where they mean nothing, D-95).
+  /// People search for the `@` picker; null turns mentions off (fields where they mean nothing, D-96).
   readonly mentionSearch = input<MentionSearch | null>(null);
   /// Users already mentioned in the text, so Preview shows their tokens as chips.
   readonly mentions = input<readonly MentionUser[] | null | undefined>(null);

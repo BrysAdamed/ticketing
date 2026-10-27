@@ -6,7 +6,7 @@ namespace Ticketing.Application.Collaboration;
 public sealed record MentionCandidate(TicketEvent Event, Guid UserId);
 
 /// <summary>
-/// Who is newly mentioned (D-95): users mentioned in the description of a new ticket or in a new comment, and users that an
+/// Who is newly mentioned (D-96): users mentioned in the description of a new ticket or in a new comment, and users that an
 /// edit adds to a description or comment. Mentions already in the previous text do not count again, and the actor never
 /// counts. A newly mentioned user starts watching and is notified with <c>Mentioned</c>.
 /// </summary>

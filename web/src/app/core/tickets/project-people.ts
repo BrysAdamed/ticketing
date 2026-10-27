@@ -29,7 +29,7 @@ export class ProjectPeople {
     );
   }
 
-  /// The `@` picker source of the markdown editor (D-95): active users who can read the project, viewers
+  /// The `@` picker source of the markdown editor (D-96): active users who can read the project, viewers
   /// included (`GET /users?projectKey=&query=&access=read`). Aborting resolves with no users.
   mentionSearch(projectKey: () => string): MentionSearch {
     return (query, signal) =>

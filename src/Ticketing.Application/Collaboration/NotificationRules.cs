@@ -7,7 +7,7 @@ namespace Ticketing.Application.Collaboration;
 public sealed record NotificationCandidate(Guid RecipientId, CollaborationEvent Event, NotificationKind Kind);
 
 /// <summary>
-/// Who is notified about what (I-30, D-94, D-95): the new assignee of a ticket or regression item, newly mentioned users,
+/// Who is notified about what (I-30, D-94, D-96): the new assignee of a ticket or regression item, newly mentioned users,
 /// and the watchers of a ticket when it is commented, changes status, has its priority raised to High or Highest, moves
 /// between backlog and boards or is deleted. A watcher mentioned in a new comment gets <c>Mentioned</c> instead of
 /// <c>Commented</c> for it. The actor is never notified about their own action.

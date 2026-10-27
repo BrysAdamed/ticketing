@@ -11,7 +11,7 @@ namespace Ticketing.Application.Users;
 /// User search for pickers and the MCP <c>find_users</c> tool (spec 9.3). Matches an email prefix or the start of any word
 /// of the display name. With a project, only active users who can write there (<see cref="UserSearchAccess.Write"/>: everyone
 /// on a public project, Admins and Owner/Member members on a private one), or who can read it (<see cref="UserSearchAccess.Read"/>,
-/// viewers included: the mention picker, D-95). An unreadable project is 404, as everywhere.
+/// viewers included: the mention picker, D-96). An unreadable project is 404, as everywhere.
 /// </summary>
 public static class FindUsers
 {

@@ -5,7 +5,7 @@ public sealed record WatchCandidate(Guid TicketId, Guid ProjectId, Guid UserId, 
 
 /// <summary>
 /// Who starts watching automatically (I-32): the reporter and the assignee of a new ticket, each new assignee, whoever
-/// comments and whoever is newly mentioned (D-95). Someone who unwatched is added again only by a new trigger.
+/// comments and whoever is newly mentioned (D-96). Someone who unwatched is added again only by a new trigger.
 /// </summary>
 public static class WatchingRules
 {

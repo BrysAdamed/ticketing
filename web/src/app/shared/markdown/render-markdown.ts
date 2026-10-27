@@ -52,7 +52,7 @@ const marked = new Marked({
 
 /// Renders user markdown (CommonMark + GFM) to sanitized HTML: raw HTML is shown as text,
 /// output goes through DOMPurify, ticket keys become links to /tickets/KEY, external links
-/// open in a new tab and mention tokens of the given users become chips (D-95; built after
+/// open in a new tab and mention tokens of the given users become chips (D-96; built after
 /// sanitizing, names as text). Safe to bind with [innerHTML] after DomSanitizer bypass.
 export function renderMarkdown(
   source: string | null | undefined,

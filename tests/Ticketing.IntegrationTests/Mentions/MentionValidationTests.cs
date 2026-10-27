@@ -8,7 +8,7 @@ using Ticketing.IntegrationTests.Watchers;
 
 namespace Ticketing.IntegrationTests.Mentions;
 
-/// <summary>D-95: who can be mentioned (active readers of the project), checked only for newly added mentions; @email normalization.</summary>
+/// <summary>D-96: who can be mentioned (active readers of the project), checked only for newly added mentions; @email normalization.</summary>
 [Collection(nameof(MentionsCollection))]
 public sealed class MentionValidationTests(TicketingApiFactory api)
 {

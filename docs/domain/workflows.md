@@ -692,7 +692,7 @@ stateDiagram-v2
 
 ### Mentions
 
-D-95. A mention is stored as `@[Name](user:<id>)` in a ticket description or comment. The handler (`CreateTicket`, `UpdateTicket`, `AddComment`, `UpdateComment`) runs `MentionNormalizer` before the change: it compares the new text with the previous one, so only newly added mentions are checked; the projector compares them again from the activity values to decide who is notified.
+D-96. A mention is stored as `@[Name](user:<id>)` in a ticket description or comment. The handler (`CreateTicket`, `UpdateTicket`, `AddComment`, `UpdateComment`) runs `MentionNormalizer` before the change: it compares the new text with the previous one, so only newly added mentions are checked; the projector compares them again from the activity values to decide who is notified.
 
 ```mermaid
 sequenceDiagram

@@ -7,7 +7,7 @@ using Ticketing.Domain.Collaboration;
 namespace Ticketing.Application.Collaboration;
 
 /// <summary>
-/// The users that texts of one project mention, for display (D-95): only active users who can read the project, so a client
+/// The users that texts of one project mention, for display (D-96): only active users who can read the project, so a client
 /// renders every other mention as plain text. One query for all the texts of a response.
 /// </summary>
 internal static class MentionedUsers

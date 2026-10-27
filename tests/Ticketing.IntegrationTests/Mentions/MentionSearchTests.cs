@@ -6,7 +6,7 @@ using Ticketing.IntegrationTests.Watchers;
 
 namespace Ticketing.IntegrationTests.Mentions;
 
-/// <summary>D-95: the mention picker searches users who can read the project (<c>access=read</c>), viewers included.</summary>
+/// <summary>D-96: the mention picker searches users who can read the project (<c>access=read</c>), viewers included.</summary>
 [Collection(nameof(MentionsCollection))]
 public sealed class MentionSearchTests(TicketingApiFactory api)
 {

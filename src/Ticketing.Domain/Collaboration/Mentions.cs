@@ -9,7 +9,7 @@ public readonly record struct MentionToken(Guid UserId, string Name, int Start, 
 public readonly record struct EmailMention(string Email, int Start, int Length);
 
 /// <summary>
-/// The mention syntax of ticket descriptions and comments (D-95). The id is authoritative and the name only a fallback, so a
+/// The mention syntax of ticket descriptions and comments (D-96). The id is authoritative and the name only a fallback, so a
 /// stored mention survives renames. A mention whose <c>@</c> lies inside an inline code span or a fenced code block is not a
 /// mention (indented code blocks are not treated as code); the web client applies the same rules.
 /// </summary>

@@ -8,7 +8,7 @@ using Ticketing.Domain.Collaboration;
 namespace Ticketing.Application.Collaboration;
 
 /// <summary>
-/// Prepares a ticket description or comment for saving (D-95): an <c>@email</c> of a user who can read the project becomes a
+/// Prepares a ticket description or comment for saving (D-96): an <c>@email</c> of a user who can read the project becomes a
 /// stored mention, newly added mentions are written with the user's current name, and a newly added mention of a user who
 /// is unknown, inactive or cannot read the project is rejected with <c>mention.invalid</c>. Mentions (and <c>@email</c>
 /// texts) already in the previous text are left as they are, so a user who lost access never blocks an edit. One query.

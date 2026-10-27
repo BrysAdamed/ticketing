@@ -9,7 +9,7 @@ using Ticketing.IntegrationTests.Watchers;
 
 namespace Ticketing.IntegrationTests.Mentions;
 
-/// <summary>D-95 over MCP: @email is normalized, get_ticket and list_comments expose mentions, find_users searches readers.</summary>
+/// <summary>D-96 over MCP: @email is normalized, get_ticket and list_comments expose mentions, find_users searches readers.</summary>
 [Collection(nameof(MentionsCollection))]
 public sealed class MentionMcpTests(TicketingApiFactory api)
 {

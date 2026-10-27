@@ -18,7 +18,7 @@ export type MentionSearch = (
   signal: AbortSignal,
 ) => Promise<readonly MentionCandidate[]>;
 
-/// A `@[Name](user:<id>)` token found outside code (D-95). `userId` is lower-case.
+/// A `@[Name](user:<id>)` token found outside code (D-96). `userId` is lower-case.
 export interface MentionToken {
   userId: string;
   name: string;

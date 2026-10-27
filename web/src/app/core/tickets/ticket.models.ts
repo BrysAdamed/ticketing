@@ -75,6 +75,26 @@ export interface TicketLink {
   createdAt: string;
 }
 
+/// `GET /tickets/{key}/children/graph`: the children plus readable linked tickets outside the
+/// parent (`external`), and the links between them. A `Blocks` edge goes from the blocking ticket.
+export interface TicketGraph {
+  key: string;
+  nodes: TicketGraphNode[];
+  edges: TicketGraphEdge[];
+}
+
+export interface TicketGraphNode extends TicketRef {
+  external: boolean;
+  blocked: boolean;
+}
+
+export interface TicketGraphEdge {
+  linkId: string;
+  type: TicketLinkType;
+  from: string;
+  to: string;
+}
+
 export interface TestCaseRef {
   id: string;
   key: string;
@@ -107,7 +127,7 @@ export interface Comment {
   deletedAt: string | null;
   canEdit: boolean;
   canDelete: boolean;
-  /// Users mentioned in the body who are active and can read the project (D-95); other tokens render as text.
+  /// Users mentioned in the body who are active and can read the project (D-96); other tokens render as text.
   mentions: UserRef[];
 }
 
@@ -120,7 +140,7 @@ export interface Ticket {
   number: number;
   title: string;
   description: string | null;
-  /// Users mentioned in the description who are active and can read the project (D-95).
+  /// Users mentioned in the description who are active and can read the project (D-96).
   mentions: UserRef[];
   type: TicketType;
   status: TicketStatus;

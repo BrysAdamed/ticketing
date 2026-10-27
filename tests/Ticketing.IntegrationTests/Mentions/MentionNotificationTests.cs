@@ -7,7 +7,7 @@ using Ticketing.IntegrationTests.Watchers;
 
 namespace Ticketing.IntegrationTests.Mentions;
 
-/// <summary>D-95: a newly added mention notifies the user once and makes them a watcher; edits without new mentions do not.</summary>
+/// <summary>D-96: a newly added mention notifies the user once and makes them a watcher; edits without new mentions do not.</summary>
 [Collection(nameof(MentionsCollection))]
 public sealed class MentionNotificationTests(TicketingApiFactory api)
 {

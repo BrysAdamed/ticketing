@@ -6,7 +6,7 @@ using Ticketing.IntegrationTests.Watchers;
 
 namespace Ticketing.IntegrationTests.Mentions;
 
-/// <summary>D-95: <c>mentions</c> on tickets and comments lists only active users who can read the project, resolved at read time.</summary>
+/// <summary>D-96: <c>mentions</c> on tickets and comments lists only active users who can read the project, resolved at read time.</summary>
 [Collection(nameof(MentionsCollection))]
 public sealed class MentionReadSideTests(TicketingApiFactory api)
 {

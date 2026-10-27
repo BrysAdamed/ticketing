@@ -132,6 +132,17 @@ public sealed class TicketTools
         CancellationToken cancellationToken = default) =>
         handler.HandleAsync(new DeleteTicket.Command(key), cancellationToken);
 
+    [McpServerTool(Name = "get_children_graph", ReadOnly = true, Idempotent = true, Title = "Get children graph")]
+    [Description("The children of a ticket (typically an epic) and how they depend on each other. Returns { key, nodes, edges }: "
+        + "nodes are the children plus linked tickets outside the parent (external: true), each with blocked = open and blocked by an open ticket; "
+        + "edges are { linkId, type, from, to } with type " + LinkTypes + "; for Blocks, from blocks to. "
+        + "Use it to find which children can start now (open and not blocked).")]
+    public static Task<TicketGraphDto> GetChildrenGraph(
+        GetChildrenGraph.Handler handler,
+        [Description("Ticket key (for example WEB-42) or id.")] string key,
+        CancellationToken cancellationToken = default) =>
+        handler.HandleAsync(new GetChildrenGraph.Query(key), cancellationToken);
+
     [McpServerTool(Name = "get_ticket_history", ReadOnly = true, Idempotent = true, Title = "Get ticket history")]
     [Description("Activity entries of a ticket, newest first: occurredAt, actor, channel (Web, Api, Mcp), action, field, oldValue, newValue. "
         + "Assignee and reporter values are user ids, resolved in 'users'. Returns { items, nextCursor, users }.")]

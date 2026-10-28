@@ -1205,7 +1205,7 @@ New users should reach their first real action quickly and learn what differs fr
 - **Restart all guides** (14.6) deletes all the user's rows, so every guide behaves as new again.
 - The SPA reads the state with `GET /api/v1/me/onboarding` after the first render, never in `provideAppInitializer`, so startup is no slower. Writes go through `PUT` and `DELETE` (section 8), cookie session only. There are no MCP tools for onboarding state (D-130).
 - **Only the welcome dialog and What's new open by themselves.** Tours start only from the welcome dialog, an empty state, the Help menu or the command palette. Hints (14.5) appear inline on their page and never cover it.
-- At most one auto-shown guide opens per sign-in: the welcome dialog when it is due, otherwise a due What's new entry.
+- At most one auto-shown dialog opens per sign-in: the welcome dialog when it is due, otherwise a due What's new entry. "Per sign-in" means once per browser session and user (remembered in `sessionStorage`): reloads in the same tab show nothing more, a new tab or window is a new session. The checklist card and inline hints are not dialogs and do not count. The decision is made once per app load, after the onboarding state has loaded, and waits while a tour runs or another dialog is open (D-138).
 - Copy (titles, bodies, button labels) lives in data files with stable ids, so i18n (I-60) can extract it mechanically.
 - End-to-end suites mark the auto-shown guides as `Completed` for the users they sign in, through the same `PUT` endpoint, with the list of auto-shown ids taken from the SPA's own data files (`AUTO_SHOWN_GUIDES`); onboarding specs opt out (TKT-77, D-132). Every guide that opens or appears by itself must be in that list.
 
@@ -1215,14 +1215,18 @@ New users should reach their first real action quickly and learn what differs fr
 
 - Shown when the user has no `welcome` row, whatever the sign-in path. This covers the bootstrap Admin, who never uses a set-password link. Users who had signed in before the onboarding release are marked as welcomed by the migration (4.18).
 - Three short cards: **Projects & backlog**, **Boards**, **Find anything** (`Ctrl K`). Admins get **Set up your instance** (users and set-password links, the first project, feature flags, `TICKETING_PUBLIC_URL`) as the first card instead of Projects & backlog.
-- Actions: **Take the tour** (primary) and **Show me the checklist**. Take the tour starts the "Your first project" walkthrough (14.4) for a user who cannot write to any project yet, and the tour of the current page otherwise. Show me the checklist closes the dialog and brings the checklist card (14.3) into view.
-- Closing the dialog in any way records `welcome`, so it is shown once.
+- The **Find anything** card shows the palette shortcut as the platform writes it (`Ctrl K`, `⌘K` on macOS), the same label as the top-bar search trigger.
+- Actions: **Take the tour** (primary, focused when the dialog opens) and **Show me the checklist**. Take the tour opens the backlog of the most recently updated project the user can write to (not archived; effective role Owner or Member, so Admins and public projects count) and starts its tour (`tour.backlog.list`). A user who cannot write to any project gets the "Your first project" walkthrough (14.4) once it is registered, and the checklist until then. Show me the checklist opens My work, brings the checklist card (14.3) back if it was dismissed and focuses it.
+- Closing the dialog in any way records `welcome`, so it is shown once: either action records `Completed`, `Esc`, × or a click outside records `Dismissed`.
+- The dialog and its actions are a lazy chunk; only the decision to open it is in the initial bundle.
 
 **What's new** (`whats-new.<date id>`):
 
 - Highlights are authored in code, keyed by date ids such as `2026-11` (`ServerVersion.Current` is never set, so versions cannot key them). The first entry covers the v2 features: notifications, watchers, mentions, the sub-tickets graph, Docs and Delegate to agent.
-- Each entry is shown once per user after sign-in, subject to the one-auto-shown-guide rule (14.1), and can be reopened from the Help menu.
-- Entries dated before the user's `createdAt` (returned by `GET /me/onboarding`) count as seen: a new user gets the welcome dialog and none of the older highlights.
+- An entry is `{ id: 'whats-new.<yyyy-mm>', version, date: '<yyyy-mm>', title, items: [{ title, body, flag? }] }` in `WHATS_NEW_ENTRIES` (`core/onboarding/guides/whats-new.ts`). An item with a `flag` is left out while that feature flag is off for the user (the sub-tickets graph and Delegate to agent in the first entry).
+- Each entry is shown once per user after sign-in, oldest unseen first and one per session, subject to the one-auto-shown-dialog rule (14.1). **Got it** records it `Completed`; `Esc`, × or a click outside records it `Dismissed`. Either way it does not open by itself again until its version is raised.
+- An entry counts as seen when the first day of its month (UTC) is before the user's `createdAt` (returned by `GET /me/onboarding`): a user created on 15 November never gets `2026-11`, a user created in October does. A brand-new user therefore gets the welcome dialog and none of the older highlights.
+- **Help → What's new** (`help.whats-new`, 14.6) opens every entry, newest first, at any time and whatever the session; it shows "New" while an entry is due. Closing it records the due entries as above.
 
 ### 14.3 Getting-started checklist
 

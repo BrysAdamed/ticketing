@@ -276,6 +276,8 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Watcher**: A user who follows a ticket. Anyone who can read the ticket may watch it; the reporter, the assignee (on each assignment), commenters and newly mentioned users start watching automatically. Only active watchers who can still read the project are shown or notified; the others stay stored but hidden (D-93). [§6.15](product/01-refined-spec.md#615-watchers-i-32-d-93)
 
-**What's new entry**: A highlight of new features, authored in code under a date id such as `2026-11` (guide `whats-new.2026-11`). Shown once per user after sign-in and reopened from the Help menu; entries dated before the user's account was created count as seen. [§14.2](product/01-refined-spec.md#142-welcome-and-whats-new)
+**Welcome dialog**: The first-run dialog (guide `welcome`), opened by itself while the user has no `welcome` row: three cards for the user's role (Admins get "Set up your instance" first) and the actions Take the tour and Show me the checklist. Any close records it, so it is shown once (D-138). [§14.2](product/01-refined-spec.md#142-welcome-and-whats-new)
+
+**What's new entry**: A highlight of new features, authored in code under a date id such as `2026-11` (guide `whats-new.2026-11`). Opened by itself once per user (oldest unseen first, at most one auto-shown dialog per browser session) and reopened from Help → What's new; an entry whose month starts before the user's account was created counts as seen (D-138). [§14.2](product/01-refined-spec.md#142-welcome-and-whats-new)
 
 **Write channel**: How a write arrived: `Web` (browser session), `Api` (PAT over REST) or `Mcp` (PAT over MCP). Recorded on every activity entry. [§2](product/01-refined-spec.md#2-cross-cutting-conventions)

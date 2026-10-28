@@ -42,7 +42,8 @@ web/src/
       notifications/    NotificationsApi, NotificationCenter (unread count polling, panel state), top bar bell + panel
       theme/            ThemeService (light / dark / system, density)
       onboarding/       OnboardingStateService (D-130); engine/: guided tours (TourLauncher, TourAnchorRegistry,
-                        tkTourAnchor; the session is a lazy chunk, D-129)
+                        tkTourAnchor; the session is a lazy chunk, D-129); tours/: tour data + TOUR_CATALOGUE;
+                        TourAvailability + provideGuidedTours (eager), GuidedTours (lazy) (D-134)
     shared/             presentational UI kit, domain enums, markdown, pipes. Never imports core or features.
     features/<name>/    one folder per feature: <name>.routes.ts, <name>.views.ts, <page>/<page>.store.ts + <page>.view.ts
 ```
@@ -133,10 +134,38 @@ Inside project sections, `inject(ProjectContext)` gives the current project (`pr
 | Breadcrumbs | `data: { breadcrumb: 'Backlog' }` or `(route) => ({ label, projectKey })` on routes. Pages can call `Breadcrumbs.setTail([...])` for dynamic crumbs. |
 | Theme | `ThemeService.setPreference('light' \| 'dark' \| 'system')`, `toggle()`, `setDensity('compact')`. Stored in localStorage (`tk-theme`, `tk-density`) and applied as `data-theme` / `data-density` on `<html>` before Angular boots. |
 | Notifications | `NotificationCenter` (`core/notifications/`): `unreadCount()` for the top bar bell, polled every 60 s and on window focus while signed in (no push), and the panel state (`open/close/toggle`, `filter` all \| unread, `groups()` by day, `loadMore()`). `markRead(n)` / `markAllRead()` are optimistic with rollback and a toast; `activate(n)` marks read and opens the ticket peek (or navigates to a regression item). REST calls go through `NotificationsApi` (`/me/notifications`). |
-| Help menu | Adding a Help menu item (D-131): `provideHelpMenuItem(() => ({ id: 'help.<name>', label, icon, order: HELP_MENU_ORDER.<slot>, visible, disabled, hint, run }))` in app or route providers, or `HelpMenuRegistry.register(item, destroyRef)`. The item appears in the top-bar Help menu (`core/help/`) and as a command in the palette's **Help** group; `visible` / `disabled` / `hint` take a signal or `computed`. Use an icon from `APP_ICONS`. The menu item's test id is the id with dots as dashes (`help-shortcuts`). Restart all guides is built in and always last; don't register it. |
-| Onboarding state | `OnboardingStateService` (`core/onboarding/`, D-130): loads `GET /me/onboarding` after the first render while signed in. `loaded()` (wait for it before auto-showing a guide), `isSeen(guideId, version)` (stored version >= `version`), `complete` / `dismiss(guideId, version)` and `resetAll()` (optimistic with rollback and a toast), `checklist()`, `ownsProjects()`, `createdAt()` (What's new entries dated before it count as seen), `load()` to refresh. | Onboarding state | `OnboardingStateService` (`core/onboarding/`, D-130): loads `GET /me/onboarding` after the first render while signed in. `loaded()` (wait for it before auto-showing a guide), `isSeen(guideId, version)` (stored version >= `version`), `complete` / `dismiss(guideId, version)` and `resetAll()` (optimistic with rollback and a toast), `checklist()`, `ownsProjects()`, `createdAt()` (What's new entries dated before it count as seen), `load()` to refresh. Guide ids must match `GUIDE_ID_PATTERN`. REST calls go through `OnboardingApi`. Guides that show by themselves are declared in `core/onboarding/guides/` and collected in `AUTO_SHOWN_GUIDES` (`auto-guides.ts`, D-132), which the e2e suites import. |
+| Help menu | Adding a Help menu item (D-131): `provideHelpMenuItem(() => ({ id: 'help.<name>', label, icon, order: HELP_MENU_ORDER.<slot>, visible, disabled, hint, run }))` in app or route providers, or `HelpMenuRegistry.register(item, destroyRef)`. The item appears in the top-bar Help menu (`core/help/`) and as a command in the palette's **Help** group; `visible` / `disabled` / `hint` take a signal or `computed`. Use an icon from `APP_ICONS`. The menu item's test id is the id with dots as dashes (`help-shortcuts`). Restart all guides is built in and always last; don't register it. menu: false offers an item in the palette only (one command per tour). |
+| Onboarding state | `OnboardingStateService` (`core/onboarding/`, D-130): loads `GET /me/onboarding` after the first render while signed in. `loaded()` (wait for it before auto-showing a guide), `isSeen(guideId, version)` (stored version >= `version`), `complete` / `dismiss(guideId, version)` and `resetAll()` (optimistic with rollback and a toast), `checklist()`, `ownsProjects()`, `createdAt()` (What's new entries dated before it count as seen), `load()` to refresh. Guide ids must match `GUIDE_ID_PATTERN`. REST calls go through `OnboardingApi`. Guides that show by themselves are declared in `core/onboarding/guides/` and collected in `AUTO_SHOWN_GUIDES` (`auto-guides.ts`, D-132), which the e2e suites import. |
+| Guided tours | Start a tour with `GuidedTours.start(viewId, { projectKey?, returnFocusTo? })` or `startCurrent()` (`core/onboarding/guided-tours.ts`, D-134), imported lazily from entry points (`const { GuidedTours } = await import('@core/onboarding/guided-tours')`). It works out access from the open project (`OpenProjectState`) and `AuthService.isAdmin()`, opens the view first when the tour has a `path` and the user is elsewhere, and stores `Completed` / `Dismissed` at the tour's version (not `aborted` or `interrupted`). `TourAvailability` (eager) says which tour belongs to the view on screen (`current()`) and whether one `canStart(viewId)`. `NavigationContext.currentViewId()` is the deepest activated `viewRoute`'s view id. Never call `TourLauncher` from a feature. |
 
 Built-in shortcuts: `Ctrl/⌘ K` and `/` open the palette, `?` opens the shortcut sheet, `[` toggles the sidebar, `C` creates a ticket (once registered). With `G` then a letter: `M` My work, `P` Projects, `O` Boards, `N` notifications panel, and, inside a project, `D` dashboard, `B` backlog, `T` test cases, `R` regressions, `W` docs. `Esc` closes the notifications panel, then the peek panel. In the Docs section `Ctrl/⌘ \` shows or hides the tree and `Ctrl/⌘ .` / `Ctrl/⌘ Shift .` copy the open doc's key / link (D-120). Shifted symbols are written with the unshifted key (`mod+shift+.`); `ShortcutService` matches them by `event.code`.
+
+## Adding a tour
+
+A tour (spec 14.4, D-129, D-134) is data plus anchors; the engine, the Help menu item and the palette command come for free.
+
+1. **Data file**, `core/onboarding/tours/<area>.tours.ts`: export a `TourDefinition`. Plain TypeScript: no Angular or package imports, only relative ones (`../engine/tour.model`), because e2e imports it through `@onboarding/tours/<area>.tours`.
+
+   ```ts
+   export const BACKLOG_TOUR: TourDefinition = {
+     id: 'tour.backlog.list',      // always `tour.<viewId>`
+     version: 1,                   // raise it to show the tour again to everyone who saw it
+     viewId: 'backlog.list',       // the view id, never a variant
+     title: 'Backlog',             // eyebrow "Backlog tour · Step n of m"
+     steps: [
+       { id: 'quick-create', anchor: 'backlog.quick-create', requires: 'write', title: '…', body: '…' },
+       { id: 'group-sort', anchor: 'backlog.group-sort', placement: 'below', title: '…', body: '…' },
+     ],
+   };
+   ```
+
+   Steps: stable `id`s (copy keys, i18n later), `requires: 'write' | 'owner' | 'admin'` for anything the user must be able to do (Viewers get the rest), `placement` as a preference only (the card flips or pushes to fit). Keep three to six steps and one or two sentences each.
+2. **Catalogue**: add an entry to `TOUR_CATALOGUE` in `tours/tour-catalogue.ts` with `viewId`, `title` (same as the definition's), `load: () => import('./<area>.tours').then((m) => m.X_TOUR)` and, when the view needs nothing but a project, `path: '/projects/:projectKey/<section>'` so the palette command can start the tour from anywhere. The `tours.spec.ts` check fails when the entry and the definition disagree.
+3. **Anchors**: put `tkTourAnchor="<area>.<thing>"` on the element each step points at, **in every variant of the view and in every state that shows that part of the page** (the backlog puts `backlog.list` on the list and on both empty states). For one element out of a list, bind null on the others: `[tkTourAnchor]="row.id === firstId() ? 'backlog.rank' : null"`. An anchor that is only there with data (rows, "on boards") is fine: the step is skipped, with a dev-mode warning. If fewer than half of the tour's anchors resolve, the tour does not start, so make sure the frame of the page (header actions, toolbar, list or its empty state) always has its anchors.
+4. **Version bump**: changing copy does not need one. Raise `version` when a tour gains steps users should see, so everyone who completed or dismissed the old version gets it as new again.
+5. **Tests**: a Vitest plan test for the role filter and the empty-page case (see `tours/tours.spec.ts`), and a Playwright spec that seeds data through the API, starts the tour from the Help menu and walks it with the keyboard (`e2e/tests/onboarding/backlog-tour.spec.ts`). Assert step titles from the imported definition rather than copying them.
+
+Nothing else changes: "Tour of this page" enables itself on the view, and the palette gets `help.tour.<viewId>` ("Backlog tour"). Do not import `GuidedTours` statically into anything the initial bundle reaches; entry points import it lazily.
 
 ## Tickets: shared services and extension points
 

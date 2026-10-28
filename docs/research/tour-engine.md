@@ -14,7 +14,7 @@ Spike for epic TKT-52. Question: can a small tour engine built on CDK Overlay an
 
 ## 2. The prototype
 
-Code: `web/src/app/core/onboarding/engine/`. This is the seed TKT-56 builds on, not throwaway code. The demo is in the UI kit (`/dev/ui-kit`, section "Guided tour engine"):
+Code: `web/src/app/core/onboarding/engine/`. This is the seed TKT-56 builds on, not throwaway code. The demo was in the UI kit (`/dev/ui-kit`, section "Guided tour engine"; TKT-56 removed it in favour of the real backlog tour, D-134):
 - **Tour the KEY backlog** starts a three-step tour from the UI kit. It navigates to `/projects/KEY/backlog` (cross-route `route` steps) and spotlights the **New ticket** button.
 - **Tour this page** runs a tour on the UI kit itself, with a missing anchor (skipped), an `admin` step and focus return.
 

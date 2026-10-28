@@ -1,12 +1,10 @@
 import { APIRequestContext, Browser, BrowserContext, Page } from '@playwright/test';
-import { AUTO_SHOWN_GUIDES } from '@onboarding/auto-guides';
 import { WELCOME_GUIDE } from '@onboarding/guides/welcome';
 import { WHATS_NEW_ENTRIES, WhatsNewEntry } from '@onboarding/guides/whats-new';
 import { Onboarding } from '@onboarding/onboarding.models';
 import { ShellPage } from '../../pages/shell.page';
 import { Api } from '../../support/api';
 import { expect, test } from '../../support/fixtures';
-import { markGuidesSeen } from '../../support/guides';
 import { signInAs } from '../../support/session';
 import { PASSWORD, uniqueEmail } from '../identity/identity';
 
@@ -31,17 +29,12 @@ async function createUser(api: Api, prefix: string, globalRole: 'User' | 'Admin'
 
 /// Signs the user in with the welcome dialog and What's new due and every other auto-shown guide
 /// (checklist card, hints) seen, so only the dialogs under test can appear.
-async function signInWithDialogs(
+function signInWithDialogs(
     browser: Browser,
     email: string,
     keep: (id: string) => boolean = (id) => id === WELCOME_GUIDE.id || id.startsWith('whats-new.'),
 ) {
-    const session = await signInAs(browser, { email, password: PASSWORD }, { keepGuides: true });
-    await markGuidesSeen(
-        session.context.request,
-        AUTO_SHOWN_GUIDES.filter((g) => !keep(g.id)),
-    );
-    return session;
+    return signInAs(browser, { email, password: PASSWORD }, { keepGuides: (g) => keep(g.id) });
 }
 
 async function onboarding(request: APIRequestContext): Promise<Onboarding> {

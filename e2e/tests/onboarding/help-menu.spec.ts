@@ -1,7 +1,7 @@
 import { Page as BrowserPage } from '@playwright/test';
-import { LoginPage } from '../../pages/login.page';
 import { ShellPage } from '../../pages/shell.page';
 import { expect, test } from '../../support/fixtures';
+import { signInAs } from '../../support/session';
 import { PASSWORD, seedUser } from '../identity/identity';
 
 interface Onboarding {
@@ -49,6 +49,11 @@ test.describe('Help menu', () => {
         await expect(shell.helpItem('help-shortcuts')).toBeFocused();
         await page.keyboard.press('ArrowDown');
         await expect(shell.helpItem('help-tour-page')).toBeDisabled();
+        await expect(shell.helpItem('help-tour-page')).not.toBeFocused();
+        await expect(shell.helpItem('help-shortcuts')).not.toBeFocused();
+        await page.keyboard.press('ArrowUp');
+        await expect(shell.helpItem('help-shortcuts')).toBeFocused();
+        await page.keyboard.press('ArrowUp');
         await expect(shell.helpItem('help-restart-guides')).toBeFocused();
         await page.keyboard.press('Escape');
         await expect(shell.helpMenu).toBeHidden();
@@ -91,14 +96,15 @@ test.describe('Help menu', () => {
     }) => {
         // Arrange: a fresh user who dismissed a guide, so the shared admin's state is untouched
         const user = await seedUser(api, 'help');
-        const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
-        const page = await context.newPage();
+        const { context, page } = await signInAs(browser, {
+            email: user.email,
+            password: PASSWORD,
+        });
         const shell = new ShellPage(page);
-        await page.goto('/login');
-        await new LoginPage(page).signIn(user.email, PASSWORD);
+        await page.goto('/my-work');
         await shell.expectVisible();
-        await setGuide(page, 'hint.free-transitions');
-        expect(await guideIds(page)).toEqual(['hint.free-transitions']);
+        await setGuide(page, 'tour.backlog.list');
+        expect(await guideIds(page)).toContain('tour.backlog.list');
 
         // Act
         await shell.openHelp();

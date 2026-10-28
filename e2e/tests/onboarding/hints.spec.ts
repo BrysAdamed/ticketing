@@ -45,7 +45,7 @@ test.describe('contextual hints', () => {
         const { context, page } = await signInAs(
             browser,
             { email: user.email, password: PASSWORD },
-            { keepGuides: true },
+            { keepGuides: (g) => g.id.startsWith('hint.') },
         );
         const hint = page.getByTestId('hint-private-404');
 
@@ -91,7 +91,7 @@ test.describe('contextual hints', () => {
         const { context, page } = await signInAs(
             browser,
             { email: user.email, password: PASSWORD },
-            { keepGuides: true },
+            { keepGuides: (g) => g.id.startsWith('hint.') },
         );
         const backlogHint = page.getByTestId('hint-backlog-vs-boards');
 
@@ -134,7 +134,7 @@ test.describe('contextual hints', () => {
         const asMember = await signInAs(
             browser,
             { email: member.email, password: PASSWORD },
-            { keepGuides: true },
+            { keepGuides: (g) => g.id.startsWith('hint.') },
         );
         await asMember.page.goto(`/boards/${boardId}`);
 
@@ -149,7 +149,7 @@ test.describe('contextual hints', () => {
         const asViewer = await signInAs(
             browser,
             { email: viewer.email, password: PASSWORD },
-            { keepGuides: true },
+            { keepGuides: (g) => g.id.startsWith('hint.') },
         );
         const loaded = onboardingLoaded(asViewer.page);
         await asViewer.page.goto(`/boards/${boardId}`);

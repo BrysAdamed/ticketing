@@ -61,6 +61,16 @@ export const TOUR_CATALOGUE: readonly TourCatalogueEntry[] = [
     requires: 'admin',
     load: () => import('./admin-users.tours').then((m) => m.ADMIN_USERS_TOUR),
   },
+  {
+    viewId: 'board.kanban',
+    title: 'Board',
+    load: () => import('./board.tours').then((m) => m.BOARD_TOUR),
+  },
+  {
+    viewId: 'ticket.detail',
+    title: 'Ticket',
+    load: () => import('./ticket.tours').then((m) => m.TICKET_TOUR),
+  },
 ];
 
 /// Guide id stored in the onboarding state for the tour of a view.

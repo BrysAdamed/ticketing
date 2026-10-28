@@ -23,6 +23,7 @@ import {
   TourCatalogueEntry,
   tourCommandId,
 } from './tours/tour-catalogue';
+import { ViewTourAccess } from './view-tour-access';
 
 /// The tours the app offers; tests replace it.
 export const TOURS = new InjectionToken<readonly TourCatalogueEntry[]>('TOURS', {
@@ -37,6 +38,7 @@ export class TourAvailability {
   private readonly directory = inject(ProjectDirectory);
   private readonly openProject = inject(OpenProjectState);
   private readonly auth = inject(AuthService);
+  private readonly viewAccess = inject(ViewTourAccess);
 
   readonly entries = inject(TOURS);
   /// The tour of the view on screen when the user is in its audience, or null.
@@ -67,7 +69,8 @@ export class TourAvailability {
   private isForUser(entry: TourCatalogueEntry): boolean {
     return meetsRequirement(
       entry.requires,
-      tourAccess(this.openProject.project(), this.auth.isAdmin()),
+      this.viewAccess.get(entry.viewId) ??
+        tourAccess(this.openProject.project(), this.auth.isAdmin()),
     );
   }
 }

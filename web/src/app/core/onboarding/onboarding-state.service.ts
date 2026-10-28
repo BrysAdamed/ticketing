@@ -21,6 +21,11 @@ import {
 
 export type OnboardingStatus = 'idle' | 'loading' | 'ready' | 'error';
 
+/// A write the server has not confirmed yet: the stored row it will leave, or null for a forget.
+interface PendingWrite {
+  value: GuideProgress | null;
+}
+
 /// The signed-in user's onboarding progress (D-130): which guide versions they completed or
 /// dismissed, the getting-started checklist, whether they own a project and when their account
 /// was created. Loaded after the first render (never at startup), only while signed in.
@@ -37,7 +42,7 @@ export class OnboardingStateService {
   private readonly checklistItems = signal<readonly OnboardingChecklistItem[]>([]);
   private readonly owner = signal(false);
   private readonly created = signal<string | null>(null);
-  private readonly pending = new Map<string, GuideProgress>();
+  private readonly pending = new Map<string, PendingWrite>();
   private session = 0;
   private loadGeneration = 0;
 
@@ -75,6 +80,27 @@ export class OnboardingStateService {
     return this.record(guideId, version, 'Dismissed');
   }
 
+  /// Forgets one completed or dismissed guide, so it shows again (D-133).
+  async forget(guideId: string): Promise<boolean> {
+    assertGuideId(guideId);
+    if (!this.auth.isAuthenticated()) return false;
+
+    const session = this.session;
+    const previous = this.progress().get(guideId) ?? null;
+    const write: PendingWrite = { value: null };
+    this.pending.set(guideId, write);
+    this.set(guideId, null);
+    try {
+      await firstValueFrom(this.api.forgetGuide(guideId));
+      this.settle(session, guideId, write);
+      return true;
+    } catch (error) {
+      if (this.settle(session, guideId, write)) this.set(guideId, previous);
+      this.toast.error(error);
+      return false;
+    }
+  }
+
   /// Forgets every completed or dismissed guide, so all of them can show again.
   async resetAll(): Promise<boolean> {
     if (!this.auth.isAuthenticated()) return false;
@@ -105,7 +131,9 @@ export class OnboardingStateService {
       const onboarding = await firstValueFrom(this.api.get());
       if (session !== this.session || generation !== this.loadGeneration) return;
       const guides = new Map(onboarding.guides.map((g) => [g.guideId, g]));
-      for (const [guideId, local] of this.pending) guides.set(guideId, local);
+      for (const [guideId, local] of this.pending)
+        if (local.value) guides.set(guideId, local.value);
+        else guides.delete(guideId);
       this.progress.set(guides);
       this.checklistItems.set(onboarding.checklist);
       this.owner.set(onboarding.ownsProjects);
@@ -122,8 +150,7 @@ export class OnboardingStateService {
   }
 
   private async record(guideId: string, version: number, state: GuideState): Promise<boolean> {
-    if (guideId.length > GUIDE_ID_MAX_LENGTH || !GUIDE_ID_PATTERN.test(guideId))
-      throw new Error(`Invalid guide id '${guideId}'.`);
+    assertGuideId(guideId);
     if (!this.auth.isAuthenticated()) return false;
 
     const session = this.session;
@@ -134,22 +161,23 @@ export class OnboardingStateService {
       state,
       updatedAt: new Date().toISOString(),
     };
-    this.pending.set(guideId, optimistic);
+    const write: PendingWrite = { value: optimistic };
+    this.pending.set(guideId, write);
     this.set(guideId, optimistic);
     try {
       const saved = await firstValueFrom(this.api.setGuide(guideId, version, state));
-      if (this.settle(session, guideId, optimistic)) this.set(guideId, saved);
+      if (this.settle(session, guideId, write)) this.set(guideId, saved);
       return true;
     } catch (error) {
-      if (this.settle(session, guideId, optimistic)) this.set(guideId, previous);
+      if (this.settle(session, guideId, write)) this.set(guideId, previous);
       this.toast.error(error);
       return false;
     }
   }
 
   /// Ends an optimistic write; false when a newer write, a reset or a sign-out superseded it.
-  private settle(session: number, guideId: string, optimistic: GuideProgress): boolean {
-    if (session !== this.session || this.pending.get(guideId) !== optimistic) return false;
+  private settle(session: number, guideId: string, write: PendingWrite): boolean {
+    if (session !== this.session || this.pending.get(guideId) !== write) return false;
     this.pending.delete(guideId);
     return true;
   }
@@ -173,4 +201,9 @@ export class OnboardingStateService {
     this.owner.set(false);
     this.created.set(null);
   }
+}
+
+function assertGuideId(guideId: string): void {
+  if (guideId.length > GUIDE_ID_MAX_LENGTH || !GUIDE_ID_PATTERN.test(guideId))
+    throw new Error(`Invalid guide id '${guideId}'.`);
 }

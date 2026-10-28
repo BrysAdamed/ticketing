@@ -108,6 +108,10 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_activity_entries_actor_id_occurred_at")
                         .HasFilter("actor_id IS NOT NULL");
 
+                    b.HasIndex("ActorId", "ProjectId")
+                        .HasDatabaseName("ix_activity_entries_actor_status_changes")
+                        .HasFilter("field = 'status' AND action = 'ticket.field.changed'");
+
                     b.HasIndex("ProjectId", "OccurredAt")
                         .HasDatabaseName("ix_activity_entries_project_id_occurred_at")
                         .HasFilter("project_id IS NOT NULL");

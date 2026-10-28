@@ -20,12 +20,13 @@ import { OpenProject, OpenProjectState } from '../projects/open-project';
 import { ProjectDirectory, ProjectSummary } from '../projects/project-directory';
 import { TourAnchorRegistry } from './engine/tour-anchor.registry';
 import { TourLauncher, TourResult } from './engine/tour-launcher';
-import { TourDefinition } from './engine/tour.model';
+import { TourAccess, TourDefinition } from './engine/tour.model';
 import { GuidedTours } from './guided-tours';
 import { provideGuidedTours, TOURS } from './tour-availability';
 import { OnboardingApi } from './onboarding.api';
 import { GuideState } from './onboarding.models';
 import { TourCatalogueEntry } from './tours/tour-catalogue';
+import { ViewTourAccess } from './view-tour-access';
 
 const TOUR: TourDefinition = {
   id: 'tour.test.view',
@@ -264,6 +265,27 @@ describe('GuidedTours', () => {
         params: {},
         returnFocusTo: undefined,
       });
+    });
+
+    it('prefers the access the view reports, and falls back while it reports none', async () => {
+      // Arrange
+      await router.navigateByUrl('/here');
+      TestBed.inject(OpenProjectState).project.set(null);
+      const reported = signal<TourAccess | null>(null);
+      TestBed.runInInjectionContext(() =>
+        TestBed.inject(ViewTourAccess).provide('test.view', () => reported()),
+      );
+
+      // Act
+      await tours.startCurrent();
+      reported.set({ canWrite: true, isOwner: true, isAdmin: false });
+      await tours.startCurrent();
+
+      // Assert
+      expect(launcher.start.mock.calls.map((call) => call[1].access)).toEqual([
+        { canWrite: false, isOwner: false, isAdmin: false },
+        { canWrite: true, isOwner: true, isAdmin: false },
+      ]);
     });
 
     it('stores Completed and Dismissed at the tour version, and nothing for an aborted or interrupted tour', async () => {

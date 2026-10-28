@@ -1,3 +1,39 @@
+.mw {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.mw-main {
+  min-width: 0;
+}
+
+.mw.with-card .mw-card {
+  margin: 0 16px;
+}
+
+@media (min-width: 1200px) {
+  .mw.with-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 352px;
+    align-items: start;
+    gap: 20px;
+
+    .mw-main {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    .mw-card {
+      grid-column: 2;
+      grid-row: 1;
+      margin: 0 20px 24px 0;
+      position: sticky;
+      top: 12px;
+    }
+  }
+}
+
 .list {
   container-type: inline-size;
   border-top: 1px solid var(--tk-border);

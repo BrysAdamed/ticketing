@@ -10,6 +10,7 @@ import {
 import { MatButtonModule } from '@angular/material/button';
 import { RouterLink } from '@angular/router';
 import { ConfirmService } from '@core/notify/confirm.service';
+import { TourAnchorDirective } from '@core/onboarding/engine/tour-anchor.directive';
 import { ActivityEntry, Comment, UserRef } from '@core/tickets/ticket.models';
 import {
   MarkdownEditorComponent,
@@ -43,6 +44,7 @@ type FeedItem =
     AvatarComponent,
     IconComponent,
     SegmentedControlComponent,
+    TourAnchorDirective,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'sec', 'data-testid': 'ticket-activity' },
@@ -188,6 +190,7 @@ type FeedItem =
       <tk-markdown-editor
         class="composer"
         data-testid="comment-composer"
+        tkTourAnchor="ticket.comment"
         ariaLabel="New comment"
         placeholder="Leave a comment… Markdown supported, @ to mention, ticket keys link automatically"
         submitHint="to comment"

@@ -90,13 +90,26 @@ const RECIPES: Readonly<Record<string, SeedingRecipe>> = {
     },
 };
 
-async function expectEveryAnchor(page: Page, tour: TourDefinition, url: string): Promise<void> {
+/// Anchors that depend on instance-wide state this spec must not change while other specs run,
+/// with the spec that covers them instead. Here they may be absent, but never hidden.
+const COVERED_ELSEWHERE: Readonly<Record<string, string>> = {
+    'ticket.delegate':
+        'needs the instance-wide agent.delegate flag; covered by e2e/tests/agents/delegate-to-agent.spec.ts',
+};
+
+/// Asserts every anchor of the tour is visible and returns how many steps the tour should show.
+async function expectEveryAnchor(page: Page, tour: TourDefinition, url: string): Promise<number> {
+    let shown = 0;
     for (const step of tour.steps) {
+        const anchor = page.locator(`[data-tour="${step.anchor}"]`);
+        if (COVERED_ELSEWHERE[step.anchor] && (await anchor.count()) === 0) continue;
         await expect(
-            page.locator(`[data-tour="${step.anchor}"]`),
+            anchor,
             `${url}: anchor "${step.anchor}" of step "${step.id}" (${tour.id})`,
         ).toBeVisible();
+        shown++;
     }
+    return shown;
 }
 
 test.describe('tour anchors', () => {
@@ -124,11 +137,11 @@ test.describe('tour anchors', () => {
 
                 // Assert: the Admin (Owner everywhere) sees every anchor, and the tour starts with
                 // every step
-                await expectEveryAnchor(page, tour, url);
+                const shown = await expectEveryAnchor(page, tour, url);
                 await shell.openHelp();
                 await shell.helpItem('help-tour-page').click();
                 await expect(page.getByTestId('tour-step-count')).toHaveText(
-                    `${tour.title} tour · Step 1 of ${tour.steps.length}`,
+                    `${tour.title} tour · Step 1 of ${shown}`,
                 );
                 await page.keyboard.press('Escape');
                 await expect(page.getByTestId('tour-popover')).toBeHidden();

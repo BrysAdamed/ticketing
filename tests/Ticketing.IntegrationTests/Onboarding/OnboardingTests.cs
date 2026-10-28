@@ -46,17 +46,17 @@ public sealed class OnboardingTests(TicketingApiFactory api)
         var client = await api.LoginAsync(await api.CreateUserAsync());
 
         // Act
-        var first = await (await PutAsync(client, "tour.backlog", 1, GuideState.Dismissed)).ReadAsync<GuideStateDto>();
-        var second = await (await PutAsync(client, "tour.backlog", 2, GuideState.Completed)).ReadAsync<GuideStateDto>();
+        var first = await (await PutAsync(client, "tour.backlog.list", 1, GuideState.Dismissed)).ReadAsync<GuideStateDto>();
+        var second = await (await PutAsync(client, "tour.backlog.list", 2, GuideState.Completed)).ReadAsync<GuideStateDto>();
         await (await PutAsync(client, "whats-new.2026-11", 1, GuideState.Completed)).ShouldHaveStatusAsync(HttpStatusCode.OK);
         var onboarding = await (await client.GetAsync(Onboarding, _ct)).ReadAsync<OnboardingDto>();
 
         // Assert
-        Assert.Equal(("tour.backlog", 1, GuideState.Dismissed), (first.GuideId, first.Version, first.State));
-        Assert.Equal(("tour.backlog", 2, GuideState.Completed), (second.GuideId, second.Version, second.State));
+        Assert.Equal(("tour.backlog.list", 1, GuideState.Dismissed), (first.GuideId, first.Version, first.State));
+        Assert.Equal(("tour.backlog.list", 2, GuideState.Completed), (second.GuideId, second.Version, second.State));
         Assert.True(second.UpdatedAt >= first.UpdatedAt);
         Assert.Equal(
-            [("tour.backlog", 2, GuideState.Completed), ("whats-new.2026-11", 1, GuideState.Completed)],
+            [("tour.backlog.list", 2, GuideState.Completed), ("whats-new.2026-11", 1, GuideState.Completed)],
             onboarding.Guides.Select(g => (g.GuideId, g.Version, g.State)));
     }
 

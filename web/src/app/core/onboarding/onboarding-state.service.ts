@@ -1,4 +1,12 @@
-import { afterNextRender, computed, effect, inject, Injectable, signal, untracked } from '@angular/core';
+import {
+  afterNextRender,
+  computed,
+  effect,
+  inject,
+  Injectable,
+  signal,
+  untracked,
+} from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
 import { ToastService } from '../notify/toast.service';
@@ -104,7 +112,11 @@ export class OnboardingStateService {
       this.created.set(onboarding.createdAt);
       this.state.set('ready');
     } catch {
-      if (session === this.session && generation === this.loadGeneration && this.state() !== 'ready')
+      if (
+        session === this.session &&
+        generation === this.loadGeneration &&
+        this.state() !== 'ready'
+      )
         this.state.set('error');
     }
   }

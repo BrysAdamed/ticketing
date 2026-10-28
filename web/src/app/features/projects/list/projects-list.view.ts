@@ -12,6 +12,7 @@ import { AuthService } from '@core/auth/auth.service';
 import { CommandRegistry } from '@core/commands/command-registry';
 import { ConfirmService } from '@core/notify/confirm.service';
 import { ToastService } from '@core/notify/toast.service';
+import { LearnActions } from '@core/onboarding/learn-actions';
 import { ProjectDetail } from '@core/projects/project-context';
 import { ProjectSummary } from '@core/projects/project-directory';
 import { ShortcutService } from '@core/shortcuts/shortcut.service';
@@ -59,6 +60,7 @@ import { plainPreview, ProjectFilter, ProjectsListStore } from './projects-list.
 })
 export class ProjectsListView {
   protected readonly store = inject(ProjectsListStore);
+  protected readonly learn = inject(LearnActions);
   private readonly dialog = inject(MatDialog);
   private readonly router = inject(Router);
   private readonly confirm = inject(ConfirmService);

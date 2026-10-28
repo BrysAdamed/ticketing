@@ -54,12 +54,20 @@
         <tk-empty-state
           icon="tablerChartBar"
           title="Nothing to chart yet"
-          description="Create tickets, test cases or regression sessions and this dashboard fills in by itself."
+          [description]="
+            canWrite()
+              ? 'Create tickets, test cases or regression sessions and this dashboard fills in by itself.'
+              : 'Nothing has been tracked in this project yet. The charts fill in as work is added.'
+          "
           data-testid="dashboard-empty"
+          [learnLabel]="learn.canStartTour('project.dashboard') ? 'Take the tour' : null"
+          (learn)="learn.startTour('project.dashboard')"
         >
-          <button mat-stroked-button type="button" (click)="createTicket()">
-            New ticket <tk-kbd>C</tk-kbd>
-          </button>
+          @if (canWrite()) {
+            <button mat-flat-button type="button" (click)="createTicket()">
+              New ticket <tk-kbd tone="on-solid">C</tk-kbd>
+            </button>
+          }
           <a mat-stroked-button [routerLink]="['/projects', store.projectKey(), 'backlog']"
             >Open backlog</a
           >

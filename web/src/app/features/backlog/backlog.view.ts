@@ -39,6 +39,7 @@ import { provideIcons } from '@ng-icons/core';
 import { PeekService } from '@core/layout/peek/peek';
 import { TourAnchorDirective } from '@core/onboarding/engine/tour-anchor.directive';
 import { ContextualHintComponent } from '@core/onboarding/hints/contextual-hint.component';
+import { LearnActions } from '@core/onboarding/learn-actions';
 import { ProjectContext } from '@core/projects/project-context';
 import { ShortcutService } from '@core/shortcuts/shortcut.service';
 import { ThemeService } from '@core/theme/theme.service';
@@ -141,6 +142,7 @@ export class BacklogView {
   private readonly people = inject(ProjectPeople);
   private readonly moveTargets = inject(MoveTargets);
   protected readonly project = inject(ProjectContext);
+  protected readonly learn = inject(LearnActions);
 
   readonly projectKey = input.required<string>();
 

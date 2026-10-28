@@ -230,12 +230,10 @@ export class ChecklistCardComponent {
         untracked(() => this.checklist.acknowledgeCompletion());
     });
 
-    let handled = untracked(this.checklist.focusRequested);
     afterRenderEffect(() => {
-      const requested = this.checklist.focusRequested();
       const title = this.title()?.nativeElement;
-      if (requested === handled || !title) return;
-      handled = requested;
+      if (!this.checklist.focusRequested() || !title) return;
+      untracked(() => this.checklist.focusHandled());
       title.scrollIntoView({ block: 'nearest' });
       title.focus({ preventScroll: true });
     });

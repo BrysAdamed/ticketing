@@ -1,8 +1,4 @@
-import { GuideRef, OnboardingChecklistItem } from '../onboarding.models';
-
-/// The getting-started checklist card (spec 14.3, D-133). Raising the version shows the card again
-/// to everyone who dismissed or completed it.
-export const CHECKLIST_GUIDE: GuideRef = { id: 'checklist', version: 1 };
+import { OnboardingChecklistItem } from '../onboarding.models';
 
 export type ChecklistGroupId = 'start' | 'projects' | 'instance' | 'agent';
 

@@ -2,7 +2,7 @@ import { computed, provideZonelessChangeDetection, signal } from '@angular/core'
 import { TestBed } from '@angular/core/testing';
 import { GuideProgress, GuideState, OnboardingChecklistItem } from '../onboarding.models';
 import { OnboardingStateService, OnboardingStatus } from '../onboarding-state.service';
-import { CHECKLIST_GUIDE } from './checklist.model';
+import { CHECKLIST_GUIDE } from '../guides/checklist';
 import { GettingStartedService } from './getting-started.service';
 
 function item(id: string, done = false, optional = false): OnboardingChecklistItem {
@@ -157,7 +157,6 @@ describe('GettingStartedService', () => {
     // Arrange
     store('Dismissed');
     const service = create();
-    const before = service.focusRequested();
 
     // Act
     const restored = await service.restore();
@@ -167,7 +166,7 @@ describe('GettingStartedService', () => {
     expect(onboarding.forget).toHaveBeenCalledWith('checklist');
     expect(onboarding.load).toHaveBeenCalled();
     expect(service.visible()).toBe(true);
-    expect(service.focusRequested()).toBe(before + 1);
+    expect(service.focusRequested()).toBe(true);
   });
 
   it('does not call the server to restore a card that was never hidden', async () => {

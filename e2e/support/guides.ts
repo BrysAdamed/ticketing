@@ -50,7 +50,8 @@ export async function markGuidesSeenAs(
     }
 }
 
-async function xsrfToken(request: APIRequestContext): Promise<string> {
+/// The XSRF token of the request context's cookie session, fetched once when the cookie is missing.
+export async function xsrfToken(request: APIRequestContext): Promise<string> {
     const current = await readCookie(request);
     if (current) return current;
     expect((await request.get('/api/v1/auth/csrf')).ok()).toBe(true);

@@ -1,6 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { TourAnchorDirective } from '@core/onboarding/engine/tour-anchor.directive';
 import { PRIORITY_OPTIONS, TICKET_STATUS_OPTIONS } from '@shared/domain/picker-options';
 import { MarkdownEditorComponent } from '@shared/markdown/markdown-editor.component';
 import { MarkdownViewerComponent } from '@shared/markdown/markdown-viewer.component';
@@ -48,7 +47,6 @@ import { UiKitStore } from './ui-kit.store';
     EmptyStateComponent,
     KbdComponent,
     RelativeTimePipe,
-    TourAnchorDirective,
   ],
   providers: [UiKitStore],
   changeDetection: ChangeDetectionStrategy.OnPush,

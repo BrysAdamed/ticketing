@@ -48,7 +48,8 @@ test.describe('Help menu', () => {
         await expect(items.last()).toHaveAttribute('data-testid', 'help-restart-guides');
         await expect(shell.helpItem('help-shortcuts')).toBeFocused();
         await page.keyboard.press('ArrowDown');
-        await expect(items.nth(1)).toBeFocused();
+        await expect(shell.helpItem('help-tour-page')).toBeDisabled();
+        await expect(shell.helpItem('help-restart-guides')).toBeFocused();
         await page.keyboard.press('Escape');
         await expect(shell.helpMenu).toBeHidden();
         await expect(shell.helpTrigger).toBeFocused();
@@ -79,7 +80,9 @@ test.describe('Help menu', () => {
             shell.palette.getByTestId('palette-item-command:help.restart-guides'),
         ).toBeVisible();
         await page.getByTestId('command-palette-input').fill('keyboard shortcuts');
-        await expect(shell.palette.getByTestId('palette-item-command:help.shortcuts')).toBeVisible();
+        await expect(
+            shell.palette.getByTestId('palette-item-command:help.shortcuts'),
+        ).toBeVisible();
     });
 
     test('Restart all guides confirms, forgets every guide and shows a toast', async ({

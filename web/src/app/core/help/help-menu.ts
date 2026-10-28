@@ -18,6 +18,8 @@ export interface HelpMenuItem {
   visible?: () => boolean;
   /// Shows the menu item disabled and leaves it out of the palette while true.
   disabled?: () => boolean;
+  /// False offers the item in the palette's Help group only (for example one command per tour).
+  menu?: boolean;
   run: () => void;
 }
 
@@ -35,6 +37,7 @@ export const HELP_MENU_ORDER = {
 } as const;
 
 export const SHORTCUTS_HELP_ID = 'help.shortcuts';
+export const TOUR_OF_PAGE_ID = 'help.tour.page';
 export const RESTART_GUIDES_ID = 'help.restart-guides';
 
 export function helpItemTestId(item: Pick<HelpMenuItem, 'id'>): string {

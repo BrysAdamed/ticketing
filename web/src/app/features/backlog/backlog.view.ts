@@ -165,6 +165,9 @@ export class BacklogView {
     () => SORT_BY_OPTIONS.find((o) => o.value === this.store.sortBy())?.label ?? '',
   );
   protected readonly selectionCount = computed(() => this.store.selection().selected.size);
+  protected readonly firstTicketId = computed(
+    () => this.store.rows().find((row) => row.kind === 'ticket')?.id ?? null,
+  );
   protected readonly trackRow = (_: number, row: ListRow) => row.id;
   protected readonly labelSuggestions = (prefix: string) =>
     this.hints.get(this.store.projectKey(), 'labels', prefix);

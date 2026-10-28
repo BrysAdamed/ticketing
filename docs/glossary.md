@@ -254,7 +254,7 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Ticket type**: `Epic`, `UserStory`, `Technical`, `Spike` or `Bug`. Changeable, subject to the parent/child rules. [§3](product/01-refined-spec.md#3-enumerations)
 
-**Tour**: A short guided sequence of steps on one view, each a popover pointing at part of the page under a spotlight. Keyed by view id, never by variant; started from the welcome dialog, an empty state, the Help menu or the palette, never by itself. Steps the user may not perform are left out (D-129). [§14.4](product/01-refined-spec.md#144-tours-and-the-anchor-rule)
+**Tour**: A short guided sequence of steps on one view, each a popover pointing at part of the page under a spotlight. Keyed by view id, never by variant; started from the welcome dialog, an empty state, the Help menu or the palette, never by itself. Steps the user may not perform are left out (D-129). Its guide id is `tour.<viewId>`; "Tour of this page" in the Help menu and a `help.tour.<viewId>` palette command start it (D-134). [§14.4](product/01-refined-spec.md#144-tours-and-the-anchor-rule)
 
 **Tour anchor**: A stable id on a page element (`tkTourAnchor="backlog.quick-create"`, rendered as `data-tour`) that a tour step points at, separate from `data-testid`. Every variant of a view must expose the same anchor ids (D-129, extending ADR 0008), and an e2e spec fails when one disappears. [§14.4](product/01-refined-spec.md#144-tours-and-the-anchor-rule)
 

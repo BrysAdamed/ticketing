@@ -89,7 +89,14 @@ export class ProjectContext {
     effect(() => {
       const project = this.project();
       open.project.set(
-        project ? { key: project.key, name: project.name, archived: !!project.archivedAt } : null,
+        project
+          ? {
+              key: project.key,
+              name: project.name,
+              archived: !!project.archivedAt,
+              role: project.myRole,
+            }
+          : null,
       );
     });
     inject(DestroyRef).onDestroy(() => open.project.set(null));

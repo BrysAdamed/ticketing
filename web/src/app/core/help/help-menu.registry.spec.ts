@@ -153,6 +153,20 @@ describe('HelpMenuRegistry', () => {
       expect(command).toBeUndefined();
     });
 
+    it('offers an item with menu false in the palette only', () => {
+      // Arrange
+      const registry = TestBed.inject(HelpMenuRegistry);
+      registry.register(item('help.tour.backlog.list', 100, { menu: false }));
+
+      // Act
+      const menu = ids(registry.items());
+      const command = TestBed.inject(CommandRegistry).find('help.tour.backlog.list');
+
+      // Assert
+      expect(menu).toEqual([]);
+      expect(command).toBeDefined();
+    });
+
     it('removes an item and its command when its scope is destroyed', () => {
       // Arrange
       const parent = TestBed.inject(EnvironmentInjector);

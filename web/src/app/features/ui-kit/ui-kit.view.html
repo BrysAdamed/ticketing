@@ -3,7 +3,7 @@
 </header>
 
 <div class="tk-page-body grid">
-  <section tkTourAnchor="dev.ui-kit.types">
+  <section>
     <h2>Ticket types</h2>
     <div class="row">
       @for (type of store.types; track type) {
@@ -12,7 +12,7 @@
     </div>
   </section>
 
-  <section tkTourAnchor="dev.ui-kit.statuses">
+  <section>
     <h2>Statuses</h2>
     <div class="row">
       @for (status of store.statuses; track status) {
@@ -144,32 +144,5 @@
     >
       <button mat-flat-button type="button">New ticket</button>
     </tk-empty-state>
-  </section>
-
-  <section class="wide" tkTourAnchor="dev.ui-kit.tour">
-    <h2>Guided tour engine (TKT-53 prototype)</h2>
-    <div class="row">
-      <button
-        mat-stroked-button
-        type="button"
-        data-testid="tour-demo-here"
-        (click)="store.startUiKitTour()"
-      >
-        Tour this page
-      </button>
-      @if (store.tourProject(); as project) {
-        <button
-          mat-stroked-button
-          type="button"
-          data-testid="tour-demo-backlog"
-          (click)="store.startBacklogTour()"
-        >
-          Tour the {{ project.key }} backlog
-        </button>
-      }
-      @if (store.tourResult(); as result) {
-        <span class="muted" data-testid="tour-demo-result">Last tour: {{ result }}</span>
-      }
-    </div>
   </section>
 </div>

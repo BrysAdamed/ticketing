@@ -116,6 +116,7 @@
     <tk-empty-state
       icon="tablerSearch"
       title="No tickets match these filters"
+      tkTourAnchor="backlog.list"
       description="Try other filters or show done tickets."
     >
       <button mat-stroked-button type="button" (click)="clearFilters()">Clear filters</button>
@@ -124,6 +125,7 @@
     <tk-empty-state
       icon="tablerList"
       title="No tickets in backlog"
+      tkTourAnchor="backlog.list"
       description="Create the first one or import from Jira."
     >
       @if (store.canWrite()) {
@@ -169,6 +171,8 @@
           @case ('ticket') {
             <tk-backlog-row
               cdkDrag
+              [tkTourAnchor]="row.id === firstTicketId() ? 'backlog.rank' : null"
+              [tourFirst]="row.id === firstTicketId()"
               cdkDragLockAxis="y"
               [cdkDragDisabled]="!store.canDrag() || isPending(row.id)"
               [pending]="isPending(row.id)"
@@ -226,7 +230,7 @@
 }
 
 @if (store.hasData() && store.onBoardsCount() > 0) {
-  <div class="on-boards" data-testid="backlog-on-boards">
+  <div class="on-boards" data-testid="backlog-on-boards" tkTourAnchor="backlog.on-boards">
     <tk-icon name="tablerLayoutKanban" [size]="14" />
     {{ store.onBoardsCount() }} more {{ store.onBoardsCount() === 1 ? 'ticket' : 'tickets' }} on
     boards

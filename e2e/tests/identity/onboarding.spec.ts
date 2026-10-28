@@ -2,6 +2,7 @@ import { AdminUsersPage, SetPasswordPage } from '../../pages/identity.page';
 import { LoginPage } from '../../pages/login.page';
 import { ShellPage } from '../../pages/shell.page';
 import { expect, test } from '../../support/fixtures';
+import { markGuidesSeenAs } from '../../support/guides';
 import { PASSWORD, uniqueEmail } from './identity';
 
 test('admin creates a user, the user sets a password through the link and signs in', async ({
@@ -21,6 +22,7 @@ test('admin creates a user, the user sets a password through the link and signs 
     const setPassword = new SetPasswordPage(newcomer);
     await expect(setPassword.email).toHaveText(email);
     await setPassword.setPassword(PASSWORD);
+    await markGuidesSeenAs({ email, password: PASSWORD });
     await setPassword.signIn.click();
     await new LoginPage(newcomer).signIn(email, PASSWORD);
 

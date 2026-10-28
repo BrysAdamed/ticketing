@@ -1,9 +1,9 @@
-import { LoginPage } from '../../pages/login.page';
 import { NotificationsPanel } from '../../pages/notifications.page';
 import { ShellPage } from '../../pages/shell.page';
 import { TicketPage } from '../../pages/ticket.page';
 import { Page } from '../../support/api';
 import { expect, test } from '../../support/fixtures';
+import { signInAs } from '../../support/session';
 import { PASSWORD, seedUser } from '../identity/identity';
 
 interface TicketSummary {
@@ -65,10 +65,11 @@ test.describe('@mentions', () => {
         expect(watchers.users.map((u) => u.id)).toContain(reader.id);
 
         // Act: the reader signs in in a browser of their own
-        const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
-        const readerPage = await context.newPage();
-        await readerPage.goto('/login');
-        await new LoginPage(readerPage).signIn(reader.email, PASSWORD);
+        const { context, page: readerPage } = await signInAs(browser, {
+            email: reader.email,
+            password: PASSWORD,
+        });
+        await readerPage.goto('/my-work');
         await new ShellPage(readerPage).expectVisible();
         const bell = new NotificationsPanel(readerPage);
 

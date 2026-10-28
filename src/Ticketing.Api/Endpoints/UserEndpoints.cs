@@ -18,6 +18,13 @@ public sealed class UserEndpoints : IEndpointModule
             .WithSummary("Up to 20 users whose email or a word of whose name starts with the query. With projectKey: active users who can write there, or with access=read who can read it (mentions).")
             .ProducesProblem(StatusCodes.Status404NotFound);
 
+        api.MapGet("/users/avatars", async (ListUserAvatars.Handler handler, HttpContext http, CancellationToken ct) =>
+                http.JsonWithContentETag(await handler.HandleAsync(new ListUserAvatars.Query(), ct)))
+            .WithTags("Users")
+            .WithSummary("Avatars of every user who picked one, deactivated users included, as [{ id, icon, color }]. Sends a content-hash ETag with Cache-Control: no-cache; If-None-Match answers 304.")
+            .Produces<IReadOnlyList<UserAvatarDto>>()
+            .Produces(StatusCodes.Status304NotModified);
+
         var users = api.MapGroup("/admin/users").WithTags("Admin: users").RequireCookieSession()
             .ProducesProblem(StatusCodes.Status403Forbidden);
 

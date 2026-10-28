@@ -16,4 +16,6 @@ public static class UserErrors
     public const string PasswordEqualsEmail = "user.password.equalsEmail";
     public const string PasswordTooCommon = "user.password.tooCommon";
     public const string CurrentPasswordInvalid = "user.password.currentInvalid";
+    public const string AvatarUnknown = "user.avatar.unknown";
+    public const string AvatarColorUnknown = "user.avatar.color.unknown";
 }

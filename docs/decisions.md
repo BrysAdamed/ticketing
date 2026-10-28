@@ -886,6 +886,17 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
 - Rejected: a second request from the card to `GET …/docs/recent` (one more round trip, and MCP clients would not get it from `get_project_stats`); a dashboard widget registry for one widget; demo Canvas diagrams without pictures (embeds and PDFs would say "Preview not rendered yet" until a writer opened each one).
 - Rationale: one request still feeds the whole dashboard (spec 7), and the demo shows every Docs feature, PDF included, right after seeding.
 
+### D-129 Avatars are a code-defined catalogue served as one directory, not a field of every user DTO (TKT-69)
+
+- Context: users may pick a predefined avatar (an animal icon and a palette colour) instead of initials; no uploads. Users appear in seven separate reference DTOs (`UserRefDto` alone has about 25 projections), in REST and over MCP.
+- Decision:
+  - `User.AvatarIcon` and `User.AvatarColor` are two nullable `varchar(32)` columns (migration `AddUserAvatar`, no backfill, no check constraint). `User.ChangeAvatar` validates them against `Domain/Users/AvatarCatalog.cs`: icons with `Key`, `Label`, `Group` and an `UnlockRequirement` that is always null for now (the hook for achievement-unlocked bonus avatars, TKT-61); colours are the named keys of the `--tk-palette-0..7` design tokens, in that order, so a hashed index and a chosen colour mean the same hue. Both fields are independent: a null icon shows initials, a null colour the hashed colour.
+  - `PATCH /me` takes optional, nullable `avatarIcon` and `avatarColor` (cookie session only, like the display name). The change is one `user.field.changed` entry with field `avatar` and `{ icon, color }` values.
+  - The web app loads `GET /users/avatars` (`[{ id, icon, color }]`, only users who chose something, deactivated users included) once and joins it to any user reference by id. At D-04 scale that is a few KB; it sends a content-hash `ETag` with `Cache-Control: no-cache`, so revalidation is a 304. Keys no longer in the catalogue are dropped there, and keeping a stale key on a later PATCH resets it instead of failing.
+  - No user DTO and no MCP tool changes: `whoami` and `find_users` are unchanged.
+- Rejected: adding `avatar` to every user DTO (seven DTOs and dozens of projections to touch, and an LLM gains nothing from an icon key); a database catalogue table or check constraint (the catalogue evolves with the code and its icons ship in the SPA); colour indexes (a reordered palette would silently change everyone's colour).
+- Rationale: one small cacheable read gives the SPA every avatar with no change to the API's user shapes, and the catalogue can grow, or gain unlockable entries, without a migration.
+
 ## Product owner answers (v1 review, 2026-10-27)
 
 These were open questions (Q-01..Q-05); the product owner resolved them as follows.

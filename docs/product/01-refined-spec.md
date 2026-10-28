@@ -82,6 +82,8 @@ Types: `uuid`, `text(n)` = string of at most n characters, `md(n)` = markdown st
 | CreatedAt, CreatedById | timestamptz, uuid? | CreatedById null for the bootstrap admin. |
 | LastLoginAt | timestamptz? | |
 | DeactivatedAt, DeactivatedById | timestamptz?, uuid? | |
+| AvatarIcon | text(32)? | A key of the code-defined avatar catalogue (`AvatarCatalog`, animal icons), else `user.avatar.unknown`. Null shows initials. Keys that later leave the catalogue are treated as null (D-129). |
+| AvatarColor | text(32)? | A named palette colour (`blue`, `violet`, `pink`, `orange`, `amber`, `green`, `teal`, `cyan`), else `user.avatar.color.unknown`. Null uses the colour hashed from the user id (D-129). |
 
 Invariants:
 
@@ -372,7 +374,8 @@ On a public project, a `Viewer` membership has no effect beyond rule 4: the user
 | Action | Admin | User |
 | --- | --- | --- |
 | Create, edit, deactivate, reactivate users; change global role; issue set-password links | Yes | No |
-| Change own display name and password | Yes | Yes |
+| Change own display name, avatar and password (web session only) | Yes | Yes |
+| Read the avatar directory (`GET /users/avatars`: every user who picked an avatar, deactivated users included; D-129) | Yes | Yes |
 | Create, list, revoke own PATs | Yes | Yes |
 | List own notifications (only those about projects still readable); mark them read (write-scoped credentials) | Yes | Yes |
 | List and revoke any user's PATs (never see secrets) | Yes | No |

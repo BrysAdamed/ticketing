@@ -61,7 +61,7 @@ async function openMyWork(page: Page): Promise<void> {
     await expect(page.getByTestId('view-my-work.list')).toBeVisible();
 }
 
-/// Waits until the onboarding state and any lazy dialog chunk have loaded, so the absence of a dialog means something.
+/// Waits for the onboarding state and any lazy dialog chunk, so a missing dialog means something.
 async function settled(page: Page): Promise<void> {
     await page.waitForLoadState('networkidle');
 }

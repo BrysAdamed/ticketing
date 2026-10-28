@@ -22,7 +22,7 @@ public sealed class OnboardingTests(TicketingApiFactory api)
     private readonly CancellationToken _ct = TestContext.Current.CancellationToken;
 
     [Fact]
-    public async Task A_new_user_has_no_guides_an_empty_checklist_and_their_creation_time()
+    public async Task A_new_user_has_no_guides_an_open_checklist_and_their_creation_time()
     {
         // Arrange
         var user = await api.CreateUserAsync();
@@ -33,7 +33,7 @@ public sealed class OnboardingTests(TicketingApiFactory api)
         var onboarding = await (await client.GetAsync(Onboarding, _ct)).ReadAsync<OnboardingDto>();
 
         // Assert
-        Assert.Empty(onboarding.Checklist);
+        Assert.All(onboarding.Checklist, item => Assert.False(item.Done));
         Assert.Empty(onboarding.Guides);
         Assert.False(onboarding.OwnsProjects);
         Assert.Equal(createdAt, onboarding.CreatedAt);

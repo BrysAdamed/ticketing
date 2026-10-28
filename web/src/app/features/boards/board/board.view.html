@@ -35,7 +35,7 @@
         </a>
       }
     </span>
-    <span class="stats tnum" data-testid="board-stats">
+    <span class="stats tnum" data-testid="board-stats" tkTourAnchor="board.counts">
       {{ store.totalCount() }} {{ store.totalCount() === 1 ? 'ticket' : 'tickets' }}
       @if (store.totalPoints()) {
         · {{ store.totalPoints() }} pts
@@ -47,6 +47,7 @@
           mat-stroked-button
           type="button"
           data-testid="board-add-tickets"
+          tkTourAnchor="board.add-tickets"
           (click)="openAddTickets()"
         >
           <tk-icon name="tablerPlus" [size]="14" />Add tickets
@@ -84,6 +85,8 @@
       class="page-hint"
       hint="hint.free-transitions"
       [canWrite]="store.canAddTickets()"
+      learnMoreLabel="Take the board tour"
+      (learnMore)="startTour()"
     />
   }
 
@@ -106,6 +109,7 @@
         class="tbtn"
         [matMenuTriggerFor]="laneMenu"
         data-testid="board-swimlanes"
+        tkTourAnchor="board.swimlanes"
       >
         <tk-icon name="tablerLayersSubtract" [size]="14" />Swimlanes: <b>{{ swimlaneLabel() }}</b>
       </button>
@@ -139,6 +143,7 @@
           [class.collapsed]="collapsed"
           [attr.data-category]="categoryOf(status)"
           [attr.data-testid]="'board-column-' + status"
+          [tkTourAnchor]="$first ? 'board.columns' : null"
         >
           @if (collapsed) {
             <button

@@ -991,6 +991,19 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
   - **The card is an auto-shown guide** (`core/onboarding/guides/checklist.ts` in `AUTO_SHOWN_GUIDES`): it appears by itself on My work, so the e2e guard (D-132) marks it seen for every spec that does not opt in.
 - Rationale: one handler with two cheap queries keeps every item channel-independent and leak-safe through the same readable-id list; link targets and copy stay in the SPA where they change with the UI; forgetting a single guide is the smallest write that makes "show it again" survive a reload.
 
+### D-136 Views without an open project report their own tour access; the board tour starts from the free-transitions hint (TKT-79)
+
+- Question: the board and the ticket page have no open project (`OpenProjectState` is null there), so D-134's access rule would give everyone the Viewer tour. A board links several projects with different roles, and the ticket page knows its role only from the ticket. Where does the access for their tours come from, and how is the board tour reached besides the Help menu?
+- Decision:
+  - **The view reports it.** `ViewTourAccess` (`core/onboarding/view-tour-access.ts`, root, eager, a few lines) holds `{ viewId, access: () => TourAccess | null }` sources; a view calls `inject(ViewTourAccess).provide(viewId, () => …)` in its constructor and the source is removed with the component. `GuidedTours` uses the latest source of the tour's view that returns non-null, else the open project's role as before. A source returns null while its data is loading or when it does not apply.
+  - **Board:** `BoardStore.tourAccess`: `write` = the board is not archived and the user can write to at least one linked project (`canAddTickets`, the same rule as the Add tickets button and the free-transitions hint), `owner` = may manage the board (`permissions.canManage`), `admin` = instance Admin. An archived board therefore gets the read-only tour.
+  - **Ticket page:** `write` = `ticket.permissions.canEdit` (Owner or Member, project not archived), `owner` = `myRole` Owner, `admin` = instance Admin. The peek reports null, so a peek over another view never changes that view's tour.
+  - **Optional parts expose their anchors themselves.** The Delegate button (a header action) puts `ticket.delegate` on itself only while it is visible, so the Delegate step shows exactly when the flag and the project's delegation make the button appear; the test-cases section (`provideTicketDetailSection`) carries `ticket.test-cases`, and the built-in fallback list carries the same id. Sub-tickets are skipped on a spike without children.
+  - **Hidden cards (D-31):** the step says cards of unreadable projects are left out of columns and counts, with no number, and is anchored to the board's ticket count.
+  - **Hint → tour.** The board's `hint.free-transitions` gets "Take the board tour" (`learnMore`), which lazily imports `GuidedTours` and starts `board.kanban`. Starting the tour does not dismiss the hint; it comes back after the tour (hints never show while one runs). The picker-footer copy of the hint has no Learn more.
+- Rejected: reading the role of the first linked project (a board mixes roles; the card-level `canDrag` rule already says "any writable project"); a `GuidedTourOptions.access` override only (the Help menu and palette start tours without the view's help); making the tours project-path tours (a board is not in a project, and a ticket page is reached by key).
+- Rationale: the view already knows exactly what the user may do there; reporting it is one line per view and keeps core free of feature imports.
+
 ## Product owner answers (v1 review, 2026-10-27)
 
 These were open questions (Q-01..Q-05); the product owner resolved them as follows.

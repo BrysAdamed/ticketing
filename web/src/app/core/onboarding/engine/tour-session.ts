@@ -32,7 +32,7 @@ import { TourPopoverComponent } from './tour-popover.component';
 import { TourSpotlightComponent } from './tour-spotlight.component';
 import { TourDefinition, TourPlacement, TourStep } from './tour.model';
 
-const HOLE_PADDING = 6;
+const HOLE_PADDING = 4;
 const POPOVER_GAP = HOLE_PADDING + 8;
 const ANCHOR_TIMEOUT_MS = 4000;
 

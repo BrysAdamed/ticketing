@@ -56,7 +56,7 @@ let nextMaskId = 0;
     }
     .ring {
       fill: none;
-      stroke: var(--tk-focus);
+      stroke: var(--tk-accent);
       stroke-width: 2;
     }
     .cut,

@@ -10,6 +10,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { IconComponent } from '@shared/ui/icon/icon.component';
 import { KbdComponent } from '@shared/ui/kbd/kbd.component';
 import type { TourSession } from './tour-session';
 
@@ -20,14 +21,14 @@ let nextId = 0;
 /// keyboard dispatcher: Esc closes, ← and → move between steps.
 @Component({
   selector: 'tk-tour-popover',
-  imports: [CdkTrapFocus, MatButtonModule, KbdComponent],
+  imports: [CdkTrapFocus, MatButtonModule, KbdComponent, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @let s = session();
     @let step = s.step();
     <div
       #dialog
-      class="card"
+      class="card tk-dense"
       role="dialog"
       aria-modal="true"
       tabindex="-1"
@@ -37,14 +38,29 @@ let nextId = 0;
       [attr.aria-describedby]="bodyId"
       [class.pending]="s.pending()"
     >
-      <div class="eyebrow">
-        <span class="count tnum" data-testid="tour-step-count">{{ s.label() }}</span>
-        <span class="keys" aria-hidden="true"
-          ><tk-kbd>←</tk-kbd><tk-kbd>→</tk-kbd><tk-kbd>Esc</tk-kbd></span
-        >
+      <div class="main">
+        <div class="eyebrow">
+          <span class="tnum" data-testid="tour-step-count"
+            >{{ s.tour.title }} tour · {{ s.label() }}</span
+          >
+          <button
+            type="button"
+            class="tk-icon-btn tk-icon-btn-sm close"
+            aria-label="End tour"
+            data-testid="tour-close"
+            (click)="s.close('dismissed')"
+          >
+            <tk-icon name="tablerX" [size]="14" />
+          </button>
+        </div>
+        <h2 class="title" [id]="titleId">{{ step.title }}</h2>
+        <p class="body" [id]="bodyId">{{ step.body }}</p>
       </div>
-      <h2 class="title" [id]="titleId">{{ step.title }}</h2>
-      <p class="body" [id]="bodyId">{{ step.body }}</p>
+      <div class="dots" aria-hidden="true">
+        @for (dot of s.steps; track dot.id; let i = $index) {
+          <i [class.on]="i === s.index()"></i>
+        }
+      </div>
       <div class="actions">
         @if (!s.isLast()) {
           <button mat-button type="button" data-testid="tour-skip" (click)="s.close('dismissed')">
@@ -52,14 +68,25 @@ let nextId = 0;
           </button>
         }
         <span class="spacer"></span>
-        @if (!s.isFirst()) {
-          <button mat-stroked-button type="button" data-testid="tour-back" (click)="s.previous()">
-            Back
-          </button>
-        }
+        <button
+          mat-stroked-button
+          type="button"
+          data-testid="tour-back"
+          [disabled]="s.isFirst()"
+          (click)="s.previous()"
+        >
+          Back
+        </button>
         <button mat-flat-button type="button" data-testid="tour-next" (click)="s.next()">
           {{ s.isLast() ? 'Done' : 'Next' }}
+          @if (!s.isLast()) {
+            <tk-icon class="next-icon" name="tablerArrowRight" [size]="14" />
+          }
         </button>
+      </div>
+      <div class="keys" aria-hidden="true">
+        <tk-kbd>←</tk-kbd><tk-kbd>→</tk-kbd> move <tk-kbd class="gap">Esc</tk-kbd> end
+        <span class="paused">Shortcuts paused</span>
       </div>
     </div>
   `,
@@ -67,7 +94,6 @@ let nextId = 0;
     .card {
       width: 320px;
       max-width: calc(100vw - 16px);
-      padding: var(--tk-space-4);
       background: var(--tk-surface-raised);
       border: 1px solid var(--tk-border);
       border-radius: var(--tk-radius-lg);
@@ -80,26 +106,26 @@ let nextId = 0;
         visibility: hidden;
       }
     }
+    .main {
+      padding: 14px var(--tk-space-4) var(--tk-space-1);
+    }
     .eyebrow {
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      gap: var(--tk-space-1-5);
       margin-bottom: var(--tk-space-1-5);
-    }
-    .count {
-      font-size: var(--tk-text-sm);
-      line-height: var(--tk-leading-sm);
+      font-size: var(--tk-text-xs);
+      line-height: var(--tk-leading-xs);
       font-weight: var(--tk-weight-medium);
-      color: var(--tk-accent-fg);
+      color: var(--tk-text-subtle);
     }
-    .keys {
-      display: inline-flex;
-      gap: 2px;
+    .close {
+      margin: -4px -6px -4px auto;
     }
     .title {
       margin: 0 0 var(--tk-space-1);
-      font-size: var(--tk-text-md);
-      line-height: var(--tk-leading-md);
+      font-size: var(--tk-text-base);
+      line-height: var(--tk-leading-base);
       font-weight: var(--tk-weight-semibold);
     }
     .body {
@@ -108,18 +134,55 @@ let nextId = 0;
       line-height: var(--tk-leading-base);
       color: var(--tk-text-muted);
     }
+    .dots {
+      display: flex;
+      gap: var(--tk-space-1);
+      padding: var(--tk-space-3) var(--tk-space-4) 0;
+
+      i {
+        width: 6px;
+        height: 6px;
+        border-radius: var(--tk-radius-full);
+        background: var(--tk-border-strong);
+        transition: width var(--tk-duration-fast) var(--tk-ease-out);
+      }
+      i.on {
+        width: 16px;
+        background: var(--tk-accent);
+      }
+    }
     .actions {
       display: flex;
       align-items: center;
-      gap: var(--tk-space-2);
-      margin-top: var(--tk-space-4);
+      gap: var(--tk-space-1-5);
+      padding: var(--tk-space-3) var(--tk-space-3) var(--tk-space-3) var(--tk-space-4);
     }
     .actions [mat-button] {
       margin-left: calc(-1 * var(--tk-space-2));
       color: var(--tk-text-muted);
     }
+    .next-icon {
+      margin-left: var(--tk-space-1);
+    }
     .spacer {
       flex: 1;
+    }
+    .keys {
+      display: flex;
+      align-items: center;
+      gap: var(--tk-space-1);
+      padding: var(--tk-space-2) var(--tk-space-4);
+      border-top: 1px solid var(--tk-border-subtle);
+      font-size: var(--tk-text-xs);
+      line-height: var(--tk-leading-xs);
+      color: var(--tk-text-subtle);
+
+      .gap {
+        margin-left: var(--tk-space-2);
+      }
+    }
+    .paused {
+      margin-left: auto;
     }
     @keyframes tk-tour-enter {
       from {

@@ -6,11 +6,11 @@ export const PROTOTYPE_BACKLOG_TOUR: TourDefinition = {
   id: 'dev.tour-prototype.backlog',
   version: 1,
   viewId: 'backlog.list',
-  title: 'Backlog (prototype)',
+  title: 'Backlog',
   steps: [
     {
       id: 'new-ticket',
-      anchor: 'backlog.new-ticket',
+      anchor: 'backlog.quick-create',
       route: '/projects/:projectKey/backlog',
       requires: 'write',
       title: 'Create a ticket',
@@ -38,7 +38,7 @@ export const PROTOTYPE_UI_KIT_TOUR: TourDefinition = {
   id: 'dev.tour-prototype.ui-kit',
   version: 1,
   viewId: 'dev.ui-kit',
-  title: 'UI kit (prototype)',
+  title: 'UI kit',
   steps: [
     {
       id: 'types',

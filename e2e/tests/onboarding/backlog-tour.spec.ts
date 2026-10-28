@@ -12,9 +12,9 @@ interface TicketSummary {
     key: string;
 }
 
-/// A private project with three backlog tickets and one on a board (so "on boards" shows), a
-/// Member and a Viewer.
-async function seedProject(api: Api) {
+/// A private project with three backlog tickets and one on a board (so "on boards" shows), and a
+/// fresh user with the given role (one user per test keeps set-password under its rate limit).
+async function seedProject(api: Api, role: 'Member' | 'Viewer') {
     const project = await api.createProject();
     const tickets: TicketSummary[] = [];
     for (const title of ['Checkout total', 'Login banner', 'Export CSV'])
@@ -29,11 +29,9 @@ async function seedProject(api: Api) {
         projectKeys: [project.key],
     });
     await api.post('/tickets/move', { keys: [tickets[2].key], target: board.id });
-    const member = await seedUser(api, 'tour-member');
-    const viewer = await seedUser(api, 'tour-viewer');
-    await api.post(`/projects/${project.key}/members`, { user: member.id, role: 'Member' });
-    await api.post(`/projects/${project.key}/members`, { user: viewer.id, role: 'Viewer' });
-    return { key: project.key, member, viewer };
+    const user = await seedUser(api, `tour-${role.toLowerCase()}`);
+    await api.post(`/projects/${project.key}/members`, { user: user.id, role });
+    return { key: project.key, user };
 }
 
 async function onboarding(request: APIRequestContext): Promise<Onboarding> {
@@ -69,9 +67,9 @@ test.describe('backlog tour', () => {
         api,
     }) => {
         // Arrange
-        const seeded = await seedProject(api);
+        const seeded = await seedProject(api, 'Member');
         const { context, page } = await signInAs(browser, {
-            email: seeded.member.email,
+            email: seeded.user.email,
             password: PASSWORD,
         });
         const shell = new ShellPage(page);
@@ -138,9 +136,9 @@ test.describe('backlog tour', () => {
 
     test('the palette starts the tour and Esc ends it as Dismissed', async ({ browser, api }) => {
         // Arrange
-        const seeded = await seedProject(api);
+        const seeded = await seedProject(api, 'Member');
         const { context, page } = await signInAs(browser, {
-            email: seeded.member.email,
+            email: seeded.user.email,
             password: PASSWORD,
         });
         const shell = new ShellPage(page);
@@ -173,10 +171,10 @@ test.describe('backlog tour', () => {
         api,
     }) => {
         // Arrange
-        const seeded = await seedProject(api);
+        const seeded = await seedProject(api, 'Viewer');
         const { context, page } = await signInAs(
             browser,
-            { email: seeded.viewer.email, password: PASSWORD },
+            { email: seeded.user.email, password: PASSWORD },
             { contextOptions: { reducedMotion: 'reduce' } },
         );
         const shell = new ShellPage(page);

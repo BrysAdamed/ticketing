@@ -1,5 +1,5 @@
 import { DOCUMENT } from '@angular/common';
-import { inject, Injectable, Injector } from '@angular/core';
+import { inject, Injectable, Injector, signal } from '@angular/core';
 import { ActiveTour } from './active-tour';
 import { NavigationContext } from '../../layout/navigation-context';
 import { PeekService } from '../../layout/peek/peek';
@@ -7,6 +7,7 @@ import { planTour } from './tour-logic';
 import { TourAnchorRegistry } from './tour-anchor.registry';
 import { TourAccess, TourDefinition } from './tour.model';
 import type { TourSession } from './tour-session';
+import type { TourConditions } from './tour-conditions';
 
 export interface TourStartOptions {
   readonly access: TourAccess;
@@ -14,6 +15,11 @@ export interface TourStartOptions {
   readonly params?: Readonly<Record<string, string>>;
   /// Where focus goes when the tour ends; defaults to the element focused when it started.
   readonly returnFocusTo?: HTMLElement | null;
+  /// Conditions and custom actions for action-driven steps (`advanceWhen`).
+  readonly conditions?: TourConditions;
+  /// Starts at the first step whose condition does not hold (spec 14.4 resume); `skipOptional`
+  /// also passes over optional steps.
+  readonly resume?: { readonly skipOptional?: boolean };
 }
 
 /// How a tour ended: `completed` (Done on the last step), `dismissed` (Esc or Skip), `aborted`
@@ -34,6 +40,8 @@ export class TourLauncher {
 
   /// Id of the running tour, or null.
   readonly running = inject(ActiveTour).id;
+  /// A walkthrough waits behind its "Continue the walkthrough" pill.
+  readonly paused = signal(false);
 
   async start(tour: TourDefinition, options: TourStartOptions): Promise<TourResult> {
     this.session?.close('interrupted');
@@ -48,18 +56,33 @@ export class TourLauncher {
     const returnFocusTo =
       options.returnFocusTo ?? (this.document.activeElement as HTMLElement | null);
     const { TourSession } = await import('./tour-session');
-    const session = new TourSession(this.injector, tour, plan, params, returnFocusTo);
+    const session = new TourSession(this.injector, tour, plan, params, returnFocusTo, {
+      conditions: options.conditions,
+      resume: options.resume,
+      onPausedChange: (paused) => {
+        if (this.session === session) this.paused.set(paused);
+      },
+    });
     this.session = session;
     this.running.set(tour.id);
     const result = await session.run();
     if (this.session === session) {
       this.session = null;
       this.running.set(null);
+      this.paused.set(false);
     }
     return result;
   }
 
   stop(): void {
     this.session?.close('dismissed');
+  }
+
+  /// Takes a paused walkthrough up again where the user left it (or further, when they did the
+  /// step's action meanwhile). Returns false when nothing is paused.
+  continue(): boolean {
+    if (!this.session || !this.paused()) return false;
+    this.session.resume();
+    return true;
   }
 }

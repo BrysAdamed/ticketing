@@ -15,6 +15,7 @@ import { ToastService } from '@core/notify/toast.service';
 import { ProjectDetail } from '@core/projects/project-context';
 import { ProjectSummary } from '@core/projects/project-directory';
 import { ShortcutService } from '@core/shortcuts/shortcut.service';
+import { TourAnchorDirective } from '@core/onboarding/engine/tour-anchor.directive';
 import { RelativeTimePipe } from '@shared/pipes/relative-time.pipe';
 import { AvatarComponent } from '@shared/ui/domain/avatar.component';
 import { BadgeComponent } from '@shared/ui/domain/badge.component';
@@ -34,6 +35,7 @@ import { plainPreview, ProjectFilter, ProjectsListStore } from './projects-list.
 @Component({
   selector: 'tk-projects-list-view',
   imports: [
+    TourAnchorDirective,
     RouterLink,
     MatButtonModule,
     MatMenuModule,

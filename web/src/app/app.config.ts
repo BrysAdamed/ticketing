@@ -34,6 +34,9 @@ import { provideGuidedTours } from '@core/onboarding/tour-availability';
 import { ShortcutService } from '@core/shortcuts/shortcut.service';
 import { ThemeService } from '@core/theme/theme.service';
 import { provideTicketCreation } from '@core/tickets/create-ticket';
+import { provideBoardCreation } from '@core/boards/create-board';
+import { provideFirstProjectWalkthrough } from '@core/onboarding/walkthrough/first-project.help';
+import { provideProjectCreation } from '@core/projects/create-project';
 import { provideTicketHeaderAction } from '@core/tickets/ticket-header-actions';
 import { provideTicketDetailSection } from '@core/tickets/ticket-sections';
 import { provideAttachments } from '@features/attachments/attachments.providers';
@@ -72,6 +75,13 @@ export const appConfig: ApplicationConfig = {
     provideOnboardingDialogs(),
     provideAttachments(),
     provideDocsTicketSection(),
+    provideProjectCreation(() =>
+      import('@features/projects/list/new-project.dialog').then((m) => m.NewProjectDialog),
+    ),
+    provideBoardCreation(() =>
+      import('@features/boards/list/create-board.dialog').then((m) => m.CreateBoardDialog),
+    ),
+    provideFirstProjectWalkthrough(),
     provideTicketCreation(() =>
       import('@features/tickets/create/create-ticket.dialog').then((m) => m.CreateTicketDialog),
     ),

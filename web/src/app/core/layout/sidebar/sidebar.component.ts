@@ -11,6 +11,7 @@ import { OpenProjectState } from '../../projects/open-project';
 import { ProjectDirectory } from '../../projects/project-directory';
 import { LayoutState } from '../layout-state';
 import { NavigationContext } from '../navigation-context';
+import { TourAnchorDirective } from '../../onboarding/engine/tour-anchor.directive';
 
 interface NavLink {
   label: string;
@@ -74,7 +75,14 @@ interface NavProject {
 
 @Component({
   selector: 'tk-sidebar',
-  imports: [RouterLink, RouterLinkActive, IconComponent, ProjectTileComponent, MatTooltip],
+  imports: [
+    RouterLink,
+    RouterLinkActive,
+    IconComponent,
+    ProjectTileComponent,
+    MatTooltip,
+    TourAnchorDirective,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '[class.rail]': 'layout.sidebarCollapsed()', 'data-testid': 'sidebar' },
   templateUrl: './sidebar.component.html',

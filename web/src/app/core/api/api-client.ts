@@ -1,6 +1,6 @@
 import { HttpClient, HttpContext, HttpHeaders, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { defer, finalize, Observable, share } from 'rxjs';
+import { defer, finalize, Observable, share, Subject, tap } from 'rxjs';
 import { Page, PageRequest } from './page';
 
 export const API_BASE_URL = '/api/v1';
@@ -28,6 +28,11 @@ export interface WriteOptions extends RequestOptions {
 export class ApiClient {
   private readonly http = inject(HttpClient);
   private readonly inFlight = new Map<string, Observable<unknown>>();
+  private readonly written = new Subject<void>();
+
+  /// Emits after every successful write (POST, PUT, PATCH, DELETE) made through this client, so
+  /// code that watches server state (the "Your first project" walkthrough) re-reads it without polling.
+  readonly writes: Observable<void> = this.written.asObservable();
 
   get<T>(path: string, query?: Query, options?: RequestOptions): Observable<T> {
     const url = this.url(path);
@@ -57,7 +62,7 @@ export class ApiClient {
     return this.http.post<T>(this.url(path), body ?? null, {
       headers: headers(options),
       context: options?.context,
-    });
+    }).pipe(tap(() => this.written.next()));
   }
 
   put<T>(path: string, body: unknown, options?: WriteOptions): Observable<T> {
@@ -65,7 +70,7 @@ export class ApiClient {
     return this.http.put<T>(this.url(path), body, {
       headers: headers(options),
       context: options?.context,
-    });
+    }).pipe(tap(() => this.written.next()));
   }
 
   patch<T>(path: string, body: unknown, options?: WriteOptions): Observable<T> {
@@ -73,7 +78,7 @@ export class ApiClient {
     return this.http.patch<T>(this.url(path), body, {
       headers: headers(options),
       context: options?.context,
-    });
+    }).pipe(tap(() => this.written.next()));
   }
 
   delete<T = void>(path: string, options?: WriteOptions): Observable<T> {
@@ -81,7 +86,7 @@ export class ApiClient {
     return this.http.delete<T>(this.url(path), {
       headers: headers(options),
       context: options?.context,
-    });
+    }).pipe(tap(() => this.written.next()));
   }
 
   url(path: string): string {

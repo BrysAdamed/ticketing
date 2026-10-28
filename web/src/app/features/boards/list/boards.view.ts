@@ -5,6 +5,7 @@ import { MatTooltip } from '@angular/material/tooltip';
 import { Router, RouterLink } from '@angular/router';
 import { Board } from '@core/boards/board.models';
 import { ShortcutService } from '@core/shortcuts/shortcut.service';
+import { TourAnchorDirective } from '@core/onboarding/engine/tour-anchor.directive';
 import { AvatarComponent } from '@shared/ui/domain/avatar.component';
 import { ProjectTileComponent } from '@shared/ui/domain/project-tile.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
@@ -21,6 +22,7 @@ import { CreateBoardDialog, CreateBoardDialogData } from './create-board.dialog'
 @Component({
   selector: 'tk-boards-view',
   imports: [
+    TourAnchorDirective,
     RouterLink,
     MatButtonModule,
     MatTooltip,
@@ -39,7 +41,13 @@ import { CreateBoardDialog, CreateBoardDialogData } from './create-board.dialog'
       <h1>Boards</h1>
       <span class="tk-page-count">{{ store.counts().active }}</span>
       <div class="tk-page-actions">
-        <button mat-stroked-button type="button" data-testid="boards-new" (click)="openCreate()">
+        <button
+          mat-stroked-button
+          type="button"
+          data-testid="boards-new"
+          tkTourAnchor="boards.new"
+          (click)="openCreate()"
+        >
           <tk-icon name="tablerPlus" [size]="14" />New board
         </button>
       </div>

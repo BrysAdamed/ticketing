@@ -3,6 +3,7 @@ import {
   afterNextRender,
   ChangeDetectionStrategy,
   Component,
+  computed,
   ElementRef,
   inject,
   Injector,
@@ -25,69 +26,100 @@ let nextId = 0;
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @let s = session();
-    @let step = s.step();
     <div
       #dialog
       class="card tk-dense"
       role="dialog"
-      aria-modal="true"
       tabindex="-1"
-      cdkTrapFocus
       data-testid="tour-popover"
+      [cdkTrapFocus]="!s.isAction()"
+      [attr.aria-modal]="s.isAction() ? null : 'true'"
       [attr.aria-labelledby]="titleId"
       [attr.aria-describedby]="bodyId"
-      [class.pending]="s.pending()"
+      [attr.data-step]="s.step().id"
+      [class.pending]="s.pending() || s.hidden()"
     >
       <div class="main">
         <div class="eyebrow">
-          <span class="tnum" data-testid="tour-step-count"
-            >{{ s.tour.title }} tour · {{ s.label() }}</span
-          >
+          @if (s.walkthrough) {
+            <tk-icon name="tablerRoute" [size]="12" />
+          }
+          <span class="tnum" data-testid="tour-step-count">{{ eyebrow() }}</span>
           <button
             type="button"
             class="tk-icon-btn tk-icon-btn-sm close"
-            aria-label="End tour"
             data-testid="tour-close"
+            [attr.aria-label]="s.walkthrough ? 'End walkthrough' : 'End tour'"
             (click)="s.close('dismissed')"
           >
             <tk-icon name="tablerX" [size]="14" />
           </button>
         </div>
-        <h2 class="title" [id]="titleId">{{ step.title }}</h2>
-        <p class="body" [id]="bodyId">{{ step.body }}</p>
+        <h2 class="title" [id]="titleId">{{ s.title() }}</h2>
+        <p class="body" [id]="bodyId">{{ s.body() }}</p>
       </div>
       <div class="dots" aria-hidden="true">
-        @for (dot of s.steps; track dot.id; let i = $index) {
-          <i [class.on]="i === s.index()"></i>
+        @for (on of s.dots(); track $index) {
+          <i [class.on]="on"></i>
         }
       </div>
-      <div class="actions">
-        @if (!s.isLast()) {
-          <button mat-button type="button" data-testid="tour-skip" (click)="s.close('dismissed')">
-            Skip tour
-          </button>
-        }
-        <span class="spacer"></span>
-        <button
-          mat-stroked-button
-          type="button"
-          data-testid="tour-back"
-          [disabled]="s.isFirst()"
-          (click)="s.previous()"
-        >
-          Back
-        </button>
-        <button mat-flat-button type="button" data-testid="tour-next" (click)="s.next()">
-          {{ s.isLast() ? 'Done' : 'Next' }}
-          @if (!s.isLast()) {
-            <tk-icon class="next-icon" name="tablerArrowRight" [size]="14" />
+      @if (s.isAction()) {
+        <div class="actions">
+          <span class="waiting" data-testid="tour-waiting"
+            ><span class="pulse" aria-hidden="true"></span>{{ s.waiting() }}</span
+          >
+        </div>
+        <div class="actions">
+          @if (s.step().optional) {
+            <button mat-button type="button" data-testid="tour-skip-step" (click)="s.skipStep()">
+              Skip this step
+            </button>
           }
-        </button>
-      </div>
-      <div class="keys" aria-hidden="true">
-        <tk-kbd>←</tk-kbd><tk-kbd>→</tk-kbd> move <tk-kbd class="gap">Esc</tk-kbd> end
-        <span class="paused">Shortcuts paused</span>
-      </div>
+          <span class="spacer"></span>
+          @if (s.actionLabel(); as label) {
+            <button
+              mat-flat-button
+              type="button"
+              data-testid="tour-action"
+              (click)="s.runAction()"
+            >
+              {{ label }}
+            </button>
+          }
+        </div>
+        <div class="keys" aria-hidden="true">
+          <tk-kbd>Esc</tk-kbd> end
+          <span class="paused">Shortcuts work</span>
+        </div>
+      } @else {
+        <div class="actions">
+          @if (!s.isLast()) {
+            <button mat-button type="button" data-testid="tour-skip" (click)="s.close('dismissed')">
+              {{ s.walkthrough ? 'End walkthrough' : 'Skip tour' }}
+            </button>
+          }
+          <span class="spacer"></span>
+          <button
+            mat-stroked-button
+            type="button"
+            data-testid="tour-back"
+            [disabled]="!s.canGoBack()"
+            (click)="s.previous()"
+          >
+            Back
+          </button>
+          <button mat-flat-button type="button" data-testid="tour-next" (click)="s.next()">
+            {{ s.isLast() ? 'Done' : 'Next' }}
+            @if (!s.isLast()) {
+              <tk-icon class="next-icon" name="tablerArrowRight" [size]="14" />
+            }
+          </button>
+        </div>
+        <div class="keys" aria-hidden="true">
+          <tk-kbd>←</tk-kbd><tk-kbd>→</tk-kbd> move <tk-kbd class="gap">Esc</tk-kbd> end
+          <span class="paused">Shortcuts paused</span>
+        </div>
+      }
     </div>
   `,
   styles: `
@@ -167,6 +199,36 @@ let nextId = 0;
     .spacer {
       flex: 1;
     }
+    .waiting {
+      display: flex;
+      align-items: center;
+      gap: var(--tk-space-2);
+      font-size: var(--tk-text-sm);
+      line-height: var(--tk-leading-sm);
+      color: var(--tk-text-muted);
+    }
+    .pulse {
+      flex: none;
+      width: 8px;
+      height: 8px;
+      border-radius: var(--tk-radius-full);
+      background: var(--tk-accent);
+      box-shadow: 0 0 0 3px var(--tk-accent-subtle);
+      animation: tk-tour-pulse 1.6s var(--tk-ease-out) infinite;
+    }
+    .actions + .actions {
+      padding-top: 0;
+    }
+    @keyframes tk-tour-pulse {
+      50% {
+        opacity: 0.4;
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .pulse {
+        animation: none;
+      }
+    }
     .keys {
       display: flex;
       align-items: center;
@@ -194,6 +256,10 @@ let nextId = 0;
 })
 export class TourPopoverComponent {
   readonly session = input.required<TourSession>();
+  protected readonly eyebrow = computed(() => {
+    const s = this.session();
+    return s.walkthrough ? `${s.tour.title} · ${s.label()}` : `${s.tour.title} tour · ${s.label()}`;
+  });
   protected readonly titleId = `tk-tour-title-${nextId}`;
   protected readonly bodyId = `tk-tour-body-${nextId++}`;
   private readonly dialog = viewChild.required<ElementRef<HTMLElement>>('dialog');

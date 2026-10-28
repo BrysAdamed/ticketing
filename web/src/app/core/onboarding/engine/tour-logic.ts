@@ -65,10 +65,13 @@ export function planTour(
   },
 ): TourPlan {
   const allowed = tour.steps.filter((step) => isAllowed(step, access));
-  const isLocal = (step: TourStep) =>
-    !step.route || isOnPath(context.url, fillRoute(step.route, context.params));
+  const isLocal = (step: TourStep) => {
+    if (!step.route) return true;
+    const path = tryFillRoute(step.route, context.params);
+    return path !== null && isOnPath(context.url, path);
+  };
   const local = allowed.filter(isLocal);
-  const skipped = local.filter((step) => !context.hasAnchor(step.anchor));
+  const skipped = local.filter((step) => !isActionStep(step) && !context.hasAnchor(step.anchor));
   const resolved = local.length - skipped.length;
   return {
     steps: allowed.filter((step) => !skipped.includes(step)),
@@ -79,6 +82,57 @@ export function planTour(
 
 export function stepLabel(index: number, total: number): string {
   return `Step ${index + 1} of ${total}`;
+}
+
+/// `fillRoute`, or null while a placeholder has no value yet (a walkthrough learns its params as
+/// the user creates things).
+export function tryFillRoute(
+  pattern: string,
+  params: Readonly<Record<string, string>>,
+): string | null {
+  try {
+    return fillRoute(pattern, params);
+  } catch {
+    return null;
+  }
+}
+
+/// Whether the step waits for the user's action instead of Next.
+export function isActionStep(step: TourStep): boolean {
+  return step.advanceWhen !== undefined;
+}
+
+/// Where step `index` stands for "Step n of m": steps that share a `stage` count as one.
+export function stageProgress(
+  steps: readonly TourStep[],
+  index: number,
+): { readonly current: number; readonly total: number } {
+  const keys = steps.map((step, i) => step.stage ?? `#${i}`);
+  const stages = [...new Set(keys)];
+  return { current: stages.indexOf(keys[index]), total: stages.length };
+}
+
+/// Replaces `{name}` placeholders in step copy with the tour's params; unknown ones stay as typed.
+export function fillText(text: string, params: Readonly<Record<string, string>>): string {
+  return text.replace(/\{([A-Za-z][A-Za-z0-9]*)\}/g, (match, name: string) => params[name] ?? match);
+}
+
+/// Where a walkthrough resumes (spec 14.4): the first step whose condition does not hold. Steps
+/// without a condition (Next-driven ones) never hold. An optional step is passed over when a later
+/// step already holds, or always with `skipOptional` (an entry point that starts further on).
+/// `holds[i]` is for `steps[i]`; returns `steps.length` when everything holds.
+export function resumeIndex(
+  steps: readonly TourStep[],
+  holds: readonly boolean[],
+  options: { readonly skipOptional?: boolean } = {},
+): number {
+  for (let i = 0; i < steps.length; i++) {
+    if (holds[i]) continue;
+    const laterHolds = holds.slice(i + 1).some(Boolean);
+    if (steps[i].optional && (options.skipOptional || laterHolds)) continue;
+    return i;
+  }
+  return steps.length;
 }
 
 /// The spotlight hole around an anchor: the anchor's box grown by `padding`, clipped to the

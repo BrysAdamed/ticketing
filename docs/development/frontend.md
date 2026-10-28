@@ -40,6 +40,7 @@ web/src/
       testing/          test case and regression wire types, TestCasesApi, RegressionsApi
       notifications/    NotificationsApi, NotificationCenter (unread count polling, panel state), top bar bell + panel
       theme/            ThemeService (light / dark / system, density)
+      onboarding/       engine/: guided tours (TourLauncher, TourAnchorRegistry, tkTourAnchor; session lazy-loaded), D-129
     shared/             presentational UI kit, domain enums, markdown, pipes. Never imports core or features.
     features/<name>/    one folder per feature: <name>.routes.ts, <name>.views.ts, <page>/<page>.store.ts + <page>.view.ts
 ```

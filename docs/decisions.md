@@ -886,6 +886,30 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
 - Rejected: a second request from the card to `GET …/docs/recent` (one more round trip, and MCP clients would not get it from `get_project_stats`); a dashboard widget registry for one widget; demo Canvas diagrams without pictures (embeds and PDFs would say "Preview not rendered yet" until a writer opened each one).
 - Rationale: one request still feeds the whole dashboard (spec 7), and the demo shows every Docs feature, PDF included, right after seeding.
 
+### D-129 Guided tours: home-grown engine on CDK Overlay and A11y, tour anchors in every view variant, onboarding owner decisions (TKT-53)
+
+- Context: epic TKT-52 (onboarding) needs guided tours per view that are keyboard and screen-reader accessible, work zoneless, keep the global shortcuts quiet while a step is open and survive A/B view variants. Spike TKT-53 compared a home-grown engine with the libraries. Details, measurements and the engine design for TKT-56: [research/tour-engine.md](research/tour-engine.md).
+- Comparison (npm, 2026-10-28):
+  - Shepherd.js 15.3.0 and intro.js 8.6.0: AGPL-3.0, excluded.
+  - driver.js 1.10.2 (MIT): its own overlay is not a CDK backdrop, so `ShortcutService` keeps firing `c`, `g b` and `/` during a tour. It has no focus trap and no dialog ARIA.
+  - ngx-ui-tour-md-menu 17.0.0 (MIT, peers on Angular 22): tested under zoneless. It renders and steps correctly, but the step is a `mat-menu` (`role="menu"`, no label, no `aria-modal`). Focus never enters the step, and nothing is announced. Its four `div` backdrops are not CDK backdrops, so `g m` navigated away mid-tour. Esc and the arrows are window listeners next to `ShortcutService`, and its default template needs Material Icons, which we don't ship.
+  - Home-grown on `@angular/cdk` 22.2 (MIT): prototype in `web/src/app/core/onboarding/engine/`. It meets every acceptance criterion (spotlight through an SVG mask, `FlexibleConnectedPositionStrategy`, `cdkTrapFocus`, dialog ARIA, `LiveAnnouncer`, Esc/←/→, focus return, shortcut suppression, both themes, reduced motion). The engine is a 12 kB lazy chunk, and no tour code is reachable from the initial bundle.
+- Decision:
+  - **Tour engine:** home-grown on CDK Overlay + A11y (owner decision 1 below, confirmed by the spike). A modal step is two overlays: a full-screen spotlight with a transparent CDK backdrop and a connected popover dialog. The backdrop makes `ShortcutService.isOverlayOpen()` true, so shortcuts are suppressed by the existing rule and `ShortcutService` does not change. A tour closes on the peek, on another backdrop overlay and on navigation it did not start. ngx-ui-tour-md-menu stays the documented fallback only.
+  - **Tour data** is pure TypeScript keyed by **view id, never by variant**: `{ id, version, viewId, title, steps: [{ id, anchor, title, body, requires?: 'write' | 'owner' | 'admin', placement?, route? }] }`. Action-driven steps (`advanceWhen`, a route match or a named condition) and pausing on foreign navigation are added by TKT-80 on the same engine. Such steps are non-modal: no backdrop, a click-through hole, live shortcuts.
+  - **Anchor rule (extends [ADR 0008](adr/0008-ab-ready-views.md)):** tour steps point at anchors declared with `tkTourAnchor="<area>.<thing>"`, never at CSS selectors or `data-testid`. Every variant of a view exposes the same tour anchor ids; anchor ids are part of a view's contract, like its view id. A variant without a feature omits that anchor, and the step is skipped. If fewer than half of a view's anchors resolve, the tour does not start. Sections added through `provideTicketDetailSection` and header actions expose their own anchors.
+- Owner decisions accepted for the epic (TKT-52, 2026-10-27; final, not proposals):
+  1. The tour engine is home-grown on Angular CDK Overlay + A11y. Shepherd.js and intro.js are excluded (AGPL-3.0). ngx-ui-tour-md-menu (MIT) is the fallback, used only if the home-grown engine proves not viable (it did prove viable).
+  2. Onboarding progress is stored in a typed `user_guide_state` table, not a generic key/value preferences table. TKT-36 reuses this storage decision.
+  3. Only the welcome dialog starts by itself. Tours start from the welcome dialog, empty states, the Help menu or the command palette.
+  4. The migration marks `welcome` as seen for existing users who have signed in; they still get the getting-started checklist.
+  5. The checklist is a card on My work, also reachable from the Help menu.
+  6. "What's new" entries use code-authored date ids such as `2026-11`, because `ServerVersion.Current` is never set.
+  7. The "Connect an AI agent" items are optional and shown to everyone.
+- MCP server instructions (for TKT-59): `ModelContextProtocol` 2.3.0 has `McpServerOptions.ServerInstructions`, set in the existing `AddMcpServer(o => …)` in `src/Ticketing.Api/Mcp/McpSetup.cs`.
+- Rejected: adopting ngx-ui-tour-md-menu and patching its accessibility, since we would write the template, focus trap, ARIA, announcements and shortcut handling ourselves anyway; driver.js (no focus trap, overlay outside the shortcut contract); a `ShortcutService.suspend()` API (not needed while modal steps use a CDK backdrop, and TKT-80's action steps want shortcuts live); anchoring steps by `data-testid` or CSS selectors (they change with tests and variants).
+- Rationale: the CDK already provides positioning, focus trapping, live announcements and the keyboard dispatcher the app uses everywhere else. Building on it costs less than fixing a library's accessibility, and it keeps tours inside the app's overlay and shortcut rules.
+
 ## Product owner answers (v1 review, 2026-10-27)
 
 These were open questions (Q-01..Q-05); the product owner resolved them as follows.

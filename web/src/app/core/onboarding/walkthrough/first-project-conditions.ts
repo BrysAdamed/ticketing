@@ -151,9 +151,7 @@ export class FirstProjectConditions implements TourConditions {
 
   private async ticket(params: Params): Promise<Ticket | null> {
     const key = params['ticketKey'];
-    return key
-      ? firstValueFrom(this.api.get<Ticket>(`/tickets/${encodeURIComponent(key)}`))
-      : null;
+    return key ? firstValueFrom(this.api.get<Ticket>(`/tickets/${encodeURIComponent(key)}`)) : null;
   }
 }
 

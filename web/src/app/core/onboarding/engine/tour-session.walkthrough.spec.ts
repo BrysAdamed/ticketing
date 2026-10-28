@@ -1,5 +1,5 @@
 import { LiveAnnouncer } from '@angular/cdk/a11y';
-import { createOverlayRef, OverlayRef } from '@angular/cdk/overlay';
+import { createOverlayRef } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
 import { Component, Injector, provideZonelessChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
@@ -291,10 +291,9 @@ describe('TourSession action-driven steps and pausing', () => {
     // Arrange
     void start();
     await settle(showing('create'));
-    let dialog: OverlayRef | null = null;
 
     // Act
-    dialog = createOverlayRef(TestBed.inject(Injector), { hasBackdrop: true });
+    const dialog = createOverlayRef(TestBed.inject(Injector), { hasBackdrop: true });
     dialog.attach(new ComponentPortal(ForeignDialogComponent));
     await settle(() => card()?.classList.contains('pending') ?? false);
     const hidden = card()!.classList.contains('pending');

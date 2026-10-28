@@ -171,7 +171,9 @@ export class NewProjectDialog {
   private readonly api = inject(ApiClient);
   private readonly directory = inject(ProjectDirectory);
   protected readonly ref = inject<MatDialogRef<NewProjectDialog, ProjectDetail>>(MatDialogRef);
-  private readonly prefill = inject<CreateProjectPrefill | null>(MAT_DIALOG_DATA, { optional: true });
+  private readonly prefill = inject<CreateProjectPrefill | null>(MAT_DIALOG_DATA, {
+    optional: true,
+  });
 
   protected readonly nameMax = PROJECT_NAME_MAX_LENGTH;
   protected readonly keyMax = PROJECT_KEY_MAX_LENGTH;

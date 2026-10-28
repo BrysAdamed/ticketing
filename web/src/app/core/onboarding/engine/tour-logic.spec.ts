@@ -192,7 +192,8 @@ describe('tour logic', () => {
     });
   });
 
-  it('labels steps from one', () => {    expect(stepLabel(0, 3)).toBe('Step 1 of 3');
+  it('labels steps from one', () => {
+    expect(stepLabel(0, 3)).toBe('Step 1 of 3');
   });
 
   it('pads the spotlight hole and clips it to the viewport', () => {

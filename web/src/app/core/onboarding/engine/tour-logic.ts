@@ -114,7 +114,10 @@ export function stageProgress(
 
 /// Replaces `{name}` placeholders in step copy with the tour's params; unknown ones stay as typed.
 export function fillText(text: string, params: Readonly<Record<string, string>>): string {
-  return text.replace(/\{([A-Za-z][A-Za-z0-9]*)\}/g, (match, name: string) => params[name] ?? match);
+  return text.replace(
+    /\{([A-Za-z][A-Za-z0-9]*)\}/g,
+    (match, name: string) => params[name] ?? match,
+  );
 }
 
 /// Where a walkthrough resumes (spec 14.4): the first step whose condition does not hold. Steps

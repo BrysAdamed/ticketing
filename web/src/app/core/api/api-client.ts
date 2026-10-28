@@ -59,34 +59,42 @@ export class ApiClient {
 
   post<T>(path: string, body?: unknown, options?: RequestOptions): Observable<T> {
     this.inFlight.clear();
-    return this.http.post<T>(this.url(path), body ?? null, {
-      headers: headers(options),
-      context: options?.context,
-    }).pipe(tap(() => this.written.next()));
+    return this.http
+      .post<T>(this.url(path), body ?? null, {
+        headers: headers(options),
+        context: options?.context,
+      })
+      .pipe(tap(() => this.written.next()));
   }
 
   put<T>(path: string, body: unknown, options?: WriteOptions): Observable<T> {
     this.inFlight.clear();
-    return this.http.put<T>(this.url(path), body, {
-      headers: headers(options),
-      context: options?.context,
-    }).pipe(tap(() => this.written.next()));
+    return this.http
+      .put<T>(this.url(path), body, {
+        headers: headers(options),
+        context: options?.context,
+      })
+      .pipe(tap(() => this.written.next()));
   }
 
   patch<T>(path: string, body: unknown, options?: WriteOptions): Observable<T> {
     this.inFlight.clear();
-    return this.http.patch<T>(this.url(path), body, {
-      headers: headers(options),
-      context: options?.context,
-    }).pipe(tap(() => this.written.next()));
+    return this.http
+      .patch<T>(this.url(path), body, {
+        headers: headers(options),
+        context: options?.context,
+      })
+      .pipe(tap(() => this.written.next()));
   }
 
   delete<T = void>(path: string, options?: WriteOptions): Observable<T> {
     this.inFlight.clear();
-    return this.http.delete<T>(this.url(path), {
-      headers: headers(options),
-      context: options?.context,
-    }).pipe(tap(() => this.written.next()));
+    return this.http
+      .delete<T>(this.url(path), {
+        headers: headers(options),
+        context: options?.context,
+      })
+      .pipe(tap(() => this.written.next()));
   }
 
   url(path: string): string {

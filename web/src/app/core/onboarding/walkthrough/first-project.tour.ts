@@ -98,14 +98,12 @@ export const FIRST_PROJECT_TOUR: TourDefinition = {
       title: 'Place the ticket on the board',
       body: 'A ticket lives in exactly one place: its backlog or one board. Add {ticketKey} here from the backlog, or use Move to… in the backlog.',
     },
-    ...DASHBOARD_TOUR_STEPS.map(
-      (step): TourStep => ({
-        ...step,
-        id: `dashboard-${step.id}`,
-        route: DASHBOARD_ROUTE,
-        stage: 'dashboard',
-      }),
-    ),
+    ...DASHBOARD_TOUR_STEPS.map((step): TourStep => ({
+      ...step,
+      id: `dashboard-${step.id}`,
+      route: DASHBOARD_ROUTE,
+      stage: 'dashboard',
+    })),
     {
       id: 'finish',
       anchor: 'project.nav-settings',

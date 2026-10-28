@@ -79,12 +79,7 @@ let nextId = 0;
           }
           <span class="spacer"></span>
           @if (s.actionLabel(); as label) {
-            <button
-              mat-flat-button
-              type="button"
-              data-testid="tour-action"
-              (click)="s.runAction()"
-            >
+            <button mat-flat-button type="button" data-testid="tour-action" (click)="s.runAction()">
               {{ label }}
             </button>
           }

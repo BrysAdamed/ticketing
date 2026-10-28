@@ -687,6 +687,12 @@ Onboarding state (14.1, D-130), always the caller's own:
 
 `GET` accepts any credential (cookie or PAT, read-only included). `PUT` and `DELETE` accept the cookie session only, like `PATCH /me`; a ReadWrite PAT gets 403 `auth.cookieSessionRequired`, a ReadOnly PAT 403 `pat.readOnlyScope`. There are no MCP tools for onboarding state (9.3).
 
+Project suggestions (14.4, D-140):
+
+| Method and path | Purpose |
+| --- | --- |
+| `GET /api/v1/projects/suggested-identity?name=&key=` | `{ name, key }`: the first project name and key no project uses, for the "Your first project" walkthrough's suggestion. The name as given (trimmed), else with ` 2`, ` 3`… appended, compared case-insensitively with live projects; the key as given, else with `2`, `3`… appended and the stem shortened to fit 10 characters, compared with every project, deleted ones included (D-10). Both checks cover projects the caller cannot read, so the suggestion never collides; it reveals no more than `POST /projects` answering 409 would. Any signed-in caller (cookie or PAT); `validation` (400) for a missing name or a malformed key. No MCP tool. |
+
 ## 9. MCP server
 
 ### 9.1 Transport and auth
@@ -1310,6 +1316,25 @@ Rules of the walkthrough:
 - Nothing is created without the user confirming the dialog. Suggested names and keys never collide with existing ones (4.3, D-10): a taken name or key gets a suffix, and a validation error leaves the step open.
 - Finishing records `tour.first-project` `Completed`. Because its actions are real data, they also tick the matching checklist items (14.3).
 - Entry points: Help menu and palette (`help.tour.first-project`), the projects list, boards list and dashboard empty states (14.7), and the welcome dialog's Take the tour for a user who cannot write to any project yet (14.2).
+
+How it behaves (TKT-80, D-140):
+
+| Step | Page and anchor | Done when (read from real data) | The card's button |
+| --- | --- | --- | --- |
+| 0 Start | A dialog, only for a user with an explicit Owner membership of a live project | — | **Use &lt;project&gt;** (the project the walkthrough last used, else the most recently updated owned one), **Create a practice project**, Cancel |
+| 1 Create a private project | Projects, New project | The chosen project is live and owned, or an owned project appeared that was not there at the start | **Create the project** opens the New project dialog with the suggestions: "&lt;display name&gt;'s sandbox", the key derived from it, both made free by `GET /projects/suggested-identity` (a suffix when taken, private projects included), and Private |
+| 2 Create a ticket | Backlog, New ticket | The user reported a ticket in the project (the newest is the walkthrough's ticket) | **New ticket** opens quick-create; `C` and the global create dialog count too |
+| 3 Change its status (optional) | Backlog, the first row's status | The ticket's status changed after it was created | **Change the status** opens the row's status picker; **Skip this step** |
+| 4 Create a board | Boards, New board | A live board links the project (the ticket's board first) | **Create the board** opens the New board dialog with "My first board" and the project selected |
+| 5 Place the ticket | The board, Add tickets | The ticket's location is a board | **Add tickets** opens add-from-backlog; Move to… in the backlog counts too |
+| 6 Dashboard | The project dashboard, the five `project.dashboard` steps | Next, as in the dashboard tour | Back, Next |
+| 7 Finish | The dashboard, the sidebar's Settings link of the project | Done | Done |
+
+- Steps 1 to 5 are **action steps**: the page stays usable (no backdrop, the hole lets clicks through, the dimmed rest swallows them, shortcuts stay live), the card shows what it waits for and focuses its button, so Enter does the action. While the user's own dialog, picker or the peek is open the card and spotlight step aside, and come back when it closes. The step re-reads its condition when it starts, after any successful write of the app, after a navigation, when the user's overlay closes and when the window regains focus; it never polls.
+- Steps 6 and 7 are ordinary modal tour steps (focus trapped, shortcuts paused, `←` `→`). The card's eyebrow reads "Your first project · Step n of 7"; the five dashboard steps count as step 6.
+- **Paused**: a navigation the walkthrough did not start first re-checks the step (finishing a step elsewhere, for example the board page opening after a board was created, just moves on); otherwise, off the step's page, the card goes and the pill at the bottom shows "Paused at step n of 7 · &lt;title&gt;" with **Continue the walkthrough** and × (Esc inside the pill also ends it). A modal step pauses the same way on navigation, the peek or another dialog. Continue re-checks from the paused step and opens the first step not done. Help → Your first project (hint "Paused") and the palette command also continue it. A reload drops the pill; starting again resumes from data.
+- **Resume**: the start checks every action step's condition in order for the chosen project, passing params on (project key, ticket key, board id), and opens the first that does not hold. The optional status step is passed over when a later step already holds; the boards list's "How boards work" also passes over it, so a user with a project and a ticket starts at Create a board.
+- **Dismiss** (×, Esc, End walkthrough, the pill's ×) stores `tour.first-project` `Dismissed`; Done on step 7 stores `Completed`. Starting from any entry point works in either state.
 
 ### 14.5 Contextual hints
 

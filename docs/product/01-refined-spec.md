@@ -1357,12 +1357,14 @@ Empty states (`shared/ui/empty-state`) teach what the page is for, not only that
 | Boards list | How boards work | "Your first project" walkthrough, resuming at Create a board when the user already owns a project |
 | Projects list | Take the tour | "Your first project" walkthrough |
 | Test cases | Take the tour | `testcases.list` tour |
-| Regressions | Take the tour | The matching regressions tour |
+| Regressions | How regressions work | A short explainer dialog: write test cases, start a session, take and record items, turn a failure into a bug. The regressions list has no tour |
 | Dashboard | Take the tour | `project.dashboard` tour |
 | Access tokens | Connect an AI agent | Agent guide (14.8) |
 
-- Viewers see the learn action but no create action.
+- Viewers see the learn action but no create action. Their copy says what the page will hold instead of asking them to create (for example "Nothing has been planned in this project yet.").
 - The backlog empty state no longer mentions importing from Jira: there is no importer (I-48, Q-01).
+- The learn action is a secondary button after the create action. It shows only while it can start: a tour when `TourAvailability.canStart` allows it, the walkthrough while `help.tour.first-project` is registered and enabled. Until then the boards and projects lists show no learn action (D-141).
+- Filtered-empty states ("No tickets match these filters") keep only Clear filters.
 
 ### 14.8 Agent onboarding
 

@@ -29,6 +29,7 @@ import { provideIcons } from '@ng-icons/core';
 import { BoardCard } from '@core/boards/board.models';
 import { Breadcrumbs } from '@core/layout/breadcrumbs';
 import { PeekService } from '@core/layout/peek/peek';
+import { ContextualHintComponent } from '@core/onboarding/hints/contextual-hint.component';
 import { ShortcutService } from '@core/shortcuts/shortcut.service';
 import { TicketCreator } from '@core/tickets/create-ticket';
 import { ProjectPeople } from '@core/tickets/project-people';
@@ -115,6 +116,7 @@ const SKELETON_COLUMNS = [3, 2, 1, 2, 1, 1, 1, 2].map((n) =>
     BoardFiltersComponent,
     InlinePickerDirective,
     SearchPickerDirective,
+    ContextualHintComponent,
   ],
   providers: [BoardStore],
   viewProviders: [provideIcons(BOARD_ICONS)],

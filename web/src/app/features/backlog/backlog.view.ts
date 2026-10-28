@@ -38,6 +38,7 @@ import { ActivatedRoute, Params, Router } from '@angular/router';
 import { provideIcons } from '@ng-icons/core';
 import { PeekService } from '@core/layout/peek/peek';
 import { TourAnchorDirective } from '@core/onboarding/engine/tour-anchor.directive';
+import { ContextualHintComponent } from '@core/onboarding/hints/contextual-hint.component';
 import { ProjectContext } from '@core/projects/project-context';
 import { ShortcutService } from '@core/shortcuts/shortcut.service';
 import { ThemeService } from '@core/theme/theme.service';
@@ -120,6 +121,7 @@ const BULK_BAR_CLEARANCE_PX = 72;
     BacklogRowComponent,
     QuickCreateRowComponent,
     TourAnchorDirective,
+    ContextualHintComponent,
   ],
   providers: [BacklogStore],
   viewProviders: [provideIcons(BACKLOG_ICONS)],
@@ -666,6 +668,11 @@ export class BacklogView {
   }
 
   /// The virtual list needs a definite height: fill the window below the toolbar.
+  protected remeasure(): void {
+    const wrap = this.listWrap();
+    if (wrap) this.measure(wrap.nativeElement);
+  }
+
   private measure(element: HTMLElement): void {
     requestAnimationFrame(() =>
       this.listHeight.set(Math.max(240, window.innerHeight - element.getBoundingClientRect().top)),

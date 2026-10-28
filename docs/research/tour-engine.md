@@ -25,7 +25,7 @@ Tour data for the demo is in `features/ui-kit/tour-prototype.ts`. The real backl
 | `tour.model.ts` | `TourDefinition`, `TourStep`, `TourAccess`. Pure data, no Angular imports. | types only |
 | `tour-logic.ts` | Pure rules: role filter, `:param` routes, path match, skip and abort plan, spotlight hole geometry. | lazy |
 | `tour-anchor.registry.ts` | `TourAnchorRegistry`, a root service: signal list of `{ id, element }`, `get`, `has`, `whenAvailable(id, timeout)`. | root, tiny |
-| `tour-anchor.directive.ts` | `tkTourAnchor="backlog.new-ticket"`: renders `data-tour`, registers while in the DOM. | in feature chunks |
+| `tour-anchor.directive.ts` | `tkTourAnchor="backlog.quick-create"`: renders `data-tour`, registers while in the DOM. | in feature chunks |
 | `tour-launcher.ts` | `TourLauncher.start(tour, { access, params, returnFocusTo })` resolves `TourResult`. Plans the tour, then `import('./tour-session')`. | root, tiny |
 | `tour-session.ts` | One running tour: overlays, measuring, keys, interruptions. | lazy chunk |
 | `tour-spotlight.component.ts` | Full-screen SVG with a `<mask>` hole and an accent ring. | lazy chunk |
@@ -35,14 +35,14 @@ Tour data for the demo is in `features/ui-kit/tour-prototype.ts`. The real backl
 
 | Criterion | How | Verified |
 |---|---|---|
-| Spotlight on the backlog's New button, SVG mask in a CDK overlay | Overlay 1: global position strategy, transparent CDK backdrop, `tk-tour-spotlight` (fixed, `pointer-events: none`) draws `rect.dim` filled with `--tk-overlay-mask` through a `<mask>` whose black rounded rect is the hole (padding 6 px, `rx` 8). | Playwright on our own stack: New button at (1284, 56, 136×32), hole at (1278, 50, 148×44). |
-| Re-measured with ResizeObserver and on scroll | `ResizeObserver` on the anchor and on `<html>`, plus `resize` on the window and a capturing, passive `scroll` listener on the document (inner scroll containers included). Everything is throttled to one `requestAnimationFrame`. A disconnected anchor (re-render, `@if`) is looked up again through the registry. | Scrolling the UI kit's content by 40 px moved the hole from y 38 to 0 (clipped). Resizing 1440→1000 px changed the hole width from 464 to 414. |
-| Popover with `FlexibleConnectedPositionStrategy` | Overlay 2: `createFlexibleConnectedPositionStrategy(injector, anchor)` with the step's `placement` first, then below/above (start and end aligned), end, start. Uses `withPush`, an 8 px viewport margin and a reposition scroll strategy. On a step change, `setOrigin()` + `withPositions()` + `updatePosition()` reuse the same overlay. | Card at x 1100 below-end of the New button (the below-start position would overflow). |
+| Spotlight on the backlog's New button, SVG mask in a CDK overlay | Overlay 1: global position strategy, transparent CDK backdrop, `tk-tour-spotlight` (fixed, `pointer-events: none`) draws `rect.dim` filled with `--tk-overlay-mask` through a `<mask>` whose black rounded rect is the hole (padding 4 px, `rx` 8), plus a 2 px `--tk-accent` ring. | Playwright on our own stack: New button (`backlog.quick-create`) at (1284, 56, 136×32), hole at (1280, 52, 144×40). |
+| Re-measured with ResizeObserver and on scroll | `ResizeObserver` on the anchor and on `<html>`, plus `resize` on the window and a capturing, passive `scroll` listener on the document (inner scroll containers included). Everything is throttled to one `requestAnimationFrame`. A disconnected anchor (re-render, `@if`) is looked up again through the registry. | Scrolling the UI kit's content by 40 px moved the hole from y 40 to 0 (clipped). Resizing 1440→1000 px changed the hole width from 460 to 410. |
+| Popover with `FlexibleConnectedPositionStrategy` | Overlay 2: `createFlexibleConnectedPositionStrategy(injector, anchor)` with the step's `placement` first, then below/above (start and end aligned), end, start. Uses `withPush`, an 8 px viewport margin and a reposition scroll strategy. On a step change, `setOrigin()` + `withPositions()` + `updatePosition()` reuse the same overlay. | Card at x 1100, y 100: below the New button, aligned to its end (the start-aligned position would overflow). |
 | `cdkTrapFocus`, `role="dialog"` + `aria-labelledby`, "Step n of m" via `LiveAnnouncer` | Card markup as above; `aria-describedby` points at the body. The dialog takes focus on open (screen readers read title and body). Each step change calls `LiveAnnouncer.announce('Step 2 of 3: Group and sort', 'polite')`. The CDK adds the live region to `aria-owns` of `aria-modal` elements, so VoiceOver still hears it. | Vitest and Playwright: role, `aria-modal`, label text, focus inside, live region text "Step 1 of 3: Create a ticket". |
 | Esc, ← and → | `OverlayRef.keydownEvents()` of the popover (the CDK keyboard dispatcher), so keys work wherever focus is. On the last step, → does nothing: Done must be pressed. | Vitest and Playwright. |
 | Focus returns to the trigger | `returnFocusTo` (default: the element focused at start) is refocused on `completed`, `dismissed` and `aborted`, but not on `interrupted`: the peek or a dialog keeps its focus. | Vitest (`#trigger`) and Playwright (Done → `tour-demo-here` focused). |
 | Global shortcuts suppressed | No `ShortcutService` change. The spotlight overlay has a CDK backdrop, so `isOverlayOpen()` is true for the whole tour, as for any dialog. | Vitest: `c` not fired while open, fired after Esc. Playwright: `c` and `g m` did nothing during the tour; `g m` navigated after Esc. |
-| Light and dark themes | Only tokens: `--tk-surface-raised`, `--tk-border`, `--tk-shadow-lg`, `--tk-radius-lg`, `--tk-overlay-mask` (0.32 light / 0.55 dark), `--tk-focus`, `--tk-accent-fg`. | Screenshots `docs/screenshots/tkt-53-tour-step-{light,dark}.png`. |
+| Light and dark themes | Only tokens: `--tk-surface-raised`, `--tk-border`, `--tk-border-subtle`, `--tk-shadow-lg`, `--tk-radius-lg`, `--tk-overlay-mask` (0.32 light / 0.55 dark), `--tk-accent`, `--tk-text-subtle`. | Screenshots `docs/screenshots/tkt-53-tour-step-{light,dark}.png`. |
 | `prefers-reduced-motion` | The card's fade + 4 px rise, the spotlight fade and the hole's move use `--tk-duration-*`, which the tokens set to 0 ms. Scrolling the anchor into view uses `behavior: 'auto'` instead of `'smooth'`. | Playwright with `reducedMotion: 'reduce'`: animation duration `0s`. |
 | Zoneless | Signals plus `ComponentRef.setInput` and `afterNextRender`. The app and TestBed both run `provideZonelessChangeDetection()`. | All of the above ran zoneless. |
 | Initial bundle unchanged | `tour-session` and both components are one lazy chunk (12.2 kB raw). The directive and registry are a 1.2 kB chunk shared by the backlog and UI kit chunks. No tour code is reachable from `main` (checked by walking static imports). Initial total: 949.05 kB before, 949.32 kB after. The +0.27 kB is esbuild export plumbing, because the lazy launcher now imports `NavigationContext` and `PeekService` from the initial chunks. The budget (1 MB warning) is not touched. | `npm run build` on both commits. |
@@ -86,7 +86,7 @@ export const BACKLOG_TOUR: TourDefinition = {
   viewId: 'backlog.list',      // keyed by view id, never by variant (D-129)
   title: 'Backlog',
   steps: [
-    { id: 'new-ticket', anchor: 'backlog.new-ticket', requires: 'write', title: '…', body: '…' },
+    { id: 'quick-create', anchor: 'backlog.quick-create', requires: 'write', title: '…', body: '…' },
     { id: 'group-sort', anchor: 'backlog.group-sort', placement: 'below', title: '…', body: '…' },
   ],
 };
@@ -125,7 +125,7 @@ interface TourStep {
 - `tkTourAnchor="<view-area>.<thing>"` on the element; the directive renders `data-tour` and registers it in `TourAnchorRegistry`. Anchors are separate from `data-testid`: tests may change test ids freely, tours never look them up. Playwright may use `[data-tour=…]`.
 - The registry keeps a list, and the latest registration of an id wins. A peek panel over the board can expose `ticket.*` anchors while the page underneath has its own.
 - Ticket view sections added through `provideTicketDetailSection` put `tkTourAnchor` inside their own component (TKT-79).
-- **Anchor rule (D-129):** every variant of a view exposes the same tour anchor ids. A variant that drops a feature drops its anchor, and the step is skipped. Anchor ids are part of a view's contract like its view id. TKT-56 should add a Vitest per toured view that renders it and checks that the tour's anchor ids resolve. When a second variant ever exists, the same test runs over each variant.
+- **Anchor rule (D-129):** every variant of a view exposes the same tour anchor ids. A variant that drops a feature drops its anchor, and the step is skipped. Anchor ids are part of a view's contract like its view id. Spec 14.4 (TKT-75) names the guard: `e2e/tests/onboarding/tour-anchors.spec.ts` opens every tour's view with seeded data and fails when an anchor disappears, and a Vitest test checks that every tour's view id is registered. When a second variant ever exists, the e2e spec runs once per variant (force the flag).
 
 ### 4.4 Shortcuts, overlays, peek
 
@@ -138,16 +138,19 @@ interface TourStep {
 
 `TourLauncher`, `TourAnchorRegistry` and `TourAnchorDirective` are the only eager pieces: a few hundred bytes, in feature chunks or root services. The session, both components, `LiveAnnouncer` use and the positioning code load on the first `start()`. Tour definitions should be imported lazily by `GuidedTours` too (`import('./tours/backlog.tours')`), keyed by view id, so adding tours never grows `main`.
 
-## 5. Styling choices for TKT-75 (mockups)
+## 5. Look: the TKT-75 mockup, with one deviation
 
-The prototype look (screenshots above) uses only existing tokens. Proposed for the mockups:
-- Card: 320 px wide, `--tk-surface-raised`, 1 px `--tk-border`, `--tk-radius-lg` (8 px, the popover radius), `--tk-shadow-lg` (heavier than menus because it floats over a dimmed page), padding `--tk-space-4`.
-- Eyebrow row: "Step n of m" in `--tk-text-sm` medium `--tk-accent-fg` (tabular figures), and on the right `tk-kbd` hints `←` `→` `Esc`, hidden from screen readers.
-- Title `--tk-text-md` semibold; body `--tk-text-base` `--tk-text-muted`.
-- Actions: "Skip tour" (`mat-button`, muted, flush left; hidden on the last step), spacer, "Back" (`mat-stroked-button`, from step 2), "Next"/"Done" (`mat-flat-button`, accent).
-- Backdrop: `--tk-overlay-mask` (the same dim as dialogs), hole padded 6 px with radius 8 px, a 2 px `--tk-focus` ring around the hole.
-- No arrow or caret: the ring shows the target, and an arrow would need a second positioning pass when `withPush` shifts the card.
-- Motion: card fade + 4 px rise over `--tk-duration-fast`; spotlight fade and hole move over `--tk-duration-base`; all 0 under reduced motion.
+TKT-75's mockup (`docs/design/mockups/onboarding.html`, section "Tour step with spotlight") landed on the integration branch during the spike. The prototype follows it, using only existing tokens:
+- Card: 320 px, `--tk-surface-raised`, 1 px `--tk-border`, `--tk-radius-lg`, `--tk-shadow-lg`.
+- Eyebrow: "Backlog tour · Step 1 of 3" (`--tk-text-xs`, medium, `--tk-text-subtle`) and an "End tour" × button.
+- Title `--tk-text-base` semibold; body `--tk-text-base` in `--tk-text-muted`.
+- Progress dots: 6 px dots, the current one 16 px wide in `--tk-accent`. They are hidden from screen readers, because the live region says "Step n of m".
+- Actions at 28 px (`tk-dense`): "Skip tour" (text, hidden on the last step), "Back" (stroked, disabled on step 1), "Next →" / "Done" (flat, accent).
+- Key row under a `--tk-border-subtle` rule: `←` `→` move, `Esc` end, "Shortcuts paused".
+- Spotlight: page dimmed with `--tk-overlay-mask`, hole padded 4 px with an 8 px radius, 2 px `--tk-accent` ring.
+- Motion: card fade + 4 px rise over `--tk-duration-fast`, dots and spotlight over `--tk-duration-fast` / `--tk-duration-base`, all 0 under reduced motion.
+
+**Deviation: no caret.** The mockup draws a rotated-square arrow on the card. With `FlexibleConnectedPositionStrategy` and `withPush`, the card can flip sides or shift away from the anchor's centre, so a caret needs `positionChanges` handling and an offset computed from the pushed position. The spotlight ring already marks the target. TKT-56 can add the caret, or TKT-75 can drop it from the mockup. I recommend dropping it.
 
 ## 6. MCP server instructions (for TKT-59)
 

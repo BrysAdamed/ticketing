@@ -45,6 +45,15 @@ export class AccessTokensStore {
     }
   }
 
+  /// Reloads in the background (the connection check): no skeleton, and a failure keeps the list.
+  async refresh(): Promise<void> {
+    const tokens = await firstValueFrom(this.api.get<PatSummary[]>('/me/tokens')).catch(() => null);
+    if (!tokens) return;
+    this.tokens.set(tokens);
+    this.error.set(null);
+    this.status.set('loaded');
+  }
+
   /// Throws ApiError so the dialog can show field errors.
   async create(request: CreateTokenRequest): Promise<CreatedToken> {
     const created = await firstValueFrom(this.api.post<CreatedToken>('/me/tokens', request));

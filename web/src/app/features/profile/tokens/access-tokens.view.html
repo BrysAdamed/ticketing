@@ -7,6 +7,7 @@
   <button
     mat-stroked-button
     type="button"
+    #newToken
     data-testid="tokens-new"
     [disabled]="store.atLimit()"
     [matTooltip]="store.atLimit() ? 'You have 20 active tokens. Revoke one first.' : ''"
@@ -16,6 +17,14 @@
     Generate token
   </button>
 </div>
+
+@if (guideOpen()) {
+  @if (store.status() === 'loaded') {
+    <tk-connect-agent-guide (closed)="closeGuide()" />
+  } @else if (store.status() === 'loading') {
+    <div class="guide-skeleton"><tk-skeleton-rows [count]="3" /></div>
+  }
+}
 
 @if (store.status() === 'error' && store.tokens().length === 0) {
   <tk-empty-state
@@ -27,15 +36,19 @@
     <button mat-stroked-button type="button" (click)="store.load()">Retry</button>
   </tk-empty-state>
 } @else if (store.status() === 'loaded' || store.tokens().length > 0) {
-  @if (store.tokens().length === 0) {
+  @if (store.tokens().length === 0 && !guideOpen()) {
     <tk-empty-state
       icon="tablerKey"
       title="No access tokens yet"
       description="Generate one to call the API from scripts or to connect Claude Code over MCP."
     >
       <button mat-stroked-button type="button" (click)="create()">Generate token</button>
+      <button mat-button type="button" data-testid="tokens-connect-agent" (click)="openGuide()">
+        <tk-icon name="tablerPlug" [size]="14" />
+        Connect an AI agent
+      </button>
     </tk-empty-state>
-  } @else {
+  } @else if (store.tokens().length > 0) {
     <table
       mat-table
       [dataSource]="store.tokens()"

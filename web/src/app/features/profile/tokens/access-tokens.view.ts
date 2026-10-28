@@ -1,10 +1,20 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  viewChild,
+} from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltip } from '@angular/material/tooltip';
+import { ActivatedRoute, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { ConfirmService } from '@core/notify/confirm.service';
+import { CONNECT_AGENT_QUERY, isConnectAgentGuide } from '@core/onboarding/agent/connect-agent';
 import { PAT_SCOPE_LABELS } from '@shared/domain/enums';
 import { PatSummary, tokenDisplayState } from '@shared/domain/tokens';
 import { AbsoluteTimePipe, RelativeTimePipe } from '@shared/pipes/relative-time.pipe';
@@ -13,6 +23,7 @@ import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.componen
 import { IconComponent } from '@shared/ui/icon/icon.component';
 import { SkeletonRowsComponent } from '@shared/ui/skeleton/skeleton-rows.component';
 import { AccessTokensStore, CreatedToken, MAX_ACTIVE_TOKENS } from './access-tokens.store';
+import { ConnectAgentGuideComponent } from './connect-agent-guide.component';
 import { CreateTokenDialog, CreateTokenDialogData } from './create-token.dialog';
 import { TokenCreatedDialog } from './token-created.dialog';
 
@@ -26,6 +37,7 @@ import { TokenCreatedDialog } from './token-created.dialog';
     EmptyStateComponent,
     SkeletonRowsComponent,
     TokenStatusBadgeComponent,
+    ConnectAgentGuideComponent,
     RelativeTimePipe,
     AbsoluteTimePipe,
   ],
@@ -39,6 +51,14 @@ export class AccessTokensView {
   protected readonly store = inject(AccessTokensStore);
   private readonly dialog = inject(MatDialog);
   private readonly confirm = inject(ConfirmService);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  private readonly queryParams = toSignal(this.route.queryParamMap);
+  private readonly newToken = viewChild('newToken', { read: ElementRef<HTMLButtonElement> });
+
+  protected readonly guideOpen = computed(() =>
+    isConnectAgentGuide(this.queryParams()?.get('guide')),
+  );
 
   protected readonly scopeLabels = PAT_SCOPE_LABELS;
   protected readonly maxTokens = MAX_ACTIVE_TOKENS;
@@ -82,6 +102,25 @@ export class AccessTokensView {
       disableClose: true,
       autoFocus: 'first-tabbable',
     });
+  }
+
+  protected openGuide(): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: CONNECT_AGENT_QUERY,
+      queryParamsHandling: 'merge',
+    });
+  }
+
+  protected closeGuide(): void {
+    void this.router
+      .navigate([], {
+        relativeTo: this.route,
+        queryParams: { guide: null },
+        queryParamsHandling: 'merge',
+        replaceUrl: true,
+      })
+      .then(() => this.newToken()?.nativeElement.focus());
   }
 
   protected async revoke(token: PatSummary): Promise<void> {

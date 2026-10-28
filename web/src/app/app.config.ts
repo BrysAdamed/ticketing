@@ -26,6 +26,7 @@ import { provideIcons } from '@ng-icons/core';
 import { apiErrorInterceptor } from '@core/api/api-error.interceptor';
 import { AuthService } from '@core/auth/auth.service';
 import { PageTitleStrategy } from '@core/layout/page-title';
+import { provideConnectAgentHelp } from '@core/onboarding/agent/connect-agent.help';
 import { provideGettingStartedHelp } from '@core/onboarding/checklist/getting-started.help';
 import { providePeekView } from '@core/layout/peek/peek';
 import { provideGuidedTours } from '@core/onboarding/tour-availability';
@@ -66,6 +67,7 @@ export const appConfig: ApplicationConfig = {
     provideSearch(),
     provideGuidedTours(),
     provideGettingStartedHelp(),
+    provideConnectAgentHelp(),
     provideAttachments(),
     provideDocsTicketSection(),
     provideTicketCreation(() =>

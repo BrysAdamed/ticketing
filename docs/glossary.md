@@ -68,6 +68,8 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Conflict view (docs)**: What the page editor shows when my edit and a version published meanwhile change the same or touching lines: theirs and mine side by side, with Keep editing on latest, Overwrite with mine and Discard mine. Edits to different parts merge on their own (D-116). [§12.8](product/01-refined-spec.md#128-reading-and-editing-pages-web)
 
+**Connect an AI agent guide**: The three-step panel on Profile → Access tokens that walks a user through connecting Claude Code: create a token, copy the `claude mcp add` command, and a connection check that turns green once the token has been used. Opened from the Help menu, the palette, the empty tokens page and the checklist's agent items (D-139). [§14.8](product/01-refined-spec.md#148-agent-onboarding)
+
 **Container**: Where a ticket sits: its project backlog or exactly one board. Rank orders tickets within a container. [§6.4](product/01-refined-spec.md#64-backlog-and-boards), [§6.6](product/01-refined-spec.md#66-ranking)
 
 **Critical path**: In the sub-tickets graph, the longest chain of open tickets connected by `Blocks` links, counted in tickets. Links that close a cycle are ignored. [D-95](decisions.md)
@@ -215,6 +217,8 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 **Row version**: PostgreSQL `xmin` exposed as `rowVersion`, used for optimistic concurrency on every mutable aggregate. [§2](product/01-refined-spec.md#2-cross-cutting-conventions), [ADR 0005](adr/0005-postgresql-and-ef-core.md)
 
 **Scope (PAT)**: `ReadOnly` or `ReadWrite`. A token acts with its user's current permissions intersected with its scope; no token can manage tokens, passwords, users or flags. [§5.5](product/01-refined-spec.md#55-pat-scope)
+
+**Server instructions (MCP)**: The short primer on Ticketing's model that the MCP server sends every client on `initialize`: whoami first, keys, free transitions, backlog vs boards, not found for private projects, idempotency keys. One constant, mirrored verbatim in `docs/mcp.md` (D-139). [§14.8](product/01-refined-spec.md#148-agent-onboarding)
 
 **Set-password link**: One-time link an Admin hands to a user so they can set a password: valid 72 hours for a new user, 24 hours for a reset. No email is sent in v1. [§6.14](product/01-refined-spec.md#614-user-and-authentication-lifecycle-d-01)
 

@@ -694,7 +694,9 @@ Onboarding state (14.1, D-130), always the caller's own:
 - Streamable HTTP MCP endpoint at `/mcp`, hosted in the same API process. No local install. Claude Code connects with `claude mcp add --transport http ticketing https://<host>/mcp --header "Authorization: Bearer tkt_..."`.
 - Every call runs as the PAT's user with that user's permissions and channel `Mcp`.
 - `tools/list` returns only tools allowed by the token scope. Read tools carry `readOnlyHint: true`. `delete_ticket`, `delete_comment`, `unlink_tickets`, `cancel_regression_session`, `archive_board`, `delete_doc` and `delete_doc_comment` carry `destructiveHint: true` and `_meta["anthropic/requiresUserInteraction"]: true`, so Claude Code asks the user before every call even in a session that would otherwise run tools unasked (D-102). Every destructive tool carries both; an integration test on `tools/list` keeps the two sets equal.
-- The `initialize` response carries server instructions: a short primer on Ticketing's model for the agent (14.8).
+- The `initialize` response carries server instructions: a short primer on Ticketing's model for the agent (14.8). The exact text is in [docs/mcp.md](../mcp.md#server-instructions).
+- A client sends `Accept: application/json, text/event-stream` and the bearer token on every POST; the server is stateless, so no session id is kept between requests and `tools/call` works without a prior `initialize` on the same connection.
+- `LastUsedAt` of the PAT is written on its first authenticated request and then at most every 5 minutes; the connection check (14.8) and the checklist read it.
 
 ### 9.2 Conventions for all tools
 
@@ -1362,6 +1364,10 @@ Empty states (`shared/ui/empty-state`) teach what the page is for, not only that
 
 For people connecting Claude Code over MCP (section 9, TKT-59):
 
-- **Server instructions.** The MCP server returns instructions on `initialize` (`McpServerOptions.ServerInstructions`): a short primer on statuses and free transitions, backlog versus boards, ticket keys, "call `whoami` first", private projects answering not found, and idempotency keys for retries. The same text is mirrored in [docs/mcp.md](../mcp.md); an integration test asserts it is present.
-- **Connect an AI agent guide**, opened from the Help menu, the palette and the access tokens empty state. Three steps: create a PAT, copy the `claude mcp add` command (the token page's snippet), and a connection check that turns green once the PAT's `LastUsedAt` is set. The two optional checklist items (14.3) tick themselves off after a real MCP call with the PAT.
+- **Server instructions.** The MCP server returns instructions on `initialize` (`McpServerOptions.ServerInstructions`): a short primer on statuses and free transitions, backlog versus boards, ticket keys, "call `whoami` first", private projects answering not found, idempotency keys for retries, the error shape and where to read more. It costs agent context on every connection, so it stays a primer; details belong in tool descriptions. The text is one constant (`McpServerInstructions.Text`) mirrored verbatim in [docs/mcp.md](../mcp.md#server-instructions); integration tests assert that `initialize` carries it and that the docs copy matches (D-139).
+- **Connect an AI agent guide** (`help.connect-agent`), opened from the Help menu, the palette, the access tokens empty state and the checklist's two agent items. It is a panel on Profile → Access tokens (`/profile/tokens?guide=connect-agent`) with three steps:
+  1. **Create a token**: the usual Generate token dialog, name suggested ("Claude Code", or the next free "Claude Code n"). A user who already has a live token sees it named and may create another.
+  2. **Copy the command**: the `claude mcp add` command of the token page (6.12) with the new token's secret. The secret is shown only while the panel is open and the show-once dialog is skipped; without a new token the command shows `tkt_...` to replace.
+  3. **Check the connection**: turns green once the token's `LastUsedAt` is set (the token created in the guide, else a live token that was used). While waiting it re-reads the token list every 5 seconds, not while the tab is hidden, and on window focus; it stops when green or when the panel closes.
+  Opening the panel focuses its heading; closing it (×) removes the query parameter and returns focus to Generate token. The two optional checklist items (14.3) tick themselves off after a real MCP call with the PAT.
 - Onboarding state itself is not available over MCP (14.1, D-130).

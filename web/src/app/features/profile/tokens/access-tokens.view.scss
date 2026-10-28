@@ -46,3 +46,8 @@ tr.ended td {
   overflow: hidden;
   clip-path: inset(50%);
 }
+
+.guide-skeleton {
+  max-width: 760px;
+  padding: var(--tk-space-4) var(--tk-space-6) 0;
+}

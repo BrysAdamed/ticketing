@@ -14,6 +14,7 @@ import { customExpiry, EXPIRY_CHOICES, ExpiryChoice, expiryBounds } from './toke
 
 export interface CreateTokenDialogData {
   create: (request: CreateTokenRequest) => Promise<CreatedToken>;
+  name?: string;
 }
 
 @Component({
@@ -177,7 +178,7 @@ export class CreateTokenDialog {
   protected readonly dateError = signal(false);
 
   protected readonly form = inject(NonNullableFormBuilder).group({
-    name: ['', [Validators.required, Validators.maxLength(100)]],
+    name: [this.data.name ?? '', [Validators.required, Validators.maxLength(100)]],
     scope: ['ReadWrite' as PatScope],
     expiry: [90 as ExpiryChoice],
     date: [''],

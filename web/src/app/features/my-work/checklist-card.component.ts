@@ -15,6 +15,7 @@ import { RouterLink } from '@angular/router';
 import { provideIcons } from '@ng-icons/core';
 import { tablerEye, tablerRoute } from '@ng-icons/tabler-icons';
 import { HelpMenuRegistry } from '@core/help/help-menu.registry';
+import { CONNECT_AGENT_PATH, CONNECT_AGENT_QUERY } from '@core/onboarding/agent/connect-agent';
 import { canWriteSomewhere, ChecklistEntry } from '@core/onboarding/checklist/checklist.model';
 import { GettingStartedService } from '@core/onboarding/checklist/getting-started.service';
 import { ProjectDirectory } from '@core/projects/project-directory';
@@ -141,6 +142,7 @@ const FIRST_PROJECT_HELP_ID = 'help.tour.first-project';
                       class="ck-item"
                       [class.next]="checklist.next() === entry.id"
                       [routerLink]="link(entry)"
+                      [queryParams]="queryParams(entry)"
                       [attr.data-testid]="'checklist-item-' + entry.id"
                       data-done="false"
                     >
@@ -247,6 +249,12 @@ export class ChecklistCardComponent {
     void this.creator.open();
   }
 
+  protected queryParams(entry: ChecklistEntry): Record<string, string> | null {
+    return entry.id === 'agent-token' || entry.id === 'agent-connected'
+      ? CONNECT_AGENT_QUERY
+      : null;
+  }
+
   protected link(entry: ChecklistEntry): string[] {
     const backlog = (key: string | undefined) =>
       key ? ['/projects', key, 'backlog'] : ['/projects'];
@@ -271,7 +279,7 @@ export class ChecklistCardComponent {
         return ['/admin', 'agent-prompts'];
       case 'agent-token':
       case 'agent-connected':
-        return ['/profile', 'tokens'];
+        return [...CONNECT_AGENT_PATH];
       default:
         return ['/projects'];
     }

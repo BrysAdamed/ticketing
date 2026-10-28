@@ -116,7 +116,7 @@ describe('ChecklistCardComponent', () => {
       '/projects/PAY/settings',
     );
     expect(testId(element, 'checklist-item-agent-token')?.getAttribute('href')).toBe(
-      '/profile/tokens',
+      '/profile/tokens?guide=connect-agent',
     );
   });
 

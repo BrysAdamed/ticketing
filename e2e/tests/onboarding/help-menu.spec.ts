@@ -47,9 +47,15 @@ test.describe('Help menu', () => {
         await expect(items.first()).toHaveAttribute('data-testid', 'help-shortcuts');
         await expect(items.last()).toHaveAttribute('data-testid', 'help-restart-guides');
         await expect(shell.helpItem('help-shortcuts')).toBeFocused();
+        await page.keyboard.press('ArrowUp');
+        await expect(shell.helpItem('help-restart-guides')).toBeFocused();
+        await page.keyboard.press('ArrowUp');
+        await expect(shell.helpItem('help-connect-agent')).toBeFocused();
+        await page.keyboard.press('Home');
         await page.keyboard.press('ArrowDown');
         await expect(shell.helpItem('help-tour-page')).toBeDisabled();
-        await expect(shell.helpItem('help-restart-guides')).toBeFocused();
+        await expect(shell.helpItem('help-tour-page')).not.toBeFocused();
+        await expect(shell.helpItem('help-shortcuts')).not.toBeFocused();
         await page.keyboard.press('Escape');
         await expect(shell.helpMenu).toBeHidden();
         await expect(shell.helpTrigger).toBeFocused();

@@ -1324,9 +1324,9 @@ The top-bar help icon opens the **Help menu** (TKT-76). Its trigger keeps `data-
 | Connect an AI agent | Opens the agent guide (14.8). |
 | Restart all guides | Asks for confirmation, calls `DELETE /api/v1/me/onboarding/guides`, shows a toast. Always last. |
 
-- Features add items through a provider in `core/` (`provideHelpMenuItem({ id, label, icon, order, visible, run })`), so the menu never imports a feature. An item whose feature has not shipped is simply not registered.
+- Features add items through a provider in `core/` (`provideHelpMenuItem({ id, label, icon, order, visible, run })`), so the menu never imports a feature. An item whose feature has not shipped is simply not registered. `visible`, `disabled` and the trailing hint (for example "3 of 8") can be signals. Restart all guides is built into the menu, not registered, so nothing can be ordered after it (D-131).
 - The command palette has a **Help** group fed from the same registrations: `help.shortcuts`, one `help.tour.*` command per tour (`help.tour.first-project` for the walkthrough), and Restart all guides.
-- Keyboard: the menu opens from the keyboard, arrows move, `Esc` closes it and focus returns to the trigger.
+- Keyboard: the menu opens from the keyboard, arrows move, `Esc` closes it and focus returns to the trigger. Enter and Space on a focused button or link always activate it, even on pages whose `Enter` shortcut opens the focused row (D-131).
 
 ### 14.7 Empty states
 

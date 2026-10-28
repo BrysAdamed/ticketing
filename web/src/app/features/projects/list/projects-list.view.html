@@ -145,9 +145,12 @@
       icon="tablerFolders"
       title="No projects yet"
       description="Projects hold tickets, test cases and regressions."
+      [learnLabel]="learn.canStartWalkthrough() ? 'Take the tour' : null"
+      (learn)="learn.startWalkthrough()"
     >
-      <button mat-flat-button type="button" (click)="createProject()">New project</button>
-      <tk-kbd>N</tk-kbd>
+      <button mat-flat-button type="button" (click)="createProject()">
+        New project <tk-kbd tone="on-solid">N</tk-kbd>
+      </button>
     </tk-empty-state>
   }
 } @else {

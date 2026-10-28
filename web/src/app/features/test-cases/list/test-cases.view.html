@@ -100,11 +100,17 @@
         <tk-empty-state
           icon="tablerChecklist"
           title="No test cases yet"
-          description="Write the first one; Manual and Automatic cases join every regression session."
+          [description]="
+            canWrite()
+              ? 'Write the first one; Manual and Automatic cases join every regression session.'
+              : 'No test cases have been written in this project yet.'
+          "
+          [learnLabel]="learn.canStartTour('testcases.list') ? 'Take the tour' : null"
+          (learn)="learn.startTour('testcases.list')"
         >
           @if (canWrite()) {
-            <button mat-stroked-button type="button" (click)="openNew()">
-              New test case <tk-kbd>N</tk-kbd>
+            <button mat-flat-button type="button" (click)="openNew()">
+              New test case <tk-kbd tone="on-solid">N</tk-kbd>
             </button>
           }
         </tk-empty-state>

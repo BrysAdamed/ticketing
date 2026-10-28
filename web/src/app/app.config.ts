@@ -27,6 +27,7 @@ import { apiErrorInterceptor } from '@core/api/api-error.interceptor';
 import { AuthService } from '@core/auth/auth.service';
 import { PageTitleStrategy } from '@core/layout/page-title';
 import { providePeekView } from '@core/layout/peek/peek';
+import { provideGuidedTours } from '@core/onboarding/tour-availability';
 import { ShortcutService } from '@core/shortcuts/shortcut.service';
 import { ThemeService } from '@core/theme/theme.service';
 import { provideTicketCreation } from '@core/tickets/create-ticket';
@@ -62,6 +63,7 @@ export const appConfig: ApplicationConfig = {
     provideIcons(APP_ICONS),
     providePeekView(TICKET_DETAIL_VIEW),
     provideSearch(),
+    provideGuidedTours(),
     provideAttachments(),
     provideDocsTicketSection(),
     provideTicketCreation(() =>

@@ -42,8 +42,10 @@ export class HelpMenuRegistry {
     run: () => void this.restart(),
   };
 
-  /// Visible registered items in menu order, without Restart all guides.
-  readonly items = computed(() => this.ordered().filter(isHelpItemVisible));
+  /// Visible registered menu items in menu order, without Restart all guides.
+  readonly items = computed(() =>
+    this.ordered().filter((item) => item.menu !== false && isHelpItemVisible(item)),
+  );
 
   private readonly ordered = computed(() =>
     [...this.registered()].sort((a, b) => a.order - b.order),

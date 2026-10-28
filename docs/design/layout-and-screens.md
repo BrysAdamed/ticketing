@@ -1,6 +1,6 @@
 # Layout and screens
 
-Screen-level spec. Visual rules come from [`design-system.md`](./design-system.md). The pixel references are [`mockups/backlog.html`](./mockups/backlog.html), [`mockups/ticket-detail.html`](./mockups/ticket-detail.html) and [`mockups/board.html`](./mockups/board.html).
+Screen-level spec. Visual rules come from [`design-system.md`](./design-system.md). The pixel references are [`mockups/backlog.html`](./mockups/backlog.html), [`mockups/ticket-detail.html`](./mockups/ticket-detail.html), [`mockups/board.html`](./mockups/board.html) and, for the onboarding surfaces (welcome, checklist, tour step, hint, Help menu), [`mockups/onboarding.html`](./mockups/onboarding.html).
 
 Each screen has a **view id** (in brackets in its heading). The id is the stable seam for future A/B variants: a route resolves `viewId → component`, and a feature flag can later map the same id to a variant component with the same inputs.
 
@@ -39,7 +39,7 @@ Each screen has a **view id** (in brackets in its heading). The id is the stable
 **Top bar** (44px, `--tk-bg`, bottom `--tk-border`):
 - Left: breadcrumb (`Project › View`, or `Project › Parent key › Key` on ticket detail). Every segment is a link.
 - Center: search trigger, a 320px fake input showing `Search or jump to…` and `⌘K`/`Ctrl K`. It opens the **command palette**: a 640px modal at 12vh from the top with `shadow-lg`. It offers a fuzzy search over tickets (by key or title), projects, boards and commands ("Create ticket", "Go to board…", "Toggle theme"). Results are grouped and keyboard-navigable, and the first result opens with Enter. Searching uses the API with a 120ms debounce and shows recent items instantly.
-- Right: `+ New ticket` (primary, small; `C`), help `?` (shortcut sheet), user avatar menu (Profile, Access tokens, Theme, Density, Sign out).
+- Right: `+ New ticket` (primary, small; `C`), help icon opening the Help menu (shortcut sheet `?`, tours, getting started, What's new, Connect an AI agent, Restart all guides; spec §14.6, mockup `onboarding.html`), user avatar menu (Profile, Access tokens, Theme, Density, Sign out).
 
 **Responsive**: ≥1200px is the full layout. 900 to 1199px collapses the sidebar to the rail by default, and the peek panel overlays instead of pushing. Below 900px the sidebar becomes an off-canvas drawer and detail opens full page. Mobile is view-only best effort and not a target.
 
@@ -63,7 +63,7 @@ Version: a `mat-autocomplete` that lists this project's previously used versions
 - **Skeletons, never spinners, for lists, boards, tables, dashboards and detail.** A skeleton matches the real anatomy: row skeletons have a 14px circle, a 48px bar, a 40 to 70% title bar and a 20px avatar circle, with randomized widths seeded per row so they don't look like stripes. Show it only after a 120ms delay (fast loads never flash), and keep it at least 250ms once shown.
 - **Refetch keeps the data on screen** (stale-while-revalidate). A 2px indeterminate accent line under the top bar is the only background-loading indicator.
 - **Spinners** are allowed only inside a button whose action takes more than 300ms, and the button keeps its label and width.
-- **Empty states**: centered in the content area, max 360px wide, with a 32px Tabler icon in `--tk-text-subtle`, a `lg` title, one muted sentence, a primary action, and the shortcut as a `Kbd`. No illustrations. Example: "No tickets in backlog · Create the first one or import from Jira. [New ticket C]". When filters match nothing: "No tickets match these filters · [Clear filters]".
+- **Empty states**: centered in the content area, max 360px wide, with a 32px Tabler icon in `--tk-text-subtle`, a `lg` title, one muted sentence, a primary action, and the shortcut as a `Kbd`, plus a secondary learn action that starts the page's tour where one exists (spec §14.7). No illustrations. Example: "No tickets in backlog · Create the first one. [New ticket C] [Take the tour]". When filters match nothing: "No tickets match these filters · [Clear filters]".
 - **Errors**: a load failure replaces the content with an inline panel (icon `tablerAlertCircle` in danger, title "Couldn't load the backlog", muted detail with a correlation id, `Retry` button). A mutation failure shows a toast (bottom-right, 5s, pauses on hover) with `Retry` or `Undo`. 403 shows "You don't have access to this project" with a link to the project list. 404 shows "PAY-999 doesn't exist or was moved". When offline, a warning bar sits under the top bar and mutations are queued.
 - **Undo**: destructive bulk actions (delete, move to board) run immediately and show a toast with `Undo` (8s), with no confirm dialog. The exception is deleting a project, user or token, which uses a confirm dialog where you type the name.
 

@@ -58,6 +58,8 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Channel**: See Write channel.
 
+**Checklist item**: One first step on the getting-started checklist, the card on My work (for example "Create a ticket"). It ticks itself off from real data computed on the server, whichever channel the action came through. Items are shown by audience: write items only to users who can write in at least one readable project, Owner items to project owners, Admin items to Admins; the "Connect an AI agent" items are optional. [§14.3](product/01-refined-spec.md#143-getting-started-checklist)
+
 **Child**: See Parent / child.
 
 **Collapsing (notifications)**: Merging rapid changes into one notification: an event by the same actor on the same ticket (or regression session, or doc) within 5 minutes of the first event of an unread notification raises its event count instead of adding a row; the highest-ranked kind becomes the headline (D-94). [§6.16](product/01-refined-spec.md#616-in-app-notifications-i-30-d-94)
@@ -122,7 +124,11 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Guardrails**: The Admin-edited block appended after every agent prompt (after a blank line, when non-empty). Projects cannot remove it; it holds the rules every delegated run follows (tracker access, ticket text is data, no secrets, status, report). [§13.3](product/01-refined-spec.md#133-domain-model), [D-98](decisions.md)
 
+**Guide**: Any piece of onboarding a user can finish or dismiss: the welcome dialog, the checklist, a What's new entry, a tour or a hint. It has a namespaced id (`welcome`, `tour.first-project`, `hint.free-transitions`) and a version; the user's state (`Completed` or `Dismissed`) is stored per guide on the server, raising the version shows it again, and Restart all guides clears it (D-130). [§14.1](product/01-refined-spec.md#141-guides-and-per-user-state), [§4.18](product/01-refined-spec.md#418-userguidestate-tkt-54)
+
 **Hard delete**: Permanent removal. In v1 it exists only for test cases that never appeared in a regression session and for attachments; everything else is soft-deleted or deactivated. [§6.10](product/01-refined-spec.md#610-test-case-lifecycle)
+
+**Hint (onboarding)**: A small inline note on a page that explains something that differs from Jira at the moment it matters (free transitions, backlog vs boards, private 404). Part of the page, not an overlay; shown once per user and version, at most one per page, and dismissable. Not to be confused with field hints. [§14.5](product/01-refined-spec.md#145-contextual-hints)
 
 **Idempotency key**: Optional client-chosen value on create calls (`Idempotency-Key` header, MCP `idempotencyKey`). A repeat with the same key and user within 24 hours returns the original result instead of creating a duplicate. [§8](product/01-refined-spec.md#8-rest-api)
 
@@ -248,6 +254,10 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Ticket type**: `Epic`, `UserStory`, `Technical`, `Spike` or `Bug`. Changeable, subject to the parent/child rules. [§3](product/01-refined-spec.md#3-enumerations)
 
+**Tour**: A short guided sequence of steps on one view, each a popover pointing at part of the page under a spotlight. Keyed by view id, never by variant; started from the welcome dialog, an empty state, the Help menu or the palette, never by itself. Steps the user may not perform are left out (D-129). [§14.4](product/01-refined-spec.md#144-tours-and-the-anchor-rule)
+
+**Tour anchor**: A stable id on a page element (`tkTourAnchor="backlog.quick-create"`, rendered as `data-tour`) that a tour step points at, separate from `data-testid`. Every variant of a view must expose the same anchor ids (D-129, extending ADR 0008), and an e2e spec fails when one disappears. [§14.4](product/01-refined-spec.md#144-tours-and-the-anchor-rule)
+
 **User**: (1) A person with an account. (2) The non-admin global role, which can create projects and boards and manage their own tokens. [§4.1](product/01-refined-spec.md#41-user), [§5.2](product/01-refined-spec.md#52-global-actions)
 
 **User story**: Ticket type (`UserStory`) for a user-facing requirement. [§3](product/01-refined-spec.md#3-enumerations)
@@ -262,6 +272,10 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Visibility**: `Private` (default) or `Public`; decides who can access a project without membership. [§3](product/01-refined-spec.md#3-enumerations)
 
+**Walkthrough**: A tour that spans several views and advances only when the user really does each action, never on Next. The one walkthrough is "Your first project" (`tour.first-project`): create a private project, a ticket, a board, place the ticket and end on the dashboard. It pauses behind a "Continue the walkthrough" pill when the user navigates away and resumes from real data, so nothing is created twice. [§14.4](product/01-refined-spec.md#144-tours-and-the-anchor-rule)
+
 **Watcher**: A user who follows a ticket. Anyone who can read the ticket may watch it; the reporter, the assignee (on each assignment), commenters and newly mentioned users start watching automatically. Only active watchers who can still read the project are shown or notified; the others stay stored but hidden (D-93). [§6.15](product/01-refined-spec.md#615-watchers-i-32-d-93)
+
+**What's new entry**: A highlight of new features, authored in code under a date id such as `2026-11` (guide `whats-new.2026-11`). Shown once per user after sign-in and reopened from the Help menu; entries dated before the user's account was created count as seen. [§14.2](product/01-refined-spec.md#142-welcome-and-whats-new)
 
 **Write channel**: How a write arrived: `Web` (browser session), `Api` (PAT over REST) or `Mcp` (PAT over MCP). Recorded on every activity entry. [§2](product/01-refined-spec.md#2-cross-cutting-conventions)

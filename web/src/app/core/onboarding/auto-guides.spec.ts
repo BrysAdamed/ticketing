@@ -19,10 +19,10 @@ describe('AUTO_SHOWN_GUIDES', () => {
     }
   });
 
-  it('only lists welcome, What is new and hint ids at a valid version', () => {
+  it('only lists welcome, checklist, What is new and hint ids at a valid version', () => {
     // Assert
     for (const { id, version } of AUTO_SHOWN_GUIDES) {
-      expect(id).toMatch(/^(welcome|whats-new\.\d{4}-\d{2}|hint\..+)$/);
+      expect(id).toMatch(/^(welcome|checklist|whats-new\.\d{4}-\d{2}|hint\..+)$/);
       expect(Number.isInteger(version) && version >= 1 && version <= 1_000_000).toBe(true);
     }
   });

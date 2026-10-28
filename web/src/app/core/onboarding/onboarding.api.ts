@@ -21,6 +21,10 @@ export class OnboardingApi {
     });
   }
 
+  forgetGuide(guideId: string): Observable<void> {
+    return this.api.delete<void>(`${BASE}/guides/${encodeURIComponent(guideId)}`);
+  }
+
   resetGuides(): Observable<void> {
     return this.api.delete<void>(`${BASE}/guides`);
   }

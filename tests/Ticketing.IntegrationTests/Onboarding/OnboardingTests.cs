@@ -22,7 +22,7 @@ public sealed class OnboardingTests(TicketingApiFactory api)
     private readonly CancellationToken _ct = TestContext.Current.CancellationToken;
 
     [Fact]
-    public async Task A_new_user_has_no_guides_an_empty_checklist_and_their_creation_time()
+    public async Task A_new_user_has_no_guides_an_open_checklist_and_their_creation_time()
     {
         // Arrange
         var user = await api.CreateUserAsync();
@@ -33,7 +33,7 @@ public sealed class OnboardingTests(TicketingApiFactory api)
         var onboarding = await (await client.GetAsync(Onboarding, _ct)).ReadAsync<OnboardingDto>();
 
         // Assert
-        Assert.Empty(onboarding.Checklist);
+        Assert.All(onboarding.Checklist, item => Assert.False(item.Done));
         Assert.Empty(onboarding.Guides);
         Assert.False(onboarding.OwnsProjects);
         Assert.Equal(createdAt, onboarding.CreatedAt);
@@ -74,6 +74,26 @@ public sealed class OnboardingTests(TicketingApiFactory api)
         // Assert
         await response.ShouldHaveStatusAsync(HttpStatusCode.NoContent);
         Assert.Empty((await (await client.GetAsync(Onboarding, _ct)).ReadAsync<OnboardingDto>()).Guides);
+    }
+
+    [Fact]
+    public async Task Delete_of_one_guide_forgets_only_that_guide_and_is_a_no_op_when_unknown()
+    {
+        // Arrange
+        var client = await api.LoginAsync(await api.CreateUserAsync());
+        await (await PutAsync(client, "checklist", 1, GuideState.Dismissed)).ShouldHaveStatusAsync(HttpStatusCode.OK);
+        await (await PutAsync(client, "welcome", 1, GuideState.Completed)).ShouldHaveStatusAsync(HttpStatusCode.OK);
+
+        // Act
+        var forgotten = await client.DeleteAsync($"{Guides}/checklist", _ct);
+        var unknown = await client.DeleteAsync($"{Guides}/tour.backlog", _ct);
+        var invalid = await client.DeleteAsync($"{Guides}/Not_A_Guide", _ct);
+
+        // Assert
+        await forgotten.ShouldHaveStatusAsync(HttpStatusCode.NoContent);
+        await unknown.ShouldHaveStatusAsync(HttpStatusCode.NoContent);
+        await invalid.ShouldBeProblemAsync(HttpStatusCode.BadRequest, OnboardingErrors.GuideInvalid);
+        Assert.Equal("welcome", Assert.Single((await (await client.GetAsync(Onboarding, _ct)).ReadAsync<OnboardingDto>()).Guides).GuideId);
     }
 
     [Fact]
@@ -212,11 +232,13 @@ public sealed class OnboardingTests(TicketingApiFactory api)
         var get = await pat.GetAsync(Onboarding, _ct);
         var put = await PutAsync(pat, "tour.backlog", 1, GuideState.Completed);
         var delete = await pat.DeleteAsync(Guides, _ct);
+        var forget = await pat.DeleteAsync($"{Guides}/welcome", _ct);
 
         // Assert
         Assert.Equal("welcome", Assert.Single((await get.ReadAsync<OnboardingDto>()).Guides).GuideId);
         await put.ShouldBeProblemAsync(HttpStatusCode.Forbidden, scope == PatScope.ReadOnly ? AppErrors.ReadOnlyToken : AppErrors.CookieSessionRequired);
         await delete.ShouldBeProblemAsync(HttpStatusCode.Forbidden, scope == PatScope.ReadOnly ? AppErrors.ReadOnlyToken : AppErrors.CookieSessionRequired);
+        await forget.ShouldBeProblemAsync(HttpStatusCode.Forbidden, scope == PatScope.ReadOnly ? AppErrors.ReadOnlyToken : AppErrors.CookieSessionRequired);
         Assert.Equal(1, await api.WithDbAsync(db => db.UserGuideStates.CountAsync(s => s.UserId == user.Id, _ct)));
     }
 

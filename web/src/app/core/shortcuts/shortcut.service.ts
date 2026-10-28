@@ -111,6 +111,7 @@ export class ShortcutService {
     }
     const combo = comboOf(event, this.isMac);
     if (!combo) return;
+    if ((combo === 'enter' || combo === 'space') && isActivatableTarget(event.target)) return;
     const editable = isEditableTarget(event.target);
     const candidates = [...this.registry()].reverse();
 
@@ -223,6 +224,18 @@ export function normalizeKeys(keys: string): string {
 /// tools): inside it, and on the page body while it is shown (the editor listens on the document
 /// and leaves focus there), only `allowInInputs` shortcuts fire, as in a text field.
 export const OWN_KEYS_ATTR = 'data-own-keys';
+
+/// A native control that Enter or Space activates (button, link, summary, button-like input), so a
+/// page's `enter` shortcut never hijacks a focused button such as a menu trigger (D-131).
+export function isActivatableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  const tag = target.tagName;
+  if (tag === 'BUTTON' || tag === 'SUMMARY') return true;
+  if (tag === 'A') return target.hasAttribute('href');
+  if (tag !== 'INPUT') return false;
+  const type = (target as HTMLInputElement).type;
+  return ['checkbox', 'radio', 'button', 'submit', 'reset'].includes(type);
+}
 
 export function isEditableTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;

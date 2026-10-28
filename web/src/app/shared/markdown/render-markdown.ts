@@ -19,6 +19,15 @@ export interface RenderOptions {
   /// their status, doc keys links with the title on hover, `![caption](KEY)` diagram embeds, and
   /// other keys plain text. Without it every key links to its route (tickets, comments).
   references?: MarkdownReferences | null;
+  /// How a mention chip draws a user's avatar (their chosen icon and colour); without it, or when
+  /// it returns null, chips show initials on the colour hashed from the user id.
+  avatarOf?: ((userId: string) => MentionAvatar | null) | null;
+}
+
+/// A mention chip's avatar: palette index and image URL (null for initials).
+export interface MentionAvatar {
+  palette: number;
+  src: string | null;
 }
 
 export const CALLOUT_KINDS = ['note', 'tip', 'important', 'warning', 'caution'] as const;
@@ -92,7 +101,7 @@ export function renderMarkdown(
     FORBID_ATTR: ['style'],
     ALLOWED_URI_REGEXP: SAFE_URL,
   });
-  renderMentions(fragment, options.mentions);
+  renderMentions(fragment, options.mentions, options.avatarOf);
   renderCallouts(fragment);
   linkReferences(fragment, options.references);
   decorateLinks(fragment);
@@ -105,6 +114,7 @@ export function renderMarkdown(
 function renderMentions(
   root: DocumentFragment,
   mentions: Iterable<MentionUser> | null | undefined,
+  avatarOf: RenderOptions['avatarOf'],
 ) {
   const placeholders = root.querySelectorAll(`span[${MENTION_ATTR}]`);
   if (placeholders.length === 0) return;
@@ -114,12 +124,14 @@ function renderMentions(
   for (const placeholder of Array.from(placeholders)) {
     const user = users.get(placeholder.getAttribute(MENTION_ATTR) ?? '');
     placeholder.replaceWith(
-      user ? mentionChip(doc, user) : doc.createTextNode(placeholder.textContent ?? ''),
+      user
+        ? mentionChip(doc, user, avatarOf?.(user.id) ?? null)
+        : doc.createTextNode(placeholder.textContent ?? ''),
     );
   }
 }
 
-function mentionChip(doc: Document, user: MentionUser): HTMLElement {
+function mentionChip(doc: Document, user: MentionUser, chosen: MentionAvatar | null): HTMLElement {
   const id = user.id.toLowerCase();
   const chip = doc.createElement('span');
   chip.className = 'tk-mention';
@@ -127,9 +139,16 @@ function mentionChip(doc: Document, user: MentionUser): HTMLElement {
   chip.setAttribute('data-testid', `mention-${id}`);
   if (user.email) chip.title = user.email;
   const avatar = doc.createElement('span');
-  avatar.className = `tk-mention-avatar tk-palette-${paletteIndex(id)}`;
+  avatar.className = `tk-mention-avatar tk-palette-${chosen?.palette ?? paletteIndex(id)}`;
   avatar.setAttribute('aria-hidden', 'true');
-  avatar.textContent = initialsOf(user.displayName);
+  if (chosen?.src) {
+    const image = doc.createElement('img');
+    image.alt = '';
+    image.src = chosen.src;
+    avatar.appendChild(image);
+  } else {
+    avatar.textContent = initialsOf(user.displayName);
+  }
   chip.append(avatar, doc.createTextNode(user.displayName));
   return chip;
 }

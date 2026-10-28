@@ -12,6 +12,7 @@ import {
 } from '@shared/domain/password-policy';
 import { AvatarComponent } from '@shared/ui/domain/avatar.component';
 import { IconComponent } from '@shared/ui/icon/icon.component';
+import { AvatarCardComponent } from './avatar-card.component';
 import { ProfileGeneralStore } from './profile-general.store';
 
 @Component({
@@ -22,6 +23,7 @@ import { ProfileGeneralStore } from './profile-general.store';
     MatFormFieldModule,
     MatInputModule,
     AvatarComponent,
+    AvatarCardComponent,
     IconComponent,
   ],
   providers: [ProfileGeneralStore],

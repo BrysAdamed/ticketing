@@ -29,6 +29,7 @@ import { PageTitleStrategy } from '@core/layout/page-title';
 import { providePeekView } from '@core/layout/peek/peek';
 import { ShortcutService } from '@core/shortcuts/shortcut.service';
 import { ThemeService } from '@core/theme/theme.service';
+import { AvatarDirectory } from '@core/users/avatar-directory';
 import { provideTicketCreation } from '@core/tickets/create-ticket';
 import { provideTicketHeaderAction } from '@core/tickets/ticket-header-actions';
 import { provideTicketDetailSection } from '@core/tickets/ticket-sections';
@@ -36,6 +37,7 @@ import { provideAttachments } from '@features/attachments/attachments.providers'
 import { provideDocsTicketSection } from '@features/docs/docs.providers';
 import { provideSearch } from '@features/search/search.providers';
 import { TICKET_DETAIL_VIEW } from '@features/tickets/tickets.views';
+import { AVATAR_SOURCE } from '@shared/avatars/avatar-source';
 import { DIAGRAM_THEME } from '@shared/diagrams/diagram-theme.token';
 import { APP_ICONS } from '@shared/ui/icon/app-icons';
 import { PICKER_SHORTCUT_AVAILABLE } from '@shared/ui/inline-picker/picker-option';
@@ -93,6 +95,7 @@ export const appConfig: ApplicationConfig = {
       },
     },
     { provide: DIAGRAM_THEME, useFactory: () => inject(ThemeService).theme },
+    { provide: AVATAR_SOURCE, useExisting: AvatarDirectory },
     { provide: MAT_RIPPLE_GLOBAL_OPTIONS, useValue: { disabled: true } },
     {
       provide: MAT_FORM_FIELD_DEFAULT_OPTIONS,

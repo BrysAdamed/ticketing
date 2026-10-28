@@ -8,6 +8,7 @@ import { SKIP_AUTH_REDIRECT } from '../api/api-error.interceptor';
 import { SwrCache } from '../api/swr-cache';
 import { LOGIN_PATH, UnauthenticatedHandler } from '../api/unauthenticated-handler';
 import { FeatureFlagService } from '../flags/feature-flag.service';
+import { AvatarDirectory } from '../users/avatar-directory';
 import { CurrentUser, LoginRequest } from './current-user';
 
 const quiet = () => ({ context: new HttpContext().set(SKIP_AUTH_REDIRECT, true) });
@@ -20,6 +21,7 @@ export class AuthService {
   private readonly router = inject(Router);
   private readonly flags = inject(FeatureFlagService);
   private readonly cache = inject(SwrCache);
+  private readonly avatars = inject(AvatarDirectory);
 
   private readonly user = signal<CurrentUser | null>(null);
 
@@ -36,6 +38,7 @@ export class AuthService {
       await firstValueFrom(this.api.get<void>('/auth/csrf', undefined, quiet()));
       const user = await firstValueFrom(this.api.get<CurrentUser>('/me', undefined, quiet()));
       this.user.set(user);
+      void this.avatars.load();
       await this.flags.load();
     } catch {
       this.user.set(null);
@@ -46,6 +49,7 @@ export class AuthService {
     const user = await firstValueFrom(this.api.post<CurrentUser>('/auth/login', request, quiet()));
     this.cache.clear();
     this.user.set(user);
+    void this.avatars.load();
     await this.flags.load();
     return user;
   }
@@ -69,5 +73,6 @@ export class AuthService {
     this.user.set(null);
     this.flags.clear();
     this.cache.clear();
+    this.avatars.clear();
   }
 }

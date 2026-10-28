@@ -37,6 +37,7 @@ import { MatTooltip } from '@angular/material/tooltip';
 import { ActivatedRoute, Params, Router } from '@angular/router';
 import { provideIcons } from '@ng-icons/core';
 import { PeekService } from '@core/layout/peek/peek';
+import { TourAnchorDirective } from '@core/onboarding/engine/tour-anchor.directive';
 import { ProjectContext } from '@core/projects/project-context';
 import { ShortcutService } from '@core/shortcuts/shortcut.service';
 import { ThemeService } from '@core/theme/theme.service';
@@ -118,6 +119,7 @@ const BULK_BAR_CLEARANCE_PX = 72;
     BacklogFiltersComponent,
     BacklogRowComponent,
     QuickCreateRowComponent,
+    TourAnchorDirective,
   ],
   providers: [BacklogStore],
   viewProviders: [provideIcons(BACKLOG_ICONS)],

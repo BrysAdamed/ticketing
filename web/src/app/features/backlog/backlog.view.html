@@ -15,6 +15,7 @@
         mat-stroked-button
         type="button"
         data-testid="backlog-new"
+        tkTourAnchor="backlog.new-ticket"
         (click)="store.openCreate(null)"
       >
         <tk-icon class="btn-icon" name="tablerPlus" [size]="14" />New ticket<tk-kbd class="btn-kbd"
@@ -35,7 +36,7 @@
     (labelsOpened)="loadLabelOptions()"
     (versionsOpened)="loadVersionOptions()"
   />
-  <span class="right">
+  <span class="right" tkTourAnchor="backlog.group-sort">
     <button type="button" class="tbtn" [matMenuTriggerFor]="groupMenu" data-testid="group-by">
       <tk-icon name="tablerLayersSubtract" [size]="14" />Group: <b>{{ groupLabel() }}</b>
     </button>
@@ -140,6 +141,7 @@
       role="grid"
       aria-label="Backlog"
       data-testid="backlog-list"
+      tkTourAnchor="backlog.list"
       cdkDropList
       cdkDropListSortingDisabled
       [cdkDropListDisabled]="!store.canDrag()"

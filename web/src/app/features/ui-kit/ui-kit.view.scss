@@ -62,3 +62,8 @@ h2 {
   gap: 16px;
   align-items: start;
 }
+
+.muted {
+  font-size: var(--tk-text-sm);
+  color: var(--tk-text-muted);
+}

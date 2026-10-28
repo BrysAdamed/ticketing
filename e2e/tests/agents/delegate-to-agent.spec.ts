@@ -1,3 +1,4 @@
+import { TICKET_TOUR } from '@onboarding/tours/ticket.tours';
 import { DelegatePage } from '../../pages/delegate.page';
 import { ShellPage } from '../../pages/shell.page';
 import { TicketPage } from '../../pages/ticket.page';
@@ -107,6 +108,43 @@ test.describe('delegate to agent', () => {
             'href',
             `/projects/${projectKey}/settings/agent`,
         );
+    });
+
+    test('with the flag on the ticket tour ends on the Delegate button', async ({
+        page,
+        api,
+        shell,
+    }) => {
+        // Arrange
+        await setFlag(api, true);
+        const { ticketKey } = await seed(api);
+        const ticket = new TicketPage(page);
+        const delegate = new DelegatePage(page, ticket.root);
+        const popover = page.getByTestId('tour-popover');
+        const steps = TICKET_TOUR.steps;
+        await ticket.goto(ticketKey);
+        await expect(delegate.button).toBeVisible();
+
+        // Act: start the tour from the Help menu and walk it with →
+        await shell.openHelp();
+        await shell.helpItem('help-tour-page').click();
+        for (let i = 1; i < steps.length; i++) {
+            await expect(popover.getByTestId('tour-step-count')).toContainText(`Step ${i} of`);
+            await page.keyboard.press('ArrowRight');
+        }
+
+        // Assert
+        await expect(popover.getByTestId('tour-step-count')).toHaveText(
+            `Ticket tour · Step ${steps.length} of ${steps.length}`,
+        );
+        await expect(popover.getByRole('heading')).toHaveText(steps[steps.length - 1].title);
+        await expect(ticket.root.locator('[data-tour="ticket.delegate"]')).toBeVisible();
+
+        // Act
+        await page.keyboard.press('Escape');
+
+        // Assert
+        await expect(popover).toBeHidden();
     });
 
     test('first use asks for the folder, launches Claude Code with the resolved prompt and records the delegation', async ({

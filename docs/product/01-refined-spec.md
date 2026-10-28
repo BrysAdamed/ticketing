@@ -1302,13 +1302,19 @@ Rules of the walkthrough:
 
 A **hint** is a small inline note shown at the moment of likely confusion. It is part of the page (a `shared/ui` component), not an overlay, so it never suppresses shortcuts or fights a tour. It has a dismiss button that records `hint.<id>` `Dismissed`; Restart all guides brings it back.
 
-| Hint | Where and when |
-| --- | --- |
-| `hint.free-transitions` | The first status change on the board or in the status picker: any status can move to any status (6.2, D-05). |
-| `hint.backlog-vs-boards` | The backlog and its "on boards" placement: a ticket lives in its backlog or on one board (6.4). |
-| `hint.private-404` | The not-found page: private projects you cannot read look as if they do not exist (5.1). |
+| Hint | Where and when | Write hint |
+| --- | --- | --- |
+| `hint.free-transitions` | Where statuses change: above the columns of a board that has cards, and under the options of every status picker (board, backlog row, ticket view). Any status can move to any status; there is no workflow to configure (6.2, D-05). | Yes: hidden from users who cannot write to any project on the board, and from archived boards |
+| `hint.backlog-vs-boards` | The backlog, under its toolbar: a ticket lives in its backlog or on one board; tickets on a board leave the list and are counted under "on boards" (6.4). | No |
+| `hint.private-404` | The not-found page and the project not-found state: private projects you cannot read look as if they do not exist (5.1). | No |
 
-Rules: each hint is shown at most once per user and version, never while a tour step or a dialog is open, and at most one hint per page. Hints that describe a write action are hidden from users who cannot write there.
+Rules (D-135):
+
+- A hint shows until the user dismisses it ("Got it", or × in a picker), which records `hint.<id>` `Dismissed` at the hint's version. Raising the version in code shows it again; Restart all guides brings every hint back.
+- Nothing shows until the onboarding state has loaded (14.1). No hint shows while a tour runs, or while a dialog, menu or picker with a backdrop covers the page; a hint inside a picker is covered only by overlays other than its own picker.
+- At most one hint is on screen: of the hints placed on the page, the first one registered that is unseen, allowed and not covered wins. Opening a status picker on the backlog therefore swaps the backlog hint for the picker's hint until the picker closes.
+- Hints are inline (`role="note"`), never focus-stealing; the dismiss button is a normal button in the tab order. A hint in a picker is dismissed with the mouse, since Tab closes the picker.
+- Copy lives in `core/onboarding/guides/hints.ts` with stable ids (I-60). Hints are listed in `AUTO_SHOWN_GUIDES`, so the e2e suites mark them seen (D-132).
 
 ### 14.6 Help menu and palette Help group
 

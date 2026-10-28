@@ -123,3 +123,31 @@
   margin-left: auto;
   color: var(--tk-accent-fg);
 }
+
+.tk-icon-btn.on {
+  background: var(--tk-bg-active);
+  color: var(--tk-text);
+}
+
+.help-item {
+  tk-icon {
+    color: var(--tk-text-muted);
+  }
+
+  &[disabled] tk-icon {
+    color: var(--tk-text-disabled);
+  }
+}
+
+.help-label {
+  flex: 1;
+}
+
+.help-hint,
+.help-keys {
+  display: inline-flex;
+  gap: 2px;
+  align-items: center;
+  color: var(--tk-text-subtle);
+  font-size: var(--tk-text-xs);
+}

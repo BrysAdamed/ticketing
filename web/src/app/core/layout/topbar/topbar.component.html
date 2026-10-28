@@ -53,13 +53,49 @@
   <button
     type="button"
     class="tk-icon-btn"
-    aria-label="Keyboard shortcuts"
-    matTooltip="Keyboard shortcuts  ?"
+    aria-label="Help"
+    matTooltip="Help"
     data-testid="shortcut-help"
-    (click)="actions.showShortcuts()"
+    [class.on]="helpTrigger.menuOpen"
+    [matMenuTriggerFor]="helpMenu"
+    #helpTrigger="matMenuTrigger"
   >
     <tk-icon name="tablerHelp" />
   </button>
+  <mat-menu #helpMenu="matMenu" xPosition="before" class="tk-help-menu" aria-label="Help">
+    @for (item of help.items(); track item.id) {
+      <button
+        mat-menu-item
+        class="help-item"
+        [disabled]="item.disabled?.() ?? false"
+        [attr.data-testid]="helpTestId(item)"
+        (click)="item.run()"
+      >
+        <tk-icon [name]="item.icon" />
+        <span class="help-label">{{ item.label }}</span>
+        @if (item.hint?.(); as hint) {
+          <span class="help-hint">{{ hint }}</span>
+        }
+        @if (item.shortcut) {
+          <span class="help-keys">
+            @for (step of shortcuts.format(item.shortcut); track $index) {
+              <tk-kbd>{{ step }}</tk-kbd>
+            }
+          </span>
+        }
+      </button>
+    }
+    <hr class="divider" />
+    <button
+      mat-menu-item
+      class="help-item"
+      [attr.data-testid]="helpTestId(help.restartGuides)"
+      (click)="help.restartGuides.run()"
+    >
+      <tk-icon [name]="help.restartGuides.icon" />
+      <span class="help-label">{{ help.restartGuides.label }}</span>
+    </button>
+  </mat-menu>
   @if (auth.currentUser(); as user) {
     <button
       type="button"

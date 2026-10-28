@@ -9,13 +9,14 @@ import { KbdComponent } from '@shared/ui/kbd/kbd.component';
 import { AuthService } from '../../auth/auth.service';
 import { CommandPaletteService } from '../../commands/command-palette.service';
 import { CommandRegistry } from '../../commands/command-registry';
+import { helpItemTestId } from '../../help/help-menu';
+import { HelpMenuRegistry } from '../../help/help-menu.registry';
 import { NotificationBellComponent } from '../../notifications/notification-bell.component';
 import { OpenProjectState } from '../../projects/open-project';
 import { ProjectDirectory } from '../../projects/project-directory';
 import { ShortcutService } from '../../shortcuts/shortcut.service';
 import { ThemeService } from '../../theme/theme.service';
 import { Breadcrumbs } from '../breadcrumbs';
-import { ShellActions } from '../shell-actions';
 
 export const CREATE_TICKET_COMMAND = 'ticket.create';
 
@@ -40,12 +41,12 @@ export class TopbarComponent {
   protected readonly auth = inject(AuthService);
   protected readonly theme = inject(ThemeService);
   protected readonly palette = inject(CommandPaletteService);
-  protected readonly actions = inject(ShellActions);
+  protected readonly help = inject(HelpMenuRegistry);
   private readonly breadcrumbs = inject(Breadcrumbs);
   private readonly directory = inject(ProjectDirectory);
   private readonly openProject = inject(OpenProjectState);
   private readonly commands = inject(CommandRegistry);
-  private readonly shortcuts = inject(ShortcutService);
+  protected readonly shortcuts = inject(ShortcutService);
 
   protected readonly themeOptions = [
     { value: 'light', label: 'Light', icon: 'tablerSun' },
@@ -67,6 +68,8 @@ export class TopbarComponent {
           : (this.directory.byKey(crumb.projectKey)?.name ?? crumb.label),
     }));
   });
+
+  protected readonly helpTestId = helpItemTestId;
 
   protected runCreateTicket(): void {
     this.commands.run(CREATE_TICKET_COMMAND);

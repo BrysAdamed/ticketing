@@ -925,6 +925,18 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
 - Rejected: a `user_preferences` key/value (or JSONB) table (untyped, every reader parses, and per-key validation ends up in code anyway); columns on `users` (one migration per guide); `localStorage` (does not follow the user); exposing the state over MCP (no agent use, and writes would need a PAT exception).
 - Rationale: one small typed table answers every onboarding question with an index lookup, and the server needs no release when the SPA adds a guide.
 
+### D-131 Help menu items are registrations in `core/help/`, Restart all guides is built in, and Enter on a focused button is never a shortcut (TKT-76)
+
+- Question: the Help menu (spec 14.6) gets items from features that ship later (tours, checklist, What's new, Connect an AI agent) and must not import them. How do they register, how do the menu and the palette stay in step, how is "Restart all guides is always last" kept, and how does the menu open from the keyboard on pages whose `enter` shortcut opens the focused row?
+- Decision:
+  - **One registry for the menu and the palette.** `HelpMenuRegistry` (`core/help/`) holds `HelpMenuItem { id, label, icon, order, shortcut?, keywords?, hint?, visible?, disabled?, run }`. `visible`, `disabled` and `hint` are plain functions, so a signal or `computed` (for example "this view has a tour") works as is. Features add items with `provideHelpMenuItem(item | () => item)` in app or route providers (removed with the injector) or `register(item, destroyRef)`. The id doubles as the palette command id (`help.shortcuts`, `help.tour.<viewId>`) and, with dots as dashes, as the menu item's `data-testid` (`help-shortcuts`).
+  - **Menu order is `order` ascending** (`HELP_MENU_ORDER` lists the spec's positions); equal orders keep registration order. The registry mirrors every registration into `CommandRegistry` as the **Help** group, re-registering the whole group on each change so it stays in menu order and after the groups registered before it. A hidden or disabled item is left out of the palette; a disabled item stays in the menu, greyed.
+  - **Restart all guides is not a registration.** The registry owns it (confirm → `OnboardingStateService.resetAll()` → success toast; a failed reset already shows an error toast), the menu draws it after a divider, and the palette lists it last, so no registration can be ordered after it.
+  - **`ShortcutService` ignores unmodified Enter and Space on a focused native button, link with `href`, `summary` or button-like input.** My work, the backlog, the board, search and test cases register `enter` to open the row under their virtual cursor; it swallowed Enter on every focused button, so the Help menu (and the user menu) could not be opened from the keyboard there. A focused control now gets its native activation; the virtual cursor still opens with Enter when focus is on the page.
+  - **Item icons are app-wide** (`APP_ICONS`): the menu and the palette live in the shell, so a feature's own `provideIcons` would not reach them.
+- Rejected: an `InjectionToken` multi-provider read by the menu (no removal when a lazy route goes away, and the palette would need a second reader); a "last" flag or `Infinity` order on registrations (any feature could take the last slot); keeping `help.shortcuts` in the Preferences group.
+- Rationale: tours, the checklist, What's new and the agent guide (TKT-55, 56, 58, 59, 80) each add one provider call, and the menu and palette cannot drift apart.
+
 ## Product owner answers (v1 review, 2026-10-27)
 
 These were open questions (Q-01..Q-05); the product owner resolved them as follows.

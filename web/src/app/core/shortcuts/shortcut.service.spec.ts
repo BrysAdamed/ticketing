@@ -84,6 +84,30 @@ describe('ShortcutService', () => {
     input.remove();
   });
 
+  it('leaves Enter and Space on a focused button or link to the control', () => {
+    // Arrange
+    const button = document.createElement('button');
+    const link = document.createElement('a');
+    link.href = '#';
+    document.body.append(button, link);
+    const calls: string[] = [];
+    service.register({ keys: 'enter', description: 'open', handler: () => calls.push('enter') });
+    service.register({ keys: 'space', description: 'select', handler: () => calls.push('space') });
+    service.register({ keys: 'j', description: 'next', handler: () => calls.push('j') });
+
+    // Act
+    press('Enter', {}, button);
+    press(' ', {}, button);
+    press('Enter', {}, link);
+    press('j', {}, button);
+    press('Enter');
+
+    // Assert
+    expect(calls).toEqual(['j', 'enter']);
+    button.remove();
+    link.remove();
+  });
+
   it('leaves the keys inside an element that owns its keyboard, and on the body while it is shown, to it', () => {
     // Arrange
     const owner = document.createElement('div');

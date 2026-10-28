@@ -18,6 +18,7 @@ import { TourAccess, TourDefinition } from './engine/tour.model';
 import { storedTourState, tourAccess } from './guided-tours.logic';
 import { OnboardingStateService } from './onboarding-state.service';
 import { TourAvailability } from './tour-availability';
+import { ViewTourAccess } from './view-tour-access';
 
 const VIEW_TIMEOUT_MS = 8000;
 const ANCHOR_TIMEOUT_MS = 4000;
@@ -46,6 +47,7 @@ export class GuidedTours {
   private readonly launcher = inject(TourLauncher);
   private readonly anchors = inject(TourAnchorRegistry);
   private readonly availability = inject(TourAvailability);
+  private readonly viewAccess = inject(ViewTourAccess);
 
   /// Id of the running tour, or null.
   readonly running = this.launcher.running;
@@ -76,7 +78,7 @@ export class GuidedTours {
     }
     const tour = await definition;
     const result = await this.launcher.start(tour, {
-      access: this.access(),
+      access: this.access(viewId),
       params,
       returnFocusTo: options.returnFocusTo,
     });
@@ -86,8 +88,11 @@ export class GuidedTours {
     return result;
   }
 
-  private access(): TourAccess {
-    return tourAccess(this.openProject.project(), this.auth.isAdmin());
+  /// The access the view reports (D-136), else the open project's role.
+  private access(viewId: string): TourAccess {
+    return (
+      this.viewAccess.get(viewId) ?? tourAccess(this.openProject.project(), this.auth.isAdmin())
+    );
   }
 
   private async open(
@@ -108,7 +113,7 @@ export class GuidedTours {
   /// After opening a view, waits until its first step the user may see has its anchor (the view
   /// loads its data first) and one more render for the others.
   private async anchorsReady(tour: TourDefinition): Promise<void> {
-    const access = this.access();
+    const access = this.access(tour.viewId);
     const first = tour.steps.find((step) => isAllowed(step, access));
     if (!first) return;
     await this.anchors.whenAvailable(first.anchor, ANCHOR_TIMEOUT_MS);

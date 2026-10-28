@@ -14,6 +14,7 @@ import {
   input,
   output,
   signal,
+  TemplateRef,
 } from '@angular/core';
 import { InlinePickerPanelComponent } from './inline-picker-panel.component';
 import { PickerOption, PickerOptionTemplate } from './picker-option';
@@ -45,6 +46,8 @@ export class InlinePickerDirective<T> {
   readonly pickerDisabled = input(false);
   /// Loads the options when the picker opens (instead of the bound list), e.g. boards to move to.
   readonly pickerLoad = input<(() => Promise<readonly PickerOption<T>[]>) | null>(null);
+  /// Rendered under the options, for example a contextual hint.
+  readonly pickerFooter = input<TemplateRef<unknown> | null>(null);
 
   readonly picked = output<T>();
 
@@ -96,6 +99,7 @@ export class InlinePickerDirective<T> {
     panel.setInput('placeholder', this.pickerPlaceholder());
     panel.setInput('shortcut', this.pickerShortcut());
     panel.setInput('optionTemplate', this.pickerOptionTemplate());
+    panel.setInput('footer', this.pickerFooter());
     panel.instance.picked.subscribe((value) => {
       this.close();
       this.picked.emit(value);

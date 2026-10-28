@@ -37,11 +37,15 @@
   }
 }
 
+.page-hint,
+.archived {
+  margin: 0 20px 8px 24px;
+}
+
 .archived {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 0 20px 8px 24px;
 
   button {
     margin-left: auto;

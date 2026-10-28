@@ -12,6 +12,7 @@ import { RouterLink, RouterOutlet } from '@angular/router';
 import { provideIcons } from '@ng-icons/core';
 import { tablerArchive } from '@ng-icons/tabler-icons';
 import { ToastService } from '@core/notify/toast.service';
+import { ContextualHintComponent } from '@core/onboarding/hints/contextual-hint.component';
 import { BOARDS_NOT_RELINKED, ProjectContext } from '@core/projects/project-context';
 import { ProjectDirectory } from '@core/projects/project-directory';
 import { AbsoluteTimePipe } from '@shared/pipes/relative-time.pipe';
@@ -33,6 +34,7 @@ import { ProjectLayoutStore } from './project-layout.store';
     EmptyStateComponent,
     SkeletonRowsComponent,
     AbsoluteTimePipe,
+    ContextualHintComponent,
   ],
   providers: [ProjectContext, ProjectLayoutStore],
   viewProviders: [provideIcons({ tablerArchive })],
@@ -48,6 +50,7 @@ import { ProjectLayoutStore } from './project-layout.store';
       >
         <a mat-stroked-button routerLink="/projects">All projects</a>
       </tk-empty-state>
+      <tk-contextual-hint class="not-found-hint" hint="hint.private-404" />
     } @else if (context.status() === 'error') {
       <tk-empty-state
         icon="tablerAlertCircle"
@@ -106,6 +109,11 @@ import { ProjectLayoutStore } from './project-layout.store';
     }
     .loading {
       padding: 56px 0 0;
+    }
+    .not-found-hint {
+      max-width: 480px;
+      margin: -32px auto 0;
+      padding: 0 16px;
     }
   `,
 })

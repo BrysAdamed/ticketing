@@ -7,6 +7,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { MatTooltip } from '@angular/material/tooltip';
+import { ContextualHintComponent } from '@core/onboarding/hints/contextual-hint.component';
 import { BacklogItem, BacklogParent, UserRef } from '@core/tickets/ticket.models';
 import {
   Priority,
@@ -64,6 +65,7 @@ export type RowEdit =
     InlinePickerDirective,
     LabelsPickerDirective,
     SearchPickerDirective,
+    ContextualHintComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
@@ -137,11 +139,15 @@ export type RowEdit =
       pickerShortcut="S"
       [attr.aria-label]="'Status: ' + statusLabel()"
       data-testid="row-status"
+      [pickerFooter]="statusHint"
       (click)="$event.stopPropagation()"
       (picked)="edit.emit({ field: 'status', value: $event })"
     >
       <tk-status-icon [status]="item().status" />
     </button>
+    <ng-template #statusHint>
+      <tk-contextual-hint hint="hint.free-transitions" compact />
+    </ng-template>
     <span class="title" data-testid="row-title">{{ item().title }}</span>
     @if (
       item().severity === 'Critical' || item().severity === 'Blocker' || item().severity === 'Major'

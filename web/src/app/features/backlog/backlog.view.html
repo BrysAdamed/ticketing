@@ -91,6 +91,10 @@
   </div>
 }
 
+@if (store.hasData()) {
+  <tk-contextual-hint class="page-hint" hint="hint.backlog-vs-boards" (shownChange)="remeasure()" />
+}
+
 @if (store.status() === 'error' && !store.hasData()) {
   <tk-empty-state
     icon="tablerAlertCircle"

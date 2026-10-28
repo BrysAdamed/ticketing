@@ -79,6 +79,14 @@
     </div>
   }
 
+  @if (!board.archivedAt && store.totalCount() > 0) {
+    <tk-contextual-hint
+      class="page-hint"
+      hint="hint.free-transitions"
+      [canWrite]="store.canAddTickets()"
+    />
+  }
+
   <div class="tk-toolbar">
     <tk-board-filters
       [filters]="store.filters()"
@@ -301,8 +309,12 @@
       [pickerValue]="focusedStatus()"
       pickerPlaceholder="Change status…"
       pickerShortcut="S"
+      [pickerFooter]="statusHint"
       (picked)="pickStatus($event)"
     ></button>
+    <ng-template #statusHint>
+      <tk-contextual-hint hint="hint.free-transitions" compact />
+    </ng-template>
     <button
       type="button"
       tabindex="-1"

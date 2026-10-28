@@ -8,6 +8,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { MatTooltip } from '@angular/material/tooltip';
+import { ContextualHintComponent } from '@core/onboarding/hints/contextual-hint.component';
 import { FieldHints } from '@core/tickets/field-hints';
 import { MoveTarget, MoveTargets } from '@core/tickets/move-targets';
 import { ProjectPeople } from '@core/tickets/project-people';
@@ -83,6 +84,7 @@ const RESOLUTION_OPTIONS: PickerOption<Resolution>[] = RESOLUTIONS.map((r) => ({
     KbdComponent,
     LabelsPickerDirective,
     SearchPickerDirective,
+    ContextualHintComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '[class.grid]': 'layout() === "grid"' },
@@ -113,10 +115,14 @@ const RESOLUTION_OPTIONS: PickerOption<Resolution>[] = RESOLUTIONS.map((r) => ({
           [pickerValue]="t.status"
           pickerPlaceholder="Change status…"
           pickerShortcut="S"
+          [pickerFooter]="statusHint"
           (picked)="setStatus($event)"
         >
           <tk-status-icon [status]="t.status" />{{ statusLabels[t.status] }}
         </button>
+        <ng-template #statusHint>
+          <tk-contextual-hint hint="hint.free-transitions" compact />
+        </ng-template>
       </div>
       @if (t.status === 'Done') {
         <div class="field">

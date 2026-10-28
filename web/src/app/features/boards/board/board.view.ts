@@ -13,6 +13,7 @@ import {
   computed,
   effect,
   inject,
+  Injector,
   input,
   signal,
   untracked,
@@ -29,7 +30,9 @@ import { provideIcons } from '@ng-icons/core';
 import { BoardCard } from '@core/boards/board.models';
 import { Breadcrumbs } from '@core/layout/breadcrumbs';
 import { PeekService } from '@core/layout/peek/peek';
+import { TourAnchorDirective } from '@core/onboarding/engine/tour-anchor.directive';
 import { ContextualHintComponent } from '@core/onboarding/hints/contextual-hint.component';
+import { ViewTourAccess } from '@core/onboarding/view-tour-access';
 import { ShortcutService } from '@core/shortcuts/shortcut.service';
 import { TicketCreator } from '@core/tickets/create-ticket';
 import { ProjectPeople } from '@core/tickets/project-people';
@@ -56,6 +59,7 @@ import { InlinePickerDirective } from '@shared/ui/inline-picker/inline-picker.di
 import { SearchPickerDirective } from '@shared/ui/search-picker/search-picker.directive';
 import { filter } from 'rxjs';
 import { BOARD_ICONS } from '../board-icons';
+import { BOARD_VIEW } from '../boards.views';
 import { AddTicketsDialog, AddTicketsDialogData } from './add-tickets.dialog';
 import { BoardCardComponent } from './board-card.component';
 import { BoardFiltersComponent } from './board-filters.component';
@@ -117,6 +121,7 @@ const SKELETON_COLUMNS = [3, 2, 1, 2, 1, 1, 1, 2].map((n) =>
     InlinePickerDirective,
     SearchPickerDirective,
     ContextualHintComponent,
+    TourAnchorDirective,
   ],
   providers: [BoardStore],
   viewProviders: [provideIcons(BOARD_ICONS)],
@@ -135,6 +140,7 @@ export class BoardView {
   private readonly creator = inject(TicketCreator);
   private readonly breadcrumbs = inject(Breadcrumbs);
   private readonly people = inject(ProjectPeople);
+  private readonly injector = inject(Injector);
 
   readonly boardId = input.required<string>();
 
@@ -193,6 +199,8 @@ export class BoardView {
   private lastDropAt = 0;
 
   constructor() {
+    inject(ViewTourAccess).provide(BOARD_VIEW.viewId, () => this.store.tourAccess());
+
     effect(() => {
       const id = this.boardId();
       untracked(() => {
@@ -323,6 +331,11 @@ export class BoardView {
         showInHelp: false,
       },
     ]);
+  }
+
+  protected async startTour(): Promise<void> {
+    const { GuidedTours } = await import('@core/onboarding/guided-tours');
+    await this.injector.get(GuidedTours).start(BOARD_VIEW.viewId);
   }
 
   protected pickStatus(status: TicketStatus): void {

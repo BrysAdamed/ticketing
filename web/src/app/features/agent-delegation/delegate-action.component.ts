@@ -27,6 +27,7 @@ import {
 import { ExternalUrlLauncher } from '@core/agent/launch-external-url';
 import { toApiError } from '@core/api/api-error';
 import { ToastService } from '@core/notify/toast.service';
+import { TourAnchorDirective } from '@core/onboarding/engine/tour-anchor.directive';
 import { ShortcutService } from '@core/shortcuts/shortcut.service';
 import { TicketEvents } from '@core/tickets/ticket-events';
 import { TicketHeaderHost, TicketMenuItem } from '@core/tickets/ticket-header-actions';
@@ -55,6 +56,7 @@ const LAUNCH_TOAST_MS = 10_000;
     MatTooltip,
     RouterLink,
     IconComponent,
+    TourAnchorDirective,
   ],
   providers: [DelegateActionStore],
   changeDetection: ChangeDetectionStrategy.OnPush,

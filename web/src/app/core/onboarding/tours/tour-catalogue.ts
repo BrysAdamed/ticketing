@@ -20,6 +20,16 @@ export const TOUR_CATALOGUE: readonly TourCatalogueEntry[] = [
     path: '/projects/:projectKey/backlog',
     load: () => import('./backlog.tours').then((m) => m.BACKLOG_TOUR),
   },
+  {
+    viewId: 'board.kanban',
+    title: 'Board',
+    load: () => import('./board.tours').then((m) => m.BOARD_TOUR),
+  },
+  {
+    viewId: 'ticket.detail',
+    title: 'Ticket',
+    load: () => import('./ticket.tours').then((m) => m.TICKET_TOUR),
+  },
 ];
 
 /// Guide id stored in the onboarding state for the tour of a view.

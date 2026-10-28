@@ -29,9 +29,13 @@ export class Api {
     }
 
     /// A helper signed in as another user through `/auth/login` (for example to seed what only
-    /// the user may change, such as `PATCH /me`).
+    /// the user may change, such as `PATCH /me`). It starts without cookies: the project's admin
+    /// storage state would otherwise be sent, and signing in ends the session a request carries.
     static async signIn(email: string, password: string): Promise<Api> {
-        const context = await request.newContext({ baseURL: BASE_URL });
+        const context = await request.newContext({
+            baseURL: BASE_URL,
+            storageState: { cookies: [], origins: [] },
+        });
         const api = new Api(context);
         await api.refreshXsrf();
         await api.post('/auth/login', { email, password });

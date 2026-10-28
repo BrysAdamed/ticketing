@@ -306,7 +306,7 @@ $tk-bp-xl: 1600px;
   --tk-palette-6-fg: var(--tk-teal-fg);
   --tk-palette-7-fg: var(--tk-cyan-fg);
   --tk-tint-avatar: 20%;
-  // Hairline edge so light icons (chick, bee) stay distinct on the amber and orange tints
+  // Hairline edge so avatar icons stay distinct on same-hue tints (chick on amber, bee on orange)
   --tk-avatar-icon-filter: drop-shadow(0 0 0.5px rgb(0 0 0 / 0.4));
 }
 
@@ -343,7 +343,7 @@ $tk-bp-xl: 1600px;
   --tk-tint-bg: 16%;
   --tk-tint-border: 32%;
   --tk-tint-avatar: 28%;
-  --tk-avatar-icon-filter: none;
+  --tk-avatar-icon-filter: drop-shadow(0 0 0.5px rgb(255 255 255 / 0.45));
 
   --tk-bg: var(--tk-gray-925);
   --tk-bg-sidebar: var(--tk-gray-950);

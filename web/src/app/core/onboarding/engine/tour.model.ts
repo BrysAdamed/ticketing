@@ -22,7 +22,7 @@ export type TourPlacement = 'below' | 'above' | 'start' | 'end';
 
 /// A guided tour of one view, keyed by view id rather than variant (D-129).
 export interface TourDefinition {
-  /// Guide id stored in the onboarding state (`tour.backlog`).
+  /// Guide id stored in the onboarding state (`tour.backlog.list`, `GUIDE_ID_PATTERN`).
   readonly id: string;
   /// Raising it shows the tour again to users who completed an older version.
   readonly version: number;

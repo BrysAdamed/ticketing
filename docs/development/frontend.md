@@ -40,7 +40,8 @@ web/src/
       testing/          test case and regression wire types, TestCasesApi, RegressionsApi
       notifications/    NotificationsApi, NotificationCenter (unread count polling, panel state), top bar bell + panel
       theme/            ThemeService (light / dark / system, density)
-      onboarding/       engine/: guided tours (TourLauncher, TourAnchorRegistry, tkTourAnchor; session lazy-loaded), D-129
+      onboarding/       OnboardingStateService (D-130); engine/: guided tours (TourLauncher, TourAnchorRegistry,
+                        tkTourAnchor; the session is a lazy chunk, D-129)
     shared/             presentational UI kit, domain enums, markdown, pipes. Never imports core or features.
     features/<name>/    one folder per feature: <name>.routes.ts, <name>.views.ts, <page>/<page>.store.ts + <page>.view.ts
 ```
@@ -131,6 +132,7 @@ Inside project sections, `inject(ProjectContext)` gives the current project (`pr
 | Breadcrumbs | `data: { breadcrumb: 'Backlog' }` or `(route) => ({ label, projectKey })` on routes. Pages can call `Breadcrumbs.setTail([...])` for dynamic crumbs. |
 | Theme | `ThemeService.setPreference('light' \| 'dark' \| 'system')`, `toggle()`, `setDensity('compact')`. Stored in localStorage (`tk-theme`, `tk-density`) and applied as `data-theme` / `data-density` on `<html>` before Angular boots. |
 | Notifications | `NotificationCenter` (`core/notifications/`): `unreadCount()` for the top bar bell, polled every 60 s and on window focus while signed in (no push), and the panel state (`open/close/toggle`, `filter` all \| unread, `groups()` by day, `loadMore()`). `markRead(n)` / `markAllRead()` are optimistic with rollback and a toast; `activate(n)` marks read and opens the ticket peek (or navigates to a regression item). REST calls go through `NotificationsApi` (`/me/notifications`). |
+| Onboarding state | `OnboardingStateService` (`core/onboarding/`, D-130): loads `GET /me/onboarding` after the first render while signed in. `loaded()` (wait for it before auto-showing a guide), `isSeen(guideId, version)` (stored version >= `version`), `complete` / `dismiss(guideId, version)` and `resetAll()` (optimistic with rollback and a toast), `checklist()`, `ownsProjects()`, `createdAt()` (What's new entries dated before it count as seen), `load()` to refresh. Guide ids must match `GUIDE_ID_PATTERN`. REST calls go through `OnboardingApi`. |
 
 Built-in shortcuts: `Ctrl/⌘ K` and `/` open the palette, `?` opens the shortcut sheet, `[` toggles the sidebar, `C` creates a ticket (once registered). With `G` then a letter: `M` My work, `P` Projects, `O` Boards, `N` notifications panel, and, inside a project, `D` dashboard, `B` backlog, `T` test cases, `R` regressions, `W` docs. `Esc` closes the notifications panel, then the peek panel. In the Docs section `Ctrl/⌘ \` shows or hides the tree and `Ctrl/⌘ .` / `Ctrl/⌘ Shift .` copy the open doc's key / link (D-120). Shifted symbols are written with the unshifted key (`mod+shift+.`); `ShortcutService` matches them by `event.code`.
 

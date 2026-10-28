@@ -81,7 +81,7 @@ Tours are pure data in `core/onboarding/tours/<view>.tours.ts` (no Angular impor
 
 ```ts
 export const BACKLOG_TOUR: TourDefinition = {
-  id: 'tour.backlog',          // guide id in user_guide_state
+  id: 'tour.backlog.list',     // guide id in user_guide_state (GUIDE_ID_PATTERN, D-130)
   version: 1,                  // raise to show it again
   viewId: 'backlog.list',      // keyed by view id, never by variant (D-129)
   title: 'Backlog',
@@ -115,7 +115,7 @@ interface TourStep {
 
 - `TourLauncher.start(tour, { access, params, returnFocusTo })` returns `Promise<TourResult>`: `completed`, `dismissed`, `aborted` or `interrupted`. TKT-56 wraps it in a `GuidedTours` service in `core/onboarding/` that:
   - builds `access` from `ProjectContext.canWrite()`/`isOwner()` and `AuthService.isAdmin()`;
-  - stores `completed` and `dismissed` through the onboarding-state API (TKT-54), but not `aborted` or `interrupted`;
+  - stores `completed` and `dismissed` with `OnboardingStateService.complete` / `dismiss(tour.id, tour.version)` (TKT-54, D-130), but not `aborted` or `interrupted`, and uses `isSeen(id, version)` to decide whether an entry point shows the tour as new;
   - picks the tour for `NavigationContext.currentViewId()`. That signal does not exist yet: TKT-56 adds it, reading `routeConfig.data[VIEW_ID_DATA_KEY]`, which `viewRoute` already sets, from the deepest activated route. Peek is ignored, because the peek is closed before a tour starts.
 - Entry points (TKT-76 Help menu "Tour of this page", `help.tour.*` palette commands, empty states) call `GuidedTours`. A Help-menu item should pass the menu's trigger button as `returnFocusTo`, because the menu item it was started from is gone by then.
 - Rules in `planTour`: role filter first, then anchors on the current route. Missing anchors are skipped (dev-mode `console.warn`). If fewer than half of the current route's anchors resolve, or nothing is left, the tour is `aborted` silently. Steps on other routes are checked when reached.

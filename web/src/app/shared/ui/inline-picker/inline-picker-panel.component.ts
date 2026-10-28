@@ -9,6 +9,7 @@ import {
   input,
   output,
   signal,
+  TemplateRef,
   viewChild,
 } from '@angular/core';
 import { SeverityBadgeComponent } from '../domain/domain-badges';
@@ -120,6 +121,9 @@ let nextPanelId = 0;
         <div class="empty">No matches</div>
       }
     </div>
+    @if (footer(); as footer) {
+      <ng-container [ngTemplateOutlet]="footer" />
+    }
   `,
   styles: `
     :host {
@@ -209,6 +213,7 @@ export class InlinePickerPanelComponent<T> {
   readonly placeholder = input('Filter…');
   readonly shortcut = input<string | null>(null);
   readonly optionTemplate = input<PickerOptionTemplate<T> | null>(null);
+  readonly footer = input<TemplateRef<unknown> | null>(null);
 
   readonly picked = output<T>();
   readonly dismissed = output<void>();

@@ -1,9 +1,9 @@
 import { Browser, Page as BrowserPage } from '@playwright/test';
 import { DocPagePage } from '../../pages/doc-page.page';
-import { LoginPage } from '../../pages/login.page';
 import { ShellPage } from '../../pages/shell.page';
 import { Api } from '../../support/api';
 import { expect, test } from '../../support/fixtures';
+import { signInAs } from '../../support/session';
 import { PASSWORD, seedUser } from '../identity/identity';
 
 interface Doc {
@@ -24,14 +24,13 @@ function createTicket(api: Api, projectKey: string, title: string) {
     return api.post<Ticket>(`/projects/${projectKey}/tickets`, { title, type: 'UserStory' });
 }
 
-async function signInAs(browser: Browser, email: string): Promise<BrowserPage> {
-    const context = await browser.newContext({
-        storageState: { cookies: [], origins: [] },
-        viewport: { width: 1440, height: 900 },
-    });
-    const page = await context.newPage();
-    await page.goto('/login');
-    await new LoginPage(page).signIn(email, PASSWORD);
+async function signInMember(browser: Browser, email: string): Promise<BrowserPage> {
+    const { page } = await signInAs(
+        browser,
+        { email, password: PASSWORD },
+        { contextOptions: { viewport: { width: 1440, height: 900 } } },
+    );
+    await page.goto('/my-work');
     await new ShellPage(page).expectVisible();
     return page;
 }
@@ -129,7 +128,7 @@ test.describe('doc links', () => {
             content: `Mentions ${hidden.key}.\n\n![Topology](${topology.key})`,
         });
         const outsider = await seedUser(api, 'outsider');
-        const page = await signInAs(browser, outsider.email);
+        const page = await signInMember(browser, outsider.email);
         const view = new DocPagePage(page);
 
         // Act

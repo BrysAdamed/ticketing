@@ -1206,7 +1206,7 @@ New users should reach their first real action quickly and learn what differs fr
 - **Only the welcome dialog and What's new open by themselves.** Tours start only from the welcome dialog, an empty state, the Help menu or the command palette. Hints (14.5) appear inline on their page and never cover it.
 - At most one auto-shown guide opens per sign-in: the welcome dialog when it is due, otherwise a due What's new entry.
 - Copy (titles, bodies, button labels) lives in data files with stable ids, so i18n (I-60) can extract it mechanically.
-- End-to-end suites mark the auto-shown guides as `Completed` for the users they sign in, through the same `PUT` endpoint, with the list of auto-shown ids taken from the SPA's own data files; onboarding specs opt out (TKT-77).
+- End-to-end suites mark the auto-shown guides as `Completed` for the users they sign in, through the same `PUT` endpoint, with the list of auto-shown ids taken from the SPA's own data files (`AUTO_SHOWN_GUIDES`); onboarding specs opt out (TKT-77, D-132). Every guide that opens or appears by itself must be in that list.
 
 ### 14.2 Welcome and What's new
 

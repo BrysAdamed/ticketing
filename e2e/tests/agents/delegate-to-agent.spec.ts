@@ -1,10 +1,10 @@
 import { DelegatePage } from '../../pages/delegate.page';
-import { LoginPage } from '../../pages/login.page';
 import { ShellPage } from '../../pages/shell.page';
 import { TicketPage } from '../../pages/ticket.page';
 import { Api } from '../../support/api';
 import { ADMIN_STORAGE_STATE } from '../../support/env';
 import { expect, test } from '../../support/fixtures';
+import { signInAs } from '../../support/session';
 import { PASSWORD, seedUser } from '../identity/identity';
 
 const FLAG = 'agent.delegate';
@@ -277,8 +277,10 @@ test.describe('delegate to agent', () => {
             visibility: 'Public',
         });
         const outsiderComment = `From outside ${Date.now()}`;
-        const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
-        const page = await context.newPage();
+        const { context, page } = await signInAs(browser, {
+            email: viewer.email,
+            password: PASSWORD,
+        });
         await DelegatePage.stubLaunches(page);
         await page.addInitScript(
             ([key]) =>
@@ -288,8 +290,7 @@ test.describe('delegate to agent', () => {
                 ),
             [publicKey],
         );
-        await page.goto('/login');
-        await new LoginPage(page).signIn(viewer.email, PASSWORD);
+        await page.goto('/my-work');
         await new ShellPage(page).expectVisible();
         const ticket = new TicketPage(page);
         const delegate = new DelegatePage(page, ticket.root);
@@ -350,10 +351,11 @@ test.describe('delegate to agent', () => {
             })
         ).key;
         await api.post(`/tickets/${ticketKey}/links`, { targetKey: linked, type: 'RelatesTo' });
-        const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
-        const page = await context.newPage();
-        await page.goto('/login');
-        await new LoginPage(page).signIn(outsider.email, PASSWORD);
+        const { context, page } = await signInAs(browser, {
+            email: outsider.email,
+            password: PASSWORD,
+        });
+        await page.goto('/my-work');
         await new ShellPage(page).expectVisible();
         const linkedPage = new TicketPage(page);
         await linkedPage.goto(linked);

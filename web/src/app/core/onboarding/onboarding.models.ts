@@ -1,5 +1,11 @@
 export type GuideState = 'Completed' | 'Dismissed';
 
+/// A guide authored in code: its id and current version. Raising the version shows it again.
+export interface GuideRef {
+  readonly id: string;
+  readonly version: number;
+}
+
 /// The version of a guide the user completed or dismissed.
 export interface GuideProgress {
   guideId: string;

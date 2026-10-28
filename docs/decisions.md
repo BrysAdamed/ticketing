@@ -937,6 +937,18 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
 - Rejected: an `InjectionToken` multi-provider read by the menu (no removal when a lazy route goes away, and the palette would need a second reader); a "last" flag or `Infinity` order on registrations (any feature could take the last slot); keeping `help.shortcuts` in the Preferences group.
 - Rationale: tours, the checklist, What's new and the agent guide (TKT-55, 56, 58, 59, 80) each add one provider call, and the menu and palette cannot drift apart.
 
+### D-132 E2E suites mark auto-shown guides seen through the API before the SPA loads, from the SPA's own guide list (TKT-77)
+
+- Question: the welcome dialog, What's new and hints appear by themselves, steal focus and suppress shortcuts. Every e2e spec that signs a user in would meet them, including the bootstrap Admin of a fresh test stack, whom the D-130 backfill does not cover. How do the suites stay clear of them without copying guide ids, and without racing the SPA?
+- Decision:
+  - **One list, in the SPA.** `web/src/app/core/onboarding/auto-guides.ts` exports `AUTO_SHOWN_GUIDES` (`{ id, version }[]`) built from data files under `core/onboarding/guides/`: `welcome.ts`, `whats-new.ts` (`WHATS_NEW_ENTRIES`) and `hints.ts` (`HINTS`). These files and `onboarding.models.ts` are plain TypeScript with no Angular imports and only relative imports, so e2e can load them. A guide that shows by itself is added to one of these files; the e2e guard picks it up with no change.
+  - **E2E imports SPA data through one alias.** `e2e/tsconfig.json` maps `@onboarding/*` to `../web/src/app/core/onboarding/*`; Playwright honours tsconfig `paths`. Tour definitions (`core/onboarding/tours/`, spec 14.4) are imported the same way.
+  - **Mark before the SPA loads.** `e2e/support/session.ts` `signInAs(browser, { email, password }, { keepGuides?, contextOptions? })` opens a fresh browser context, signs in with `POST /auth/login` on `context.request` (which shares the context's cookies) and PUTs `Completed` for every auto-shown guide (`e2e/support/guides.ts` `markGuidesSeen`) before any page opens, so no dialog can appear first. Specs that signed a seeded user in through the login form now use it; the login form stays covered by the smoke and identity specs. `global.setup.ts` marks the bootstrap Admin right after its sign-in, before the storage state is saved. A user who must go through the login page (the set-password journey) is marked with `markGuidesSeenAs`, a throwaway API session.
+  - **Opt in to keep guides.** Onboarding specs pass `{ keepGuides: true }` (or simply skip `markGuidesSeen`); the guard is the default.
+  - **Demo users are left alone.** The demo seeder (D-85) creates users after the migration has run, so they have no `welcome` row and are welcomed on first sign-in, like any new real user. That is what a demo should show.
+- Rejected: copying the ids into e2e (a new What's new entry would silently break the suite); marking guides after a login through the form (races the SPA's first render, and an extra API login per user would eat into the 20-per-minute login rate limit shared by the parallel workers); a server-side switch or seeded rows for test stacks (production code paths for tests).
+- Rationale: the SPA owns which guides exist, so the list that keeps the suite clear is the same list that shows the guides; signing in through the API is both race-free and cheaper than the form.
+
 ## Product owner answers (v1 review, 2026-10-27)
 
 These were open questions (Q-01..Q-05); the product owner resolved them as follows.

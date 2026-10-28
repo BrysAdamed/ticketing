@@ -13,6 +13,7 @@
       <a
         mat-stroked-button
         data-testid="search-export"
+        tkTourAnchor="search.export"
         download
         [href]="store.exportUrl()"
         [class.disabled]="!store.items().length"
@@ -29,7 +30,7 @@
   <tk-doc-search />
 } @else {
   <div class="query">
-    <label class="qbox">
+    <label class="qbox" tkTourAnchor="search.text">
       <tk-icon name="tablerSearch" [size]="16" />
       <input
         #textInput
@@ -51,11 +52,12 @@
 
   <div class="tk-toolbar filters">
     <tk-search-filter-bar
+      tkTourAnchor="search.filters"
       [filters]="store.filters()"
       [users]="resultUsers()"
       (filtersChange)="setFilters($event)"
     />
-    <span class="right">
+    <span class="right" tkTourAnchor="search.sort">
       <button type="button" class="tbtn" [matMenuTriggerFor]="sortMenu" data-testid="search-sort">
         Sort: <b>{{ sortLabel() }}</b>
       </button>
@@ -113,6 +115,7 @@
       <tk-empty-state
         icon="tablerSearch"
         title="No tickets match"
+        tkTourAnchor="search.results"
         description="Try fewer filters or other words."
       >
         <button mat-stroked-button type="button" data-testid="search-clear" (click)="clearAll()">
@@ -123,6 +126,7 @@
       <tk-empty-state
         icon="tablerInbox"
         title="No tickets yet"
+        tkTourAnchor="search.results"
         description="Tickets from every project you can read show up here."
       />
     }
@@ -130,6 +134,7 @@
     <div
       #listWrap
       class="list-wrap"
+      tkTourAnchor="search.results"
       [class.stale]="store.status() === 'loading'"
       [style.height.px]="listHeight()"
     >

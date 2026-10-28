@@ -28,6 +28,7 @@ import {
   tablerSortDescending,
 } from '@ng-icons/tabler-icons';
 import { PEEK_QUERY_PARAM, PeekService } from '@core/layout/peek/peek';
+import { TourAnchorDirective } from '@core/onboarding/engine/tour-anchor.directive';
 import { ProjectDirectory } from '@core/projects/project-directory';
 import { ShortcutService } from '@core/shortcuts/shortcut.service';
 import { ThemeService } from '@core/theme/theme.service';
@@ -67,6 +68,7 @@ const PREFETCH_DELAY_MS = 150;
 @Component({
   selector: 'tk-search-view',
   imports: [
+    TourAnchorDirective,
     CdkVirtualScrollViewport,
     CdkFixedSizeVirtualScroll,
     CdkVirtualForOf,

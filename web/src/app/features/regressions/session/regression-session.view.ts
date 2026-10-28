@@ -19,6 +19,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { provideIcons } from '@ng-icons/core';
 import { tablerPlayerTrackNext, tablerRotate, tablerUserCheck } from '@ng-icons/tabler-icons';
 import { ConfirmService } from '@core/notify/confirm.service';
+import { TourAnchorDirective } from '@core/onboarding/engine/tour-anchor.directive';
 import { ShortcutService } from '@core/shortcuts/shortcut.service';
 import { RegressionItem } from '@core/testing/testing.models';
 import { ProjectPeople } from '@core/tickets/project-people';
@@ -56,6 +57,7 @@ const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(naviga
 @Component({
   selector: 'tk-regression-session-view',
   imports: [
+    TourAnchorDirective,
     MatButtonModule,
     MatCheckbox,
     MatMenuModule,

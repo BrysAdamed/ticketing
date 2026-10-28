@@ -18,6 +18,7 @@ import { TourAccess, TourDefinition } from './engine/tour.model';
 import { storedTourState, tourAccess } from './guided-tours.logic';
 import { OnboardingStateService } from './onboarding-state.service';
 import { TourAvailability } from './tour-availability';
+import { pathNeedsProject } from './tours/tour-catalogue';
 
 const VIEW_TIMEOUT_MS = 8000;
 const ANCHOR_TIMEOUT_MS = 4000;
@@ -68,9 +69,12 @@ export class GuidedTours {
     const definition = entry.load();
     const params: Record<string, string> = {};
     if (this.navigation.currentViewId() !== viewId) {
-      const projectKey = options.projectKey ?? this.availability.targetProject();
-      if (!entry.path || !projectKey) return null;
-      params['projectKey'] = projectKey;
+      if (!entry.path) return null;
+      if (pathNeedsProject(entry.path)) {
+        const projectKey = options.projectKey ?? this.availability.targetProject();
+        if (!projectKey) return null;
+        params['projectKey'] = projectKey;
+      }
       if (!(await this.open(entry.path, params, viewId))) return null;
       await this.anchorsReady(await definition);
     }

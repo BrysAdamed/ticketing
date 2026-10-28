@@ -1,6 +1,7 @@
 import { DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { TourAnchorDirective } from '@core/onboarding/engine/tour-anchor.directive';
 import { DashboardLink, DashboardLinks } from '../dashboard-links';
 import { ProjectDashboard } from '../dashboard.model';
 import { percent } from '../dashboard-widgets';
@@ -17,13 +18,14 @@ interface Tile {
 /// the link to the search that produces its number.
 @Component({
   selector: 'tk-kpi-tiles',
-  imports: [RouterLink, DecimalPipe],
+  imports: [RouterLink, DecimalPipe, TourAnchorDirective],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (data(); as d) {
       @for (tile of tiles(); track tile.id) {
         <a
           class="tile"
+          [tkTourAnchor]="$first ? 'dashboard.count-link' : null"
           [routerLink]="tile.link.path"
           [queryParams]="tile.link.query"
           [attr.data-testid]="'kpi-' + tile.id"

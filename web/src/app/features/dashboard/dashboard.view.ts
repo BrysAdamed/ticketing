@@ -9,6 +9,7 @@ import {
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { TourAnchorDirective } from '@core/onboarding/engine/tour-anchor.directive';
 import { TicketCreator } from '@core/tickets/create-ticket';
 import { RelativeTimePipe } from '@shared/pipes/relative-time.pipe';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
@@ -38,7 +39,9 @@ import { DashboardTicketListComponent } from './widgets/ticket-list.component';
 import { VersionFilterComponent } from './widgets/version-filter.component';
 
 /// Project dashboard (spec §7, layout-and-screens §3.5): KPI row, then the widget grid. The
-/// version filter lives in the URL (`?version=`), so a filtered dashboard can be shared.
+/// version filter lives in the URL (`?version=`), so a filtered dashboard can be shared. An empty
+/// project shows the empty state above the toured widgets at zero (totals, status, created vs
+/// resolved, epic progress), so the dashboard tour runs there too (D-137).
 @Component({
   selector: 'tk-dashboard-view',
   imports: [
@@ -58,6 +61,7 @@ import { VersionFilterComponent } from './widgets/version-filter.component';
     StatusDistributionComponent,
     TestCasesWidgetComponent,
     VersionFilterComponent,
+    TourAnchorDirective,
   ],
   providers: [DashboardStore],
   changeDetection: ChangeDetectionStrategy.OnPush,

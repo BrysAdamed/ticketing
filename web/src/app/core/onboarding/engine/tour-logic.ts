@@ -1,4 +1,4 @@
-import { TourAccess, TourDefinition, TourStep } from './tour.model';
+import { TourAccess, TourDefinition, TourRequirement, TourStep } from './tour.model';
 
 export interface TourPlan {
   /// Steps to show, in order.
@@ -18,7 +18,14 @@ export interface Box {
 }
 
 export function isAllowed(step: TourStep, access: TourAccess): boolean {
-  switch (step.requires) {
+  return meetsRequirement(step.requires, access);
+}
+
+export function meetsRequirement(
+  requires: TourRequirement | undefined,
+  access: TourAccess,
+): boolean {
+  switch (requires) {
     case 'write':
       return access.canWrite;
     case 'owner':

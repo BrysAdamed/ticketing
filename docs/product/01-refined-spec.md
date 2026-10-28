@@ -681,10 +681,10 @@ Onboarding state (14.1, D-130), always the caller's own:
 | Method and path | Purpose |
 | --- | --- |
 | `GET /api/v1/me/onboarding` | `{ checklist, guides, ownsProjects, createdAt }` in one round trip: the checklist items visible to the caller with their done state (14.3), the caller's guide states (`guideId`, `version`, `state`, `updatedAt`), whether the caller owns a project, and the caller's account creation time (for What's new, 14.2). p95 under 50 ms on the performance dataset. |
-| `PUT /api/v1/me/onboarding/guides/{guideId}` | `{ version, state }`: records `Completed` or `Dismissed` for one guide, replacing an earlier row. `onboarding.guide.invalid`, `onboarding.guide.limit`. |
-| `DELETE /api/v1/me/onboarding/guides` | Deletes all the caller's guide states (Restart all guides, 14.6). |
+| `PUT /api/v1/me/onboarding/guides/{guideId}` | `{ version, state }` (`version` 1 to 1 000 000): records `Completed` or `Dismissed` for one guide, replacing an earlier row, and returns the stored `{ guideId, version, state, updatedAt }` (200). The server stores the version as sent and does not know which ids exist; it only checks their shape. `onboarding.guide.invalid` (400), `onboarding.guide.limit` (409, only for a new id), `validation` for a missing or out-of-range field. |
+| `DELETE /api/v1/me/onboarding/guides` | Deletes all the caller's guide states, `welcome` included (Restart all guides, 14.6). 204. |
 
-`PUT` and `DELETE` accept the cookie session only, like `PATCH /me`; a PAT gets 403 `auth.cookieSessionRequired`. There are no MCP tools for onboarding state (9.3).
+`GET` accepts any credential (cookie or PAT, read-only included). `PUT` and `DELETE` accept the cookie session only, like `PATCH /me`; a ReadWrite PAT gets 403 `auth.cookieSessionRequired`, a ReadOnly PAT 403 `pat.readOnlyScope`. There are no MCP tools for onboarding state (9.3).
 
 ## 9. MCP server
 

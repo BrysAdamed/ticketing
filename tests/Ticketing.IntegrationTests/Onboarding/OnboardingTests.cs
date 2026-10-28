@@ -77,6 +77,26 @@ public sealed class OnboardingTests(TicketingApiFactory api)
     }
 
     [Fact]
+    public async Task Delete_of_one_guide_forgets_only_that_guide_and_is_a_no_op_when_unknown()
+    {
+        // Arrange
+        var client = await api.LoginAsync(await api.CreateUserAsync());
+        await (await PutAsync(client, "checklist", 1, GuideState.Dismissed)).ShouldHaveStatusAsync(HttpStatusCode.OK);
+        await (await PutAsync(client, "welcome", 1, GuideState.Completed)).ShouldHaveStatusAsync(HttpStatusCode.OK);
+
+        // Act
+        var forgotten = await client.DeleteAsync($"{Guides}/checklist", _ct);
+        var unknown = await client.DeleteAsync($"{Guides}/tour.backlog", _ct);
+        var invalid = await client.DeleteAsync($"{Guides}/Not_A_Guide", _ct);
+
+        // Assert
+        await forgotten.ShouldHaveStatusAsync(HttpStatusCode.NoContent);
+        await unknown.ShouldHaveStatusAsync(HttpStatusCode.NoContent);
+        await invalid.ShouldBeProblemAsync(HttpStatusCode.BadRequest, OnboardingErrors.GuideInvalid);
+        Assert.Equal("welcome", Assert.Single((await (await client.GetAsync(Onboarding, _ct)).ReadAsync<OnboardingDto>()).Guides).GuideId);
+    }
+
+    [Fact]
     public async Task Owns_projects_is_true_only_for_owners_of_an_active_project()
     {
         // Arrange
@@ -212,11 +232,13 @@ public sealed class OnboardingTests(TicketingApiFactory api)
         var get = await pat.GetAsync(Onboarding, _ct);
         var put = await PutAsync(pat, "tour.backlog", 1, GuideState.Completed);
         var delete = await pat.DeleteAsync(Guides, _ct);
+        var forget = await pat.DeleteAsync($"{Guides}/welcome", _ct);
 
         // Assert
         Assert.Equal("welcome", Assert.Single((await get.ReadAsync<OnboardingDto>()).Guides).GuideId);
         await put.ShouldBeProblemAsync(HttpStatusCode.Forbidden, scope == PatScope.ReadOnly ? AppErrors.ReadOnlyToken : AppErrors.CookieSessionRequired);
         await delete.ShouldBeProblemAsync(HttpStatusCode.Forbidden, scope == PatScope.ReadOnly ? AppErrors.ReadOnlyToken : AppErrors.CookieSessionRequired);
+        await forget.ShouldBeProblemAsync(HttpStatusCode.Forbidden, scope == PatScope.ReadOnly ? AppErrors.ReadOnlyToken : AppErrors.CookieSessionRequired);
         Assert.Equal(1, await api.WithDbAsync(db => db.UserGuideStates.CountAsync(s => s.UserId == user.Id, _ct)));
     }
 

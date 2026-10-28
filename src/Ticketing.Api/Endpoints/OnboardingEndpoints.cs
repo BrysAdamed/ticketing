@@ -22,6 +22,16 @@ public sealed class OnboardingEndpoints : IEndpointModule
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status409Conflict);
 
+        onboarding.MapDelete("/guides/{guideId}", async (string guideId, ForgetGuide.Handler handler, CancellationToken ct) =>
+            {
+                await handler.HandleAsync(new ForgetGuide.Command(guideId), ct);
+                return TypedResults.NoContent();
+            })
+            .RequireCookieSession()
+            .WithSummary("Forgets one guide you completed or dismissed, so it shows again (web session only).")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden);
+
         onboarding.MapDelete("/guides", async (ResetMyGuides.Handler handler, CancellationToken ct) =>
             {
                 await handler.HandleAsync(new ResetMyGuides.Command(), ct);

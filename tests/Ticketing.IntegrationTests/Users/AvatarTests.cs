@@ -65,7 +65,7 @@ public sealed class AvatarTests(TicketingApiFactory api)
     }
 
     [Theory]
-    [InlineData("unicorn", null, "avatarIcon", UserErrors.AvatarUnknown)]
+    [InlineData("dodo", null, "avatarIcon", UserErrors.AvatarUnknown)]
     [InlineData("Cat", null, "avatarIcon", UserErrors.AvatarUnknown)]
     [InlineData(null, "magenta", "avatarColor", UserErrors.AvatarColorUnknown)]
     [InlineData(null, "3", "avatarColor", UserErrors.AvatarColorUnknown)]
@@ -134,14 +134,14 @@ public sealed class AvatarTests(TicketingApiFactory api)
         // Arrange
         var admin = await api.LoginAsync(await api.CreateUserAsync(GlobalRole.Admin));
         var user = await api.CreateUserAsync();
-        await (await api.LoginAsync(user)).PatchAsJsonAsync("/api/v1/me", new { avatarIcon = "deer", avatarColor = "amber" }, _ct);
+        await (await api.LoginAsync(user)).PatchAsJsonAsync("/api/v1/me", new { avatarIcon = "fox", avatarColor = "amber" }, _ct);
 
         // Act
         await (await admin.PostAsync($"/api/v1/admin/users/{user.Id}/deactivate", null, _ct)).ShouldHaveStatusAsync(HttpStatusCode.OK);
         var directory = await DirectoryAsync(admin);
 
         // Assert
-        Assert.Equal(new UserAvatarDto(user.Id, "deer", "amber"), directory.Single(a => a.Id == user.Id));
+        Assert.Equal(new UserAvatarDto(user.Id, "fox", "amber"), directory.Single(a => a.Id == user.Id));
     }
 
     [Fact]
@@ -172,7 +172,7 @@ public sealed class AvatarTests(TicketingApiFactory api)
     {
         // Arrange
         var user = await api.CreateUserAsync(displayName: "Avatar Mcp");
-        await (await api.LoginAsync(user)).PatchAsJsonAsync("/api/v1/me", new { avatarIcon = "bat", avatarColor = "cyan" }, _ct);
+        await (await api.LoginAsync(user)).PatchAsJsonAsync("/api/v1/me", new { avatarIcon = "owl", avatarColor = "cyan" }, _ct);
         await using var mcp = await api.CreateMcpClientAsync(await api.CreatePatAsync(user, PatScope.ReadOnly));
 
         // Act

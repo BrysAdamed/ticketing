@@ -607,7 +607,7 @@ Flag changes write ActivityEntries. Admin UI: list, create, edit, delete; shows 
 - Password policy: 12..128 characters, not equal to the email, checked against a bundled list of the 10 000 most common passwords. No composition rules.
 - Lockout: 5 failed logins in a row from one client address lock the account for that address for 15 minutes; other addresses can still sign in (D-74). A locked account, an unknown email and a wrong password all get the same answer, `401 auth.invalidCredentials`, after the same password-hashing work, so sign-in reveals neither which accounts exist nor which are locked. Sign-in is also rate limited per client address (20 per minute). The client address is the TCP peer unless the request came through a trusted proxy (D-73). Setting a password through a link lifts the account's lockouts.
 - Web session: HttpOnly, Secure, SameSite=Lax cookie with 12 hour sliding expiry, plus anti-forgery protection on cookie-authenticated writes. The session is also stored on the server; signing out deletes it, so a copied cookie stops working (D-75).
-- Users change their own display name and password (current password required).
+- Users change their own display name, avatar and password (current password required for the password). The avatar is one of 32 animal icons (or initials) on one of the 8 palette colours (or the automatic hashed colour), picked on Profile → General and saved at once (D-129, D-130).
 - Deactivate and reactivate per 4.1. No hard delete.
 
 ### 6.15 Watchers (I-32, D-93)

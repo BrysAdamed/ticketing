@@ -1,11 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { paletteIndex } from '@shared/util/hash';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { AVATAR_SOURCE, resolveAvatar } from '@shared/avatars/avatar-source';
 import { initialsOf } from '@shared/util/initials';
 import { IconComponent } from '../icon/icon.component';
 
 export type AvatarSize = 20 | 24 | 32;
 
-/// User avatar: initials on a stable palette tint (hash of user id). No user = "Unassigned".
+/// User avatar: the animal icon the user chose (`AVATAR_SOURCE`, by user id), else initials; on
+/// the chosen palette colour, else a stable tint hashed from the user id. No user = "Unassigned".
 @Component({
   selector: 'tk-avatar',
   imports: [IconComponent],
@@ -14,18 +15,21 @@ export type AvatarSize = 20 | 24 | 32;
     role: 'img',
     '[attr.aria-label]': 'name() ?? "Unassigned"',
     '[attr.title]': 'showTitle() ? (name() ?? "Unassigned") : null',
+    '[attr.data-avatar-icon]': 'name() ? avatar().icon : null',
     '[class.none]': '!name()',
     '[style.width.px]': 'size()',
     '[style.height.px]': 'size()',
     '[style.font-size.px]': 'fontSize()',
-    '[style.--tk-avatar-bg]': '"var(--tk-palette-" + palette() + ")"',
-    '[style.--tk-avatar-fg]': '"var(--tk-palette-" + palette() + "-fg)"',
+    '[style.--tk-avatar-bg]': '"var(--tk-palette-" + avatar().palette + ")"',
+    '[style.--tk-avatar-fg]': '"var(--tk-palette-" + avatar().palette + "-fg)"',
   },
   template: `
-    @if (name()) {
-      {{ initials() }}
-    } @else {
+    @if (!name()) {
       <tk-icon name="tablerUser" [size]="12" />
+    } @else if (avatar().src; as src) {
+      <img alt="" [src]="src" [width]="imageSize()" [height]="imageSize()" />
+    } @else if (!avatar().pending) {
+      {{ initials() }}
     }
   `,
   styles: `
@@ -46,9 +50,15 @@ export type AvatarSize = 20 | 24 | 32;
       color: var(--tk-text-subtle);
       background: transparent;
     }
+    img {
+      display: block;
+      filter: var(--tk-avatar-icon-filter);
+    }
   `,
 })
 export class AvatarComponent {
+  private readonly source = inject(AVATAR_SOURCE, { optional: true });
+
   readonly userId = input<string | null | undefined>(null);
   readonly name = input<string | null | undefined>(null);
   readonly size = input<AvatarSize>(20);
@@ -56,5 +66,8 @@ export class AvatarComponent {
 
   protected readonly initials = computed(() => initialsOf(this.name() ?? ''));
   protected readonly fontSize = computed(() => ({ 20: 9, 24: 10, 32: 12 })[this.size()]);
-  protected readonly palette = computed(() => paletteIndex(this.userId() ?? this.name() ?? ''));
+  protected readonly imageSize = computed(() => ({ 20: 14, 24: 18, 32: 22 })[this.size()]);
+  protected readonly avatar = computed(() =>
+    resolveAvatar(this.source, this.userId(), this.userId() ?? this.name() ?? ''),
+  );
 }

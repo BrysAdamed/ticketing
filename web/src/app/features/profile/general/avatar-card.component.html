@@ -1,0 +1,100 @@
+<section class="card" aria-labelledby="avatar-heading" data-testid="profile-avatar-card">
+  <header>
+    <div>
+      <h2 id="avatar-heading">Avatar</h2>
+      <p class="tk-muted">Pick an animal and a colour so people recognise you at a glance.</p>
+    </div>
+  </header>
+
+  <div class="preview" data-testid="avatar-preview">
+    <tk-avatar [userId]="user().id" [name]="user().displayName" [size]="32" />
+    <div class="mock-row" aria-hidden="true">
+      <span class="mock-key">TKT-1</span>
+      <span class="mock-title">How your avatar looks on a card</span>
+      <tk-avatar [userId]="user().id" [name]="user().displayName" [size]="20" [showTitle]="false" />
+    </div>
+  </div>
+
+  <h3 class="tk-field-label" id="avatar-icon-label">Animal</h3>
+  @if (store.avatarArtReady()) {
+    <div
+      class="tiles"
+      role="radiogroup"
+      aria-labelledby="avatar-icon-label"
+      data-testid="avatar-icons"
+      [style.--tk-avatar-bg]="'var(--tk-palette-' + palette() + ')'"
+    >
+      @for (icon of icons; track icon.key; let i = $index) {
+        <button
+          type="button"
+          role="radio"
+          class="tile"
+          data-avatar-tile
+          [attr.aria-label]="icon.label"
+          [attr.aria-checked]="icon.key === current().icon"
+          [attr.data-testid]="'avatar-icon-' + icon.key"
+          [title]="icon.label"
+          [tabIndex]="i === iconTabStop() ? 0 : -1"
+          (click)="pickIcon(icon.key)"
+          (keydown)="onIconKeydown($event)"
+        >
+          <img alt="" width="28" height="28" [src]="store.imageOf(icon.key)" />
+        </button>
+      }
+    </div>
+  } @else {
+    <div class="tiles" role="status" aria-label="Loading avatars" data-testid="avatar-skeleton">
+      @for (key of skeletonTiles; track key) {
+        <span class="tile bone"></span>
+      }
+    </div>
+  }
+
+  <h3 class="tk-field-label" id="avatar-color-label">Colour</h3>
+  <div
+    class="swatches"
+    role="radiogroup"
+    aria-labelledby="avatar-color-label"
+    data-testid="avatar-colors"
+  >
+    @for (color of colors(); track color.label; let i = $index) {
+      <button
+        type="button"
+        role="radio"
+        class="swatch"
+        data-avatar-swatch
+        [attr.aria-label]="color.label"
+        [attr.aria-checked]="color.key === current().color"
+        [attr.data-testid]="'avatar-color-' + (color.key ?? 'auto')"
+        [tabIndex]="i === colorTabStop() ? 0 : -1"
+        (click)="pickColor(color.key)"
+        (keydown)="onColorKeydown($event)"
+      >
+        <span
+          class="dot"
+          [style.--tk-avatar-bg]="'var(--tk-palette-' + color.palette + ')'"
+          [style.--tk-avatar-fg]="'var(--tk-palette-' + color.palette + '-fg)'"
+        >
+          @if (currentImage(); as src) {
+            <img alt="" width="18" height="18" [src]="src" />
+          } @else {
+            {{ initials() }}
+          }
+        </span>
+        <span class="label">{{ color.label }}</span>
+      </button>
+    }
+  </div>
+
+  <div class="actions">
+    <button
+      mat-stroked-button
+      type="button"
+      data-testid="avatar-use-initials"
+      [disabled]="!current().icon"
+      (click)="useInitials()"
+    >
+      Use initials
+    </button>
+  </div>
+</section>

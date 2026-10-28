@@ -123,7 +123,27 @@
                 testIdPrefix="severity-"
               />
             </tk-dashboard-card>
+          }
 
+          <tk-dashboard-card
+            [class.span-8]="!empty"
+            [class.span-12]="empty"
+            title="Epic progress"
+            note="Direct children of open epics"
+            tkTourAnchor="dashboard.epic-progress"
+          >
+            @if (d.epicProgress.epics.length > 0) {
+              <tk-epic-progress
+                [epics]="d.epicProgress.epics"
+                [openEpics]="d.epicProgress.openEpics"
+                [links]="store.links()"
+              />
+            } @else {
+              <p class="calm">No open epics{{ d.version ? ' with version ' + d.version : '' }}.</p>
+            }
+          </tk-dashboard-card>
+
+          @if (!empty) {
             @defer (on viewport; prefetch on idle) {
               <tk-dashboard-card class="span-4" title="Open by assignee">
                 <tk-bar-list
@@ -159,39 +179,7 @@
                   </p>
                 }
               </tk-dashboard-card>
-            } @placeholder {
-              <div class="span-12 row">
-                <tk-dashboard-card class="span-4" title="Open by assignee" [loading]="true" />
-                <tk-dashboard-card
-                  class="span-8"
-                  title="Stale tickets"
-                  [loading]="true"
-                  shape="rows"
-                />
-              </div>
-            }
-          }
 
-          <tk-dashboard-card
-            [class.span-8]="!empty"
-            [class.span-12]="empty"
-            title="Epic progress"
-            note="Direct children of open epics"
-            tkTourAnchor="dashboard.epic-progress"
-          >
-            @if (d.epicProgress.epics.length > 0) {
-              <tk-epic-progress
-                [epics]="d.epicProgress.epics"
-                [openEpics]="d.epicProgress.openEpics"
-                [links]="store.links()"
-              />
-            } @else {
-              <p class="calm">No open epics{{ d.version ? ' with version ' + d.version : '' }}.</p>
-            }
-          </tk-dashboard-card>
-
-          @if (!empty) {
-            @defer (on viewport; prefetch on idle) {
               <tk-dashboard-card class="span-4" title="Test cases" [note]="versionNote()">
                 @if (d.testCases.total > 0) {
                   <tk-test-cases-widget [stats]="d.testCases" [links]="store.links()" />
@@ -252,7 +240,7 @@
                 }
               </tk-dashboard-card>
             } @placeholder {
-              <tk-dashboard-card class="span-4" title="Test cases" [loading]="true" />
+              <tk-dashboard-card class="span-4" title="Open by assignee" [loading]="true" />
             }
           }
         </div>

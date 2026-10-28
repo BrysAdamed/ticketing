@@ -70,8 +70,14 @@ test.describe('Getting-started checklist', () => {
         await expect(card).toBeVisible();
 
         // Act
+        const stored = page.waitForResponse(
+            (r) =>
+                r.url().endsWith('/me/onboarding/guides/checklist') &&
+                r.request().method() === 'PUT',
+        );
         await page.getByTestId('checklist-dismiss').click();
         await expect(card).toBeHidden();
+        expect((await stored).ok()).toBe(true);
         await page.reload();
         await expect(page.getByTestId('view-my-work.list')).toBeVisible();
 
@@ -82,7 +88,13 @@ test.describe('Getting-started checklist', () => {
         await page.goto('/projects');
         await shell.openHelp();
         await expect(shell.helpItem('help-getting-started')).toContainText('0 of 4');
+        const forgotten = page.waitForResponse(
+            (r) =>
+                r.url().endsWith('/me/onboarding/guides/checklist') &&
+                r.request().method() === 'DELETE',
+        );
         await shell.helpItem('help-getting-started').click();
+        expect((await forgotten).ok()).toBe(true);
 
         // Assert
         await expect(page).toHaveURL(/\/my-work$/);

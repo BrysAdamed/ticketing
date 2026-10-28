@@ -682,6 +682,7 @@ Onboarding state (14.1, D-130), always the caller's own:
 | --- | --- |
 | `GET /api/v1/me/onboarding` | `{ checklist, guides, ownsProjects, createdAt }` in one round trip: the checklist items visible to the caller with their done state (14.3), the caller's guide states (`guideId`, `version`, `state`, `updatedAt`), whether the caller owns a project, and the caller's account creation time (for What's new, 14.2). p95 under 50 ms on the performance dataset. |
 | `PUT /api/v1/me/onboarding/guides/{guideId}` | `{ version, state }` (`version` 1 to 1 000 000): records `Completed` or `Dismissed` for one guide, replacing an earlier row, and returns the stored `{ guideId, version, state, updatedAt }` (200). The server stores the version as sent and does not know which ids exist; it only checks their shape. `onboarding.guide.invalid` (400), `onboarding.guide.limit` (409, only for a new id), `validation` for a missing or out-of-range field. |
+| `DELETE /api/v1/me/onboarding/guides/{guideId}` | Deletes the caller's state of one guide, so it shows again (Help → Getting started, 14.3, D-133). 204, also when there was no row; a malformed id is 400 `onboarding.guide.invalid`. |
 | `DELETE /api/v1/me/onboarding/guides` | Deletes all the caller's guide states, `welcome` included (Restart all guides, 14.6). 204. |
 
 `GET` accepts any credential (cookie or PAT, read-only included). `PUT` and `DELETE` accept the cookie session only, like `PATCH /me`; a ReadWrite PAT gets 403 `auth.cookieSessionRequired`, a ReadOnly PAT 403 `pat.readOnlyScope`. There are no MCP tools for onboarding state (9.3).
@@ -1187,7 +1188,7 @@ Every type with the guardrails stays below 4 500 characters with the longest val
 
 ## 14. Onboarding
 
-New users should reach their first real action quickly and learn what differs from Jira: free status transitions, backlog versus boards, regressions, and private projects that answer 404. Every guide can be replayed, and guides stay valid as views and their A/B variants change. Epic TKT-52; decisions D-129 (tour engine, anchor rule, owner decisions) and D-130 (guide state storage, REST only). Mockups: [`docs/design/mockups/onboarding.html`](../design/mockups/onboarding.html). The first-run flow and the life of a guide are drawn in [workflows §7](../domain/workflows.md#7-user-onboarding).
+New users should reach their first real action quickly and learn what differs from Jira: free status transitions, backlog versus boards, regressions, and private projects that answer 404. Every guide can be replayed, and guides stay valid as views and their A/B variants change. Epic TKT-52; decisions D-129 (tour engine, anchor rule, owner decisions) D-130 (guide state storage, REST only) and D-133 (checklist). Mockups: [`docs/design/mockups/onboarding.html`](../design/mockups/onboarding.html). The first-run flow and the life of a guide are drawn in [workflows §7](../domain/workflows.md#7-user-onboarding).
 
 | Audience | What onboarding covers |
 | --- | --- |
@@ -1247,8 +1248,12 @@ Rules:
 
 - **Writers** are users who can write in at least one readable project (5.1, 5.3). A user who is Viewer in every project they can read sees no write items (Create a ticket, Move work forward, Join the conversation; commenting needs write access, 5.3). Follow a ticket and the optional agent items stay visible to everyone. Because any active user can create a project (D-18), Create a ticket may also link to the "Your first project" walkthrough.
 - Owner items appear only when `ownsProjects` is true; Admin items only for Admins.
-- Optional items do not hold back completion. When every other visible item is done, the card shows a completed state, records `checklist` `Completed` and stops appearing on My work.
-- The card can be dismissed, which records `checklist` `Dismissed`; Help → Getting started shows it again.
+- Items are computed on the server and returned as ids with `done` and `optional`, in the order above (D-133). Work in a project the user can no longer read, or in a deleted project, does not count; archived owned projects do not count as owned. Watching a ticket automatically (as its reporter, for example) counts as following it.
+- Optional items do not hold back completion. When every other visible item is done, the card shows a completed state, records `checklist` `Completed` and stops appearing on My work after the visit (or after Hide).
+- The card can be dismissed, which records `checklist` `Dismissed`; Help → Getting started (with the progress, for example "3 of 8") forgets the stored state with `DELETE /me/onboarding/guides/checklist`, opens My work and focuses the card, so it shows again until it is dismissed or completed again.
+- The card refreshes when My work is shown and when the window regains focus, so actions done in another tab, over REST or over MCP tick items off. A skeleton shows while the state loads. Each open item links to where its action is done: the create-ticket dialog, the backlog of a project the user can write to, the settings, test cases or regressions of a project they own, Boards, Admin → Users or Agent prompts, or Profile → Access tokens; the first open item shows what to do next ("Press C", "Open a ticket").
+- A user without write items sees a note that steps that create, move or comment are hidden because they cannot change any project yet. While the "Your first project" walkthrough is registered, the card's footer offers it.
+- The card shows by itself, so it is listed in `AUTO_SHOWN_GUIDES` (14.1).
 - Leak guard: no item reveals anything about a project the user cannot read; the queries are covered by a copy of `ReadableProjectsLeakGuardTests` and by a test for a user who is Viewer everywhere.
 
 ### 14.4 Tours and the anchor rule

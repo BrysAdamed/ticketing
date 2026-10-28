@@ -324,6 +324,7 @@ $icon-octagon: tabler-icon(
     img {
       width: 12px;
       height: 12px;
+      filter: var(--tk-avatar-icon-filter);
     }
   }
 

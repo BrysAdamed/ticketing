@@ -65,7 +65,7 @@ public sealed class AvatarTests(TicketingApiFactory api)
     }
 
     [Theory]
-    [InlineData("unicorn", null, "avatarIcon", UserErrors.AvatarUnknown)]
+    [InlineData("dodo", null, "avatarIcon", UserErrors.AvatarUnknown)]
     [InlineData("Cat", null, "avatarIcon", UserErrors.AvatarUnknown)]
     [InlineData(null, "magenta", "avatarColor", UserErrors.AvatarColorUnknown)]
     [InlineData(null, "3", "avatarColor", UserErrors.AvatarColorUnknown)]

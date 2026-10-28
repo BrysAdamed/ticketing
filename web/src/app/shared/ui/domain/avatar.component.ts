@@ -52,6 +52,7 @@ export type AvatarSize = 20 | 24 | 32;
     }
     img {
       display: block;
+      filter: var(--tk-avatar-icon-filter);
     }
   `,
 })

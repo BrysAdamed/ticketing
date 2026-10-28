@@ -126,7 +126,13 @@
       icon="tablerList"
       title="No tickets in backlog"
       tkTourAnchor="backlog.list"
-      description="Create the first one or import from Jira."
+      [description]="
+        store.canWrite()
+          ? 'Create the first one. New tickets land here until you place them on a board.'
+          : 'Nothing has been planned in this project yet.'
+      "
+      [learnLabel]="learn.canStartTour('backlog.list') ? 'Take the tour' : null"
+      (learn)="learn.startTour('backlog.list')"
     >
       @if (store.canWrite()) {
         <button mat-flat-button type="button" (click)="store.openCreate(null)">

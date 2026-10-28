@@ -20,6 +20,7 @@ import { provideIcons } from '@ng-icons/core';
 import { filter, firstValueFrom, map } from 'rxjs';
 import { PeekService } from '@core/layout/peek/peek';
 import { TourAnchorDirective } from '@core/onboarding/engine/tour-anchor.directive';
+import { LearnActions } from '@core/onboarding/learn-actions';
 import { ProjectContext } from '@core/projects/project-context';
 import { ShortcutService } from '@core/shortcuts/shortcut.service';
 import { TestCaseSummary } from '@core/testing/testing.models';
@@ -85,6 +86,7 @@ export class TestCasesView {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly project = inject(ProjectContext);
+  protected readonly learn = inject(LearnActions);
   private readonly peek = inject(PeekService);
   private readonly tickets = inject(TicketsApi);
   private readonly destroyRef = inject(DestroyRef);

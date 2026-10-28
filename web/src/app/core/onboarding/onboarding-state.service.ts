@@ -42,6 +42,7 @@ export class OnboardingStateService {
   private readonly checklistItems = signal<readonly OnboardingChecklistItem[]>([]);
   private readonly owner = signal(false);
   private readonly created = signal<string | null>(null);
+  private readonly resets = signal(0);
   private readonly pending = new Map<string, PendingWrite>();
   private session = 0;
   private loadGeneration = 0;
@@ -54,6 +55,8 @@ export class OnboardingStateService {
   readonly ownsProjects = this.owner.asReadonly();
   /// ISO time the account was created; What's new entries dated before it count as seen.
   readonly createdAt = this.created.asReadonly();
+  /// Counts successful `resetAll` calls (Restart all guides) since the app loaded.
+  readonly restarts = this.resets.asReadonly();
 
   constructor() {
     afterNextRender(() => this.rendered.set(true));
@@ -111,6 +114,7 @@ export class OnboardingStateService {
     this.progress.set(new Map());
     try {
       await firstValueFrom(this.api.resetGuides());
+      this.resets.update((n) => n + 1);
       return true;
     } catch (error) {
       if (session === this.session && this.progress().size === 0) this.progress.set(previous);

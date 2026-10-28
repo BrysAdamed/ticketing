@@ -28,6 +28,7 @@ import { AuthService } from '@core/auth/auth.service';
 import { PageTitleStrategy } from '@core/layout/page-title';
 import { provideGettingStartedHelp } from '@core/onboarding/checklist/getting-started.help';
 import { providePeekView } from '@core/layout/peek/peek';
+import { provideOnboardingDialogs } from '@core/onboarding/onboarding-dialogs';
 import { provideGuidedTours } from '@core/onboarding/tour-availability';
 import { ShortcutService } from '@core/shortcuts/shortcut.service';
 import { ThemeService } from '@core/theme/theme.service';
@@ -66,6 +67,7 @@ export const appConfig: ApplicationConfig = {
     provideSearch(),
     provideGuidedTours(),
     provideGettingStartedHelp(),
+    provideOnboardingDialogs(),
     provideAttachments(),
     provideDocsTicketSection(),
     provideTicketCreation(() =>

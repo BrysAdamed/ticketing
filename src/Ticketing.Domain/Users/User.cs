@@ -46,6 +46,12 @@ public sealed class User
 
     public DateTimeOffset? DeactivatedAt { get; private set; }
 
+    /// <summary>An <see cref="AvatarCatalog.Icons"/> key; null shows initials.</summary>
+    public string? AvatarIcon { get; private set; }
+
+    /// <summary>An <see cref="AvatarCatalog.Colors"/> key; null uses the colour hashed from the user id.</summary>
+    public string? AvatarColor { get; private set; }
+
     public Guid? DeactivatedById { get; private set; }
 
     public uint RowVersion { get; private set; }
@@ -102,6 +108,17 @@ public sealed class User
 
     public void ChangeDisplayName(string displayName) =>
         DisplayName = Text.SingleLine(displayName, "displayName", DisplayNameMaxLength);
+
+    public void ChangeAvatar(string? icon, string? color)
+    {
+        if (icon is not null && !AvatarCatalog.IsIcon(icon))
+            throw DomainException.Invalid("avatarIcon", UserErrors.AvatarUnknown, $"'{icon}' is not an avatar icon.");
+        if (color is not null && !AvatarCatalog.IsColor(color))
+            throw DomainException.Invalid(
+                "avatarColor", UserErrors.AvatarColorUnknown, $"'{color}' is not an avatar colour.", $"Use one of {string.Join(", ", AvatarCatalog.Colors)}.");
+        AvatarIcon = icon;
+        AvatarColor = color;
+    }
 
     public void ChangeRole(GlobalRole role, Guid actorId)
     {

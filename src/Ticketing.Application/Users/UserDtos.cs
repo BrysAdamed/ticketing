@@ -25,3 +25,6 @@ public sealed record AdminUserDto(
     uint RowVersion);
 
 public sealed record CreateUserResult(AdminUserDto User, SetPasswordLinkDto SetPasswordLink);
+
+/// <summary>A user's chosen avatar: an <see cref="AvatarCatalog.Icons"/> key and an <see cref="AvatarCatalog.Colors"/> key, each null for the default.</summary>
+public sealed record UserAvatarDto(Guid Id, string? Icon, string? Color);

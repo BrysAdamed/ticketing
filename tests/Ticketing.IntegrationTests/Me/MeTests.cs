@@ -1,5 +1,8 @@
 using System.Net;
+using System.Net.Http.Json;
+using Microsoft.EntityFrameworkCore;
 using Ticketing.Application.Auth;
+using Ticketing.Application.Common;
 using Ticketing.Application.Me;
 using Ticketing.Domain.FeatureFlags;
 using Ticketing.Domain.Tokens;
@@ -60,6 +63,64 @@ public sealed class MeTests(TicketingApiFactory api)
         // Assert
         await response.ShouldHaveStatusAsync(HttpStatusCode.Unauthorized);
         Assert.Equal("Bearer", response.Headers.WwwAuthenticate.Single().Scheme);
+    }
+
+    [Fact]
+    public async Task Patch_me_changes_the_display_name_and_records_it()
+    {
+        // Arrange
+        var user = await api.CreateUserAsync(displayName: "Old Name");
+        var client = await api.LoginAsync(user);
+
+        // Act
+        var me = await (await client.PatchAsJsonAsync("/api/v1/me", new { displayName = "  New Name " }, _ct)).ReadAsync<CurrentUserDto>();
+
+        // Assert
+        Assert.Equal(new CurrentUserDto(user.Id, user.Email, "New Name", GlobalRole.User), me);
+        var entry = await api.WithDbAsync(db => db.ActivityEntries.SingleAsync(a => a.EntityId == user.Id && a.Action == "user.field.changed", _ct));
+        Assert.Equal("displayName", entry.Field);
+    }
+
+    [Fact]
+    public async Task Patch_me_without_fields_changes_nothing()
+    {
+        // Arrange
+        var user = await api.CreateUserAsync(displayName: "Kept Name");
+        var client = await api.LoginAsync(user);
+
+        // Act
+        var me = await (await client.PatchAsJsonAsync("/api/v1/me", new { }, _ct)).ReadAsync<CurrentUserDto>();
+
+        // Assert
+        Assert.Equal("Kept Name", me.DisplayName);
+        Assert.False(await api.WithDbAsync(db => db.ActivityEntries.AnyAsync(a => a.EntityId == user.Id && a.Action == "user.field.changed", _ct)));
+    }
+
+    [Fact]
+    public async Task Patch_me_rejects_an_empty_display_name()
+    {
+        // Arrange
+        var client = await api.LoginAsync(await api.CreateUserAsync());
+
+        // Act
+        var response = await client.PatchAsJsonAsync("/api/v1/me", new { displayName = "" }, _ct);
+
+        // Assert
+        await response.ShouldBeProblemAsync(HttpStatusCode.BadRequest, "validation");
+    }
+
+    [Fact]
+    public async Task Patch_me_is_web_session_only()
+    {
+        // Arrange
+        var user = await api.CreateUserAsync(displayName: "Pat User");
+        var client = await api.CreatePatClientAsync(user);
+
+        // Act
+        var response = await client.PatchAsJsonAsync("/api/v1/me", new { displayName = "Changed" }, _ct);
+
+        // Assert
+        await response.ShouldBeProblemAsync(HttpStatusCode.Forbidden, AppErrors.CookieSessionRequired);
     }
 
     [Fact]

@@ -20,7 +20,7 @@ public sealed class MeEndpoints : IEndpointModule
         me.MapPatch("", async (UpdateMyProfile.Command command, UpdateMyProfile.Handler handler, CancellationToken ct) =>
             TypedResults.Ok(await handler.HandleAsync(command, ct)))
             .RequireCookieSession()
-            .WithSummary("Changes the signed-in user's display name (web session only).")
+            .WithSummary("Changes the signed-in user's display name or avatar (avatarIcon, avatarColor; null resets) (web session only).")
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden);
 

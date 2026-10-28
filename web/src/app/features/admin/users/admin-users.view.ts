@@ -17,6 +17,7 @@ import { toApiError } from '@core/api/api-error';
 import { AuthService } from '@core/auth/auth.service';
 import { ConfirmService } from '@core/notify/confirm.service';
 import { ToastService } from '@core/notify/toast.service';
+import { TourAnchorDirective } from '@core/onboarding/engine/tour-anchor.directive';
 import { ShortcutService } from '@core/shortcuts/shortcut.service';
 import { GLOBAL_ROLE_LABELS, GlobalRole } from '@shared/domain/enums';
 import { AbsoluteTimePipe, RelativeTimePipe } from '@shared/pipes/relative-time.pipe';
@@ -43,6 +44,7 @@ const SEARCH_DEBOUNCE_MS = 200;
 @Component({
   selector: 'tk-admin-users-view',
   imports: [
+    TourAnchorDirective,
     MatButtonModule,
     MatMenuModule,
     MatTableModule,

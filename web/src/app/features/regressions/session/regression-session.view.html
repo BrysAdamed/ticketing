@@ -65,7 +65,12 @@
     </div>
   </header>
 
-  <section class="progress" aria-label="Progress" data-testid="session-progress">
+  <section
+    class="progress"
+    aria-label="Progress"
+    data-testid="session-progress"
+    tkTourAnchor="regressions.progress"
+  >
     <tk-session-progress size="lg" [summary]="sum" />
     <div class="legend tnum">
       <span
@@ -129,7 +134,12 @@
   </div>
 
   <div class="split">
-    <nav class="items" aria-label="Session items" data-testid="session-items">
+    <nav
+      class="items"
+      aria-label="Session items"
+      data-testid="session-items"
+      tkTourAnchor="regressions.items"
+    >
       <tk-session-items />
     </nav>
 
@@ -155,7 +165,7 @@
           </div>
           <h2 class="ititle" data-testid="item-title">{{ it.title }}</h2>
 
-          <div class="who">
+          <div class="who" [tkTourAnchor]="canAct() ? 'regressions.take' : null">
             <span class="tk-field-label">Assignee</span>
             <tk-user [user]="it.assignee" data-testid="item-assignee" />
             @if (canAct() && it.assignee?.id !== store.meId()) {
@@ -285,7 +295,7 @@
         </div>
 
         @if (canAct()) {
-          <footer class="actions" data-testid="item-actions">
+          <footer class="actions" data-testid="item-actions" tkTourAnchor="regressions.record">
             <span class="sr-status tk-sr-only" role="status">{{
               store.isBusy(it.testCaseKey) ? 'Saving…' : ''
             }}</span>
@@ -302,6 +312,7 @@
               type="button"
               class="act fail"
               data-testid="action-fail"
+              tkTourAnchor="regressions.create-bug"
               [class.on]="it.status === 'Failed'"
               (click)="startFail()"
             >

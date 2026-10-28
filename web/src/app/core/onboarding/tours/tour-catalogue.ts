@@ -1,4 +1,4 @@
-import type { TourDefinition } from '../engine/tour.model';
+import type { TourDefinition, TourRequirement } from '../engine/tour.model';
 
 /// A view that has a tour. The definition (its copy) is loaded on demand, so adding tours never
 /// grows the initial bundle. Plain TypeScript: e2e specs may import this file.
@@ -6,9 +6,14 @@ export interface TourCatalogueEntry {
   readonly viewId: string;
   /// Same as the definition's title; names the palette command ("Backlog tour").
   readonly title: string;
-  /// Where the view lives when a project is all it needs (`/projects/:projectKey/backlog`). The
-  /// palette command can then start the tour from anywhere; without it, only on the view itself.
+  /// Where the view lives when it needs at most a project (`/projects/:projectKey/backlog`,
+  /// `/search`). The palette command can then start the tour from anywhere; without it, only on
+  /// the view itself.
   readonly path?: string;
+  /// Who the whole tour is for (`project.settings` is for Owners, `admin.users` for Admins). Others
+  /// get neither "Tour of this page" nor the palette command. Checked against the open project and
+  /// the instance role, so a tour that needs `write` or `owner` has no `path`.
+  readonly requires?: TourRequirement;
   readonly load: () => Promise<TourDefinition>;
 }
 
@@ -19,6 +24,42 @@ export const TOUR_CATALOGUE: readonly TourCatalogueEntry[] = [
     title: 'Backlog',
     path: '/projects/:projectKey/backlog',
     load: () => import('./backlog.tours').then((m) => m.BACKLOG_TOUR),
+  },
+  {
+    viewId: 'project.dashboard',
+    title: 'Dashboard',
+    path: '/projects/:projectKey/dashboard',
+    load: () => import('./dashboard.tours').then((m) => m.DASHBOARD_TOUR),
+  },
+  {
+    viewId: 'search.results',
+    title: 'Search',
+    path: '/search',
+    load: () => import('./search.tours').then((m) => m.SEARCH_TOUR),
+  },
+  {
+    viewId: 'testcases.list',
+    title: 'Test cases',
+    path: '/projects/:projectKey/test-cases',
+    load: () => import('./test-cases.tours').then((m) => m.TEST_CASES_TOUR),
+  },
+  {
+    viewId: 'regressions.session',
+    title: 'Regression session',
+    load: () => import('./regressions.tours').then((m) => m.REGRESSION_SESSION_TOUR),
+  },
+  {
+    viewId: 'project.settings',
+    title: 'Project settings',
+    requires: 'owner',
+    load: () => import('./project-settings.tours').then((m) => m.PROJECT_SETTINGS_TOUR),
+  },
+  {
+    viewId: 'admin.users',
+    title: 'Users',
+    path: '/admin/users',
+    requires: 'admin',
+    load: () => import('./admin-users.tours').then((m) => m.ADMIN_USERS_TOUR),
   },
   {
     viewId: 'board.kanban',
@@ -40,4 +81,9 @@ export function tourGuideId(viewId: string): string {
 /// Palette command (Help group) that starts the tour of a view.
 export function tourCommandId(viewId: string): string {
   return `help.tour.${viewId}`;
+}
+
+/// Whether a catalogue path opens a view inside a project (it has the `:projectKey` param).
+export function pathNeedsProject(path: string): boolean {
+  return path.includes(':projectKey');
 }

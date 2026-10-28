@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
+import { TourAnchorDirective } from '@core/onboarding/engine/tour-anchor.directive';
 import { SkeletonRowsComponent } from '@shared/ui/skeleton/skeleton-rows.component';
 import { DangerZoneComponent } from './danger-zone.component';
 import { GeneralSettingsComponent } from './general-settings.component';
@@ -14,6 +15,7 @@ import { ProjectSettingsStore } from './project-settings.store';
     MembersSettingsComponent,
     DangerZoneComponent,
     SkeletonRowsComponent,
+    TourAnchorDirective,
   ],
   providers: [ProjectSettingsStore],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -21,9 +23,9 @@ import { ProjectSettingsStore } from './project-settings.store';
   template: `
     @if (store.project()) {
       <div class="body">
-        <tk-general-settings />
+        <tk-general-settings tkTourAnchor="project-settings.general" />
         <tk-members-settings />
-        <tk-danger-zone />
+        <tk-danger-zone tkTourAnchor="project-settings.danger-zone" />
       </div>
     } @else {
       <tk-skeleton-rows [count]="8" />

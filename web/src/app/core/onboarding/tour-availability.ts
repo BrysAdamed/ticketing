@@ -9,12 +9,21 @@ import {
   makeEnvironmentProviders,
   provideEnvironmentInitializer,
 } from '@angular/core';
+import { AuthService } from '../auth/auth.service';
 import { HELP_MENU_ORDER, TOUR_OF_PAGE_ID } from '../help/help-menu';
 import { HelpMenuRegistry, provideHelpMenuItem } from '../help/help-menu.registry';
 import { NavigationContext } from '../layout/navigation-context';
+import { OpenProjectState } from '../projects/open-project';
 import { ProjectDirectory } from '../projects/project-directory';
-import { pickTourProject } from './guided-tours.logic';
-import { TOUR_CATALOGUE, TourCatalogueEntry, tourCommandId } from './tours/tour-catalogue';
+import { meetsRequirement } from './engine/tour-logic';
+import { pickTourProject, tourAccess } from './guided-tours.logic';
+import {
+  pathNeedsProject,
+  TOUR_CATALOGUE,
+  TourCatalogueEntry,
+  tourCommandId,
+} from './tours/tour-catalogue';
+import { ViewTourAccess } from './view-tour-access';
 
 /// The tours the app offers; tests replace it.
 export const TOURS = new InjectionToken<readonly TourCatalogueEntry[]>('TOURS', {
@@ -27,27 +36,42 @@ export const TOURS = new InjectionToken<readonly TourCatalogueEntry[]>('TOURS', 
 export class TourAvailability {
   private readonly navigation = inject(NavigationContext);
   private readonly directory = inject(ProjectDirectory);
+  private readonly openProject = inject(OpenProjectState);
+  private readonly auth = inject(AuthService);
+  private readonly viewAccess = inject(ViewTourAccess);
 
   readonly entries = inject(TOURS);
-  /// The tour of the view on screen, or null.
-  readonly current = computed(() => this.entry(this.navigation.currentViewId()) ?? null);
+  /// The tour of the view on screen when the user is in its audience, or null.
+  readonly current = computed(() => {
+    const entry = this.entry(this.navigation.currentViewId());
+    return entry && this.isForUser(entry) ? entry : null;
+  });
 
   entry(viewId: string | null): TourCatalogueEntry | undefined {
     return this.entries.find((e) => e.viewId === viewId);
   }
 
-  /// Whether the tour of `viewId` can start now: the user is on that view, or the view needs only
-  /// a project and there is one to open.
+  /// Whether the tour of `viewId` can start now: the user is in its audience and on that view, or
+  /// the view needs at most a project and there is one to open.
   canStart(viewId: string): boolean {
     const entry = this.entry(viewId);
-    if (!entry) return false;
+    if (!entry || !this.isForUser(entry)) return false;
     if (this.navigation.currentViewId() === viewId) return true;
-    return !!entry.path && this.targetProject() !== null;
+    if (!entry.path) return false;
+    return !pathNeedsProject(entry.path) || this.targetProject() !== null;
   }
 
   /// The project a tour started away from its view opens (`pickTourProject`).
   targetProject(): string | null {
     return pickTourProject(this.directory.projects(), this.navigation.projectKey());
+  }
+
+  private isForUser(entry: TourCatalogueEntry): boolean {
+    return meetsRequirement(
+      entry.requires,
+      this.viewAccess.get(entry.viewId) ??
+        tourAccess(this.openProject.project(), this.auth.isAdmin()),
+    );
   }
 }
 

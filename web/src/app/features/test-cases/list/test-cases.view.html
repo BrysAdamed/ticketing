@@ -3,7 +3,13 @@
   <span class="tk-page-count" data-testid="tc-count">{{ store.counts().active }}</span>
   <div class="tk-page-actions">
     @if (canWrite()) {
-      <button mat-stroked-button type="button" data-testid="tc-new" (click)="openNew()">
+      <button
+        mat-stroked-button
+        type="button"
+        data-testid="tc-new"
+        tkTourAnchor="testcases.new"
+        (click)="openNew()"
+      >
         <tk-icon name="tablerPlus" [size]="14" />New test case<tk-kbd>N</tk-kbd>
       </button>
     }
@@ -14,11 +20,12 @@
   <tk-segmented
     ariaLabel="Status"
     testId="tc-status"
+    tkTourAnchor="testcases.status"
     [options]="statusOptions()"
     [value]="filters().status"
     (valueChange)="setStatus($event)"
   />
-  <label class="search">
+  <label class="search" tkTourAnchor="testcases.filters">
     <tk-icon name="tablerSearch" [size]="14" />
     <input
       #filter
@@ -62,7 +69,13 @@
 </div>
 
 <div class="body" [class.with-pane]="paneOpen()">
-  <div class="list" role="grid" aria-label="Test cases" data-testid="tc-list">
+  <div
+    class="list"
+    role="grid"
+    aria-label="Test cases"
+    data-testid="tc-list"
+    tkTourAnchor="testcases.list"
+  >
     @if (store.status() === 'error' && !store.hasData()) {
       <tk-empty-state
         icon="tablerAlertCircle"
@@ -103,7 +116,12 @@
         <span class="t" role="columnheader">Title</span>
         <span class="tk" role="columnheader">Ticket</span>
         <span class="steps" role="columnheader">Steps</span>
-        <span class="run" role="columnheader" matTooltip="Last regression result">
+        <span
+          class="run"
+          role="columnheader"
+          matTooltip="Last regression result"
+          tkTourAnchor="testcases.last-result"
+        >
           <span aria-hidden="true">Last</span><span class="tk-sr-only">Last result</span>
         </span>
         <span class="upd" role="columnheader">Updated</span>

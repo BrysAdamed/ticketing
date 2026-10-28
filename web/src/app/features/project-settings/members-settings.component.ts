@@ -17,6 +17,7 @@ import { tablerUserPlus } from '@ng-icons/tabler-icons';
 import { toApiError } from '@core/api/api-error';
 import { AuthService } from '@core/auth/auth.service';
 import { ToastService } from '@core/notify/toast.service';
+import { TourAnchorDirective } from '@core/onboarding/engine/tour-anchor.directive';
 import { ProjectMember } from '@core/projects/project-context';
 import { ProjectRole } from '@shared/domain/enums';
 import { RelativeTimePipe } from '@shared/pipes/relative-time.pipe';
@@ -41,6 +42,7 @@ const SEARCH_DEBOUNCE_MS = 150;
     BadgeComponent,
     IconComponent,
     RelativeTimePipe,
+    TourAnchorDirective,
   ],
   viewProviders: [provideIcons({ tablerUserPlus })],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -59,7 +61,7 @@ const SEARCH_DEBOUNCE_MS = 150;
     }
 
     @if (store.canManage()) {
-      <div class="add" data-testid="member-add">
+      <div class="add" data-testid="member-add" tkTourAnchor="project-settings.add-member">
         <mat-form-field class="user-field">
           <tk-icon matPrefix name="tablerSearch" [size]="14" class="prefix" />
           <input
@@ -116,7 +118,7 @@ const SEARCH_DEBOUNCE_MS = 150;
       </div>
     }
 
-    <div class="table" role="table" aria-label="Members">
+    <div class="table" role="table" aria-label="Members" tkTourAnchor="project-settings.members">
       <div class="head" role="row">
         <span role="columnheader">Name</span>
         <span role="columnheader">Email</span>

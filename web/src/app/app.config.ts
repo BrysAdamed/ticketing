@@ -29,6 +29,7 @@ import { PageTitleStrategy } from '@core/layout/page-title';
 import { provideConnectAgentHelp } from '@core/onboarding/agent/connect-agent.help';
 import { provideGettingStartedHelp } from '@core/onboarding/checklist/getting-started.help';
 import { providePeekView } from '@core/layout/peek/peek';
+import { provideOnboardingDialogs } from '@core/onboarding/onboarding-dialogs';
 import { provideGuidedTours } from '@core/onboarding/tour-availability';
 import { ShortcutService } from '@core/shortcuts/shortcut.service';
 import { ThemeService } from '@core/theme/theme.service';
@@ -68,6 +69,7 @@ export const appConfig: ApplicationConfig = {
     provideGuidedTours(),
     provideGettingStartedHelp(),
     provideConnectAgentHelp(),
+    provideOnboardingDialogs(),
     provideAttachments(),
     provideDocsTicketSection(),
     provideTicketCreation(() =>

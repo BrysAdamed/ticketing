@@ -67,6 +67,11 @@ export class HelpMenuRegistry {
     return remove;
   }
 
+  /// A registered item, palette-only ones included, or undefined while none has this id.
+  find(id: string): HelpMenuItem | undefined {
+    return this.registered().find((item) => item.id === id);
+  }
+
   /// Asks for confirmation, forgets every guide the user completed or dismissed and confirms it
   /// with a toast. Resolves true when the guides were reset.
   async restart(): Promise<boolean> {

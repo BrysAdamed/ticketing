@@ -1,5 +1,6 @@
 import { DOCUMENT } from '@angular/common';
-import { inject, Injectable, Injector, signal } from '@angular/core';
+import { inject, Injectable, Injector } from '@angular/core';
+import { ActiveTour } from './active-tour';
 import { NavigationContext } from '../../layout/navigation-context';
 import { PeekService } from '../../layout/peek/peek';
 import { planTour } from './tour-logic';
@@ -32,7 +33,7 @@ export class TourLauncher {
   private session: TourSession | null = null;
 
   /// Id of the running tour, or null.
-  readonly running = signal<string | null>(null);
+  readonly running = inject(ActiveTour).id;
 
   async start(tour: TourDefinition, options: TourStartOptions): Promise<TourResult> {
     this.session?.close('interrupted');

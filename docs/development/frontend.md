@@ -174,6 +174,31 @@ A tour (spec 14.4, D-129, D-134) is data plus anchors; the engine, the Help menu
 
 Nothing else changes: "Tour of this page" enables itself on the view, and the palette gets `help.tour.<viewId>` ("Backlog tour"). Do not import `GuidedTours` statically into anything the initial bundle reaches; entry points import it lazily.
 
+## Adding a What's new entry
+
+What's new (spec 14.2, D-138) is data; the dialog, the scheduling, Help → What's new and the e2e guard come for free.
+
+1. **Append** an entry to `WHATS_NEW_ENTRIES` in `core/onboarding/guides/whats-new.ts` (oldest first, plain TypeScript):
+
+   ```ts
+   {
+     id: 'whats-new.2027-02',      // always `whats-new.<date>`
+     version: 1,                   // raise it to show the entry again to everyone who saw it
+     date: '2027-02',              // the release month, yyyy-mm (UTC)
+     title: 'Board swimlanes and saved filters',
+     items: [
+       { title: 'Swimlanes', body: 'Group a board by assignee or epic. Press S to switch.' },
+       { title: 'Delegate to agent', body: '…', flag: 'agent.delegate' }, // hidden while the flag is off
+     ],
+   }
+   ```
+
+   Keep three to six items of one or two sentences each, describing what the user can do and where (a shortcut, a menu). Check each claim against the app; put `flag` on items behind a feature flag.
+2. **Date it by the release month.** Users created after the first day of that month never see it; everyone else gets it once, the oldest unseen entry first and at most one auto-shown dialog per browser session (the welcome dialog wins). Help → What's new lists every entry, newest first.
+3. **Tests**: `auto-dialogs.logic.spec.ts` checks every authored entry (id matches the date, valid month, at least one item, unique). The e2e guard picks the entry up through `AUTO_SHOWN_GUIDES`, so existing specs stay clear of it; `e2e/tests/onboarding/welcome.spec.ts` covers whichever entry is due.
+
+The pieces: `OnboardingDialogs` (`core/onboarding/onboarding-dialogs.ts`, eager and small) decides once per app load which dialog opens by itself (`nextAutoDialog` in `auto-dialogs.logic.ts`); `OnboardingDialogRunner` and the dialogs (`core/onboarding/dialogs/`) are one lazy chunk. To wait for a tour without loading the engine, read `ActiveTour.id()`.
+
 ## Tickets: shared services and extension points
 
 The tickets slice (`features/tickets`, `features/backlog`) keeps everything other features need in `core/tickets/`, because features must not import each other.
@@ -298,7 +323,7 @@ Global CSS helpers (`styles/`): `.tk-page`, `.tk-page-header` (+ `.tk-page-count
   - `api` (`e2e/support/api.ts`) uses the admin cookie session and handles XSRF itself (it reads the `XSRF-TOKEN` cookie and echoes it as `X-XSRF-TOKEN`). Seed data through it (`api.createProject()`, `api.post(...)`), never through the UI. Use `uniqueProjectKey()` so parallel tests don't collide.
   - Page objects live in `e2e/pages/*.page.ts`. They expose locators and intent-level methods, never assertions about business rules.
   - **Other users**: seed them with `seedUser(api, prefix)` (`e2e/tests/identity/identity.ts`) and sign them in with `signInAs(browser, { email, password: PASSWORD })` (`e2e/support/session.ts`). It returns `{ context, page }` with no page loaded yet (stub routes or add init scripts, then `page.goto`), signed in through the API.
-  - **Auto-shown guides (D-132)**: the welcome dialog, What's new and hints would cover what a spec drives, so `global.setup.ts` and `signInAs` mark every auto-shown guide `Completed` before the SPA loads (`markGuidesSeen(request, guides?)` in `e2e/support/guides.ts`; `markGuidesSeenAs(credentials)` for a user who must sign in through the login form). An onboarding spec that wants them opts in with `signInAs(browser, credentials, { keepGuides: true })`, or marks only some with `markGuidesSeen(context.request, [guide])`. The list is `AUTO_SHOWN_GUIDES` in `web/src/app/core/onboarding/auto-guides.ts`: **every guide that opens or appears by itself must be listed there** (through `guides/welcome.ts`, `guides/whats-new.ts` or `guides/hints.ts`), or the suite will meet it. `e2e/tests/onboarding/guide-guard.spec.ts` checks the guard.
+  - **Auto-shown guides (D-132)**: the welcome dialog, What's new and hints would cover what a spec drives, so `global.setup.ts` and `signInAs` mark every auto-shown guide `Completed` before the SPA loads (`markGuidesSeen(request, guides?)` in `e2e/support/guides.ts`; `markGuidesSeenAs(credentials)` for a user who must sign in through the login form). An onboarding spec that wants them opts in with `signInAs(browser, credentials, { keepGuides: true })`, or marks only some with `markGuidesSeen(context.request, [guide])`. The list is `AUTO_SHOWN_GUIDES` in `web/src/app/core/onboarding/auto-guides.ts`: **every guide that opens or appears by itself must be listed there** (through `guides/welcome.ts`, `guides/whats-new.ts` or `guides/hints.ts`), or the suite will meet it. `e2e/tests/onboarding/guide-guard.spec.ts` checks the guard. The welcome dialog and What's new open by themselves at most once per browser session (D-138), so a spec that wants one of them marks the other auto-shown guides seen (see `signInWithDialogs` in `e2e/tests/onboarding/welcome.spec.ts`).
   - **Importing SPA data**: `e2e/tsconfig.json` maps `@onboarding/*` to `web/src/app/core/onboarding/*` (Playwright honours tsconfig `paths`), e.g. `import { AUTO_SHOWN_GUIDES } from '@onboarding/auto-guides'`. Files imported this way (guide lists, tour definitions in `tours/`, `onboarding.models.ts`) must stay plain TypeScript: no Angular or other package imports, relative imports only.
   - Timing budgets go in `*.perf.spec.ts`. The `chromium` project ignores them; the `perf` project runs them only when asked, alone: `E2E_PERF=1 npx playwright test --project=perf` (parallel workers skew the numbers).
 

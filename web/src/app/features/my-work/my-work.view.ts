@@ -19,6 +19,8 @@ import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.componen
 import { IconComponent } from '@shared/ui/icon/icon.component';
 import { SkeletonRowsComponent } from '@shared/ui/skeleton/skeleton-rows.component';
 import { TicketRowComponent } from '@shared/ui/ticket-row/ticket-row.component';
+import { GettingStartedService } from '@core/onboarding/checklist/getting-started.service';
+import { ChecklistCardComponent } from './checklist-card.component';
 import { MyWorkStore, REGRESSIONS_GROUP, WATCHING_GROUP } from './my-work.store';
 
 const PEEK_FOLLOW_MS = 120;
@@ -30,6 +32,7 @@ const PEEK_FOLLOW_MS = 120;
   imports: [
     MatButtonModule,
     RouterLink,
+    ChecklistCardComponent,
     ProjectTileComponent,
     EmptyStateComponent,
     IconComponent,
@@ -60,161 +63,173 @@ const PEEK_FOLLOW_MS = 120;
       </div>
     </header>
 
-    @if (store.status() === 'error' && !store.work()) {
-      <tk-empty-state
-        icon="tablerAlertCircle"
-        tone="danger"
-        title="Couldn't load your work"
-        [description]="store.error()?.title ?? null"
-      >
-        <button mat-stroked-button type="button" (click)="store.load()">Retry</button>
-      </tk-empty-state>
-    } @else if (!store.work()) {
-      <tk-skeleton-rows [count]="10" />
-    } @else if (store.isEmpty()) {
-      <tk-empty-state
-        icon="tablerInbox"
-        title="Nothing assigned to you"
-        description="Open tickets assigned to you or watched by you, and your waiting regression tests show up here."
-      >
-        <a mat-stroked-button routerLink="/projects">Browse projects</a>
-      </tk-empty-state>
-    } @else {
-      <div class="list" role="grid" aria-label="My work" data-testid="my-work-list">
-        @for (group of store.projects(); track group.projectKey) {
-          <div class="ghead" role="row" [attr.data-testid]="'my-work-group-' + group.projectKey">
-            <button
-              type="button"
-              class="chev"
-              [attr.aria-expanded]="!store.collapsed().has(group.projectKey)"
-              [attr.aria-label]="
-                (store.collapsed().has(group.projectKey) ? 'Expand ' : 'Collapse ') +
-                group.projectName
-              "
-              (click)="store.toggle(group.projectKey)"
-            >
-              <tk-icon
-                [name]="
-                  store.collapsed().has(group.projectKey)
-                    ? 'tablerChevronRight'
-                    : 'tablerChevronDown'
-                "
-                [size]="14"
-              />
-            </button>
-            <tk-project-tile [projectKey]="group.projectKey" />
-            <a class="glabel" [routerLink]="['/projects', group.projectKey, 'backlog']">{{
-              group.projectName
-            }}</a>
-            <span class="gcount tnum">{{ group.tickets.length }}</span>
-          </div>
-          @if (!store.collapsed().has(group.projectKey)) {
-            @for (ticket of group.tickets; track ticket.id) {
-              <tk-ticket-row
-                testIdPrefix="my-work-row-"
-                [ticket]="ticket"
-                [focused]="focusedId() === ticket.id"
-                (click)="openTicket(ticket.key, $event)"
-                (mouseenter)="cache.prefetch(ticket.key)"
-              />
-            }
-          }
-        }
-
-        @if (store.work()?.truncated) {
-          <div class="more">
-            Showing the first {{ store.work()?.ticketCount }} tickets.
-            <a [routerLink]="'/search'" [queryParams]="searchParams">See all in search</a>
-          </div>
-        }
-
-        @if (store.items().length) {
-          <div class="ghead" role="row" data-testid="my-work-group-regressions">
-            <button
-              type="button"
-              class="chev"
-              [attr.aria-expanded]="!store.collapsed().has(regressions)"
-              aria-label="Toggle regression items"
-              (click)="store.toggle(regressions)"
-            >
-              <tk-icon
-                [name]="
-                  store.collapsed().has(regressions) ? 'tablerChevronRight' : 'tablerChevronDown'
-                "
-                [size]="14"
-              />
-            </button>
-            <tk-icon name="tablerListCheck" [size]="14" />
-            <span class="glabel">Regression tests waiting for me</span>
-            <span class="gcount tnum">{{ store.items().length }}</span>
-          </div>
-          @if (!store.collapsed().has(regressions)) {
-            @for (item of store.items(); track item.itemId) {
-              <a
-                class="irow"
+    <div class="mw" [class.with-card]="checklist.visible() || checklist.loading()">
+      <tk-checklist-card class="mw-card" />
+      <div class="mw-main">
+        @if (store.status() === 'error' && !store.work()) {
+          <tk-empty-state
+            icon="tablerAlertCircle"
+            tone="danger"
+            title="Couldn't load your work"
+            [description]="store.error()?.title ?? null"
+          >
+            <button mat-stroked-button type="button" (click)="store.load()">Retry</button>
+          </tk-empty-state>
+        } @else if (!store.work()) {
+          <tk-skeleton-rows [count]="10" />
+        } @else if (store.isEmpty()) {
+          <tk-empty-state
+            icon="tablerInbox"
+            title="Nothing assigned to you"
+            description="Open tickets assigned to you or watched by you, and your waiting regression tests show up here."
+          >
+            <a mat-stroked-button routerLink="/projects">Browse projects</a>
+          </tk-empty-state>
+        } @else {
+          <div class="list" role="grid" aria-label="My work" data-testid="my-work-list">
+            @for (group of store.projects(); track group.projectKey) {
+              <div
+                class="ghead"
                 role="row"
-                [class.focus]="focusedId() === item.itemId"
-                [routerLink]="itemPath(item.url)"
-                [queryParams]="itemQuery(item.url)"
-                [attr.data-testid]="'my-work-item-' + item.testCaseKey"
+                [attr.data-testid]="'my-work-group-' + group.projectKey"
               >
-                <tk-icon name="tablerChecklist" [size]="14" />
-                <span class="key tnum">{{ item.testCaseKey }}</span>
-                <span class="title">{{ item.title }}</span>
-                <span class="fill"></span>
-                <span class="mode">{{ modeLabels[item.executionMode] }}</span>
-                <span class="session">
-                  <tk-project-tile [projectKey]="item.projectKey" />{{ item.sessionKey }} ·
-                  {{ item.sessionName }}
-                  @if (item.sessionVersion) {
-                    · {{ item.sessionVersion }}
-                  }
-                </span>
-              </a>
+                <button
+                  type="button"
+                  class="chev"
+                  [attr.aria-expanded]="!store.collapsed().has(group.projectKey)"
+                  [attr.aria-label]="
+                    (store.collapsed().has(group.projectKey) ? 'Expand ' : 'Collapse ') +
+                    group.projectName
+                  "
+                  (click)="store.toggle(group.projectKey)"
+                >
+                  <tk-icon
+                    [name]="
+                      store.collapsed().has(group.projectKey)
+                        ? 'tablerChevronRight'
+                        : 'tablerChevronDown'
+                    "
+                    [size]="14"
+                  />
+                </button>
+                <tk-project-tile [projectKey]="group.projectKey" />
+                <a class="glabel" [routerLink]="['/projects', group.projectKey, 'backlog']">{{
+                  group.projectName
+                }}</a>
+                <span class="gcount tnum">{{ group.tickets.length }}</span>
+              </div>
+              @if (!store.collapsed().has(group.projectKey)) {
+                @for (ticket of group.tickets; track ticket.id) {
+                  <tk-ticket-row
+                    testIdPrefix="my-work-row-"
+                    [ticket]="ticket"
+                    [focused]="focusedId() === ticket.id"
+                    (click)="openTicket(ticket.key, $event)"
+                    (mouseenter)="cache.prefetch(ticket.key)"
+                  />
+                }
+              }
             }
-          }
-        }
 
-        @if (store.watching().length) {
-          <div class="ghead" role="row" data-testid="my-work-watching">
-            <button
-              type="button"
-              class="chev"
-              [attr.aria-expanded]="!store.collapsed().has(watching)"
-              aria-label="Toggle watched tickets"
-              (click)="store.toggle(watching)"
-            >
-              <tk-icon
-                [name]="
-                  store.collapsed().has(watching) ? 'tablerChevronRight' : 'tablerChevronDown'
-                "
-                [size]="14"
-              />
-            </button>
-            <tk-icon name="tablerEye" [size]="14" />
-            <a class="glabel" routerLink="/search" [queryParams]="watchingParams">Watching</a>
-            <span class="gcount tnum">{{ store.watching().length }}</span>
-          </div>
-          @if (!store.collapsed().has(watching)) {
-            @for (ticket of store.watching(); track ticket.id) {
-              <tk-ticket-row
-                testIdPrefix="my-work-watching-row-"
-                [ticket]="ticket"
-                [focused]="focusedId() === ticket.id"
-                (click)="openTicket(ticket.key, $event)"
-                (mouseenter)="cache.prefetch(ticket.key)"
-              />
+            @if (store.work()?.truncated) {
+              <div class="more">
+                Showing the first {{ store.work()?.ticketCount }} tickets.
+                <a [routerLink]="'/search'" [queryParams]="searchParams">See all in search</a>
+              </div>
             }
-          }
+
+            @if (store.items().length) {
+              <div class="ghead" role="row" data-testid="my-work-group-regressions">
+                <button
+                  type="button"
+                  class="chev"
+                  [attr.aria-expanded]="!store.collapsed().has(regressions)"
+                  aria-label="Toggle regression items"
+                  (click)="store.toggle(regressions)"
+                >
+                  <tk-icon
+                    [name]="
+                      store.collapsed().has(regressions)
+                        ? 'tablerChevronRight'
+                        : 'tablerChevronDown'
+                    "
+                    [size]="14"
+                  />
+                </button>
+                <tk-icon name="tablerListCheck" [size]="14" />
+                <span class="glabel">Regression tests waiting for me</span>
+                <span class="gcount tnum">{{ store.items().length }}</span>
+              </div>
+              @if (!store.collapsed().has(regressions)) {
+                @for (item of store.items(); track item.itemId) {
+                  <a
+                    class="irow"
+                    role="row"
+                    [class.focus]="focusedId() === item.itemId"
+                    [routerLink]="itemPath(item.url)"
+                    [queryParams]="itemQuery(item.url)"
+                    [attr.data-testid]="'my-work-item-' + item.testCaseKey"
+                  >
+                    <tk-icon name="tablerChecklist" [size]="14" />
+                    <span class="key tnum">{{ item.testCaseKey }}</span>
+                    <span class="title">{{ item.title }}</span>
+                    <span class="fill"></span>
+                    <span class="mode">{{ modeLabels[item.executionMode] }}</span>
+                    <span class="session">
+                      <tk-project-tile [projectKey]="item.projectKey" />{{ item.sessionKey }} ·
+                      {{ item.sessionName }}
+                      @if (item.sessionVersion) {
+                        · {{ item.sessionVersion }}
+                      }
+                    </span>
+                  </a>
+                }
+              }
+            }
+
+            @if (store.watching().length) {
+              <div class="ghead" role="row" data-testid="my-work-watching">
+                <button
+                  type="button"
+                  class="chev"
+                  [attr.aria-expanded]="!store.collapsed().has(watching)"
+                  aria-label="Toggle watched tickets"
+                  (click)="store.toggle(watching)"
+                >
+                  <tk-icon
+                    [name]="
+                      store.collapsed().has(watching) ? 'tablerChevronRight' : 'tablerChevronDown'
+                    "
+                    [size]="14"
+                  />
+                </button>
+                <tk-icon name="tablerEye" [size]="14" />
+                <a class="glabel" routerLink="/search" [queryParams]="watchingParams">Watching</a>
+                <span class="gcount tnum">{{ store.watching().length }}</span>
+              </div>
+              @if (!store.collapsed().has(watching)) {
+                @for (ticket of store.watching(); track ticket.id) {
+                  <tk-ticket-row
+                    testIdPrefix="my-work-watching-row-"
+                    [ticket]="ticket"
+                    [focused]="focusedId() === ticket.id"
+                    (click)="openTicket(ticket.key, $event)"
+                    (mouseenter)="cache.prefetch(ticket.key)"
+                  />
+                }
+              }
+            }
+          </div>
         }
       </div>
-    }
+    </div>
   `,
   styleUrl: './my-work.view.scss',
 })
 export class MyWorkView {
   protected readonly store = inject(MyWorkStore);
   protected readonly cache = inject(TicketCache);
+  protected readonly checklist = inject(GettingStartedService);
   private readonly peek = inject(PeekService);
   private readonly router = inject(Router);
 

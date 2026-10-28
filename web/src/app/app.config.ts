@@ -26,6 +26,7 @@ import { provideIcons } from '@ng-icons/core';
 import { apiErrorInterceptor } from '@core/api/api-error.interceptor';
 import { AuthService } from '@core/auth/auth.service';
 import { PageTitleStrategy } from '@core/layout/page-title';
+import { provideGettingStartedHelp } from '@core/onboarding/checklist/getting-started.help';
 import { providePeekView } from '@core/layout/peek/peek';
 import { ShortcutService } from '@core/shortcuts/shortcut.service';
 import { ThemeService } from '@core/theme/theme.service';
@@ -62,6 +63,7 @@ export const appConfig: ApplicationConfig = {
     provideIcons(APP_ICONS),
     providePeekView(TICKET_DETAIL_VIEW),
     provideSearch(),
+    provideGettingStartedHelp(),
     provideAttachments(),
     provideDocsTicketSection(),
     provideTicketCreation(() =>

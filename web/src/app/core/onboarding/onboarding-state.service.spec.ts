@@ -23,6 +23,7 @@ describe('OnboardingStateService', () => {
   let api: {
     get: ReturnType<typeof vi.fn>;
     setGuide: ReturnType<typeof vi.fn>;
+    forgetGuide: ReturnType<typeof vi.fn>;
     resetGuides: ReturnType<typeof vi.fn>;
   };
   let toast: { error: ReturnType<typeof vi.fn> };
@@ -42,6 +43,7 @@ describe('OnboardingStateService', () => {
       setGuide: vi.fn((guideId: string, version: number, state: GuideState) =>
         of(guide(guideId, version, state)),
       ),
+      forgetGuide: vi.fn().mockReturnValue(of(undefined)),
       resetGuides: vi.fn().mockReturnValue(of(undefined)),
     };
     toast = { error: vi.fn() };
@@ -52,6 +54,66 @@ describe('OnboardingStateService', () => {
         { provide: AuthService, useValue: { isAuthenticated: computed(() => signedIn()) } },
         { provide: ToastService, useValue: toast },
       ],
+    });
+  });
+
+  describe('forget', () => {
+    it('forgets one guide optimistically and keeps the others', async () => {
+      // Arrange
+      api.get.mockReturnValue(
+        of(onboarding([guide('checklist', 1, 'Dismissed'), guide('welcome', 1)])),
+      );
+      const store = await create();
+      const pending = new Subject<void>();
+      api.forgetGuide.mockReturnValue(pending);
+
+      // Act
+      const result = store.forget('checklist');
+
+      // Assert
+      expect(store.isSeen('checklist', 1)).toBe(false);
+      expect(store.isSeen('welcome', 1)).toBe(true);
+      expect(api.forgetGuide).toHaveBeenCalledWith('checklist');
+
+      // Act
+      void store.load();
+      await flush();
+
+      // Assert
+      expect(store.isSeen('checklist', 1)).toBe(false);
+
+      // Act
+      pending.next();
+      pending.complete();
+
+      // Assert
+      expect(await result).toBe(true);
+    });
+
+    it('restores the guide and shows a toast when the server refuses', async () => {
+      // Arrange
+      api.get.mockReturnValue(of(onboarding([guide('checklist', 1, 'Dismissed')])));
+      const store = await create();
+      api.forgetGuide.mockReturnValue(throwError(() => new Error('offline')));
+
+      // Act
+      const result = await store.forget('checklist');
+
+      // Assert
+      expect(result).toBe(false);
+      expect(store.guides().get('checklist')?.state).toBe('Dismissed');
+      expect(toast.error).toHaveBeenCalled();
+    });
+
+    it('rejects a malformed guide id', async () => {
+      // Arrange
+      const store = await create();
+
+      // Act
+      const forget = () => store.forget('Not_A_Guide');
+
+      // Assert
+      await expect(forget()).rejects.toThrow("Invalid guide id 'Not_A_Guide'.");
     });
   });
 

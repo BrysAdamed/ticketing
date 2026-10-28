@@ -1,7 +1,10 @@
 import { APIRequestContext, Locator, Page } from '@playwright/test';
+import { WELCOME_GUIDE } from '@onboarding/guides/welcome';
 import { Onboarding } from '@onboarding/onboarding.models';
 import { FIRST_PROJECT_TOUR } from '@onboarding/walkthrough/first-project.tour';
 import { expect, test } from '../../support/fixtures';
+import { uniqueProjectKey } from '../../support/api';
+import { xsrfToken } from '../../support/guides';
 import { signInAs } from '../../support/session';
 import { PASSWORD, seedUser } from '../identity/identity';
 
@@ -17,6 +20,16 @@ interface Ticket {
 async function json<T>(request: APIRequestContext, path: string): Promise<T> {
     const response = await request.get(`/api/v1${path}`);
     expect(response.ok(), `GET ${path} → ${response.status()}`).toBe(true);
+    return (await response.json()) as T;
+}
+
+/// A POST as the signed-in user of `request` (cookie session, XSRF header).
+async function postAs<T>(request: APIRequestContext, path: string, data: unknown): Promise<T> {
+    const response = await request.post(`/api/v1${path}`, {
+        data,
+        headers: { 'X-XSRF-TOKEN': await xsrfToken(request) },
+    });
+    expect(response.ok(), `POST ${path} → ${response.status()}`).toBe(true);
     return (await response.json()) as T;
 }
 
@@ -45,9 +58,11 @@ class Walkthrough {
     async startFromPalette(): Promise<void> {
         await this.page.keyboard.press('Control+k');
         await this.page.getByTestId('command-palette-input').fill('Your first project');
-        await expect(
-            this.page.getByTestId('palette-item-command:help.tour.first-project'),
-        ).toBeVisible();
+        const item = this.page.getByTestId('palette-item-command:help.tour.first-project');
+        await expect(item).toBeVisible();
+        for (let i = 0; i < 10 && (await item.getAttribute('aria-selected')) !== 'true'; i++)
+            await this.page.keyboard.press('ArrowDown');
+        await expect(item).toHaveAttribute('aria-selected', 'true');
         await this.page.keyboard.press('Enter');
     }
 
@@ -94,7 +109,10 @@ test.describe('"Your first project" walkthrough', () => {
         test.setTimeout(180_000);
         // Arrange
         const user = await seedUser(api, 'first-project');
-        const { context, page } = await signInAs(browser, { email: user.email, password: PASSWORD });
+        const { context, page } = await signInAs(browser, {
+            email: user.email,
+            password: PASSWORD,
+        });
         const walkthrough = new Walkthrough(page);
         await page.goto('/my-work');
         await expect(page.getByTestId('view-my-work.list')).toBeVisible();
@@ -231,7 +249,10 @@ test.describe('"Your first project" walkthrough', () => {
     }) => {
         // Arrange
         const user = await seedUser(api, 'first-project-pause');
-        const { context, page } = await signInAs(browser, { email: user.email, password: PASSWORD });
+        const { context, page } = await signInAs(browser, {
+            email: user.email,
+            password: PASSWORD,
+        });
         const walkthrough = new Walkthrough(page);
         await page.goto('/my-work');
         await expect(page.getByTestId('view-my-work.list')).toBeVisible();
@@ -268,6 +289,93 @@ test.describe('"Your first project" walkthrough', () => {
             })
             .toBe('Dismissed');
         expect(await ownedKeys(context.request)).toEqual([]);
+        await context.close();
+    });
+
+    test('the projects list empty state starts it at step 1', async ({ browser, api }) => {
+        // Arrange
+        const user = await seedUser(api, 'first-project-projects');
+        const { context, page } = await signInAs(browser, {
+            email: user.email,
+            password: PASSWORD,
+        });
+        const walkthrough = new Walkthrough(page);
+        await page.goto('/projects');
+        await expect(page.getByTestId('view-projects.list')).toBeVisible();
+        const projects = await json<{ items: unknown[] }>(context.request, '/projects');
+        test.skip(projects.items.length > 0, 'public projects of other specs fill the list');
+        const state = page.locator('tk-empty-state');
+
+        // Act
+        await state.getByTestId('empty-state-learn').click();
+
+        // Assert
+        await walkthrough.expectStep('create-project', 1);
+        await page.keyboard.press('Escape');
+        await expect(walkthrough.card).toBeHidden();
+        await context.close();
+    });
+
+    test('the boards list empty state resumes at Create a board for a user with a project and a ticket', async ({
+        browser,
+        api,
+    }) => {
+        // Arrange
+        const user = await seedUser(api, 'first-project-boards');
+        const { context, page } = await signInAs(browser, {
+            email: user.email,
+            password: PASSWORD,
+        });
+        const key = uniqueProjectKey('FP');
+        await postAs(context.request, '/projects', { key, name: `E2E ${key}` });
+        await postAs(context.request, `/projects/${key}/tickets`, {
+            title: 'My first ticket',
+            type: 'Technical',
+        });
+        const walkthrough = new Walkthrough(page);
+        await page.goto('/boards');
+        await expect(page.getByTestId('view-boards.list')).toBeVisible();
+        const boards = await json<{ items: unknown[] }>(context.request, '/boards');
+        test.skip(boards.items.length > 0, 'boards of other specs fill the list');
+        const learn = page.locator('tk-empty-state').getByTestId('empty-state-learn');
+        await expect(learn).toHaveText(/How boards work/);
+
+        // Act
+        await learn.click();
+        await expect(page.getByTestId('first-project-use')).toBeFocused();
+        await page.keyboard.press('Enter');
+
+        // Assert
+        await walkthrough.expectStep('create-board', 4);
+        await expect(walkthrough.card).toContainText(key);
+        await page.keyboard.press('Escape');
+        await expect(walkthrough.card).toBeHidden();
+        await context.close();
+    });
+
+    test('the welcome dialog’s Take the tour starts it for a user who cannot write anywhere', async ({
+        browser,
+        api,
+    }) => {
+        // Arrange
+        const user = await seedUser(api, 'first-project-welcome');
+        const { context, page } = await signInAs(
+            browser,
+            { email: user.email, password: PASSWORD },
+            { keepGuides: (g) => g.id === WELCOME_GUIDE.id },
+        );
+        const walkthrough = new Walkthrough(page);
+        await page.goto('/my-work');
+        await expect(page.getByTestId('welcome-dialog')).toBeVisible();
+
+        // Act
+        await page.keyboard.press('Enter');
+
+        // Assert
+        await expect(page.getByTestId('welcome-dialog')).toBeHidden();
+        await walkthrough.expectStep('create-project', 1);
+        await page.keyboard.press('Escape');
+        await expect(walkthrough.card).toBeHidden();
         await context.close();
     });
 });

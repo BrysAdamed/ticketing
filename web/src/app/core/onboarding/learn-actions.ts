@@ -3,6 +3,7 @@ import { isHelpItemEnabled } from '../help/help-menu';
 import { HelpMenuRegistry } from '../help/help-menu.registry';
 import { TourAvailability } from './tour-availability';
 import { tourCommandId } from './tours/tour-catalogue';
+import { startFirstProjectWalkthrough } from './walkthrough/first-project.help';
 
 const FIRST_PROJECT_COMMAND_ID = tourCommandId('first-project');
 
@@ -33,7 +34,12 @@ export class LearnActions {
     await this.injector.get(GuidedTours).start(viewId);
   }
 
-  startWalkthrough(): void {
-    this.walkthrough()?.run();
+  /// Starts the walkthrough; skipOptional passes over the optional status step, so the boards
+  /// list resumes at Create a board for a user who already has a project and a ticket (D-140).
+  startWalkthrough(options: { readonly skipOptional?: boolean } = {}): void {
+    const item = this.walkthrough();
+    if (!item) return;
+    if (options.skipOptional) void startFirstProjectWalkthrough(this.injector, options);
+    else item.run();
   }
 }

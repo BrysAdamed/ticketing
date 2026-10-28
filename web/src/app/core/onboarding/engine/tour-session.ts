@@ -679,6 +679,7 @@ export class TourSession {
     if (this.steps.some(isActionStep)) {
       this.coverObserver = new MutationObserver(() => {
         if (this.isAction()) this.refreshCovered();
+        this.scheduleMeasure();
       });
       this.coverObserver.observe(this.document.body, { childList: true, subtree: true });
     }

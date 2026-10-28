@@ -143,7 +143,7 @@ import { CreateBoardDialog, CreateBoardDialogData } from './create-board.dialog'
                 title="No boards yet"
                 description="A board pulls tickets from one or more project backlogs, like a sprint."
                 [learnLabel]="learn.canStartWalkthrough() ? 'How boards work' : null"
-                (learn)="learn.startWalkthrough()"
+                (learn)="learn.startWalkthrough({ skipOptional: true })"
               >
                 <button mat-flat-button type="button" (click)="openCreate()">New board</button>
               </tk-empty-state>

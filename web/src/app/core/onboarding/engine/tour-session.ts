@@ -174,6 +174,7 @@ export class TourSession {
   private overlayObserver: MutationObserver | null = null;
   private coverObserver: MutationObserver | null = null;
   private peekWatch: EffectRef | null = null;
+  private anchorWatch: EffectRef | null = null;
   private readonly subscriptions = new Subscription();
   private stepWatch = new Subscription();
   private readonly uncovered = new Subject<void>();
@@ -245,10 +246,11 @@ export class TourSession {
   async runAction(): Promise<void> {
     const action = this.step().action;
     if (!action) return;
+    const anchor = this.anchors.get(this.step().anchor) ?? this.element;
     if (action.does === 'click-anchor') {
-      this.element?.click();
+      anchor?.click();
     } else if (action.does === 'focus-anchor') {
-      focusable(this.element)?.focus();
+      focusable(anchor)?.focus();
     } else {
       if (!this.conditions) return;
       const token = this.moveToken;
@@ -273,6 +275,7 @@ export class TourSession {
     this.overlayObserver?.disconnect();
     this.coverObserver?.disconnect();
     this.peekWatch?.destroy();
+    this.anchorWatch?.destroy();
     this.stepWatch.unsubscribe();
     this.subscriptions.unsubscribe();
     this.disposeCard();
@@ -644,6 +647,14 @@ export class TourSession {
       { injector: this.injector },
     );
 
+    this.anchorWatch = effect(
+      () => {
+        const element = this.anchors.get(this.step().anchor);
+        untracked(() => this.followAnchor(element));
+      },
+      { injector: this.injector },
+    );
+
     const container = this.injector.get(OverlayContainer).getContainerElement();
     this.overlayObserver = new MutationObserver((records) => {
       if (this.isAction() || this.paused()) return;
@@ -671,6 +682,14 @@ export class TourSession {
       });
       this.coverObserver.observe(this.document.body, { childList: true, subtree: true });
     }
+  }
+
+  /// The view re-rendered the current anchor (a list refresh): the hole and the card follow it.
+  private followAnchor(element: HTMLElement | null): void {
+    if (!element || !this.element || element === this.element || this.pending()) return;
+    this.observeAnchor(element);
+    this.position?.setOrigin(element);
+    this.measure();
   }
 
   private giveWay(): void {

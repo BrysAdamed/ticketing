@@ -17,9 +17,11 @@ import type { TourSession } from './tour-session';
 
 let nextId = 0;
 
-/// The step card of a tour: a modal dialog (focus trapped, labelled by the step title, described
-/// by its body) connected to the anchor. Keys are handled by the session through the overlay's
-/// keyboard dispatcher: Esc closes, ← and → move between steps.
+/// The step card of a tour: a dialog labelled by the step title and described by its body,
+/// connected to the anchor. Modal steps trap focus and have Back and Next; action-driven steps
+/// (D-140) are non-modal and show what they wait for, the step's action and, when optional, Skip
+/// this step. Keys are handled by the session through the overlay's keyboard dispatcher: Esc
+/// closes, ← and → move between modal steps.
 @Component({
   selector: 'tk-tour-popover',
   imports: [CdkTrapFocus, MatButtonModule, KbdComponent, IconComponent],
@@ -265,14 +267,17 @@ export class TourPopoverComponent {
   private readonly dialog = viewChild.required<ElementRef<HTMLElement>>('dialog');
   private readonly injector = inject(Injector);
 
-  /// After the current step has rendered, moves focus to the dialog unless it is already inside
-  /// (on the button just pressed). Screen readers then read the title and body; step changes made
+  /// After the current step has rendered, moves focus to the card unless it is already inside (on
+  /// the button just pressed): to the step's action button on an action-driven step, so Enter does
+  /// the action, else to the dialog. Screen readers then read the title and body; step changes made
   /// from inside are announced by the session.
   focus(): void {
     afterNextRender(
       () => {
         const dialog = this.dialog().nativeElement;
-        if (!dialog.contains(dialog.ownerDocument.activeElement)) dialog.focus();
+        if (dialog.contains(dialog.ownerDocument.activeElement)) return;
+        const action = dialog.querySelector<HTMLElement>('[data-testid="tour-action"]');
+        (action ?? dialog).focus();
       },
       { injector: this.injector },
     );

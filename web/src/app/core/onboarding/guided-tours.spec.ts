@@ -45,6 +45,29 @@ const ENTRY: TourCatalogueEntry = {
   load: () => Promise.resolve(TOUR),
 };
 
+const ADMIN_TOUR: TourDefinition = {
+  id: 'tour.admin.view',
+  version: 1,
+  viewId: 'admin.view',
+  title: 'Admin',
+  steps: [{ id: 'a', anchor: 'admin.a', requires: 'admin', title: 'A', body: 'Admins' }],
+};
+
+const ADMIN_ENTRY: TourCatalogueEntry = {
+  viewId: 'admin.view',
+  title: 'Admin',
+  path: '/admin-page',
+  requires: 'admin',
+  load: () => Promise.resolve(ADMIN_TOUR),
+};
+
+const OWNER_ENTRY: TourCatalogueEntry = {
+  viewId: 'owner.view',
+  title: 'Owner',
+  requires: 'owner',
+  load: () => Promise.resolve({ ...TOUR, id: 'tour.owner.view', viewId: 'owner.view' }),
+};
+
 const MEMBER: OpenProject = { key: 'WEB', name: 'Web', archived: false, role: 'Member' };
 
 @Component({ selector: 'tk-blank', template: 'blank' })
@@ -65,6 +88,7 @@ describe('GuidedTours', () => {
   let api: { get: ReturnType<typeof vi.fn>; setGuide: ReturnType<typeof vi.fn> };
   let projects: ReturnType<typeof signal<readonly ProjectSummary[]>>;
   let tours: GuidedTours;
+  let isAdmin: ReturnType<typeof signal<boolean>>;
   let router: Router;
 
   beforeEach(async () => {
@@ -83,25 +107,28 @@ describe('GuidedTours', () => {
       ),
     };
     projects = signal<readonly ProjectSummary[]>([]);
+    isAdmin = signal(false);
     TestBed.configureTestingModule({
       providers: [
         provideZonelessChangeDetection(),
         provideRouter([
           { path: 'other', component: BlankComponent, data: { viewId: 'other.view' } },
           { path: 'here', component: BlankComponent, data: { viewId: 'test.view' } },
+          { path: 'admin-page', component: BlankComponent, data: { viewId: 'admin.view' } },
+          { path: 'owner-page', component: BlankComponent, data: { viewId: 'owner.view' } },
           {
             path: 'projects/:projectKey/test',
             component: ProjectPageComponent,
             data: { viewId: 'test.view' },
           },
         ]),
-        { provide: TOURS, useValue: [ENTRY] },
+        { provide: TOURS, useValue: [ENTRY, ADMIN_ENTRY, OWNER_ENTRY] },
         { provide: TourLauncher, useValue: launcher },
         { provide: OnboardingApi, useValue: api },
         { provide: ProjectDirectory, useValue: { projects } },
         {
           provide: AuthService,
-          useValue: { isAuthenticated: signal(true), isAdmin: signal(false) },
+          useValue: { isAuthenticated: signal(true), isAdmin },
         },
         { provide: ToastService, useValue: { error: vi.fn(), success: vi.fn() } },
         { provide: ConfirmService, useValue: { confirm: vi.fn() } },
@@ -163,6 +190,61 @@ describe('GuidedTours', () => {
 
       // Assert
       expect(command()!.available!()).toBe(true);
+    });
+  });
+
+  describe('tours for one audience', () => {
+    const commandOf = (viewId: string) =>
+      TestBed.inject(CommandRegistry)
+        .commands()
+        .find((c) => c.id === `help.tour.${viewId}`);
+
+    it('offers an Admin tour with a project-less path to Admins only, from anywhere', () => {
+      // Assert: not an Admin
+      expect(commandOf('admin.view')!.available!()).toBe(false);
+
+      // Act
+      isAdmin.set(true);
+
+      // Assert: no project needed
+      expect(commandOf('admin.view')!.available!()).toBe(true);
+    });
+
+    it('starts an Admin tour away from its view without picking a project', async () => {
+      // Arrange
+      isAdmin.set(true);
+
+      // Act
+      const result = await tours.start('admin.view');
+
+      // Assert
+      expect(result).toBe('completed');
+      expect(router.url).toBe('/admin-page');
+      expect(launcher.start).toHaveBeenCalledWith(ADMIN_TOUR, {
+        access: { canWrite: false, isOwner: false, isAdmin: true },
+        params: {},
+        returnFocusTo: undefined,
+      });
+    });
+
+    it('enables Tour of this page on an Owner tour for Owners only', async () => {
+      // Arrange
+      await router.navigateByUrl('/owner-page');
+      const open = TestBed.inject(OpenProjectState).project;
+
+      // Act
+      open.set(MEMBER);
+
+      // Assert
+      expect(tourOfPage().disabled!()).toBe(true);
+      expect(commandOf('owner.view')!.available!()).toBe(false);
+
+      // Act
+      open.set({ ...MEMBER, role: 'Owner' });
+
+      // Assert
+      expect(tourOfPage().disabled!()).toBe(false);
+      expect(commandOf('owner.view')!.available!()).toBe(true);
     });
   });
 

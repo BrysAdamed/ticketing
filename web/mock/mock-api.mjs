@@ -62,6 +62,14 @@ const NOTIFICATIONS = [
   notification(5, 'Commented', 'commented', 60 * 80, { readAt: minutesAgo(60 * 70) }),
 ];
 const unreadCount = () => NOTIFICATIONS.filter((n) => !n.readAt).length;
+const unseenAchievements = () => {
+  const items = ACHIEVEMENTS.flatMap((a) =>
+    a.tiers
+      .filter((t) => t.unlockedAt && !t.seenAt)
+      .map((t) => ({ id: a.id, name: a.name, tier: t.tier, icon: a.icon })),
+  );
+  return { count: items.length, items };
+};
 const achievement = (id, name, description, icon, thresholds, tier, count, extra = {}) => ({
   id,
   name,
@@ -246,11 +254,12 @@ createServer(async (req, res) => {
     return send(res, 200, { flags: { 'board.swimlanes': 'off', achievements: 'on' } });
   if (path === '/api/v1/me/achievements')
     return send(res, 200, { startedAt: minutesAgo(60 * 24 * 7), items: ACHIEVEMENTS });
+  if (path === '/api/v1/me/achievements/unseen') return send(res, 200, unseenAchievements());
   if (path === '/api/v1/me/achievements/seen' && req.method === 'POST') {
     const ids = new Set((await readBody(req)).ids ?? []);
     for (const a of ACHIEVEMENTS.filter((a) => ids.has(a.id)))
       for (const t of a.tiers) if (t.unlockedAt && !t.seenAt) t.seenAt = new Date().toISOString();
-    return send(res, 200, { count: 0, items: [] });
+    return send(res, 200, unseenAchievements());
   }
   if (path === '/api/v1/me/notifications/unread-count')
     return send(res, 200, { count: unreadCount() });

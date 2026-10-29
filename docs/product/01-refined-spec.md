@@ -1557,3 +1557,13 @@ The look is `docs/design/mockups/achievements.html`, layout-and-screens §3.9b a
 - The grid has one tab stop: arrows move in 2D across the groups, Home/End jump, Enter or a click opens the detail popover (description, the tier ladder of an earned tiered medal, "How to earn" for a locked one; a masked secret gets no hint). Esc closes it and returns focus to the tile.
 - While nothing is earned yet, an empty state says "Achievements start counting now" (no backfill, D-144), with Still to earn below.
 - Opening the tab marks every earned, unseen tier seen (`POST /me/achievements/seen` with the ids).
+
+### 15.10 Unlock toast
+
+The look is section 5 of `docs/design/mockups/achievements.html` and layout-and-screens §2 (avatar menu). Decision D-152 (TKT-67).
+
+- **Polling:** `GET /me/achievements/unseen` rides on the notification poll (6.16: every minute while the tab is visible, on window focus and at sign-in) and runs only while achievements are on for the user (`AchievementsAccess`). A 404 `achievements.disabled` turns achievements off for the session, as on the tab. There is no other loop.
+- **Toast:** one two-line toast per newly unseen tier, bottom-right for 5 s (paused while hovered or focused): the 32px medal, "Name · Tier" (a one-time achievement shows its name alone), the achievement's description as the second line, **View** (opens `/profile/achievements`) and Dismiss. Several toasts show one after another. More than 3 new tiers at once collapse into one summary toast: up to three stacked medals, "5 new achievements" and "Reporter, Connector, Machine whisperer and 2 more."
+- **Once per tier:** a tier is toasted at most once per browser, even across reloads and tabs, as long as it stays unseen; the remembered tiers are kept per user in `localStorage` and pruned to the tiers still unseen. Toasting doesn't mark anything seen; only opening the tab does (15.9).
+- **Dot:** while any tier is unseen, the avatar carries an 8px accent dot with no number, its label reads "Account: name, new achievements", and the account menu's Achievements item shows a "New" badge. The tab's `POST /seen` answer clears them at once.
+- No confetti and no animation of its own; the snack bar's entry animation is off under reduced motion. The copy names what the user did, never a comparison.

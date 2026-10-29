@@ -1,7 +1,7 @@
 import { DOCUMENT } from '@angular/common';
 import { computed, DestroyRef, effect, inject, Injectable, signal, untracked } from '@angular/core';
 import { Router } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, Subject } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
 import { PeekService } from '../layout/peek/peek';
 import { ToastService } from '../notify/toast.service';
@@ -33,8 +33,13 @@ export class NotificationCenter {
   private readonly state = signal<NotificationPanelStatus>('idle');
   private readonly more = signal(false);
   private readonly now = signal(Date.now());
+  private readonly pollTicks = new Subject<void>();
   private countGeneration = 0;
   private listGeneration = 0;
+
+  /// Emits on every unread-count refresh (the minute poll, window focus, sign-in), so other
+  /// per-user counts can ride on the same poll instead of starting their own.
+  readonly polls = this.pollTicks.asObservable();
 
   readonly unreadCount = this.count.asReadonly();
   readonly isOpen = this.opened.asReadonly();
@@ -80,6 +85,7 @@ export class NotificationCenter {
   }
 
   async refreshCount(): Promise<void> {
+    this.pollTicks.next();
     const generation = ++this.countGeneration;
     const count = await firstValueFrom(this.api.unreadCount()).catch(() => null);
     if (count === null || generation !== this.countGeneration) return;

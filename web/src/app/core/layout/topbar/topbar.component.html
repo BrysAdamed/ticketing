@@ -101,10 +101,15 @@
       type="button"
       class="user"
       data-testid="user-menu"
-      [attr.aria-label]="'Account: ' + user.displayName"
+      [attr.aria-label]="
+        'Account: ' + user.displayName + (unlocks.hasUnseen() ? ', new achievements' : '')
+      "
       [matMenuTriggerFor]="userMenu"
     >
       <tk-avatar [userId]="user.id" [name]="user.displayName" [size]="24" [showTitle]="false" />
+      @if (unlocks.hasUnseen()) {
+        <span class="unseen-dot" data-testid="achievements-dot"></span>
+      }
     </button>
     <mat-menu #userMenu="matMenu" xPosition="before" class="tk-user-menu">
       <div class="who">
@@ -114,6 +119,14 @@
       <a mat-menu-item routerLink="/profile" data-testid="menu-profile">
         <tk-icon name="tablerUserCircle" /> Profile
       </a>
+      @if (achievements.enabled()) {
+        <a mat-menu-item routerLink="/profile/achievements" data-testid="menu-achievements">
+          <tk-icon name="tablerAward" /> Achievements
+          @if (unlocks.hasUnseen()) {
+            <span class="new-badge" data-testid="menu-achievements-new">New</span>
+          }
+        </a>
+      }
       <a mat-menu-item routerLink="/profile/tokens" data-testid="menu-tokens">
         <tk-icon name="tablerKey" /> Access tokens
       </a>

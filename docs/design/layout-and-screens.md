@@ -1,6 +1,6 @@
 # Layout and screens
 
-Screen-level spec. Visual rules come from [`design-system.md`](./design-system.md). The pixel references are [`mockups/backlog.html`](./mockups/backlog.html), [`mockups/ticket-detail.html`](./mockups/ticket-detail.html), [`mockups/board.html`](./mockups/board.html) and, for the onboarding surfaces (welcome, checklist, tour step, hint, Help menu), [`mockups/onboarding.html`](./mockups/onboarding.html).
+Screen-level spec. Visual rules come from [`design-system.md`](./design-system.md). The pixel references are [`mockups/backlog.html`](./mockups/backlog.html), [`mockups/ticket-detail.html`](./mockups/ticket-detail.html), [`mockups/board.html`](./mockups/board.html) and, for the onboarding surfaces (welcome, checklist, tour step, hint, Help menu), [`mockups/onboarding.html`](./mockups/onboarding.html), and for achievements (medal states, tab, toasts, opt-out, user card), [`mockups/achievements.html`](./mockups/achievements.html).
 
 Each screen has a **view id** (in brackets in its heading). The id is the stable seam for future A/B variants: a route resolves `viewId → component`, and a feature flag can later map the same id to a variant component with the same inputs.
 
@@ -39,7 +39,7 @@ Each screen has a **view id** (in brackets in its heading). The id is the stable
 **Top bar** (44px, `--tk-bg`, bottom `--tk-border`):
 - Left: breadcrumb (`Project › View`, or `Project › Parent key › Key` on ticket detail). Every segment is a link.
 - Center: search trigger, a 320px fake input showing `Search or jump to…` and `⌘K`/`Ctrl K`. It opens the **command palette**: a 640px modal at 12vh from the top with `shadow-lg`. It offers a fuzzy search over tickets (by key or title), projects, boards and commands ("Create ticket", "Go to board…", "Toggle theme"). Results are grouped and keyboard-navigable, and the first result opens with Enter. Searching uses the API with a 120ms debounce and shows recent items instantly.
-- Right: `+ New ticket` (primary, small; `C`), help icon opening the Help menu (shortcut sheet `?`, tours, getting started, What's new, Connect an AI agent, Restart all guides; spec §14.6, mockup `onboarding.html`), user avatar menu (Profile, Access tokens, Theme, Density, Sign out).
+- Right: `+ New ticket` (primary, small; `C`), help icon opening the Help menu (shortcut sheet `?`, tours, getting started, What's new, Connect an AI agent, Restart all guides; spec §14.6, mockup `onboarding.html`), user avatar menu (Profile, Achievements, Access tokens, Theme, Density, Sign out). While there are unseen achievements the avatar carries an 8px accent dot with no number, the button's label becomes "Account menu, new achievements" and the Achievements item shows a "New" badge; opening the tab clears it. Achievements entries are hidden when the `achievements` flag is off or the user opted out.
 
 **Responsive**: ≥1200px is the full layout. 900 to 1199px collapses the sidebar to the rail by default, and the peek panel overlays instead of pushing. Below 900px the sidebar becomes an off-canvas drawer and detail opens full page. Mobile is view-only best effort and not a target.
 
@@ -66,6 +66,12 @@ Version: a `mat-autocomplete` that lists this project's previously used versions
 - **Empty states**: centered in the content area, max 360px wide, with a 32px Tabler icon in `--tk-text-subtle`, a `lg` title, one muted sentence, a primary action, and the shortcut as a `Kbd`, plus a secondary learn action (stroked button with a compass icon, `learnLabel` and `(learn)` on `tk-empty-state`) that starts the page's tour, the "Your first project" walkthrough or an explainer (spec §14.7, D-143), shown only while it can start. Viewers get the learn action without the create action and copy that does not ask them to create. No illustrations. Example: "No tickets in backlog · Create the first one. New tickets land here until you place them on a board. [New ticket C] [Take the tour]". When filters match nothing: "No tickets match these filters · [Clear filters]".
 - **Errors**: a load failure replaces the content with an inline panel (icon `tablerAlertCircle` in danger, title "Couldn't load the backlog", muted detail with a correlation id, `Retry` button). A mutation failure shows a toast (bottom-right, 5s, pauses on hover) with `Retry` or `Undo`. 403 shows "You don't have access to this project" with a link to the project list. 404 shows "PAY-999 doesn't exist or was moved". When offline, a warning bar sits under the top bar and mutations are queued.
 - **Undo**: destructive bulk actions (delete, move to board) run immediately and show a toast with `Undo` (8s), with no confirm dialog. The exception is deleting a project, user or token, which uses a confirm dialog where you type the name.
+
+### User card
+A popover about a person (`tk-user-card`, CDK overlay, `role="dialog"` labelled by the name; mockup `achievements.html`). It is the only place another user's shared achievements appear, since there is no page for another user's profile.
+- Opens on click or Enter on a person's name or avatar where a click does nothing else today: comment and history authors, the watchers list, the Reporter field. Elsewhere (row and card avatars, whose click edits the assignee) it opens after a 500ms hover, like the ticket key hover card. Esc closes it and returns focus.
+- Content: 32px avatar, name, email ("You" on your own card), then "Shared achievements": 32px medals with name and tier, in catalogue order so the list never reads as a ranking. No dates, counts, progress or comparison.
+- The achievements section is absent when the person shared nothing, opted out, or the flag is off for the viewer. Your own card says "Shared by you" and links to Profile → Achievements.
 
 ### Performance budget (feel)
 - Every list over 100 rows uses CDK virtual scroll with a fixed `itemSize = --tk-row-h`. Group headers are rows of the same height.
@@ -156,6 +162,15 @@ Version: a `mat-autocomplete` that lists this project's previously used versions
 ### 3.9a Profile → general [`profile.general`]
 - Cards, max 640px: Profile (email, role, display name), **Avatar**, Password.
 - Avatar card: a live preview (32px avatar, and a mock card row with the 20px avatar); an "Animal" radio group of 48px tiles tinted with the current colour (roving tabindex: arrows in 2D, Home/End, Enter/Space picks; skeleton tiles while the art loads); a "Colour" radio group of `Automatic` plus the 8 palette colours, each swatch showing the avatar in that colour; `Use initials` (stroked, disabled when no animal is picked). Every pick saves at once, optimistically, with a toast and rollback on failure.
+
+- Achievements card (TKT-68): an "Earn achievements" switch, on by default, with the copy "They're private: nobody else sees them, Admins included, unless you share one" and "Turning this off deletes your achievements and anything you shared. If you turn it back on, counting starts again from that moment." Turning off asks inline ("Turn off and delete your achievements?", danger `Turn off and delete`, `Keep them`); turning on needs no confirm.
+
+### 3.9b Profile → achievements [`profile.achievements`] (mockup: `achievements.html`)
+- A third Profile tab, hidden when the `achievements` flag is off or the user opted out. A muted line with a lock icon says who can see them.
+- Groups, without totals: **Earned** (highest tier first), **Still to earn** (closest first), **Secret** ("???"). Tiles in a 3-column grid (`--tk-surface`, 1px `--tk-border`, radius `lg`, 12px padding): 48px medal, name (600), tier, one-line description, and the progress bar to the next tier ("23 of 50 to Gold", "Highest tier" at the top). Earned tiles have a Share / Shared toggle (`aria-pressed`, "Unshare" on hover), optimistic with rollback.
+- Enter or click opens the medal detail popover: description and tier ladder for earned medals with the share control; for locked ones a "How to earn" hint and a `Show me` learn action (stroked, compass icon) when one can start (TKT-93, D-143). Secret entries have neither.
+- Loading: tile skeletons with a hexagon block. Empty (nothing earned yet): "Achievements start counting now", explaining that earlier work isn't included, with the Still to earn grid below.
+- Unlocks show a toast each (medal, "Closer · Silver", what you did, `View`); more than 3 at once collapse into "5 new achievements" (TKT-67).
 
 ### 3.10 Profile → access tokens [`profile.tokens`]
 - Profile page has tabs `General · Access tokens · Preferences` (Preferences: theme, density, keyboard shortcut hints on/off).

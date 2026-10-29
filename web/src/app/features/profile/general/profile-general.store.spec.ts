@@ -154,6 +154,21 @@ describe('ProfileGeneralStore achievements opt-out', () => {
     expect(access.enabled()).toBe(true);
   });
 
+  it('keeps the opt-in when an answer from before the save said disabled', async () => {
+    // Arrange
+    user.set({ ...user()!, achievementsHidden: true });
+    const { store, access } = setup();
+
+    // Act: a poll sent right after the click is answered before the server saved the opt-in
+    store.toggleAchievements();
+    access.markDisabled(access.since());
+    api.succeed();
+    await vi.waitFor(() => expect(store.savingAchievements()).toBe(false));
+
+    // Assert
+    expect(access.enabled()).toBe(true);
+  });
+
   it('rolls the opt-in back when the save fails', async () => {
     // Arrange
     user.set({ ...user()!, achievementsHidden: true });

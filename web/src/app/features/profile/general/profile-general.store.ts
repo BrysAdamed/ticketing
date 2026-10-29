@@ -93,13 +93,15 @@ export class ProfileGeneralStore {
     return this.saveAchievements(true);
   }
 
-  /// Optimistic: every achievements surface hides or returns at once and rolls back on failure.
+  /// Optimistic: every achievements surface hides or returns at once and rolls back on failure. The
+  /// choice is applied again once saved, because a poll answered before the save can contradict it.
   private async saveAchievements(hidden: boolean): Promise<void> {
     this.confirmingOptOut.set(false);
     this.savingAchievements.set(true);
     this.markAchievements(hidden);
     try {
       await firstValueFrom(this.api.patch('/me', { achievementsHidden: hidden }));
+      this.markAchievements(hidden);
       this.toast.success(
         hidden
           ? 'Achievements turned off. Your achievements were deleted.'

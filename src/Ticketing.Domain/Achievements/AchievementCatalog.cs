@@ -26,6 +26,9 @@ public static class AchievementCatalog
     public const string MachineWhisperer = "machine-whisperer";
     public const string EpicFinisher = "epic-finisher";
     public const string ShoutOut = "shout-out";
+    public const string SecondThoughts = "second-thoughts";
+    public const string Unblocker = "unblocker";
+    public const string GrandTour = "grand-tour";
 
     private static readonly int[] Once = [1];
 
@@ -50,6 +53,9 @@ public static class AchievementCatalog
         new(MachineWhisperer, "Machine whisperer", "Made a change through MCP.", "Connect an AI agent over MCP and let it change something for you.", "plug-connected", Once),
         new(EpicFinisher, "Epic finisher", "Closed an Epic with all of its work done.", "Move an Epic to Done once every ticket in it is Done.", "flag-check", Once),
         new(ShoutOut, "Shout-out", "Mentioned a teammate.", "Mention a teammate with @ in a comment or a ticket description.", "speakerphone", Once),
+        new(SecondThoughts, "Second thoughts", "Undid your own delete.", null, "arrow-back-up", Once, secret: true),
+        new(Unblocker, "Unblocker", "Finished a ticket that was blocking three open tickets.", null, "lock-open", Once, secret: true),
+        new(GrandTour, "Grand tour", "Worked on a ticket that went through all eight statuses.", null, "route", Once, secret: true),
     ];
 
     public static AchievementDefinition? Find(string id) => All.FirstOrDefault(a => a.Id == id);

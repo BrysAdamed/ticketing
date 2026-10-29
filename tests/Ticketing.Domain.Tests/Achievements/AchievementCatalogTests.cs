@@ -16,17 +16,20 @@ public sealed class AchievementCatalogTests
             [
                 "reporter", "closer", "ready-for-review", "bug-hunter", "exterminator", "conversationalist", "connector", "show-me", "triage",
                 "test-author", "regression-runner", "found-it", "full-sweep", "board-builder", "spring-cleaning", "delegator", "machine-whisperer",
-                "epic-finisher", "shout-out",
+                "epic-finisher", "shout-out", "second-thoughts", "unblocker", "grand-tour",
             ],
             ids);
         Assert.Equal(ids.Count, ids.Distinct().Count());
-        Assert.Empty(AchievementCatalog.All.Where(a => a.Secret).Select(a => a.Id));
+        Assert.Equal(["second-thoughts", "unblocker", "grand-tour"], AchievementCatalog.All.Where(a => a.Secret).Select(a => a.Id));
         Assert.All(AchievementCatalog.All, a => Assert.Equal(a.Secret, string.IsNullOrWhiteSpace(a.HowToEarn)));
     }
 
     [Theory]
     [InlineData("epic-finisher")]
     [InlineData("shout-out")]
+    [InlineData("second-thoughts")]
+    [InlineData("unblocker")]
+    [InlineData("grand-tour")]
     public void Event_achievements_are_earned_once(string id)
     {
         // Act

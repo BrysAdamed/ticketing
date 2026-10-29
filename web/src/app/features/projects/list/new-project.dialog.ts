@@ -9,12 +9,13 @@ import {
   Validators,
 } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { firstValueFrom } from 'rxjs';
 import { ApiClient } from '@core/api/api-client';
 import { toApiError } from '@core/api/api-error';
+import { CreateProjectPrefill } from '@core/projects/create-project';
 import { ProjectDetail } from '@core/projects/project-context';
 import { ProjectDirectory } from '@core/projects/project-directory';
 import { ProjectVisibility } from '@shared/domain/enums';
@@ -27,7 +28,7 @@ import {
   PROJECT_NAME_MAX_LENGTH,
   projectKeyError,
   suggestProjectKey,
-} from '../project-key';
+} from '@shared/domain/project-key';
 
 const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 
@@ -170,6 +171,9 @@ export class NewProjectDialog {
   private readonly api = inject(ApiClient);
   private readonly directory = inject(ProjectDirectory);
   protected readonly ref = inject<MatDialogRef<NewProjectDialog, ProjectDetail>>(MatDialogRef);
+  private readonly prefill = inject<CreateProjectPrefill | null>(MAT_DIALOG_DATA, {
+    optional: true,
+  });
 
   protected readonly nameMax = PROJECT_NAME_MAX_LENGTH;
   protected readonly keyMax = PROJECT_KEY_MAX_LENGTH;
@@ -193,6 +197,10 @@ export class NewProjectDialog {
     this.form.controls.name.valueChanges.pipe(takeUntilDestroyed()).subscribe((name) => {
       if (!this.keyEdited) this.form.controls.key.setValue(suggestProjectKey(name));
     });
+    const { name, key, visibility } = this.prefill ?? {};
+    if (name) this.form.controls.name.setValue(name);
+    if (key) this.form.controls.key.setValue(key);
+    if (visibility) this.form.controls.visibility.setValue(visibility);
   }
 
   protected onKeyInput(raw: string): void {

@@ -276,7 +276,7 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Visibility**: `Private` (default) or `Public`; decides who can access a project without membership. [§3](product/01-refined-spec.md#3-enumerations)
 
-**Walkthrough**: A tour that spans several views and advances only when the user really does each action, never on Next. The one walkthrough is "Your first project" (`tour.first-project`): create a private project, a ticket, a board, place the ticket and end on the dashboard. It pauses behind a "Continue the walkthrough" pill when the user navigates away and resumes from real data, so nothing is created twice. [§14.4](product/01-refined-spec.md#144-tours-and-the-anchor-rule)
+**Walkthrough**: A tour that spans several views and advances only when the user really does each action, never on Next. The one walkthrough is "Your first project" (`tour.first-project`): create a private project, a ticket, a board, place the ticket and end on the dashboard. It pauses behind a "Continue the walkthrough" pill when the user navigates away and resumes from real data, so nothing is created twice. Its steps are **action steps** (`advanceWhen`): non-modal, shortcuts live, done when a condition read from real data holds (D-140). [§14.4](product/01-refined-spec.md#144-tours-and-the-anchor-rule)
 
 **Watcher**: A user who follows a ticket. Anyone who can read the ticket may watch it; the reporter, the assignee (on each assignment), commenters and newly mentioned users start watching automatically. Only active watchers who can still read the project are shown or notified; the others stay stored but hidden (D-93). [§6.15](product/01-refined-spec.md#615-watchers-i-32-d-93)
 

@@ -1,4 +1,15 @@
-import { fillRoute, isAllowed, isOnPath, planTour, spotlightHole, stepLabel } from './tour-logic';
+import {
+  fillRoute,
+  fillText,
+  isAllowed,
+  isOnPath,
+  planTour,
+  resumeIndex,
+  spotlightHole,
+  stageProgress,
+  stepLabel,
+  tryFillRoute,
+} from './tour-logic';
 import { TourAccess, TourDefinition, TourStep } from './tour.model';
 
 const viewer: TourAccess = { canWrite: false, isOwner: false, isAdmin: false };
@@ -106,6 +117,79 @@ describe('tour logic', () => {
     // Assert
     expect(plan.steps.map((s) => s.id)).toEqual(['here', 'there', 'also-there']);
     expect(plan.abort).toBe(false);
+  });
+
+  it('keeps an action-driven step whose anchor is missing and skips a route it cannot fill yet', () => {
+    // Arrange
+    const definition = tour(
+      step('act', { advanceWhen: { kind: 'condition', id: 'x' } }),
+      step('read'),
+      step('board', { route: '/boards/:boardId' }),
+    );
+
+    // Act
+    const plan = planTour(definition, member, {
+      url: '/x',
+      params: {},
+      hasAnchor: anchors('a.read'),
+    });
+
+    // Assert
+    expect(plan.steps.map((s) => s.id)).toEqual(['act', 'read', 'board']);
+    expect(plan.abort).toBe(false);
+    expect(tryFillRoute('/boards/:boardId', {})).toBeNull();
+    expect(tryFillRoute('/boards/:boardId', { boardId: 'b1' })).toBe('/boards/b1');
+  });
+
+  it('counts steps that share a stage as one', () => {
+    // Arrange
+    const steps = [step('a'), step('d1', { stage: 'd' }), step('d2', { stage: 'd' }), step('z')];
+
+    // Act
+    const progress = steps.map((_, i) => stageProgress(steps, i));
+
+    // Assert
+    expect(progress).toEqual([
+      { current: 0, total: 3 },
+      { current: 1, total: 3 },
+      { current: 1, total: 3 },
+      { current: 2, total: 3 },
+    ]);
+  });
+
+  it('fills copy placeholders from the params and leaves unknown ones', () => {
+    expect(fillText('Move {ticketKey} to {board}', { ticketKey: 'KS-1' })).toBe(
+      'Move KS-1 to {board}',
+    );
+  });
+
+  describe('resume', () => {
+    const steps = [
+      step('project', { advanceWhen: { kind: 'condition', id: 'p' } }),
+      step('ticket', { advanceWhen: { kind: 'condition', id: 't' } }),
+      step('status', { advanceWhen: { kind: 'condition', id: 's' }, optional: true }),
+      step('board', { advanceWhen: { kind: 'condition', id: 'b' } }),
+      step('read'),
+    ];
+
+    it('starts at the first step whose condition does not hold', () => {
+      expect(resumeIndex(steps, [false, false, false, false, false])).toBe(0);
+      expect(resumeIndex(steps, [true, false, false, false, false])).toBe(1);
+    });
+
+    it('stops at an optional step only while nothing after it holds', () => {
+      expect(resumeIndex(steps, [true, true, false, false, false])).toBe(2);
+      expect(resumeIndex(steps, [true, true, false, true, false])).toBe(4);
+    });
+
+    it('passes over optional steps when asked to', () => {
+      expect(resumeIndex(steps, [true, true, false, false, false], { skipOptional: true })).toBe(3);
+    });
+
+    it('lands on the first Next-driven step once every action is done', () => {
+      expect(resumeIndex(steps, [true, true, true, true, false])).toBe(4);
+      expect(resumeIndex(steps.slice(0, 4), [true, true, true, true])).toBe(4);
+    });
   });
 
   it('labels steps from one', () => {

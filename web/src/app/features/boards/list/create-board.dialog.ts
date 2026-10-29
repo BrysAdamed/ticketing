@@ -11,6 +11,9 @@ import { IconComponent } from '@shared/ui/icon/icon.component';
 
 export interface CreateBoardDialogData {
   create: (board: NewBoard, idempotencyKey: string) => Promise<Board>;
+  /// Suggested values (the "Your first project" walkthrough); the user can change them.
+  name?: string;
+  projectKeys?: readonly string[];
 }
 
 const MAX_PROJECTS = 20;
@@ -198,9 +201,9 @@ export class CreateBoardDialog {
   private readonly idempotencyKey = crypto.randomUUID();
 
   protected readonly maxProjects = MAX_PROJECTS;
-  protected readonly name = signal('');
+  protected readonly name = signal(this.data.name ?? '');
   protected readonly description = signal('');
-  protected readonly selected = signal<ReadonlySet<string>>(new Set());
+  protected readonly selected = signal<ReadonlySet<string>>(new Set(this.data.projectKeys ?? []));
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
 

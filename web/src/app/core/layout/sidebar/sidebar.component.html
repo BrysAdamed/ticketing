@@ -77,6 +77,11 @@
               [routerLink]="['/projects', project.key, item.path]"
               routerLinkActive="active"
               [attr.data-testid]="item.testId"
+              [tkTourAnchor]="
+                item.path === 'settings' && project.key === currentProjectKey()
+                  ? 'project.nav-settings'
+                  : null
+              "
               [matTooltip]="item.label"
               matTooltipPosition="right"
               [matTooltipDisabled]="!layout.sidebarCollapsed()"

@@ -23,6 +23,11 @@ public sealed class ProjectEndpoints : IEndpointModule
                 new ListProjects.Query(query, includeArchived ?? false, new PageRequest(limit, cursor), visibility, mine ?? false), ct)))
             .WithSummary("Projects the caller can read, ordered by key. Filters: query (key or name), visibility (Private, Public), mine (explicit member), includeArchived.");
 
+        projects.MapGet("/suggested-identity", async (string? name, string? key, SuggestProjectIdentity.Handler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.HandleAsync(new SuggestProjectIdentity.Query(name ?? "", key ?? ""), ct)))
+            .WithSummary("The first free project name and key for a suggestion: as given, else with a numeric suffix. Checks every project, deleted keys included.")
+            .ProducesProblem(StatusCodes.Status400BadRequest);
+
         projects.MapGet("/{projectKeyOrId}", async (string projectKeyOrId, GetProject.Handler handler, HttpResponse response, CancellationToken ct) =>
             {
                 var project = await handler.HandleAsync(new GetProject.Query(projectKeyOrId), ct);

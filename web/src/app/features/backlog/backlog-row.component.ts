@@ -142,6 +142,7 @@ export type RowEdit =
       pickerShortcut="S"
       [attr.aria-label]="'Status: ' + statusLabel()"
       data-testid="row-status"
+      [tkTourAnchor]="tourFirst() ? 'backlog.status' : null"
       [pickerFooter]="statusHint"
       (click)="$event.stopPropagation()"
       (picked)="edit.emit({ field: 'status', value: $event })"

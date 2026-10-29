@@ -174,6 +174,32 @@ A tour (spec 14.4, D-129, D-134) is data plus anchors; the engine, the Help menu
 
 Nothing else changes: "Tour of this page" enables itself on the view, and the palette gets `help.tour.<viewId>` ("Backlog tour"). Do not import `GuidedTours` statically into anything the initial bundle reaches; entry points import it lazily.
 
+### Action-driven steps and walkthroughs
+
+A walkthrough (`kind: 'walkthrough'`, D-140) spans pages and moves on when the user really does something. Its steps are the same `TourStep` data with a few more fields:
+
+```ts
+{
+  id: 'create-board',
+  anchor: 'boards.new',
+  route: '/boards',                                            // the engine goes here first
+  advanceWhen: { kind: 'condition', id: 'board.links-project' },  // or { kind: 'route', path }
+  action: { label: 'Create the board', does: 'custom', id: 'create-board' }, // or click-anchor / focus-anchor
+  waiting: 'Waiting for a board that links {projectKey}',     // {param} placeholders come from what was learnt
+  optional: false,                                             // true adds "Skip this step"
+  title: 'Create a board',
+  body: '…',
+}
+```
+
+- **Conditions live in code, not in the data.** The starter passes a `TourConditions` (`engine/tour-conditions.ts`) to `TourLauncher.start`: `check(id, params)` reads real data (a GET, never a store that only knows this tab) and returns `{ holds, params? }`; the params it learns (`ticketKey`, `boardId`) fill later routes and copy. `run(id, params)` performs `custom` actions (open a dialog with suggestions) and returns learnt params or null. `changes` says when to check again; `FirstProjectConditions` uses `ApiClient.writes` and window focus, and the engine adds navigation and "the user's dialog closed". Do not poll.
+- **The step is non-modal.** No backdrop, shortcuts stay live, clicks pass through the hole only, and the card hides while the user's own dialog, picker or the peek is open. Put the step's anchor on what the user acts on, and give the step an `action` so Enter on the card does it.
+- **Resume, don't repeat.** Start with `resume: {}` (or `{ skipOptional: true }`): the session checks the action steps in order and opens the first one not done (`resumeIndex`). Make every condition true for work done any other way (another dialog, a shortcut, REST, MCP), so a restart never asks for something the user already made.
+- **Pause.** In a walkthrough a navigation the session did not start re-checks the step, then pauses behind the "Continue the walkthrough" pill when the user is off the step's page. `TourLauncher.paused()` and `continue()` expose it; Help items can use them.
+- **Feature dialogs from core** go through a creator seam, like `TicketCreator`: `ProjectCreator.open(prefill)` and `BoardCreator.open(prefill)` load the feature dialog lazily through a token provided in `app.config.ts`.
+- **Starting the walkthrough** from another feature: `startFirstProjectWalkthrough(injector, { skipOptional? })` from `core/onboarding/walkthrough/first-project.help.ts`, or run the Help item `help.tour.first-project` (`HelpMenuRegistry.find`), as the welcome dialog and `LearnActions` do.
+- **Tests**: Vitest for the conditions with a stubbed `ApiClient` and for the resume rule (`walkthrough/first-project.spec.ts`), the engine behaviour with fake conditions (`engine/tour-session.walkthrough.spec.ts`), and one Playwright run of the whole walkthrough that asserts each step's anchor (`e2e/tests/onboarding/first-project.spec.ts`; the walkthrough is not in `TOUR_CATALOGUE`, so this spec is its anchor guard). `E2E_SCREENSHOTS=1` writes the step screenshots to `docs/screenshots/`.
+
 ## Adding a What's new entry
 
 What's new (spec 14.2, D-138) is data; the dialog, the scheduling, Help → What's new and the e2e guard come for free.

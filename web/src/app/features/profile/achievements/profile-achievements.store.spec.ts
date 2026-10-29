@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { ApiError } from '@core/api/api-error';
 import { MyAchievement, MyAchievements } from '@core/achievements/achievement.models';
+import { AchievementUnlocks } from '@core/achievements/achievement-unlocks';
 import { AchievementsAccess } from '@core/achievements/achievements-access';
 import { AchievementsApi } from '@core/achievements/achievements.api';
 import { AuthService } from '@core/auth/auth.service';
@@ -49,6 +50,7 @@ class FakeApi {
 describe('ProfileAchievementsStore', () => {
   let api: FakeApi;
   let flags: Record<string, string>;
+  let unlocks: { apply: ReturnType<typeof vi.fn> };
 
   function setup(): ProfileAchievementsStore {
     TestBed.configureTestingModule({
@@ -58,6 +60,7 @@ describe('ProfileAchievementsStore', () => {
         { provide: AchievementsApi, useValue: api },
         { provide: FeatureFlagService, useValue: { isOn: (key: string) => flags[key] === 'on' } },
         { provide: AuthService, useValue: { currentUser: signal({ id: 'user-1' }) } },
+        { provide: AchievementUnlocks, useValue: unlocks },
       ],
     });
     return TestBed.inject(ProfileAchievementsStore);
@@ -66,6 +69,7 @@ describe('ProfileAchievementsStore', () => {
   beforeEach(() => {
     api = new FakeApi();
     flags = { achievements: 'on' };
+    unlocks = { apply: vi.fn() };
   });
 
   it('loads the catalogue into groups and marks the unseen earned ones seen', async () => {
@@ -82,6 +86,7 @@ describe('ProfileAchievementsStore', () => {
     expect(store.groups().toEarn.map((t) => t.key)).toEqual(['reporter']);
     expect(store.nothingEarned()).toBe(false);
     expect(api.markSeen).toHaveBeenCalledWith(['closer']);
+    expect(unlocks.apply).toHaveBeenCalledWith({ count: 0, items: [] });
     expect(store.items()[1].tiers[0].seenAt).not.toBeNull();
   });
 

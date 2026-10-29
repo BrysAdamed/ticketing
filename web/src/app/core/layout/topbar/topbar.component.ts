@@ -2,10 +2,14 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltip } from '@angular/material/tooltip';
 import { RouterLink } from '@angular/router';
+import { provideIcons } from '@ng-icons/core';
+import { tablerAward } from '@ng-icons/tabler-icons';
 import { AvatarComponent } from '@shared/ui/domain/avatar.component';
 import { ProjectTileComponent } from '@shared/ui/domain/project-tile.component';
 import { IconComponent } from '@shared/ui/icon/icon.component';
 import { KbdComponent } from '@shared/ui/kbd/kbd.component';
+import { AchievementUnlocks } from '../../achievements/achievement-unlocks';
+import { AchievementsAccess } from '../../achievements/achievements-access';
 import { AuthService } from '../../auth/auth.service';
 import { CommandPaletteService } from '../../commands/command-palette.service';
 import { CommandRegistry } from '../../commands/command-registry';
@@ -32,6 +36,7 @@ export const CREATE_TICKET_COMMAND = 'ticket.create';
     ProjectTileComponent,
     NotificationBellComponent,
   ],
+  viewProviders: [provideIcons({ tablerAward })],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './topbar.component.html',
   styleUrl: './topbar.component.scss',
@@ -47,6 +52,8 @@ export class TopbarComponent {
   private readonly openProject = inject(OpenProjectState);
   private readonly commands = inject(CommandRegistry);
   protected readonly shortcuts = inject(ShortcutService);
+  protected readonly achievements = inject(AchievementsAccess);
+  protected readonly unlocks = inject(AchievementUnlocks);
 
   protected readonly themeOptions = [
     { value: 'light', label: 'Light', icon: 'tablerSun' },

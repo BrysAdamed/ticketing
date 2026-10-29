@@ -1559,3 +1559,13 @@ The look is `docs/design/mockups/achievements.html`, layout-and-screens §3.9b a
 - Opening the tab marks every earned, unseen tier seen (`POST /me/achievements/seen` with the ids).
 
 **How to earn** (TKT-93, D-154). The detail of an achievement with no tier earned yet shows its `howToEarn` hint and, when a matching learn action exists, a footer with one sentence saying what it starts and a **Show me** button. The button closes the popover and starts the action through `LearnActions` (D-143): the backlog tour for Reporter, Bug hunter, Closer, Ready for review, Exterminator and Triage, the test cases tour for Test author, the "Your first project" walkthrough at Create a board for Board builder, and Help → Connect an AI agent for Machine whisperer. It is hidden while its target cannot start (for example no project to open a tour in). Secret entries never get a hint or an action. The nudge stays in the popover: no toasts, notifications or emails about unearned achievements, and nothing shows while the achievements UI is hidden.
+
+### 15.10 Unlock toast
+
+The look is section 5 of `docs/design/mockups/achievements.html` and layout-and-screens §2 (avatar menu). Decision D-152 (TKT-67).
+
+- **Polling:** `GET /me/achievements/unseen` rides on the notification poll (6.16: every minute while the tab is visible, on window focus and at sign-in) and runs only while achievements are on for the user (`AchievementsAccess`). A 404 `achievements.disabled` turns achievements off for the session, as on the tab. There is no other loop.
+- **Toast:** one two-line toast per newly unseen tier, bottom-right for 5 s (paused while hovered or focused): the 32px medal, "Name · Tier" (a one-time achievement shows its name alone), the achievement's description as the second line, **View** (opens `/profile/achievements`) and Dismiss. Several toasts show one after another. More than 3 new tiers at once collapse into one summary toast: up to three stacked medals, "5 new achievements" and "Reporter, Connector, Machine whisperer and 2 more."
+- **Once per tier:** a tier is toasted at most once per browser, even across reloads and tabs, as long as it stays unseen; the remembered tiers are kept per user in `localStorage` and pruned to the tiers still unseen. Toasting doesn't mark anything seen; only opening the tab does (15.9).
+- **Dot:** while any tier is unseen, the avatar carries an 8px accent dot with no number, its label reads "Account: name, new achievements", and the account menu's Achievements item shows a "New" badge. The tab's `POST /seen` answer clears them at once.
+- No confetti and no animation of its own; the snack bar's entry animation is off under reduced motion. The copy names what the user did, never a comparison.

@@ -2,6 +2,7 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { toApiError } from '@core/api/api-error';
 import { ACHIEVEMENTS_DISABLED, MyAchievement } from '@core/achievements/achievement.models';
+import { AchievementUnlocks } from '@core/achievements/achievement-unlocks';
 import { AchievementsAccess } from '@core/achievements/achievements-access';
 import { AchievementsApi } from '@core/achievements/achievements.api';
 import { groupAchievements, unseenIds } from './achievements.logic';
@@ -12,6 +13,7 @@ export type AchievementsStatus = 'loading' | 'loaded' | 'error' | 'disabled';
 export class ProfileAchievementsStore {
   private readonly api = inject(AchievementsApi);
   private readonly access = inject(AchievementsAccess);
+  private readonly unlocks = inject(AchievementUnlocks);
 
   readonly status = signal<AchievementsStatus>('loading');
   readonly items = signal<readonly MyAchievement[]>([]);
@@ -46,7 +48,7 @@ export class ProfileAchievementsStore {
     const ids = unseenIds(this.items());
     if (ids.length === 0) return;
     try {
-      await firstValueFrom(this.api.markSeen(ids));
+      this.unlocks.apply(await firstValueFrom(this.api.markSeen(ids)));
     } catch {
       return;
     }

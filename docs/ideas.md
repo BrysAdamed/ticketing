@@ -34,7 +34,7 @@ This file is the pool of unscheduled ideas. Once an idea is scheduled it becomes
 | I-70 | Self-service password reset by email | Removes Admin from the reset loop. Needs email. | S |
 | I-69 | Read-only option for public projects | Some projects want visibility without outside edits. | S |
 | I-63 | Private boards | Board names can reveal private work. | S |
-| I-57 | User anonymization | GDPR erasure for former employees. | S |
+| I-57 | User anonymization | GDPR erasure for former employees. Must also delete the user's achievements (D-144). | S |
 | I-78 | Active sessions list and "sign out everywhere" | Lets users end a session on a lost laptop. The security stamp (D-55) already does the work. | S |
 | I-79 | Breached-password check (HIBP k-anonymity range API) | Catches leaked passwords beyond the bundled list (D-54). Needs outbound internet from the VM. | S |
 | – | "Leave project" for non-owners | Today only Owners remove members; a member who no longer needs a private project asks an Owner. | S |
@@ -109,6 +109,19 @@ This file is the pool of unscheduled ideas. Once an idea is scheduled it becomes
 | - | Deny rules for delegated runs | The prompt designer wanted `--disallowedTools` for tracker writes a delegated run never needs and for force-pushes (§2.2). A deep link cannot pass flags, so v1 relies on the guardrails and on `requiresUserInteraction` for destructive tools (D-102); our own helper (I-124) or a shipped `.claude/settings.json` snippet could add them. | S |
 | - | Editable merge-policy sentences | The two `{{finish}}` sentences ship fixed with the built-ins (D-98); an Admin may want to word them for the company's forge and review flow. | S |
 | - | Project-scoped personal access tokens | A token limited to one project would cap what a hijacked agent or a stolen PAT can change (research §4.4, agent delegation threat model T5). | M |
+
+## Achievements
+
+Later items of the Achievements epic (TKT-61, D-144). Anything that lets others see individual achievements beyond what their owner shares needs a new HR/DPO check first.
+
+| ID | Idea | Why | Size |
+| --- | --- | --- | --- |
+| I-132 | Bonus avatars unlocked by achievements | A few extra animals as a reward. The 32 animal avatars stay free (D-130). | S |
+| I-133 | `scribe` achievement for Docs | Recognises writing docs. Needs the Docs feature (TKT-10) and its activity. | S |
+| I-134 | `merged` achievement | Recognises merged work. Needs git integration (I-50). | S |
+| I-135 | `NotificationKind` for achievement unlocks | Unlocks in the notification list, not only as a toast. Notifications belong to a project today, so it needs a nullable `notifications.project_id` (an achievement stores no project, D-144). | S |
+| I-136 | Team achievement dashboards | Shared team milestones. Must not rank or compare individuals (no leaderboards, D-144). | M |
+| I-137 | Admin-editable achievement catalogue | Admins add or tune achievements without a release. v1's catalogue lives in code behind the extension point of TKT-63. | M |
 
 ## Experiments and UI
 

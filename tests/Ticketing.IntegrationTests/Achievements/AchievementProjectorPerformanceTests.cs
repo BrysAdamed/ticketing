@@ -87,7 +87,7 @@ public sealed class AchievementProjectorPerformanceTests(TicketingApiFactory api
             .AppendLine("Worst-case cycle per statement:");
         foreach (var statement in statements.OrderByDescending(s => s.Milliseconds))
             report.AppendLine(CultureInfo.InvariantCulture, $"  {statement.Milliseconds,8:F1} ms  {FirstLine(statement.Sql)}");
-        report.AppendLine().AppendLine(await ExplainAsync(statements.Single(s => s.Sql.StartsWith("WITH subjects", StringComparison.Ordinal))));
+        report.AppendLine().AppendLine(await ExplainAsync(statements.Where(s => s.Sql.StartsWith("WITH subjects", StringComparison.Ordinal)).MaxBy(s => s.Milliseconds)!));
         TestContext.Current.TestOutputHelper?.WriteLine(report.ToString());
         await File.WriteAllTextAsync(Path.Combine(AppContext.BaseDirectory, "achievement-projector-performance.txt"), report.ToString(), _ct);
 

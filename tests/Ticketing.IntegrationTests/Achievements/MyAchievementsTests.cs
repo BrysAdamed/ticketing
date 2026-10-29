@@ -72,7 +72,7 @@ public sealed class MyAchievementsTests(TicketingApiFactory api)
         Assert.Equal(start, json.GetProperty("startedAt").GetDateTimeOffset());
         Assert.Equal(start, again.GetProperty("startedAt").GetDateTimeOffset());
         var items = json.GetProperty("items").EnumerateArray().ToList();
-        Assert.Equal(AchievementCatalog.All.Select(a => a.Id), items.Select(i => i.GetProperty("id").GetString()));
+        Assert.Equal(AchievementCatalog.All.Select(a => a.Secret ? null : a.Id), items.Select(i => i.GetProperty("id").GetString()));
         var reporter = items[0];
         Assert.Equal(
             ["id", "name", "description", "howToEarn", "icon", "secret", "masked", "tier", "shared", "tiers", "progress"],
@@ -106,7 +106,7 @@ public sealed class MyAchievementsTests(TicketingApiFactory api)
         await MarkSeenInDbAsync(user, AchievementCatalog.BoardBuilder);
 
         // Act
-        var items = (await (await client.GetAsync(Path, _ct)).ReadAsync<MyAchievementsDto>()).Items.ToDictionary(i => i.Id!);
+        var items = (await (await client.GetAsync(Path, _ct)).ReadAsync<MyAchievementsDto>()).Items.Where(i => !i.Masked).ToDictionary(i => i.Id!);
 
         // Assert
         var reporter = items[AchievementCatalog.Reporter];
@@ -277,7 +277,7 @@ public sealed class MyAchievementsTests(TicketingApiFactory api)
         var tool = Assert.Single(tools, t => t.Name == Tool);
         Assert.True(tool.Annotations?.ReadOnlyHint);
         Assert.Equal(Normalized(overRest), Normalized(overMcp));
-        var whisperer = overMcp.GetProperty("items").EnumerateArray().Single(i => i.GetProperty("id").GetString() == AchievementCatalog.MachineWhisperer);
+        var whisperer = overMcp.GetProperty("items").EnumerateArray().Single(i => i.TryGetProperty("id", out var id) && id.GetString() == AchievementCatalog.MachineWhisperer);
         Assert.Equal(1, whisperer.GetProperty("tier").GetInt32());
     }
 

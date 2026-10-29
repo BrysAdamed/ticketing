@@ -5,7 +5,7 @@ Deliver the user story {{ticket.key}}.
 3. Plan against the acceptance criteria: the backend, API and UI pieces and the test proving each criterion. Give independent parts (for example backend and frontend once the API is fixed) to subagents in their own worktrees with the criteria and these rules; do small or coupled work yourself.
 4. Implement it with tests at the levels the repository uses and run the full checks from CLAUDE.md until they pass.
 5. Run the app and walk through every acceptance criterion in the browser. Screenshot the changed screens, light and dark if the app has both.
-6. Update the docs the repository expects. Record behaviour worth regression-testing with create_test_case (ticketKey {{ticket.key}}; Automatic with the test's name when a test covers it).
+6. Update the docs the repository expects. If CLAUDE.md asks to consider achievements, add one (or a ticket for it) or note that none fits. Record behaviour worth regression-testing with create_test_case (ticketKey {{ticket.key}}; Automatic with the test's name when a test covers it).
 7. {{finish}}
 
 Deliver what the criteria ask, at the scope intended. If one looks wrong, say so and build the rest; new ideas become follow-up tickets.

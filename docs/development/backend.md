@@ -229,6 +229,34 @@ Run `dotnet test` without the `rtk` prefix: rtk filters the test runner output a
 
 Performance tests carry `[Trait("Category", "Performance")]`. `DashboardPerformanceTests` seeds two 50 000-ticket projects with `INSERT ... SELECT`, asserts the dashboard's p95 stays under 500 ms and writes timings, per-statement durations and `EXPLAIN ANALYZE` plans to `dashboard-performance.txt` next to the test binaries. Skip them in a quick loop with `dotnet test -- --filter-not-trait "Category=Performance"`.
 
+## Designing an achievement
+
+Every new epic and feature is checked for achievements while it is planned (slice playbook, definition of done). The outcome is either a catalogue entry with its criterion, a linked ticket for one, or a line in the ticket saying none fits. "None fits" is a fine answer; most features don't need one.
+
+**What makes a good one.** An achievement rewards a real action a person chose to take and nudges them towards a feature they may not have tried: filing a bug from a failed regression item (`found-it`), creating a board (`board-builder`), delegating a ticket to an agent (`delegator`). Good candidates are the first use of a new feature and the actions that make the tracker better for everyone (linking, testing, triage). Bad candidates are actions people take anyway with no choice in them (opening a page, signing in) and anything that only rewards volume.
+
+**Hard rules** (D-144, spec 15.1). An idea that breaks one of these is dropped, not adapted:
+
+- Nothing time-based: no streaks, no "within a day", no night-owl or weekend achievements.
+- No points, currency or totals across achievements.
+- No ranking, leaderboard or comparison between people, not even per team. An achievement says what you did, never how you did against others.
+- No project or ticket id is stored with an earned tier, and the name and description never need one.
+- Only activity at or after the user's start S counts; there is no backfill.
+- Monotonic: an earned tier is never revoked, even when the counted entities are deleted later.
+- Every channel counts (web, REST with a PAT, MCP), unless the achievement is about the channel itself (`machine-whisperer`).
+
+**Tiers.** Thresholds follow how often the action naturally happens, so the first tier is reachable in normal work and the last one is rare:
+
+- Once-only (`[1]`) for a feature you only need to discover: `board-builder`, `spring-cleaning`, `machine-whisperer`.
+- `1 / 10` for occasional actions: `show-me`, `found-it`.
+- `1 / 10 / 50` for regular actions: `bug-hunter`, `connector`, `delegator`, `test-author`.
+- `1 / 10 / 50 / 250` for everyday work: `reporter`, `closer`, `ready-for-review`; `1 / 25 / 100 / 500` for the most frequent (`conversationalist`).
+- Start above 1 when a single action means nothing: `triage` starts at 10, `regression-runner` at 10.
+
+**Secret.** Make it secret only when it is a pleasant surprise rather than a goal, and announcing it would invite gaming or the wrong behaviour: undoing your own delete (`second-thoughts`), closing a ticket that blocks three open ones (`unblocker`), a ticket you worked on passing through every status (`grand-tour`). A secret entry has no "how to earn" hint and stays masked until earned. Achievements meant to nudge towards a feature are never secret, because the hint is the nudge.
+
+**Criteria stay set-based.** A criterion counts for a whole batch of users, each with their own S, in a fixed number of queries: one `SELECT ... GROUP BY s.user_id` over `subjects`, or a computed criterion that runs a fixed number of queries per batch. Never a query per user or per entity. If the count needs data that is not recorded, add it additively to the activity payload or a table column first (as D-145 did for `assigneeId`). Declare in `Triggers` the activity actions that can raise the count (`board.created` for `board-builder`, the comment actions for `conversationalist`) so the projector can skip it; use `null` only when any action can (`machine-whisperer`). A criterion that needs state at a point in time, or someone else's action, needs a decision (`D-xx`) before it is built.
+
 ## Adding an achievement
 
 Achievements (spec 15, D-144, D-145) are a catalogue in code plus one criterion per entry. Adding one touches no evaluator, projector, API or UI code:

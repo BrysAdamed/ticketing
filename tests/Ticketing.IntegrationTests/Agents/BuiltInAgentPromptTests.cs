@@ -101,8 +101,8 @@ public sealed class BuiltInAgentPromptTests
     }
 
     [Theory]
-    [InlineData(TicketType.Epic, new[] { "create_tickets", "acceptance criteria", "Blocks", "Do not change code" })]
-    [InlineData(TicketType.UserStory, new[] { "worktree", "tests", "in the browser", "{{finish}}" })]
+    [InlineData(TicketType.Epic, new[] { "create_tickets", "acceptance criteria", "Blocks", "Do not change code", "If CLAUDE.md asks to consider achievements" })]
+    [InlineData(TicketType.UserStory, new[] { "worktree", "tests", "in the browser", "{{finish}}", "If CLAUDE.md asks to consider achievements" })]
     [InlineData(TicketType.Technical, new[] { "worktree", "tests", "in the browser", "{{finish}}" })]
     [InlineData(TicketType.Spike, new[] { "not production code", "create_tickets", "RelatesTo", "{{finish}}" })]
     [InlineData(TicketType.Bug, new[] { "automated test that fails", "root cause", "{{finish}}" })]

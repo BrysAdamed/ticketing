@@ -1181,12 +1181,12 @@ A delegation writes `ticket.agent.delegated` (EntityType `Ticket`) with the new 
 
 ### 13.10 Default prompts
 
-The built-ins (`Agents/BuiltIns/*.txt`, release `2026.10.2`) are condensed from [04-delegate-to-agent-prompts.md](04-delegate-to-agent-prompts.md) to fit 13.4's limit (D-102). Every type template names the ticket by key only, has the agent read it with `get_ticket` and follow the repository's `CLAUDE.md`, and works without the guardrails; status changes and the closing comment come from both.
+The built-ins (`Agents/BuiltIns/*.txt`, release `2026.10.3`) are condensed from [04-delegate-to-agent-prompts.md](04-delegate-to-agent-prompts.md) to fit 13.4's limit (D-102). Every type template names the ticket by key only, has the agent read it with `get_ticket` and follow the repository's `CLAUDE.md`, and works without the guardrails; status changes and the closing comment come from both.
 
 | Type | What the default asks for | Finish |
 | --- | --- | --- |
-| Epic | Plan only, no code: read the epic and its children, create the missing children in one `create_tickets` call (idempotency key `<KEY>-plan`) with acceptance criteria, link real dependencies with `Blocks`, comment the delivery order and open questions. The epic's status stays as it is. | None |
-| UserStory | Worktree, plan against the ACs (subagents only for independent parts), tests at the repository's levels, every AC walked through in the browser with light and dark screenshots, docs, test cases. | `{{finish}}` |
+| Epic | Plan only, no code: read the epic and its children, create the missing children in one `create_tickets` call (idempotency key `<KEY>-plan`) with acceptance criteria, link real dependencies with `Blocks`, comment the delivery order and open questions. When the repository's `CLAUDE.md` asks to consider achievements, an achievement worth adding is one of the gaps (D-146). The epic's status stays as it is. | None |
+| UserStory | Worktree, plan against the ACs (subagents only for independent parts), tests at the repository's levels, every AC walked through in the browser with light and dark screenshots, docs, the achievements check when `CLAUDE.md` asks for it (D-146), test cases. | `{{finish}}` |
 | Technical | Worktree, proof by kind of change (pinned behaviour for refactors, integration tests for new capabilities, before/after numbers for performance), full checks, a browser check of the flows that rely on the change, test cases. | `{{finish}}` |
 | Spike | Research with cited primary sources, an optional throwaway prototype that is never merged, findings in a doc, follow-up tickets (`RelatesTo`, `Blocks` among themselves) left in To Do. No production code. | `{{finish}}` for the docs branch |
 | Bug | Reproduce first as an automated test that fails for the reported reason (ask instead of guessing when it cannot be reproduced), root cause, smallest fix, regression test kept, browser check when the bug was visible. | `{{finish}}` plus root cause and the failing-then-passing test |
@@ -1195,7 +1195,7 @@ The **guardrails** (in this order): the folder check (compare `git remote get-ur
 
 **Finish** sentences: `Review` commits with the ticket key, merges the latest `{{project.defaultBranch}}` into the branch, re-runs the checks, pushes, opens a pull request if a forge CLI is set up and sets Review, without merging. `MergeWhenVerified` does the same, then merges the branch back, re-runs the checks, pushes, sets Done and reports the merge commit; it stops at Review on non-trivial conflicts or a failing check.
 
-Every type with the guardrails stays below 4 500 characters with the longest values the fields allow (10-character project key, ticket number 2 147 483 647, 500-character repository URL, 100-character branch, a 150-character public URL): about 4 400 at most, and about 3 600 for TKT's own values.
+Every type with the guardrails stays below 4 500 characters with the longest values the fields allow (10-character project key, ticket number 2 147 483 647, 500-character repository URL, 100-character branch, a 150-character public URL): just under 4 500 at most, and about 3 700 for TKT's own values.
 
 ## 14. Onboarding
 

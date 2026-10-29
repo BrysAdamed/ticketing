@@ -27,6 +27,7 @@ How a feature slice is delivered in this repo. Every slice is full-stack: use ca
 * **E2E** — add Playwright specs under `e2e/tests/<slice>/` for the slice's main user journeys (seed via the API helper, not the UI, except for the journey under test). Run `npm run typecheck` in `e2e/` before the suite.
 * **Look and feel** — check every page in the browser in light and dark themes against the mockups; take screenshots. It must look professional and feel instant.
 * **Performance** — `AsNoTracking` projections, no N+1, paging, indexes exist for your queries (check `EXPLAIN` for heavy ones). Lazy routes, `@defer` for heavy widgets, virtual scroll for long lists.
+* **Achievements** — check whether the slice adds real actions worth an achievement; [Designing an achievement](backend.md#designing-an-achievement) says what fits and the rules, [Adding an achievement](backend.md#adding-an-achievement) how to build one.
 * **Style** — minimal comments (only TODO/FIXME, Arrange/Act/Assert in tests, `///` on public abstractions). No heredocs in shell. Don't prefix `dotnet test` with `rtk` (it runs zero tests).
 
 ## Docs
@@ -35,7 +36,7 @@ Update in the same branch: `docs/domain/workflows.md` and `docs/glossary.md` if 
 
 ## Definition of done
 
-`dotnet build` warning-free, `dotnet test` green, `npm run build` within budgets, `npm test`, `npm run lint` and `npm run format:check` green, `npm run typecheck` in `e2e/` clean, your Playwright specs green against `docker compose up --build`, branch pushed.
+`dotnet build` warning-free, `dotnet test` green, `npm run build` within budgets, `npm test`, `npm run lint` and `npm run format:check` green, `npm run typecheck` in `e2e/` clean, your Playwright specs green against `docker compose up --build`, branch pushed. Achievements considered: either a new catalogue entry and criterion (or a linked ticket for one), or a line in the ticket saying none fits.
 
 ## Report (reply to the orchestrator, ≤25 lines)
 

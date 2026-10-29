@@ -1127,6 +1127,16 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
 - Rejected: per-criterion queries (one round trip per achievement and growing with the catalogue; the batched `UNION ALL` is one); reading every count from activity alone (`tickets.created_by_id` and `comments.author_id` are indexed and exact); `notifications` as a source for mentions (merged, purged after 90 days, no actor index); restarting S when the flag is turned on again (would punish users for an operator's switch).
 - Rationale: every count is recomputed from data the app already records, so a missed cycle or a bug in one criterion heals on the next run, and nothing the user did before their start is turned into achievement data.
 
+### D-146 Achievements are considered in every epic and feature; the built-in prompts check only when `CLAUDE.md` asks (TKT-99)
+
+- Question: how do new epics and features get checked for achievements while they are planned and built, so nobody has to search the product for missing ones later?
+- Decision:
+  - The slice playbook's definition of done requires it: a new catalogue entry and criterion (or a linked ticket for one), or a line in the ticket saying none fits. The guidance is backend.md "Designing an achievement", next to "Adding an achievement". `CLAUDE.md` points at both.
+  - The built-in Epic prompt treats an achievement worth adding as one of the gaps, and the UserStory prompt adds the check to its docs step, both **only when the repository's `CLAUDE.md` asks to consider achievements**. The built-ins serve every project on an instance, and most repositories are not Ticketing, so the step is conditional instead of unconditional. Built-in release `2026.10.3`.
+  - Technical, Spike and Bug prompts get no check: they don't add user-facing features (a spike's follow-up epic is checked when it is planned).
+- Rejected: an unconditional step in the built-ins (it would ask unrelated repositories about Ticketing's achievements); a separate guide in `docs/domain/` (that folder holds the cross-cutting workflows, while the extension point already lives in backend.md).
+- Rationale: the check sits where features are planned and finished, costs one line, and only fires in repositories that opted in.
+
 ## Product owner answers (v1 review, 2026-10-27)
 
 These were open questions (Q-01..Q-05); the product owner resolved them as follows.

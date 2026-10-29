@@ -19,7 +19,7 @@ public interface IBuiltInAgentPrompts
 /// <summary>Built-ins embedded from <c>Agents/BuiltIns/*.txt</c>.</summary>
 internal sealed class EmbeddedAgentPrompts : IBuiltInAgentPrompts
 {
-    public const string Release = "2026.10.2";
+    public const string Release = "2026.10.3";
 
     private static readonly Lazy<FrozenDictionary<string, string>> Texts = new(Load);
 

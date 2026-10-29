@@ -48,6 +48,51 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                     b.ToTable("data_protection_keys", (string)null);
                 });
 
+            modelBuilder.Entity("Ticketing.Domain.Achievements.AchievementProjectorState", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("ProcessedUntil")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("processed_until");
+
+                    b.HasKey("Id")
+                        .HasName("pk_achievement_projector_state");
+
+                    b.ToTable("achievement_projector_state", (string)null);
+                });
+
+            modelBuilder.Entity("Ticketing.Domain.Achievements.UserAchievement", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<string>("AchievementId")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("achievement_id");
+
+                    b.Property<short>("Tier")
+                        .HasColumnType("smallint")
+                        .HasColumnName("tier");
+
+                    b.Property<DateTimeOffset?>("SeenAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("seen_at");
+
+                    b.Property<DateTimeOffset>("UnlockedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("unlocked_at");
+
+                    b.HasKey("UserId", "AchievementId", "Tier")
+                        .HasName("pk_user_achievements");
+
+                    b.ToTable("user_achievements", (string)null);
+                });
+
             modelBuilder.Entity("Ticketing.Domain.Activity.ActivityEntry", b =>
                 {
                     b.Property<Guid>("Id")
@@ -118,6 +163,10 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("EntityType", "EntityId", "OccurredAt")
                         .HasDatabaseName("ix_activity_entries_entity_type_entity_id_occurred_at");
+
+                    b.HasIndex("ActorId", "Action", "Field", "OccurredAt")
+                        .HasDatabaseName("ix_activity_entries_actor_action")
+                        .HasFilter("actor_id IS NOT NULL");
 
                     b.ToTable("activity_entries", (string)null);
                 });
@@ -1817,6 +1866,16 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<bool>("AchievementsHidden")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("achievements_hidden");
+
+                    b.Property<DateTimeOffset?>("AchievementsStartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("achievements_started_at");
+
                     b.Property<string>("AvatarColor")
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)")
@@ -1953,6 +2012,16 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                         .HasName("pk_attachment_content");
 
                     b.ToTable("attachment_content", (string)null);
+                });
+
+            modelBuilder.Entity("Ticketing.Domain.Achievements.UserAchievement", b =>
+                {
+                    b.HasOne("Ticketing.Domain.Users.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_user_achievements_users_user_id");
                 });
 
             modelBuilder.Entity("Ticketing.Domain.Agents.AgentPromptTemplate", b =>

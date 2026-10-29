@@ -132,6 +132,7 @@ public static class CreateTicket
                         ticket.Type,
                         ticket.Status,
                         ticket.Priority,
+                        ticket.AssigneeId,
                         location = command.BoardId is null ? "backlog" : "board",
                     });
                     await db.SaveChangesAsync(ct);

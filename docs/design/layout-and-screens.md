@@ -69,8 +69,8 @@ Version: a `mat-autocomplete` that lists this project's previously used versions
 
 ### User card
 A popover about a person (`tk-user-card`, CDK overlay, `role="dialog"` labelled by the name; mockup `achievements.html`). It is the only place another user's shared achievements appear, since there is no page for another user's profile.
-- Opens on click or Enter on a person's name or avatar where a click does nothing else today: comment and history authors, the watchers list, the Reporter field. Elsewhere (row and card avatars, whose click edits the assignee) it opens after a 500ms hover, like the ticket key hover card. Esc closes it and returns focus.
-- Content: 32px avatar, name, email ("You" on your own card), then "Shared achievements": 32px medals with name and tier, in catalogue order so the list never reads as a ranking. No dates, counts, progress or comparison.
+- Opens on click or Enter on a person's name or avatar where a click does nothing else today: comment and history authors, the watchers list, the Reporter field. Elsewhere (row and card avatars, whose click edits the assignee) it opens after a 500ms hover, like the ticket key hover card. Esc closes it and returns focus (D-155).
+- Content: 32px avatar, name ("You" on your own card; no email, D-155), then "Shared achievements": 32px medals with name and tier, in catalogue order so the list never reads as a ranking. No dates, counts, progress or comparison.
 - The achievements section is absent when the person shared nothing, opted out, or the flag is off for the viewer. Your own card says "Shared by you" and links to Profile → Achievements.
 
 ### Performance budget (feel)

@@ -696,7 +696,7 @@ Project suggestions (14.4, D-142):
 | --- | --- |
 | `GET /api/v1/projects/suggested-identity?name=&key=` | `{ name, key }`: the first project name and key no project uses, for the "Your first project" walkthrough's suggestion. The name as given (trimmed), else with ` 2`, ` 3`… appended, compared case-insensitively with live projects; the key as given, else with `2`, `3`… appended and the stem shortened to fit 10 characters, compared with every project, deleted ones included (D-10). Both checks cover projects the caller cannot read, so the suggestion never collides; it reveals no more than `POST /projects` answering 409 would. Any signed-in caller (cookie or PAT); `validation` (400) for a missing name or a malformed key. No MCP tool. |
 
-Achievements (15.6, TKT-65), always the caller's own: `GET /api/v1/me/achievements`, `GET /api/v1/me/achievements/unseen` and `POST /api/v1/me/achievements/seen`; shapes and errors are in 15.6.
+Achievements (15.6, TKT-65), always the caller's own: `GET /api/v1/me/achievements`, `GET /api/v1/me/achievements/unseen` and `POST /api/v1/me/achievements/seen`; shapes and errors are in 15.6. Sharing (15.7, TKT-97): `PUT` and `DELETE /api/v1/me/achievements/{id}/share`, and another user's shared achievements at `GET /api/v1/users/{id}/achievements`.
 
 ## 9. MCP server
 
@@ -808,11 +808,13 @@ Notifications (6.16)
 | `list_notifications` | optional `unreadOnly`, `cursor`, `limit` | `{ items, nextCursor }` of notifications, newest first, in the REST shape (6.16). |
 | `mark_notifications_read` | `ids` (1..100) or `all` (true) | `{ unreadCount }`. Write-scoped tokens only. |
 
-Achievements (15.6)
+Achievements (15.6, 15.7)
 
 | Tool | Inputs | Output |
 | --- | --- | --- |
 | `list_my_achievements` | none | Your own achievements in the `GET /api/v1/me/achievements` shape: `{ startedAt, items }`, secret entries masked until earned. Read-only; listed only while the `achievements` flag is on for you. |
+| `share_achievement` | `id` | Shares one of your earned achievements with every signed-in user (15.7) and returns the item in the `list_my_achievements` item shape. Idempotent; `achievements.notEarned` when not earned; needs a read-write token. Listed only while the `achievements` flag is on for you. |
+| `unshare_achievement` | `id` | Stops sharing it; same shape, errors and listing as `share_achievement`. |
 
 Docs (12)
 
@@ -1456,7 +1458,7 @@ The catalogue is code (`AchievementCatalog`), not an admin-editable table. Each 
 
 - `users.achievements_hidden` (bool, default false): the user opted out.
 - `users.achievements_started_at` (timestamptz, null): the user's start **S**. Only activity at or after S counts.
-- `user_achievements(user_id, achievement_id varchar(50), tier smallint, unlocked_at, seen_at null)`, primary key `(user_id, achievement_id, tier)`, deleted with the user. One row per earned tier; `seen_at` is set when the owner has seen the unlock (TKT-67).
+- `user_achievements(user_id, achievement_id varchar(50), tier smallint, unlocked_at, seen_at null)`, primary key `(user_id, achievement_id, tier)`, deleted with the user. One row per earned tier; `seen_at` is set when the owner has seen the unlock (TKT-67). `shared_at` (null) is set on the tier-1 row while the owner shares the achievement (15.7, D-150).
 - `achievement_projector_state(id, processed_until)`: the projector's single-row watermark (TKT-64).
 
 ### 15.4 Criteria
@@ -1500,12 +1502,27 @@ The evaluator computes every criterion for a batch of users, each with their own
 
 ### 15.6 REST and MCP
 
-Every endpoint and tool serves the caller's own achievements only, Admins included: none takes a user id, and none returns or changes another user's rows (TKT-65). Showing a shared achievement to others is TKT-97's separate read path. While the flag is off for the caller, and after they opted out, every endpoint returns 404 `achievements.disabled` (the opt-out answer carries a hint to opt back in) and `list_my_achievements` fails with that code. Every call stamps S as in 15.5 (D-147).
+Every endpoint and tool serves the caller's own achievements only, Admins included: none takes a user id, and none returns or changes another user's rows (TKT-65). Showing a shared achievement to others is the separate read path in 15.7. While the flag is off for the caller, and after they opted out, every endpoint returns 404 `achievements.disabled` (the opt-out answer carries a hint to opt back in) and `list_my_achievements` fails with that code. Every call stamps S as in 15.5 (D-147).
 
 | Method and path | Purpose |
 | --- | --- |
-| `GET /api/v1/me/achievements` | `{ startedAt, items }`: S, and the whole catalogue in catalogue order. An item is `{ id, name, description, howToEarn, icon, secret, masked, tier, tiers: [{ tier, threshold, unlockedAt, seenAt }], progress: { count, nextTier, nextThreshold } }`. `tier` is the highest tier earned (0 for none); `unlockedAt` and `seenAt` are null while a tier is not earned or not seen. `progress.count` is computed live by the evaluator for the caller from S; `nextTier` is the tier after the highest earned one and `nextThreshold` its threshold, both null once the top tier is earned (the count can reach it shortly before the projector awards it). `howToEarn` is null for secret entries. A secret entry not earned yet is masked: `masked: true`, `secret: true`, `tier: 0`, `tiers: []` and `id`, `name`, `description`, `howToEarn`, `icon` and `progress` null. |
+| `GET /api/v1/me/achievements` | `{ startedAt, items }`: S, and the whole catalogue in catalogue order. An item is `{ id, name, description, howToEarn, icon, secret, masked, tier, shared, tiers: [{ tier, threshold, unlockedAt, seenAt }], progress: { count, nextTier, nextThreshold } }`. `tier` is the highest tier earned (0 for none); `shared` is true while the caller shares it (15.7), false for unearned and masked entries; `unlockedAt` and `seenAt` are null while a tier is not earned or not seen. `progress.count` is computed live by the evaluator for the caller from S; `nextTier` is the tier after the highest earned one and `nextThreshold` its threshold, both null once the top tier is earned (the count can reach it shortly before the projector awards it). `howToEarn` is null for secret entries. A secret entry not earned yet is masked: `masked: true`, `secret: true`, `tier: 0`, `tiers: []` and `id`, `name`, `description`, `howToEarn`, `icon` and `progress` null. |
 | `GET /api/v1/me/achievements/unseen` | `{ count, items: [{ id, name, tier, icon }] }`: the caller's earned tiers with no `seenAt`, oldest unlock first, one item per tier. The unlock toast polls it with the notification poll; it evaluates no criteria and answers in under 50 ms (p95), like the unread count (6.16). |
 | `POST /api/v1/me/achievements/seen` | `{ ids: [...] }` (1 to 100 achievement ids): sets `seenAt` on every earned, unseen tier of those achievements; a tier already seen keeps its time, unknown or unearned ids are ignored. Returns the remaining unseen tiers in the `GET /unseen` shape. Needs write-scoped credentials (a ReadOnly PAT gets 403 `pat.readOnlyScope`); `validation` (400) for no ids or more than 100. |
 
 `GET` accepts any credential (cookie or PAT, read-only included). The read-only MCP tool `list_my_achievements` (no inputs) returns the `GET /api/v1/me/achievements` shape and is listed in `tools/list` only while the flag is on for the token's user (`[FeatureGate(typeof(AchievementsGate))]`). Marking seen has no tool: it is personal UI state.
+
+### 15.7 Sharing
+
+A user may share individual earned achievements; everything else stays visible only to them (D-144). A shared achievement is visible to **every signed-in user**, with no shared project needed, and Admins see no more than anyone else. Nothing is shared until the user shares it. Decision D-150 (TKT-97).
+
+- **Storage:** `user_achievements.shared_at` on the achievement's tier-1 row (15.3). The projector always inserts every tier up to the one reached, so the tier-1 row exists whenever any tier is earned. A share covers the achievement, not a tier: others see the highest tier, including tiers earned after sharing.
+- **Opt-out** deletes the user's `user_achievements` rows (TKT-68), and the shares with them; nothing else needs deleting.
+
+| Method and path | Purpose |
+| --- | --- |
+| `PUT /api/v1/me/achievements/{id}/share` | Shares the caller's earned achievement `id`. Idempotent: sharing again keeps the first `shared_at`. Returns the item in the `GET /api/v1/me/achievements` item shape, with `shared: true`. 404 `achievements.notEarned` when the caller has not earned it, unknown ids included (a secret id reveals nothing). Needs write-scoped credentials (403 `pat.readOnlyScope`). Like every `/me/achievements` call: 404 `achievements.disabled` while the flag is off for the caller or after an opt-out, and it stamps S. |
+| `DELETE /api/v1/me/achievements/{id}/share` | Stops sharing it. Idempotent; same response, errors and credentials as `PUT`, with `shared: false`. |
+| `GET /api/v1/users/{id}/achievements` | `{ items: [{ id, name, icon, tier }] }`: the user's shared achievements in catalogue order, `tier` the highest earned. Never dates, counts, progress or anything about projects or tickets; unshared, unearned and secret-but-unshared achievements are never returned. Any signed-in user and any credential (read-only PAT included); `200` with empty `items` while the user shares nothing. 404 `achievements.disabled` while the flag is off for the viewer. 404 `user.notFound` when the user is unknown, deactivated, opted out or has the flag off, so the answer never tells which. It does not stamp the viewer's S, and a viewer who opted out may still read others' shares. |
+
+MCP: `share_achievement` and `unshare_achievement` (input `id`) call the same handler as `PUT` and `DELETE` and return the same item; they are idempotent, need a read-write token and are listed only while the flag is on for the token's user. Reading another user's shares has no tool: the web app's user card (TKT-98) is its only consumer. The response carries no user data at all, so the card's name-only rule (no email) holds.

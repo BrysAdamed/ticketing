@@ -83,6 +83,10 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("seen_at");
 
+                    b.Property<DateTimeOffset?>("SharedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("shared_at");
+
                     b.Property<DateTimeOffset>("UnlockedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("unlocked_at");

@@ -504,7 +504,7 @@ Users change their own password with the current one. That rotates the security 
 
 ### First run
 
-Spec: [§14](../product/01-refined-spec.md#14-onboarding), [§4.18](../product/01-refined-spec.md#418-userguidestate-tkt-54), D-129, D-130.
+Spec: [§14](../product/01-refined-spec.md#14-onboarding), [§4.18](../product/01-refined-spec.md#418-userguidestate-tkt-54), D-131, D-132.
 
 After the first sign-in the app guides the user to a first real action. The welcome dialog is due whenever the user has no `welcome` row, so the bootstrap Admin, who signs in with the password from the environment and never sees a set-password link, gets it too (with the Admin card "Set up your instance"). Users who had signed in before the onboarding release were marked as welcomed by the migration.
 

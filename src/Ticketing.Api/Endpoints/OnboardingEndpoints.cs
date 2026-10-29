@@ -3,7 +3,7 @@ using Ticketing.Application.Onboarding;
 
 namespace Ticketing.Api.Endpoints;
 
-/// <summary>The signed-in user's onboarding state (D-130). REST only, no MCP tools: it is personal UI state.</summary>
+/// <summary>The signed-in user's onboarding state (D-132). REST only, no MCP tools: it is personal UI state.</summary>
 public sealed class OnboardingEndpoints : IEndpointModule
 {
     public void MapEndpoints(RouteGroupBuilder api)

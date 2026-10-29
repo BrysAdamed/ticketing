@@ -6,7 +6,7 @@ export type TourRequirement = 'write' | 'owner' | 'admin';
 export interface TourStep {
   /// Stable id, unique within the tour (copy keys and analytics later).
   readonly id: string;
-  /// Tour anchor id exposed with `tkTourAnchor` by every variant of the view (D-129).
+  /// Tour anchor id exposed with `tkTourAnchor` by every variant of the view (D-131).
   readonly anchor: string;
   readonly title: string;
   readonly body: string;
@@ -45,7 +45,7 @@ export type TourStepAction =
 
 export type TourPlacement = 'below' | 'above' | 'start' | 'end';
 
-/// A guided tour of one view, keyed by view id rather than variant (D-129).
+/// A guided tour of one view, keyed by view id rather than variant (D-131).
 export interface TourDefinition {
   /// Guide id stored in the onboarding state (`tour.backlog.list`, `GUIDE_ID_PATTERN`).
   readonly id: string;

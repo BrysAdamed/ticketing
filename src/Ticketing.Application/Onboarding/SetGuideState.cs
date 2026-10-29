@@ -8,7 +8,7 @@ using Ticketing.Domain.Onboarding;
 namespace Ticketing.Application.Onboarding;
 
 /// <summary>
-/// Records that the caller completed or dismissed a version of a guide (D-130), web session only. Ids are not looked up
+/// Records that the caller completed or dismissed a version of a guide (D-132), web session only. Ids are not looked up
 /// (the web client authors them), only checked for shape; at most 200 guides per user, updating a known one always works.
 /// </summary>
 public static class SetGuideState

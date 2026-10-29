@@ -4,7 +4,7 @@ using Ticketing.IntegrationTests.Infrastructure;
 
 namespace Ticketing.IntegrationTests.Projects;
 
-/// <summary>GET /projects/suggested-identity: the free name and key the "Your first project" walkthrough suggests (D-140).</summary>
+/// <summary>GET /projects/suggested-identity: the free name and key the "Your first project" walkthrough suggests (D-142).</summary>
 [Collection(nameof(ProjectsCollection))]
 public sealed class ProjectSuggestionTests(TicketingApiFactory api)
 {

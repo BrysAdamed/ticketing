@@ -4,7 +4,7 @@ using Ticketing.Application.Access;
 
 namespace Ticketing.Application.Onboarding;
 
-/// <summary>Forgets every guide the caller completed or dismissed, so all of them can show again (D-130). Web session only.</summary>
+/// <summary>Forgets every guide the caller completed or dismissed, so all of them can show again (D-132). Web session only.</summary>
 public static class ResetMyGuides
 {
     public sealed record Command;

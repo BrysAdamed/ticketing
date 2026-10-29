@@ -6,7 +6,7 @@ using Ticketing.Domain.Onboarding;
 namespace Ticketing.Application.Onboarding;
 
 /// <summary>
-/// Forgets one guide the caller completed or dismissed, so it shows again (D-133: Help → Getting started restores a
+/// Forgets one guide the caller completed or dismissed, so it shows again (D-135: Help → Getting started restores a
 /// dismissed checklist). Web session only; forgetting a guide that has no row is a no-op.
 /// </summary>
 public static class ForgetGuide

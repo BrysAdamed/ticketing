@@ -25,7 +25,7 @@ export interface FirstProjectStartOptions {
   readonly returnFocusTo?: HTMLElement | null;
 }
 
-/// Starts, resumes or continues the "Your first project" walkthrough (spec 14.4, D-140): asks which
+/// Starts, resumes or continues the "Your first project" walkthrough (spec 14.4, D-142): asks which
 /// project to use when the user already owns one, suggests a free sandbox name and key, resumes at
 /// the first step whose condition does not hold, and stores Completed or Dismissed. Lazy: entry
 /// points call `startFirstProjectWalkthrough` (first-project.help.ts).

@@ -29,7 +29,7 @@ import {
 import { CreateTokenDialog, CreateTokenDialogData } from './create-token.dialog';
 import { claudeCodeCommand } from './token-snippets';
 
-/// The Connect an AI agent guide (spec 14.8, D-139): create a token, copy the `claude mcp add`
+/// The Connect an AI agent guide (spec 14.8, D-141): create a token, copy the `claude mcp add`
 /// command, and a connection check that polls the token list until the token has been used. The
 /// secret of a token created here lives only in this component, like the show-once dialog.
 @Component({

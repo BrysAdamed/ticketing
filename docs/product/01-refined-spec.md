@@ -358,7 +358,7 @@ Indexes: (RecipientId, ReadAt, CreatedAt, Id) (unread list and count), (Recipien
 
 ### 4.18 UserGuideState (TKT-54)
 
-Which onboarding guides (14.1) a user has finished or dismissed, stored on the server so progress follows the user across browsers. Table `user_guide_state`, added by the additive migration `AddUserGuideState` (D-130).
+Which onboarding guides (14.1) a user has finished or dismissed, stored on the server so progress follows the user across browsers. Table `user_guide_state`, added by the additive migration `AddUserGuideState` (D-132).
 
 | Field | Type | Constraints |
 | --- | --- | --- |
@@ -676,18 +676,18 @@ Every count links to the search that produces it. Target: dashboard loads in und
 - Tickets are addressable by key: `/api/v1/tickets/WEB-42`.
 - Create endpoints accept an optional `Idempotency-Key` header. A repeat within 24 hours with the same key and user returns the original result (I-25).
 
-Onboarding state (14.1, D-130), always the caller's own:
+Onboarding state (14.1, D-132), always the caller's own:
 
 | Method and path | Purpose |
 | --- | --- |
 | `GET /api/v1/me/onboarding` | `{ checklist, guides, ownsProjects, createdAt }` in one round trip: the checklist items visible to the caller with their done state (14.3), the caller's guide states (`guideId`, `version`, `state`, `updatedAt`), whether the caller owns a project, and the caller's account creation time (for What's new, 14.2). p95 under 50 ms on the performance dataset. |
 | `PUT /api/v1/me/onboarding/guides/{guideId}` | `{ version, state }` (`version` 1 to 1 000 000): records `Completed` or `Dismissed` for one guide, replacing an earlier row, and returns the stored `{ guideId, version, state, updatedAt }` (200). The server stores the version as sent and does not know which ids exist; it only checks their shape. `onboarding.guide.invalid` (400), `onboarding.guide.limit` (409, only for a new id), `validation` for a missing or out-of-range field. |
-| `DELETE /api/v1/me/onboarding/guides/{guideId}` | Deletes the caller's state of one guide, so it shows again (Help → Getting started, 14.3, D-133). 204, also when there was no row; a malformed id is 400 `onboarding.guide.invalid`. |
+| `DELETE /api/v1/me/onboarding/guides/{guideId}` | Deletes the caller's state of one guide, so it shows again (Help → Getting started, 14.3, D-135). 204, also when there was no row; a malformed id is 400 `onboarding.guide.invalid`. |
 | `DELETE /api/v1/me/onboarding/guides` | Deletes all the caller's guide states, `welcome` included (Restart all guides, 14.6). 204. |
 
 `GET` accepts any credential (cookie or PAT, read-only included). `PUT` and `DELETE` accept the cookie session only, like `PATCH /me`; a ReadWrite PAT gets 403 `auth.cookieSessionRequired`, a ReadOnly PAT 403 `pat.readOnlyScope`. There are no MCP tools for onboarding state (9.3).
 
-Project suggestions (14.4, D-140):
+Project suggestions (14.4, D-142):
 
 | Method and path | Purpose |
 | --- | --- |
@@ -828,7 +828,7 @@ Docs (12)
 
 Restoring deleted docs stays REST and UI only (D-82).
 
-Out of MCP in v1: user administration, PAT management, feature flags, project deletion, board deletion. These stay in the web UI. Onboarding state (14.1) is REST only: it is personal UI state, and its writes are cookie-only (D-130). Agent onboarding is in 14.8.
+Out of MCP in v1: user administration, PAT management, feature flags, project deletion, board deletion. These stay in the web UI. Onboarding state (14.1) is REST only: it is personal UI state, and its writes are cookie-only (D-132). Agent onboarding is in 14.8.
 
 ## 10. Non-functional requirements
 
@@ -1196,7 +1196,7 @@ Every type with the guardrails stays below 4 500 characters with the longest val
 
 ## 14. Onboarding
 
-New users should reach their first real action quickly and learn what differs from Jira: free status transitions, backlog versus boards, regressions, and private projects that answer 404. Every guide can be replayed, and guides stay valid as views and their A/B variants change. Epic TKT-52; decisions D-129 (tour engine, anchor rule, owner decisions) D-130 (guide state storage, REST only) and D-133 (checklist). Mockups: [`docs/design/mockups/onboarding.html`](../design/mockups/onboarding.html). The first-run flow and the life of a guide are drawn in [workflows §7](../domain/workflows.md#7-user-onboarding).
+New users should reach their first real action quickly and learn what differs from Jira: free status transitions, backlog versus boards, regressions, and private projects that answer 404. Every guide can be replayed, and guides stay valid as views and their A/B variants change. Epic TKT-52; decisions D-131 (tour engine, anchor rule, owner decisions) D-132 (guide state storage, REST only) and D-135 (checklist). Mockups: [`docs/design/mockups/onboarding.html`](../design/mockups/onboarding.html). The first-run flow and the life of a guide are drawn in [workflows §7](../domain/workflows.md#7-user-onboarding).
 
 | Audience | What onboarding covers |
 | --- | --- |
@@ -1211,11 +1211,11 @@ New users should reach their first real action quickly and learn what differs fr
 - A **guide** is any piece of onboarding a user can finish or dismiss. Each has a namespaced id and an integer version, both authored in code: `welcome`, `checklist`, `whats-new.<date id>` (for example `whats-new.2026-11`), `tour.<name>` (for example `tour.first-project`), `hint.<name>` (for example `hint.free-transitions`).
 - State is stored per user and guide in `UserGuideState` (4.18): `Completed` or `Dismissed`, with the version it was recorded for. No row means the guide is new to the user. Raising a guide's version in code shows it again to everyone whose row has a lower version.
 - **Restart all guides** (14.6) deletes all the user's rows, so every guide behaves as new again.
-- The SPA reads the state with `GET /api/v1/me/onboarding` after the first render, never in `provideAppInitializer`, so startup is no slower. Writes go through `PUT` and `DELETE` (section 8), cookie session only. There are no MCP tools for onboarding state (D-130).
+- The SPA reads the state with `GET /api/v1/me/onboarding` after the first render, never in `provideAppInitializer`, so startup is no slower. Writes go through `PUT` and `DELETE` (section 8), cookie session only. There are no MCP tools for onboarding state (D-132).
 - **Only the welcome dialog and What's new open by themselves.** Tours start only from the welcome dialog, an empty state, the Help menu or the command palette. Hints (14.5) appear inline on their page and never cover it.
-- At most one auto-shown dialog opens per sign-in: the welcome dialog when it is due, otherwise a due What's new entry. "Per sign-in" means once per browser session and user (remembered in `sessionStorage`): reloads in the same tab show nothing more, a new tab or window is a new session. The checklist card and inline hints are not dialogs and do not count. The decision is made once per app load, after the onboarding state has loaded, and waits while a tour runs or another dialog is open (D-138).
+- At most one auto-shown dialog opens per sign-in: the welcome dialog when it is due, otherwise a due What's new entry. "Per sign-in" means once per browser session and user (remembered in `sessionStorage`): reloads in the same tab show nothing more, a new tab or window is a new session. The checklist card and inline hints are not dialogs and do not count. The decision is made once per app load, after the onboarding state has loaded, and waits while a tour runs or another dialog is open (D-140).
 - Copy (titles, bodies, button labels) lives in data files with stable ids, so i18n (I-60) can extract it mechanically.
-- End-to-end suites mark the auto-shown guides as `Completed` for the users they sign in, through the same `PUT` endpoint, with the list of auto-shown ids taken from the SPA's own data files (`AUTO_SHOWN_GUIDES`); onboarding specs opt out (TKT-77, D-132). Every guide that opens or appears by itself must be in that list.
+- End-to-end suites mark the auto-shown guides as `Completed` for the users they sign in, through the same `PUT` endpoint, with the list of auto-shown ids taken from the SPA's own data files (`AUTO_SHOWN_GUIDES`); onboarding specs opt out (TKT-77, D-134). Every guide that opens or appears by itself must be in that list.
 
 ### 14.2 Welcome and What's new
 
@@ -1260,7 +1260,7 @@ Rules:
 
 - **Writers** are users who can write in at least one readable project (5.1, 5.3). A user who is Viewer in every project they can read sees no write items (Create a ticket, Move work forward, Join the conversation; commenting needs write access, 5.3). Follow a ticket and the optional agent items stay visible to everyone. Because any active user can create a project (D-18), Create a ticket may also link to the "Your first project" walkthrough.
 - Owner items appear only when `ownsProjects` is true; Admin items only for Admins.
-- Items are computed on the server and returned as ids with `done` and `optional`, in the order above (D-133). Work in a project the user can no longer read, or in a deleted project, does not count; archived owned projects do not count as owned. Watching a ticket automatically (as its reporter, for example) counts as following it.
+- Items are computed on the server and returned as ids with `done` and `optional`, in the order above (D-135). Work in a project the user can no longer read, or in a deleted project, does not count; archived owned projects do not count as owned. Watching a ticket automatically (as its reporter, for example) counts as following it.
 - Optional items do not hold back completion. When every other visible item is done, the card shows a completed state, records `checklist` `Completed` and stops appearing on My work after the visit (or after Hide).
 - The card can be dismissed, which records `checklist` `Dismissed`; Help → Getting started (with the progress, for example "3 of 8") forgets the stored state with `DELETE /me/onboarding/guides/checklist`, opens My work and focuses the card, so it shows again until it is dismissed or completed again.
 - The card refreshes when My work is shown and when the window regains focus, so actions done in another tab, over REST or over MCP tick items off. A skeleton shows while the state loads. Each open item links to where its action is done: the create-ticket dialog, the backlog of a project the user can write to, the settings, test cases or regressions of a project they own, Boards, Admin → Users or Agent prompts, or Profile → Access tokens; the first open item shows what to do next ("Press C", "Open a ticket").
@@ -1270,7 +1270,7 @@ Rules:
 
 ### 14.4 Tours and the anchor rule
 
-A **tour** is a short sequence of steps on one view, each step a popover pointing at a part of the page under a spotlight. The engine is home-grown on Angular CDK Overlay and A11y (D-129):
+A **tour** is a short sequence of steps on one view, each step a popover pointing at a part of the page under a spotlight. The engine is home-grown on Angular CDK Overlay and A11y (D-131):
 
 - The spotlight is an SVG-mask backdrop in a CDK overlay, re-measured on resize and scroll. The popover is positioned next to its anchor, traps focus, has `role="dialog"` labelled by its title, and announces "Step n of m". `←` and `→` move between steps, `Esc` ends the tour, and focus returns to where the tour was started. Global shortcuts are suppressed while a step is open. Both themes and `prefers-reduced-motion` are supported.
 - Tours are keyed by **view id** (6.13), never by variant. Definitions are plain data (no Angular imports) under `core/onboarding/tours/`, so e2e specs can import them, and they reference anchors by string id only, so core never imports a feature.
@@ -1278,17 +1278,17 @@ A **tour** is a short sequence of steps on one view, each step a popover pointin
 - A step whose anchor is missing is skipped (with a warning in development builds). If fewer than half the anchors of a tour resolve, the tour does not start.
 - A tour closes when the peek panel or another overlay opens.
 - Finishing a tour records `Completed`, ending it early records `Dismissed`; both can be replayed from the Help menu or the palette.
-- Each tour has the guide id `tour.<viewId>` and a version; raising the version shows it again to users who completed or dismissed an older one. A tour that did not start (too few anchors) or gave way to the peek, another overlay or a navigation records nothing. Access comes from the user's effective role in the open project (Owner and Member write unless the project is archived; Admins are Owner everywhere) and the instance Admin role. Views without an open project report their own access: a board from its linked projects, a ticket page from the ticket (D-136).
+- Each tour has the guide id `tour.<viewId>` and a version; raising the version shows it again to users who completed or dismissed an older one. A tour that did not start (too few anchors) or gave way to the peek, another overlay or a navigation records nothing. Access comes from the user's effective role in the open project (Owner and Member write unless the project is archived; Admins are Owner everywhere) and the instance Admin role. Views without an open project report their own access: a board from its linked projects, a ticket page from the ticket (D-138).
 - **Starting a tour.** "Tour of this page" in the Help menu starts the tour of the current view and is disabled, with the hint "No tour here", on views without one. The palette's Help group has one command per tour (`help.tour.<viewId>`, "Backlog tour"). On its own view it starts the tour; a tour whose view needs only a project (the backlog) can also be started from anywhere: it opens that view in the project in context, else in the most recently updated project the user can write to, else the most recently updated readable one, and starts once the view has loaded. Focus returns to the Help menu trigger (or to what the palette gave focus back to).
 
-**Anchor rule** (D-129, extends ADR 0008): a tour anchor is a stable id on an element, set with the `tkTourAnchor` directive (for example `tkTourAnchor="backlog.quick-create"`), which renders `data-tour` and registers the element. Anchors are separate from `data-testid`. **Every variant of a view exposes the same anchor ids.** Sections added to the ticket view through `provideTicketDetailSection` expose their own anchors. `e2e/tests/onboarding/tour-anchors.spec.ts` opens every tour's view with seeded data and fails as soon as an anchor disappears; a Vitest test asserts that every tour's view id is registered in the view registry. A tour for one audience declares it on its catalogue entry (`requires: owner | admin`); others get neither "Tour of this page" nor its palette command (D-137).
+**Anchor rule** (D-131, extends ADR 0008): a tour anchor is a stable id on an element, set with the `tkTourAnchor` directive (for example `tkTourAnchor="backlog.quick-create"`), which renders `data-tour` and registers the element. Anchors are separate from `data-testid`. **Every variant of a view exposes the same anchor ids.** Sections added to the ticket view through `provideTicketDetailSection` expose their own anchors. `e2e/tests/onboarding/tour-anchors.spec.ts` opens every tour's view with seeded data and fails as soon as an anchor disappears; a Vitest test asserts that every tour's view id is registered in the view registry. A tour for one audience declares it on its catalogue entry (`requires: owner | admin`); others get neither "Tour of this page" nor its palette command (D-139).
 
 Per-view tours:
 
 | View id | Steps cover | Audience | Ticket |
 | --- | --- | --- | --- |
 | `backlog.list` | Quick-create, everything not on a board, ranking by drag, the bulk bar (on the first row's checkbox), group and sort, "on boards" (only while some tickets are on boards). An empty backlog still gets the quick-create, list and group-and-sort steps. | All; Viewers get the list, group and sort, and "on boards" | TKT-56 |
-| `board.kanban` | Columns are statuses and transitions are free (D-05), swimlanes, placing a card (Add tickets, drag between and within columns), cards from projects you cannot read are left out of columns and counts, with no number shown (D-31). Also started by "Take the board tour" on the free-transitions hint. | All; Viewers, and everyone on an archived board, get no placing step. Writing = the user can write to a linked project (D-136) | TKT-79 |
+| `board.kanban` | Columns are statuses and transitions are free (D-05), swimlanes, placing a card (Add tickets, drag between and within columns), cards from projects you cannot read are left out of columns and counts, with no number shown (D-31). Also started by "Take the board tour" on the free-transitions hint. | All; Viewers, and everyone on an archived board, get no placing step. Writing = the user can write to a linked project (D-138) | TKT-79 |
 | `ticket.detail` | Status and fields, sub-tickets (skipped on a spike without children), links, watching (`w`), @mentions, test cases, Delegate (only while the Delegate button shows: `agent.delegate` on and delegation set up for the project) | All; Viewers get no @mentions and no Delegate step | TKT-79 |
 | `search.results` | The text box (words or a key, every readable project), filters kept in the URL, sort, results (J/K, Enter peeks), CSV export. Ticket scope only. Can start from anywhere (`/search`). | All | TKT-57 |
 | `testcases.list` | New test case, statuses (New is not ready; Manual needs steps; Automatic passes by itself), the list, last regression result (only with cases), filters and archived. An empty list still gets the list step. | All; Viewers get no New test case step | TKT-57 |
@@ -1317,7 +1317,7 @@ Rules of the walkthrough:
 - Finishing records `tour.first-project` `Completed`. Because its actions are real data, they also tick the matching checklist items (14.3).
 - Entry points: Help menu and palette (`help.tour.first-project`), the projects list, boards list and dashboard empty states (14.7), and the welcome dialog's Take the tour for a user who cannot write to any project yet (14.2).
 
-How it behaves (TKT-80, D-140):
+How it behaves (TKT-80, D-142):
 
 | Step | Page and anchor | Done when (read from real data) | The card's button |
 | --- | --- | --- | --- |
@@ -1346,13 +1346,13 @@ A **hint** is a small inline note shown at the moment of likely confusion. It is
 | `hint.backlog-vs-boards` | The backlog, under its toolbar: a ticket lives in its backlog or on one board; tickets on a board leave the list and are counted under "on boards" (6.4). | No |
 | `hint.private-404` | The not-found page and the project not-found state: private projects you cannot read look as if they do not exist (5.1). | No |
 
-Rules (D-135):
+Rules (D-137):
 
 - A hint shows until the user dismisses it ("Got it", or × in a picker), which records `hint.<id>` `Dismissed` at the hint's version. Raising the version in code shows it again; Restart all guides brings every hint back.
 - Nothing shows until the onboarding state has loaded (14.1). No hint shows while a tour runs, or while a dialog, menu or picker with a backdrop covers the page; a hint inside a picker is covered only by overlays other than its own picker.
 - At most one hint is on screen: of the hints placed on the page, the first one registered that is unseen, allowed and not covered wins. Opening a status picker on the backlog therefore swaps the backlog hint for the picker's hint until the picker closes.
 - Hints are inline (`role="note"`), never focus-stealing; the dismiss button is a normal button in the tab order. A hint in a picker is dismissed with the mouse, since Tab closes the picker.
-- Copy lives in `core/onboarding/guides/hints.ts` with stable ids (I-60). Hints are listed in `AUTO_SHOWN_GUIDES`, so the e2e suites mark them seen (D-132).
+- Copy lives in `core/onboarding/guides/hints.ts` with stable ids (I-60). Hints are listed in `AUTO_SHOWN_GUIDES`, so the e2e suites mark them seen (D-134).
 
 ### 14.6 Help menu and palette Help group
 
@@ -1368,9 +1368,9 @@ The top-bar help icon opens the **Help menu** (TKT-76). Its trigger keeps `data-
 | Connect an AI agent | Opens the agent guide (14.8). |
 | Restart all guides | Asks for confirmation, calls `DELETE /api/v1/me/onboarding/guides`, shows a toast. Always last. |
 
-- Features add items through a provider in `core/` (`provideHelpMenuItem({ id, label, icon, order, visible, run })`), so the menu never imports a feature. An item whose feature has not shipped is simply not registered. `visible`, `disabled` and the trailing hint (for example "3 of 8") can be signals. Restart all guides is built into the menu, not registered, so nothing can be ordered after it (D-131).
+- Features add items through a provider in `core/` (`provideHelpMenuItem({ id, label, icon, order, visible, run })`), so the menu never imports a feature. An item whose feature has not shipped is simply not registered. `visible`, `disabled` and the trailing hint (for example "3 of 8") can be signals. Restart all guides is built into the menu, not registered, so nothing can be ordered after it (D-133).
 - The command palette has a **Help** group fed from the same registrations: `help.shortcuts`, one `help.tour.*` command per tour (`help.tour.first-project` for the walkthrough), and Restart all guides.
-- Keyboard: the menu opens from the keyboard, arrows move, `Esc` closes it and focus returns to the trigger. Enter and Space on a focused button or link always activate it, even on pages whose `Enter` shortcut opens the focused row (D-131).
+- Keyboard: the menu opens from the keyboard, arrows move, `Esc` closes it and focus returns to the trigger. Enter and Space on a focused button or link always activate it, even on pages whose `Enter` shortcut opens the focused row (D-133).
 
 ### 14.7 Empty states
 
@@ -1388,17 +1388,17 @@ Empty states (`shared/ui/empty-state`) teach what the page is for, not only that
 
 - Viewers see the learn action but no create action. Their copy says what the page will hold instead of asking them to create (for example "Nothing has been planned in this project yet.").
 - The backlog empty state no longer mentions importing from Jira: there is no importer (I-48, Q-01).
-- The learn action is a secondary button after the create action. It shows only while it can start: a tour when `TourAvailability.canStart` allows it, the walkthrough while `help.tour.first-project` is registered and enabled. Until then the boards and projects lists show no learn action (D-141).
+- The learn action is a secondary button after the create action. It shows only while it can start: a tour when `TourAvailability.canStart` allows it, the walkthrough while `help.tour.first-project` is registered and enabled. Until then the boards and projects lists show no learn action (D-143).
 - Filtered-empty states ("No tickets match these filters") keep only Clear filters.
 
 ### 14.8 Agent onboarding
 
 For people connecting Claude Code over MCP (section 9, TKT-59):
 
-- **Server instructions.** The MCP server returns instructions on `initialize` (`McpServerOptions.ServerInstructions`): a short primer on statuses and free transitions, backlog versus boards, ticket keys, "call `whoami` first", private projects answering not found, idempotency keys for retries, the error shape and where to read more. It costs agent context on every connection, so it stays a primer; details belong in tool descriptions. The text is one constant (`McpServerInstructions.Text`) mirrored verbatim in [docs/mcp.md](../mcp.md#server-instructions); integration tests assert that `initialize` carries it and that the docs copy matches (D-139).
+- **Server instructions.** The MCP server returns instructions on `initialize` (`McpServerOptions.ServerInstructions`): a short primer on statuses and free transitions, backlog versus boards, ticket keys, "call `whoami` first", private projects answering not found, idempotency keys for retries, the error shape and where to read more. It costs agent context on every connection, so it stays a primer; details belong in tool descriptions. The text is one constant (`McpServerInstructions.Text`) mirrored verbatim in [docs/mcp.md](../mcp.md#server-instructions); integration tests assert that `initialize` carries it and that the docs copy matches (D-141).
 - **Connect an AI agent guide** (`help.connect-agent`), opened from the Help menu, the palette, the access tokens empty state and the checklist's two agent items. It is a panel on Profile → Access tokens (`/profile/tokens?guide=connect-agent`) with three steps:
   1. **Create a token**: the usual Generate token dialog, name suggested ("Claude Code", or the next free "Claude Code n"). A user who already has a live token sees it named and may create another.
   2. **Copy the command**: the `claude mcp add` command of the token page (6.12) with the new token's secret. The secret is shown only while the panel is open and the show-once dialog is skipped; without a new token the command shows `tkt_...` to replace.
   3. **Check the connection**: turns green once the token's `LastUsedAt` is set (the token created in the guide, else a live token that was used). While waiting it re-reads the token list every 5 seconds, not while the tab is hidden, and on window focus; it stops when green or when the panel closes.
   Opening the panel focuses its heading; closing it (×) removes the query parameter and returns focus to Generate token. The two optional checklist items (14.3) tick themselves off after a real MCP call with the PAT.
-- Onboarding state itself is not available over MCP (14.1, D-130).
+- Onboarding state itself is not available over MCP (14.1, D-132).

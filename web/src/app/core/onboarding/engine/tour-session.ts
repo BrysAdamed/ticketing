@@ -113,7 +113,7 @@ export interface TourSessionOptions {
 /// One running tour: a full-screen spotlight overlay and a popover card connected to the current
 /// anchor. A modal step (Next-driven) puts a transparent CDK backdrop under the spotlight, which
 /// blocks the page and, through `ShortcutService.isOverlayOpen()`, the global shortcuts, and traps
-/// focus in the card. An action-driven step (`advanceWhen`, D-140) has no backdrop: the dimmed area
+/// focus in the card. An action-driven step (`advanceWhen`, D-142) has no backdrop: the dimmed area
 /// swallows clicks but the hole lets them through, shortcuts stay live, and the step moves on when
 /// its condition holds. A walkthrough pauses (a "Continue the walkthrough" pill) where a tour would
 /// end on foreign navigation. Created by `TourLauncher` from a lazy chunk.

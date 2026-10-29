@@ -3,7 +3,7 @@ import { OnboardingStateService } from '../onboarding-state.service';
 import { CHECKLIST_GUIDE } from '../guides/checklist';
 import { checklistProgress, groupChecklist, nextChecklistItem } from './checklist.model';
 
-/// The getting-started checklist card on My work (spec 14.3, D-133). Items come from
+/// The getting-started checklist card on My work (spec 14.3, D-135). Items come from
 /// `GET /me/onboarding`; this service decides whether the card shows: until the user dismisses
 /// it or completes every required item. On completion the card shows its completed state for the
 /// rest of the visit while `checklist` is stored as Completed, so it does not show again.

@@ -1,7 +1,7 @@
 import { TourDefinition } from '../engine/tour.model';
 
 /// Tour of a kanban board (spec 14.4). Writers get four steps, Viewers (and everyone on an archived
-/// board) three: no placing step. Access comes from the board itself, not an open project (D-136):
+/// board) three: no placing step. Access comes from the board itself, not an open project (D-138):
 /// writing means the board is not archived and the user can write to one of its projects.
 export const BOARD_TOUR: TourDefinition = {
   id: 'tour.board.kanban',

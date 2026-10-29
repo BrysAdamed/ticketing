@@ -2,7 +2,7 @@ using Ticketing.Domain.Onboarding;
 
 namespace Ticketing.Application.Onboarding;
 
-/// <summary>Everything the web client needs to decide which guides to offer, in one round trip (D-130).</summary>
+/// <summary>Everything the web client needs to decide which guides to offer, in one round trip (D-132).</summary>
 /// <param name="Checklist">The getting-started items with their completion, computed from real data, only those meant for the caller's roles.</param>
 /// <param name="Guides">The guides the caller completed or dismissed, with the version they saw.</param>
 /// <param name="OwnsProjects">Whether the caller owns at least one active project, for owner-only guides and checklist items.</param>
@@ -16,7 +16,7 @@ public sealed record OnboardingDto(
 /// <summary>One getting-started step. New members may be added; existing ones keep their meaning.</summary>
 public sealed record OnboardingChecklistItemDto(string Id, bool Done, bool Optional);
 
-/// <summary>The getting-started item ids (spec 14.3, D-133). The web client maps each id to its label and link.</summary>
+/// <summary>The getting-started item ids (spec 14.3, D-135). The web client maps each id to its label and link.</summary>
 public static class OnboardingChecklistItems
 {
     public const string CreateTicket = "create-ticket";

@@ -7,7 +7,7 @@ export interface TourConditionResult {
   readonly params?: Readonly<Record<string, string>>;
 }
 
-/// What an action-driven tour needs from the code that starts it (D-140): conditions over real data
+/// What an action-driven tour needs from the code that starts it (D-142): conditions over real data
 /// for `advanceWhen: { kind: 'condition' }`, the custom step actions, and when to check again.
 export interface TourConditions {
   /// Reads the real state; never throws (a failed read is "does not hold").

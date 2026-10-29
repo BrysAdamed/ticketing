@@ -26,7 +26,7 @@ import { IconComponent } from '@shared/ui/icon/icon.component';
 
 const FIRST_PROJECT_HELP_ID = 'help.tour.first-project';
 
-/// The getting-started checklist card on My work (spec 14.3, D-133): progress over the required
+/// The getting-started checklist card on My work (spec 14.3, D-135): progress over the required
 /// items, each item linking to where its action is done, the optional agent items in their own
 /// group, Dismiss, and a completed state. Refreshes when shown and on window focus, so actions
 /// done elsewhere (another tab, REST, MCP) tick items off.

@@ -7,7 +7,7 @@ interface AccessSource {
 }
 
 /// What the user may do on a view that has no open project (a board, a ticket page), as the view
-/// itself reports it from what it loaded (D-136). `GuidedTours` prefers it over the open project's
+/// itself reports it from what it loaded (D-138). `GuidedTours` prefers it over the open project's
 /// role for the tour of that view. Eager and tiny; views call `provide` in their constructor.
 @Injectable({ providedIn: 'root' })
 export class ViewTourAccess {

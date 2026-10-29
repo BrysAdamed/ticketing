@@ -92,7 +92,7 @@ export class GuidedTours {
     return result;
   }
 
-  /// The access the view reports (D-136), else the open project's role.
+  /// The access the view reports (D-138), else the open project's role.
   private access(viewId: string): TourAccess {
     return (
       this.viewAccess.get(viewId) ?? tourAccess(this.openProject.project(), this.auth.isAdmin())

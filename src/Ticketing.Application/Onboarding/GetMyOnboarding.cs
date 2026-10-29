@@ -9,7 +9,7 @@ using Ticketing.Domain.Projects;
 
 namespace Ticketing.Application.Onboarding;
 
-/// <summary>The caller's onboarding state: checklist, guide progress, project ownership and account age (D-130, D-133).</summary>
+/// <summary>The caller's onboarding state: checklist, guide progress, project ownership and account age (D-132, D-135).</summary>
 public static class GetMyOnboarding
 {
     public sealed record Query;

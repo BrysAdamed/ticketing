@@ -19,7 +19,7 @@ let nextId = 0;
 
 /// The step card of a tour: a dialog labelled by the step title and described by its body,
 /// connected to the anchor. Modal steps trap focus and have Back and Next; action-driven steps
-/// (D-140) are non-modal and show what they wait for, the step's action and, when optional, Skip
+/// (D-142) are non-modal and show what they wait for, the step's action and, when optional, Skip
 /// this step. Keys are handled by the session through the overlay's keyboard dispatcher: Esc
 /// closes, ← and → move between modal steps.
 @Component({

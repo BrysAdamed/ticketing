@@ -26,7 +26,7 @@ interface PendingWrite {
   value: GuideProgress | null;
 }
 
-/// The signed-in user's onboarding progress (D-130): which guide versions they completed or
+/// The signed-in user's onboarding progress (D-132): which guide versions they completed or
 /// dismissed, the getting-started checklist, whether they own a project and when their account
 /// was created. Loaded after the first render (never at startup), only while signed in.
 /// `complete`, `dismiss` and `resetAll` are optimistic and roll back with a toast on failure.
@@ -83,7 +83,7 @@ export class OnboardingStateService {
     return this.record(guideId, version, 'Dismissed');
   }
 
-  /// Forgets one completed or dismissed guide, so it shows again (D-133).
+  /// Forgets one completed or dismissed guide, so it shows again (D-135).
   async forget(guideId: string): Promise<boolean> {
     assertGuideId(guideId);
     if (!this.auth.isAuthenticated()) return false;

@@ -22,7 +22,7 @@ const NO: TourConditionResult = { holds: false };
 const OWNED_LIMIT = 100;
 const REMEMBERED_KEY = 'tk-first-project';
 
-/// The walkthrough's conditions over real data (D-140). Every check is a fresh GET, so an action
+/// The walkthrough's conditions over real data (D-142). Every check is a fresh GET, so an action
 /// counts however it was done (quick-create, `c`, the board, REST, MCP, another tab). They run when
 /// the step starts, after any successful write of this app (`ApiClient.writes`), when the window
 /// gets focus, and (from the engine) after navigation or when the user's dialog closes; no polling.

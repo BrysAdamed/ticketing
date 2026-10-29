@@ -2,7 +2,7 @@ import { TourDefinition, TourStep } from '../engine/tour.model';
 import { DASHBOARD_TOUR_STEPS } from '../tours/dashboard.tours';
 
 /// Conditions of the walkthrough's action-driven steps, read from real data by
-/// `FirstProjectConditions` (D-140). Each reports the params later steps need.
+/// `FirstProjectConditions` (D-142). Each reports the params later steps need.
 export const FIRST_PROJECT_CONDITIONS = {
   /// The chosen project exists and is live, or a project the user owns appeared that was not
   /// there when the walkthrough started (`ownedBefore`). Learns `projectKey`.

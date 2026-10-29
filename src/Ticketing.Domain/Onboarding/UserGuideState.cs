@@ -11,7 +11,7 @@ public enum GuideState
 }
 
 /// <summary>
-/// The version of a guide (welcome, checklist, tour, hint, What's new entry) a user completed or dismissed (D-130).
+/// The version of a guide (welcome, checklist, tour, hint, What's new entry) a user completed or dismissed (D-132).
 /// Guide ids are authored in the web client; the server only checks their shape. A client shows a guide again when its
 /// current version is higher than the stored one.
 /// </summary>

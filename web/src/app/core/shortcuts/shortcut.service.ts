@@ -226,7 +226,7 @@ export function normalizeKeys(keys: string): string {
 export const OWN_KEYS_ATTR = 'data-own-keys';
 
 /// A native control that Enter or Space activates (button, link, summary, button-like input), so a
-/// page's `enter` shortcut never hijacks a focused button such as a menu trigger (D-131).
+/// page's `enter` shortcut never hijacks a focused button such as a menu trigger (D-133).
 export function isActivatableTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   const tag = target.tagName;

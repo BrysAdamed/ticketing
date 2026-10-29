@@ -1,6 +1,6 @@
 # Guided tours: home-grown engine on the Angular CDK vs a library (TKT-53, 2026-10-28)
 
-Spike for epic TKT-52. Question: can a small tour engine built on CDK Overlay and CDK A11y meet the accessibility and zoneless requirements, or should we adopt a library? Answer: **build it**. The prototype meets every acceptance criterion in about 870 lines, templates and styles included. The only MIT library that runs on Angular 22 renders and steps correctly under zoneless, but it fails on accessibility and leaks the global shortcuts. The decision is recorded as [D-129](../decisions.md#d-129-guided-tours-home-grown-engine-on-cdk-overlay-and-a11y-tour-anchors-in-every-view-variant-onboarding-owner-decisions-tkt-53).
+Spike for epic TKT-52. Question: can a small tour engine built on CDK Overlay and CDK A11y meet the accessibility and zoneless requirements, or should we adopt a library? Answer: **build it**. The prototype meets every acceptance criterion in about 870 lines, templates and styles included. The only MIT library that runs on Angular 22 renders and steps correctly under zoneless, but it fails on accessibility and leaks the global shortcuts. The decision is recorded as [D-131](../decisions.md#d-129-guided-tours-home-grown-engine-on-cdk-overlay-and-a11y-tour-anchors-in-every-view-variant-onboarding-owner-decisions-tkt-53).
 
 ## 1. Candidates
 
@@ -14,7 +14,7 @@ Spike for epic TKT-52. Question: can a small tour engine built on CDK Overlay an
 
 ## 2. The prototype
 
-Code: `web/src/app/core/onboarding/engine/`. This is the seed TKT-56 builds on, not throwaway code. The demo was in the UI kit (`/dev/ui-kit`, section "Guided tour engine"; TKT-56 removed it in favour of the real backlog tour, D-134):
+Code: `web/src/app/core/onboarding/engine/`. This is the seed TKT-56 builds on, not throwaway code. The demo was in the UI kit (`/dev/ui-kit`, section "Guided tour engine"; TKT-56 removed it in favour of the real backlog tour, D-136):
 - **Tour the KEY backlog** starts a three-step tour from the UI kit. It navigates to `/projects/KEY/backlog` (cross-route `route` steps) and spotlights the **New ticket** button.
 - **Tour this page** runs a tour on the UI kit itself, with a missing anchor (skipped), an `admin` step and focus return.
 
@@ -81,9 +81,9 @@ Tours are pure data in `core/onboarding/tours/<view>.tours.ts` (no Angular impor
 
 ```ts
 export const BACKLOG_TOUR: TourDefinition = {
-  id: 'tour.backlog.list',     // guide id in user_guide_state (GUIDE_ID_PATTERN, D-130)
+  id: 'tour.backlog.list',     // guide id in user_guide_state (GUIDE_ID_PATTERN, D-132)
   version: 1,                  // raise to show it again
-  viewId: 'backlog.list',      // keyed by view id, never by variant (D-129)
+  viewId: 'backlog.list',      // keyed by view id, never by variant (D-131)
   title: 'Backlog',
   steps: [
     { id: 'quick-create', anchor: 'backlog.quick-create', requires: 'write', title: '…', body: '…' },
@@ -115,7 +115,7 @@ interface TourStep {
 
 - `TourLauncher.start(tour, { access, params, returnFocusTo })` returns `Promise<TourResult>`: `completed`, `dismissed`, `aborted` or `interrupted`. TKT-56 wraps it in a `GuidedTours` service in `core/onboarding/` that:
   - builds `access` from `ProjectContext.canWrite()`/`isOwner()` and `AuthService.isAdmin()`;
-  - stores `completed` and `dismissed` with `OnboardingStateService.complete` / `dismiss(tour.id, tour.version)` (TKT-54, D-130), but not `aborted` or `interrupted`, and uses `isSeen(id, version)` to decide whether an entry point shows the tour as new;
+  - stores `completed` and `dismissed` with `OnboardingStateService.complete` / `dismiss(tour.id, tour.version)` (TKT-54, D-132), but not `aborted` or `interrupted`, and uses `isSeen(id, version)` to decide whether an entry point shows the tour as new;
   - picks the tour for `NavigationContext.currentViewId()`. That signal does not exist yet: TKT-56 adds it, reading `routeConfig.data[VIEW_ID_DATA_KEY]`, which `viewRoute` already sets, from the deepest activated route. Peek is ignored, because the peek is closed before a tour starts.
 - Entry points (TKT-76 Help menu "Tour of this page", `help.tour.*` palette commands, empty states) call `GuidedTours`. A Help-menu item should pass the menu's trigger button as `returnFocusTo`, because the menu item it was started from is gone by then.
 - Rules in `planTour`: role filter first, then anchors on the current route. Missing anchors are skipped (dev-mode `console.warn`). If fewer than half of the current route's anchors resolve, or nothing is left, the tour is `aborted` silently. Steps on other routes are checked when reached.
@@ -125,7 +125,7 @@ interface TourStep {
 - `tkTourAnchor="<view-area>.<thing>"` on the element; the directive renders `data-tour` and registers it in `TourAnchorRegistry`. Anchors are separate from `data-testid`: tests may change test ids freely, tours never look them up. Playwright may use `[data-tour=…]`.
 - The registry keeps a list, and the latest registration of an id wins. A peek panel over the board can expose `ticket.*` anchors while the page underneath has its own.
 - Ticket view sections added through `provideTicketDetailSection` put `tkTourAnchor` inside their own component (TKT-79).
-- **Anchor rule (D-129):** every variant of a view exposes the same tour anchor ids. A variant that drops a feature drops its anchor, and the step is skipped. Anchor ids are part of a view's contract like its view id. Spec 14.4 (TKT-75) names the guard: `e2e/tests/onboarding/tour-anchors.spec.ts` opens every tour's view with seeded data and fails when an anchor disappears, and a Vitest test checks that every tour's view id is registered. When a second variant ever exists, the e2e spec runs once per variant (force the flag).
+- **Anchor rule (D-131):** every variant of a view exposes the same tour anchor ids. A variant that drops a feature drops its anchor, and the step is skipped. Anchor ids are part of a view's contract like its view id. Spec 14.4 (TKT-75) names the guard: `e2e/tests/onboarding/tour-anchors.spec.ts` opens every tour's view with seeded data and fails when an anchor disappears, and a Vitest test checks that every tour's view id is registered. When a second variant ever exists, the e2e spec runs once per variant (force the flag).
 
 ### 4.4 Shortcuts, overlays, peek
 

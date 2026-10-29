@@ -17,7 +17,7 @@ export interface TourCatalogueEntry {
   readonly load: () => Promise<TourDefinition>;
 }
 
-/// Every per-view tour, keyed by view id (spec 14.4, D-129).
+/// Every per-view tour, keyed by view id (spec 14.4, D-131).
 export const TOUR_CATALOGUE: readonly TourCatalogueEntry[] = [
   {
     viewId: 'backlog.list',

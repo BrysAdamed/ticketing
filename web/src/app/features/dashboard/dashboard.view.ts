@@ -43,7 +43,7 @@ import { VersionFilterComponent } from './widgets/version-filter.component';
 /// Project dashboard (spec §7, layout-and-screens §3.5): KPI row, then the widget grid. The
 /// version filter lives in the URL (`?version=`), so a filtered dashboard can be shared. An empty
 /// project shows the empty state above the toured widgets at zero (totals, status, created vs
-/// resolved, epic progress), so the dashboard tour runs there too (D-137).
+/// resolved, epic progress), so the dashboard tour runs there too (D-139).
 @Component({
   selector: 'tk-dashboard-view',
   imports: [

@@ -34,6 +34,19 @@ export class LearnActions {
     await this.injector.get(GuidedTours).start(viewId);
   }
 
+  /// Whether the Help item `id` (for example `help.connect-agent`) is registered and enabled now;
+  /// reactive.
+  canRunHelpItem(id: string): boolean {
+    const item = this.help.find(id);
+    return !!item && isHelpItemEnabled(item);
+  }
+
+  /// Runs the Help item `id` while it is registered and enabled; does nothing otherwise.
+  runHelpItem(id: string): void {
+    const item = this.help.find(id);
+    if (item && isHelpItemEnabled(item)) item.run();
+  }
+
   /// Starts the walkthrough; skipOptional passes over the optional status step, so the boards
   /// list resumes at Create a board for a user who already has a project and a ticket (D-142).
   startWalkthrough(options: { readonly skipOptional?: boolean } = {}): void {

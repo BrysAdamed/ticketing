@@ -1199,6 +1199,17 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
 - Rejected: `role="grid"` with gridcells (invalid without rows); a separate tab stop per group (more Tab presses for no gain); hiding the tab by calling the API from the layout on every profile visit (the flag already covers the common case and the view reports the opt-out); importing all Tabler icons (the bundle would grow by the whole set).
 - Rationale: valid ARIA with one tab stop, room for the share control without restructuring, and one source for "are achievements on" that the next stories reuse.
 
+### D-154 "Show me" on locked achievements: a frontend map to tours, the walkthrough and Help items that can start from the tab, hidden otherwise (TKT-93)
+
+- Question: TKT-93 wants a learn action on locked medals where one exists. Most per-view tours only start on their own view (ticket, board, regression session), the regressions explainer lives in a feature the profile may not import, and the mockup's example (Connector → ticket tour at Links) needs an open ticket. Which achievements get an action, where does the map live, and which medals show it?
+- Decision:
+  - **The map is frontend code**, `features/profile/achievements/achievement-learn.ts`, keyed by catalogue id: a tour (`viewId`), the walkthrough or a Help item id, plus one note sentence. The hint text stays in the catalogue (`howToEarn`); what the app can start is a UI concern the API does not know.
+  - **Only targets that can start from the Achievements tab are mapped**: tours with a `path` and no audience requirement (backlog for Reporter, Bug hunter, Closer, Ready for review, Exterminator, Triage; test cases for Test author), the walkthrough with `skipOptional` for Board builder (as the boards list does, D-143), and `help.connect-agent` for Machine whisperer. Connector, Conversationalist, Show me, Shout-out and Delegator (ticket tour), the three regression achievements (session tour or the feature's explainer), Spring cleaning (board tour) and Epic finisher have no action. A Vitest checks every mapped tour has a path and every Help id is registered by its provider.
+  - **D-143's rule applies per open**: the footer renders only while `canStartTour` / `canStartWalkthrough` / `canRunHelpItem` is true, read as signals. `LearnActions` gains `canRunHelpItem(id)` / `runHelpItem(id)` for any Help item, so the tab calls one front door.
+  - **Only medals with no tier earned** (the Still to earn group, with or without progress) get it, where the hint already shows; an earned tiered medal's footer is the Share control (TKT-98). Secret entries never get one, earned or masked.
+- Rejected: starting the ticket or board tour by opening some ticket or board first (picks content for the user and needs a launcher the engine doesn't have); falling back to the checklist or to another page's tour (D-143); serving the action from the API.
+- Rationale: every Show me does what its note says, a tour that later gains a path or a "start anywhere" launcher is one more map entry, and nothing new appears outside the popover.
+
 ## Product owner answers (v1 review, 2026-10-27)
 
 These were open questions (Q-01..Q-05); the product owner resolved them as follows.

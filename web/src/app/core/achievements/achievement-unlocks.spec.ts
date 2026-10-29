@@ -27,6 +27,7 @@ function entry(id: string, tierCount: number): MyAchievement {
     secret: false,
     masked: false,
     tier: 1,
+    shared: false,
     tiers: Array.from({ length: tierCount }, (_, i) => ({
       tier: i + 1,
       threshold: i + 1,

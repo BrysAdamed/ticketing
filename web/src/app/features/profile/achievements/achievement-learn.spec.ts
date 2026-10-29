@@ -71,6 +71,7 @@ function locked(id: string, overrides: Partial<MyAchievement> = {}): MyAchieveme
     secret: false,
     masked: false,
     tier: 0,
+    shared: false,
     tiers: [{ tier: 1, threshold: 1, unlockedAt: null, seenAt: null }],
     progress: { count: 0, nextTier: 1, nextThreshold: 1 },
     ...overrides,

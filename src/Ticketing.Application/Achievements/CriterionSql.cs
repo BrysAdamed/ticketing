@@ -1,3 +1,7 @@
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
+using NpgsqlTypes;
+using Ticketing.Application.Abstractions;
 using Ticketing.Application.Tickets;
 using Ticketing.Domain.Tickets;
 
@@ -37,6 +41,20 @@ public static class CriterionSql
         + " JOIN projects p ON p.id = coalesce(t.project_id, d.project_id) AND p.deleted_at IS NULL";
 
     public const string TicketOrDocAlive = "((t.id IS NOT NULL AND t.deleted_at IS NULL) OR (d.id IS NOT NULL AND d.deleted_at IS NULL))";
+
+    /// <summary>
+    /// Runs <paramref name="sql"/> over the same <c>subjects(user_id, started_at)</c> CTE the SQL criteria get, as one query, for a
+    /// <see cref="ComputedAchievementCriterion"/> that reads rows to process in C#. Columns map to <typeparamref name="T"/> by name.
+    /// </summary>
+    public static IQueryable<T> OverSubjects<T>(ITicketingDbContext db, string sql, IReadOnlyCollection<AchievementSubject> subjects) =>
+        db.Database.SqlQueryRaw<T>(
+            $"WITH subjects AS MATERIALIZED (SELECT * FROM unnest(@user_ids, @started_ats) AS s(user_id, started_at))\n{sql}"
+                .Replace("{", "{{", StringComparison.Ordinal).Replace("}", "}}", StringComparison.Ordinal),
+            new NpgsqlParameter("user_ids", NpgsqlDbType.Array | NpgsqlDbType.Uuid) { Value = subjects.Select(s => s.UserId).ToArray() },
+            new NpgsqlParameter("started_ats", NpgsqlDbType.Array | NpgsqlDbType.TimestampTz)
+            {
+                Value = subjects.Select(s => s.StartedAt.ToUniversalTime()).ToArray(),
+            });
 
     private static string Literal(string value) =>
         value.All(c => char.IsAsciiLetterOrDigit(c) || c is '.' or '_' or '-')

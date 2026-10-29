@@ -6,7 +6,7 @@ namespace Ticketing.Domain.Tests.Achievements;
 public sealed class AchievementCatalogTests
 {
     [Fact]
-    public void The_catalogue_holds_the_core_achievements_with_unique_ids()
+    public void The_catalogue_holds_the_achievements_with_unique_ids()
     {
         // Act
         var ids = AchievementCatalog.All.Select(a => a.Id).ToList();
@@ -16,11 +16,24 @@ public sealed class AchievementCatalogTests
             [
                 "reporter", "closer", "ready-for-review", "bug-hunter", "exterminator", "conversationalist", "connector", "show-me", "triage",
                 "test-author", "regression-runner", "found-it", "full-sweep", "board-builder", "spring-cleaning", "delegator", "machine-whisperer",
+                "epic-finisher", "shout-out",
             ],
             ids);
         Assert.Equal(ids.Count, ids.Distinct().Count());
-        Assert.All(AchievementCatalog.All, a => Assert.False(a.Secret));
-        Assert.All(AchievementCatalog.All, a => Assert.False(string.IsNullOrWhiteSpace(a.HowToEarn)));
+        Assert.Empty(AchievementCatalog.All.Where(a => a.Secret).Select(a => a.Id));
+        Assert.All(AchievementCatalog.All, a => Assert.Equal(a.Secret, string.IsNullOrWhiteSpace(a.HowToEarn)));
+    }
+
+    [Theory]
+    [InlineData("epic-finisher")]
+    [InlineData("shout-out")]
+    public void Event_achievements_are_earned_once(string id)
+    {
+        // Act
+        var definition = AchievementCatalog.Find(id)!;
+
+        // Assert
+        Assert.Equal([1], definition.Tiers);
     }
 
     [Theory]

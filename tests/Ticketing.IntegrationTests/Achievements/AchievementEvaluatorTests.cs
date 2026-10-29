@@ -9,6 +9,7 @@ using Ticketing.Domain.Achievements;
 using Ticketing.Domain.Projects;
 using Ticketing.Infrastructure.Persistence;
 using Ticketing.IntegrationTests.Infrastructure;
+using Ticketing.IntegrationTests.Mentions;
 using Ticketing.IntegrationTests.Tickets;
 
 namespace Ticketing.IntegrationTests.Achievements;
@@ -72,13 +73,24 @@ public sealed class AchievementEvaluatorTests(TicketingApiFactory api)
         for (var i = 0; i < 25; i++)
             users.Add(await api.CreateUserAsync());
         var start = DateTimeOffset.UtcNow.AddMinutes(-1);
+        var owner = await api.LoginAsync(users[0]);
+        var project = await owner.CreateProjectAsync("WEB");
+        var ticket = await owner.CreateTicketAsync("WEB", "Busy");
+        for (var i = 1; i <= 5; i++)
+        {
+            await api.AddMemberAsync(project.Id, users[i], ProjectRole.Member);
+            var member = await api.LoginAsync(users[i]);
+            await member.AddCommentAsync(ticket.Key, $"Hello {users[0].Mention()}");
+            await member.PatchTicketAsync((await member.CreateTicketAsync("WEB", $"Task {i}", extra: new { description = users[0].Mention() })).Key, new { status = "Done" });
+        }
+        var computed = api.Services.GetServices<IAchievementCriterion>().OfType<ComputedAchievementCriterion>().Count();
 
         // Act
-        var one = await CountQueriesAsync(host.Services, recorder, [new(users[0].Id, start)]);
+        var one = await CountQueriesAsync(host.Services, recorder, [new(users[1].Id, start)]);
         var many = await CountQueriesAsync(host.Services, recorder, [.. users.Select(u => new AchievementSubject(u.Id, start))]);
 
         // Assert
-        Assert.Equal(1, one);
+        Assert.Equal(1 + computed, one);
         Assert.Equal(one, many);
     }
 

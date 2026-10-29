@@ -1441,8 +1441,10 @@ The catalogue is code (`AchievementCatalog`), not an admin-editable table. Each 
 | `spring-cleaning` | Spring cleaning | A board archived | once | `archive` |
 | `delegator` | Delegator | Tickets delegated to an agent | 1 / 10 / 50 | `robot` |
 | `machine-whisperer` | Machine whisperer | A write through MCP | once | `plug-connected` |
+| `epic-finisher` | Epic finisher | An Epic moved to Done with all of its children Done | once | `flag-check` |
+| `shout-out` | Shout-out | A teammate mentioned | once | `speakerphone` |
 
-`epic-finisher` and `shout-out` (TKT-95) and the secret `second-thoughts`, `unblocker` and `grand-tour` (TKT-96) are added through the same extension point.
+`epic-finisher` and `shout-out` (TKT-95) were the first entries added through the extension point. The secret `second-thoughts`, `unblocker` and `grand-tour` (TKT-96) are added the same way.
 
 ### 15.3 Data
 
@@ -1480,6 +1482,8 @@ Counts come from data that is already recorded: `activity_entries` (every channe
 | `spring-cleaning` | Boards U archived, even if they were deleted later. |
 | `delegator` | Distinct alive tickets U delegated to an agent (web only). |
 | `machine-whisperer` | Any activity U wrote over MCP. MCP calls that write no activity (watch, unwatch, mark notifications read), reads and REST with a PAT don't count. |
+| `epic-finisher` | An Epic U moved to Done that, when evaluated, is alive and still Done and has at least one non-deleted **direct** child, all of them Done. A childless Epic doesn't count. The children's state is read at evaluation, so an Epic closed before its last child counts once that child is Done (D-148). |
+| `shout-out` | U's first new ticket, description change, comment or comment edit that newly mentions a user other than U, on an alive ticket and, for comments, a comment that is not deleted. Mentions are found with the D-96 rules (`MentionRules`): a new text counts every mention, an edit only mentions the old text didn't have; self-mentions and mentions in code don't count. Doc-comment mentions don't count (D-96). Users who already hold it are skipped (D-148). |
 
 The evaluator computes every criterion for a batch of users, each with their own S, in a fixed number of queries that does not depend on the number of users, and returns per user and achievement the current count and the tier it reaches (the progress TKT-65 shows). It never writes; the after-commit projector (TKT-64) awards tiers. It is not an `IActivityObserver`, so an evaluator failure never fails a user's write (D-144).
 

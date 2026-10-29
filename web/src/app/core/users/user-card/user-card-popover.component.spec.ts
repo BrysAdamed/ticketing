@@ -4,7 +4,7 @@ import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { ApiError } from '../../api/api-error';
 import { SharedAchievements } from '../../achievements/achievement.models';
-import { AchievementsApi } from '../../achievements/achievements.api';
+import { AchievementSharesApi } from '../../achievements/achievement-shares.api';
 import { AuthService } from '../../auth/auth.service';
 import { FeatureFlagService } from '../../flags/feature-flag.service';
 import { UserCardPopoverComponent } from './user-card-popover.component';
@@ -13,7 +13,7 @@ const ANNA = { id: 'anna', displayName: 'Anna Kowalska', email: 'anna@example.co
 
 describe('UserCardPopoverComponent', () => {
   let flags: Record<string, string>;
-  let response: () => ReturnType<AchievementsApi['sharedBy']>;
+  let response: () => ReturnType<AchievementSharesApi['sharedBy']>;
   let sharedBy: ReturnType<typeof vi.fn>;
 
   async function render(user = ANNA): Promise<ComponentFixture<UserCardPopoverComponent>> {
@@ -22,7 +22,7 @@ describe('UserCardPopoverComponent', () => {
       providers: [
         provideZonelessChangeDetection(),
         provideRouter([]),
-        { provide: AchievementsApi, useValue: { sharedBy } },
+        { provide: AchievementSharesApi, useValue: { sharedBy } },
         { provide: FeatureFlagService, useValue: { isOn: (key: string) => flags[key] === 'on' } },
         { provide: AuthService, useValue: { currentUser: signal({ id: 'me' }) } },
       ],

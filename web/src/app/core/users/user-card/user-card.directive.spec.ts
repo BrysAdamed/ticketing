@@ -2,7 +2,7 @@ import { Component, provideZonelessChangeDetection, signal } from '@angular/core
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
-import { AchievementsApi } from '../../achievements/achievements.api';
+import { AchievementSharesApi } from '../../achievements/achievement-shares.api';
 import { AuthService } from '../../auth/auth.service';
 import { FeatureFlagService } from '../../flags/feature-flag.service';
 import { USER_CARD_HOVER_MS, UserCardDirective } from './user-card.directive';
@@ -28,7 +28,7 @@ describe('UserCardDirective', () => {
       providers: [
         provideZonelessChangeDetection(),
         provideRouter([]),
-        { provide: AchievementsApi, useValue: { sharedBy: () => of({ items: [] }) } },
+        { provide: AchievementSharesApi, useValue: { sharedBy: () => of({ items: [] }) } },
         { provide: FeatureFlagService, useValue: { isOn: () => false } },
         { provide: AuthService, useValue: { currentUser: signal({ id: 'me' }) } },
       ],

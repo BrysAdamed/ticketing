@@ -5,6 +5,7 @@ import { ApiError } from '@core/api/api-error';
 import { MyAchievement, MyAchievements } from '@core/achievements/achievement.models';
 import { AchievementUnlocks } from '@core/achievements/achievement-unlocks';
 import { AchievementsAccess } from '@core/achievements/achievements-access';
+import { AchievementSharesApi } from '@core/achievements/achievement-shares.api';
 import { AchievementsApi } from '@core/achievements/achievements.api';
 import { AuthService } from '@core/auth/auth.service';
 import { FeatureFlagService } from '@core/flags/feature-flag.service';
@@ -69,6 +70,7 @@ describe('ProfileAchievementsStore', () => {
         provideZonelessChangeDetection(),
         ProfileAchievementsStore,
         { provide: AchievementsApi, useValue: api },
+        { provide: AchievementSharesApi, useValue: api },
         { provide: ToastService, useValue: toast },
         { provide: FeatureFlagService, useValue: { isOn: (key: string) => flags[key] === 'on' } },
         { provide: AuthService, useValue: { currentUser: signal({ id: 'user-1' }) } },

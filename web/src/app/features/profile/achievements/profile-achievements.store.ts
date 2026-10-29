@@ -4,6 +4,7 @@ import { toApiError } from '@core/api/api-error';
 import { ACHIEVEMENTS_DISABLED, MyAchievement } from '@core/achievements/achievement.models';
 import { AchievementUnlocks } from '@core/achievements/achievement-unlocks';
 import { AchievementsAccess } from '@core/achievements/achievements-access';
+import { AchievementSharesApi } from '@core/achievements/achievement-shares.api';
 import { AchievementsApi } from '@core/achievements/achievements.api';
 import { ToastService } from '@core/notify/toast.service';
 import { groupAchievements, unseenIds, withShared } from './achievements.logic';
@@ -13,6 +14,7 @@ export type AchievementsStatus = 'loading' | 'loaded' | 'error' | 'disabled';
 @Injectable()
 export class ProfileAchievementsStore {
   private readonly api = inject(AchievementsApi);
+  private readonly shares = inject(AchievementSharesApi);
   private readonly access = inject(AchievementsAccess);
   private readonly unlocks = inject(AchievementUnlocks);
   private readonly toast = inject(ToastService);
@@ -56,7 +58,9 @@ export class ProfileAchievementsStore {
     this.items.update((items) => withShared(items, id, shared));
     this.setPending(id, true);
     try {
-      const updated = await firstValueFrom(shared ? this.api.share(id) : this.api.unshare(id));
+      const updated = await firstValueFrom(
+        shared ? this.shares.share(id) : this.shares.unshare(id),
+      );
       this.items.update((items) => items.map((i) => (i.id === id ? updated : i)));
       this.toast.success(shared ? `${item.name} is shared` : `${item.name} is no longer shared`, {
         action: { label: 'Undo', run: () => void this.setShared(id, !shared) },

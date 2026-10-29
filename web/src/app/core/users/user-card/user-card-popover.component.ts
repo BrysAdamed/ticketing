@@ -15,7 +15,7 @@ import { UserRef } from '@shared/ui/domain/user-display.component';
 import { UserCardComponent } from '@shared/ui/user-card/user-card.component';
 import { SharedMedalsState } from '@shared/ui/user-card/user-card.logic';
 import { AchievementsAccess } from '../../achievements/achievements-access';
-import { AchievementsApi } from '../../achievements/achievements.api';
+import { AchievementSharesApi } from '../../achievements/achievement-shares.api';
 import { AuthService } from '../../auth/auth.service';
 
 /// The user card with its data: who is looking, and the person's shared achievements, fetched
@@ -46,7 +46,7 @@ export class UserCardPopoverComponent {
   protected readonly achievements = signal<SharedMedalsState>({ status: 'off' });
 
   constructor() {
-    const api = inject(AchievementsApi);
+    const api = inject(AchievementSharesApi);
     const access = inject(AchievementsAccess);
     const host = inject<ElementRef<HTMLElement>>(ElementRef);
     const destroyRef = inject(DestroyRef);

@@ -2,29 +2,32 @@ import {
   tablerArchive,
   tablerAward,
   tablerBug,
-  tablerBugOff,
   tablerChecklist,
   tablerCircleCheck,
   tablerFilePlus,
-  tablerGitPullRequest,
   tablerLayoutKanban,
   tablerLink,
   tablerListCheck,
-  tablerMessages,
   tablerPaperclip,
+  tablerRobot,
+} from '@ng-icons/tabler-icons';
+import {
+  tablerBugOff,
+  tablerGitPullRequest,
+  tablerMessages,
   tablerPlugConnected,
   tablerQuestionMark,
-  tablerRobot,
   tablerTestPipe,
   tablerUserShare,
   tablerZoomExclamation,
-} from '@ng-icons/tabler-icons';
+} from './medal-glyph-icons';
 
 export const MEDAL_FALLBACK_GLYPH = 'tablerAward';
 export const MEDAL_SECRET_GLYPH = 'tablerQuestionMark';
 
 /// Glyphs of the achievement catalogue (spec 15.2), keyed by ng-icons name. A catalogue icon
-/// missing here draws the award glyph, so add the icon when you add an achievement.
+/// missing here draws the award glyph, so add the icon when you add an achievement: from
+/// `./medal-glyph-icons` (copied there) unless app code outside the medal already imports it.
 export const MEDAL_GLYPHS: Readonly<Record<string, string>> = {
   tablerArchive,
   tablerAward,

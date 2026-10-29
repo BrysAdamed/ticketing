@@ -9,7 +9,7 @@ import type { AchievementUnlockAnnouncer } from './achievement-unlock-announcer'
 import { ACHIEVEMENTS_DISABLED, UnseenAchievement, UnseenAchievements } from './achievement.models';
 import { AchievementsAccess } from './achievements-access';
 import { AchievementsApi } from './achievements.api';
-import { ToastedTiers } from './toasted-tiers';
+import { forgetToastedTiers } from './toasted-tiers-storage';
 
 /// The signed-in user's unseen achievement tiers (spec 15.10, D-152): fetched on the notification
 /// poll while achievements are on, handed to the lazily loaded announcer for the unlock toasts,
@@ -21,7 +21,7 @@ export class AchievementUnlocks {
   private readonly access = inject(AchievementsAccess);
   private readonly auth = inject(AuthService);
   private readonly injector = inject(Injector);
-  private readonly toasted = new ToastedTiers(inject(DOCUMENT));
+  private readonly document = inject(DOCUMENT);
 
   private readonly count = signal(0);
   private announcer: AchievementUnlockAnnouncer | null = null;
@@ -62,7 +62,7 @@ export class AchievementUnlocks {
     if (generation !== this.generation || this.auth.currentUser()?.id !== userId) return;
     this.count.set(unseen.count);
     if (unseen.items.length) await this.announce(userId, unseen.items);
-    else this.toasted.forget(userId);
+    else forgetToastedTiers(this.document, userId);
   }
 
   /// What is still unseen after the tab marked tiers seen (`POST /me/achievements/seen`).
@@ -70,7 +70,7 @@ export class AchievementUnlocks {
     this.generation++;
     this.count.set(unseen.count);
     const userId = this.auth.currentUser()?.id;
-    if (userId && unseen.count === 0) this.toasted.forget(userId);
+    if (userId && unseen.count === 0) forgetToastedTiers(this.document, userId);
   }
 
   private async announce(userId: string, items: readonly UnseenAchievement[]): Promise<void> {

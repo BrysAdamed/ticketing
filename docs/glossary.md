@@ -2,6 +2,8 @@
 
 Domain terms used in the spec, the code, the UI and the API. Section links point to the normative [refined spec](product/01-refined-spec.md) (`§`), the [decision log](decisions.md) (`D-xx`) and the [ADRs](adr/README.md). Enum values are written as they travel over the API (`ReadyForTesting`); the UI shows display labels.
 
+**Achievement**: Private, tiered recognition a user earns for real actions in the app (creating and closing tickets, testing, linking, delegating to an agent, a few secret ones), through any channel, MCP and PATs included. Visible only to its owner, Admins included, unless the owner shares it; never revoked; counted only from when the `achievements` flag turns on for the user or they opt (back) in; an opt-out deletes it. Not a performance metric: no leaderboards, points or time-based criteria. Not the same as the UI **Badge** component of the design system (D-144).
+
 **Activity entry**: One append-only record of a change: who (actor), when, through which write channel, what action, and the old and new value of a field. It serves both as ticket history and as the admin audit trail; entries are never edited or deleted. [§4.14](product/01-refined-spec.md#414-activityentry-history-and-audit)
 
 **Admin**: Global role with full user, token and feature-flag administration and `Owner` access to every project, private ones included (D-17). At least one active Admin must always exist. [§5.2](product/01-refined-spec.md#52-global-actions)
@@ -225,6 +227,8 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 **Set-password link**: One-time link an Admin hands to a user so they can set a password: valid 72 hours for a new user, 24 hours for a reset. No email is sent in v1. [§6.14](product/01-refined-spec.md#614-user-and-authentication-lifecycle-d-01)
 
 **Severity**: Impact of a problem: `Blocker`, `Critical`, `Major`, `Minor`, `Trivial`. Optional on every ticket, prominent on bugs (D-26). [§3](product/01-refined-spec.md#3-enumerations)
+
+**Shared achievement**: An achievement its owner chose to show to others. Every signed-in user can see its name, icon and tier, never when it was earned. Unshared achievements stay visible only to their owner (D-144).
 
 **Snapshot**: The copy of a test case's title, preconditions, steps, expected result, automation reference and mode stored in a regression item at session start. Later edits to the test case never change it (D-20). [§4.11](product/01-refined-spec.md#411-regressionsessionitem)
 

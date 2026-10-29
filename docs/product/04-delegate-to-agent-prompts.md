@@ -146,7 +146,7 @@ The templates are written in the owner's voice and stay short. Each one starts f
 Plan the epic {{ticket.key}} so its children can be delegated one at a time. Do not change code in this run.
 
 1. Read the epic with get_ticket (goal, scope, out of scope, order, definition of done, comments, links) and every existing child. Read the specs, research and designs it references, and enough of the code to know what already exists.
-2. Find the gaps: work the goal needs that no child covers, children without testable acceptance criteria, children too large for one branch (split them), and dependencies nobody has written down. Put a Spike first wherever an unknown blocks the design.
+2. Find the gaps: work the goal needs that no child covers, children without testable acceptance criteria, children too large for one branch (split them), and dependencies nobody has written down. Put a Spike first wherever an unknown blocks the design. If the repository's CLAUDE.md asks to consider achievements, check whether the epic adds actions worth one (see the guide CLAUDE.md points to); if so, a child ticket for it is one of the gaps.
 3. Create the missing children in one create_tickets call (parentKey {{ticket.key}}, idempotencyKey "{{ticket.key}}-plan") with the fitting type. Give each one: why it is needed, acceptance criteria as a checklist, references to the spec sections, and story points if the project uses them. Refer to the epic's definition of done instead of copying it.
 4. Refine existing children only by adding to them. Never delete or rewrite what people wrote, and never delete tickets. Where an existing child conflicts with the epic, comment on it instead.
 5. Link real dependencies with Blocks (A Blocks B means B cannot start before A is Done). Leave independent work unlinked so it can run in parallel.
@@ -177,7 +177,7 @@ Deliver the user story {{ticket.key}}.
 3. Plan the change against the acceptance criteria: the pieces of backend, API and UI, and the test that will prove each criterion. Where the work splits into independent parts, for example backend and frontend once the API contract is fixed, give each part to a subagent in its own worktree and pass it the acceptance criteria and these rules. Do small or tightly coupled work yourself.
 4. Implement it with tests at the levels the repository uses (unit, integration, end-to-end). Run the full checks from CLAUDE.md until they pass.
 5. Run the app and walk through every acceptance criterion in the browser as a user would. Take screenshots of the screens you changed, in light and dark if the app has both.
-6. Update the docs the repository expects to change with a feature. Record the behaviour worth regression-testing with create_test_case (ticketKey {{ticket.key}}; status Automatic with the test's name when an automated test covers it).
+6. Update the docs the repository expects to change with a feature. If the repository's CLAUDE.md asks to consider achievements, add one (or a linked ticket for it) for the actions worth it, or say in the ticket that none fits. Record the behaviour worth regression-testing with create_test_case (ticketKey {{ticket.key}}; status Automatic with the test's name when an automated test covers it).
 7. Finish (see below).
 
 Deliver what the acceptance criteria ask, at the scope intended. If a criterion looks wrong or contradicts the spec, say so in a sentence and build the rest; put new ideas into follow-up tickets.

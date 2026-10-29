@@ -624,7 +624,7 @@ Flag changes write ActivityEntries. Admin UI: list, create, edit, delete; shows 
 - Password policy: 12..128 characters, not equal to the email, checked against a bundled list of the 10 000 most common passwords. No composition rules.
 - Lockout: 5 failed logins in a row from one client address lock the account for that address for 15 minutes; other addresses can still sign in (D-74). A locked account, an unknown email and a wrong password all get the same answer, `401 auth.invalidCredentials`, after the same password-hashing work, so sign-in reveals neither which accounts exist nor which are locked. Sign-in is also rate limited per client address (20 per minute). The client address is the TCP peer unless the request came through a trusted proxy (D-73). Setting a password through a link lifts the account's lockouts.
 - Web session: HttpOnly, Secure, SameSite=Lax cookie with 12 hour sliding expiry, plus anti-forgery protection on cookie-authenticated writes. The session is also stored on the server; signing out deletes it, so a copied cookie stops working (D-75).
-- Users change their own display name, avatar and password (current password required for the password). The avatar is one of 32 animal icons (or initials) on one of the 8 palette colours (or the automatic hashed colour), picked on Profile → General and saved at once (D-129, D-130).
+- Users change their own display name, avatar and password (current password required for the password). The avatar is one of 32 animal icons (or initials) on one of the 8 palette colours (or the automatic hashed colour), picked on Profile → General and saved at once (D-129, D-130). They can also turn achievements off there, which deletes their achievement data, and back on (15.11).
 - Deactivate and reactivate per 4.1. No hard delete.
 
 ### 6.15 Watchers (I-32, D-93)
@@ -695,6 +695,8 @@ Project suggestions (14.4, D-142):
 | Method and path | Purpose |
 | --- | --- |
 | `GET /api/v1/projects/suggested-identity?name=&key=` | `{ name, key }`: the first project name and key no project uses, for the "Your first project" walkthrough's suggestion. The name as given (trimmed), else with ` 2`, ` 3`… appended, compared case-insensitively with live projects; the key as given, else with `2`, `3`… appended and the stem shortened to fit 10 characters, compared with every project, deleted ones included (D-10). Both checks cover projects the caller cannot read, so the suggestion never collides; it reveals no more than `POST /projects` answering 409 would. Any signed-in caller (cookie or PAT); `validation` (400) for a missing name or a malformed key. No MCP tool. |
+
+Achievements (15.6, TKT-65), always the caller's own: `GET /api/v1/me/achievements`, `GET /api/v1/me/achievements/unseen` and `POST /api/v1/me/achievements/seen`; shapes and errors are in 15.6. Sharing (15.7, TKT-97): `PUT` and `DELETE /api/v1/me/achievements/{id}/share`, and another user's shared achievements at `GET /api/v1/users/{id}/achievements`.
 
 ## 9. MCP server
 
@@ -805,6 +807,14 @@ Notifications (6.16)
 | --- | --- | --- |
 | `list_notifications` | optional `unreadOnly`, `cursor`, `limit` | `{ items, nextCursor }` of notifications, newest first, in the REST shape (6.16). |
 | `mark_notifications_read` | `ids` (1..100) or `all` (true) | `{ unreadCount }`. Write-scoped tokens only. |
+
+Achievements (15.6, 15.7)
+
+| Tool | Inputs | Output |
+| --- | --- | --- |
+| `list_my_achievements` | none | Your own achievements in the `GET /api/v1/me/achievements` shape: `{ startedAt, items }`, secret entries masked until earned. Read-only; listed only while the `achievements` flag is on for you. |
+| `share_achievement` | `id` | Shares one of your earned achievements with every signed-in user (15.7) and returns the item in the `list_my_achievements` item shape. Idempotent; `achievements.notEarned` when not earned; needs a read-write token. Listed only while the `achievements` flag is on for you. |
+| `unshare_achievement` | `id` | Stops sharing it; same shape, errors and listing as `share_achievement`. |
 
 Docs (12)
 
@@ -1181,12 +1191,12 @@ A delegation writes `ticket.agent.delegated` (EntityType `Ticket`) with the new 
 
 ### 13.10 Default prompts
 
-The built-ins (`Agents/BuiltIns/*.txt`, release `2026.10.2`) are condensed from [04-delegate-to-agent-prompts.md](04-delegate-to-agent-prompts.md) to fit 13.4's limit (D-102). Every type template names the ticket by key only, has the agent read it with `get_ticket` and follow the repository's `CLAUDE.md`, and works without the guardrails; status changes and the closing comment come from both.
+The built-ins (`Agents/BuiltIns/*.txt`, release `2026.10.3`) are condensed from [04-delegate-to-agent-prompts.md](04-delegate-to-agent-prompts.md) to fit 13.4's limit (D-102). Every type template names the ticket by key only, has the agent read it with `get_ticket` and follow the repository's `CLAUDE.md`, and works without the guardrails; status changes and the closing comment come from both.
 
 | Type | What the default asks for | Finish |
 | --- | --- | --- |
-| Epic | Plan only, no code: read the epic and its children, create the missing children in one `create_tickets` call (idempotency key `<KEY>-plan`) with acceptance criteria, link real dependencies with `Blocks`, comment the delivery order and open questions. The epic's status stays as it is. | None |
-| UserStory | Worktree, plan against the ACs (subagents only for independent parts), tests at the repository's levels, every AC walked through in the browser with light and dark screenshots, docs, test cases. | `{{finish}}` |
+| Epic | Plan only, no code: read the epic and its children, create the missing children in one `create_tickets` call (idempotency key `<KEY>-plan`) with acceptance criteria, link real dependencies with `Blocks`, comment the delivery order and open questions. When the repository's `CLAUDE.md` asks to consider achievements, an achievement worth adding is one of the gaps (D-146). The epic's status stays as it is. | None |
+| UserStory | Worktree, plan against the ACs (subagents only for independent parts), tests at the repository's levels, every AC walked through in the browser with light and dark screenshots, docs, the achievements check when `CLAUDE.md` asks for it (D-146), test cases. | `{{finish}}` |
 | Technical | Worktree, proof by kind of change (pinned behaviour for refactors, integration tests for new capabilities, before/after numbers for performance), full checks, a browser check of the flows that rely on the change, test cases. | `{{finish}}` |
 | Spike | Research with cited primary sources, an optional throwaway prototype that is never merged, findings in a doc, follow-up tickets (`RelatesTo`, `Blocks` among themselves) left in To Do. No production code. | `{{finish}}` for the docs branch |
 | Bug | Reproduce first as an automated test that fails for the reported reason (ask instead of guessing when it cannot be reproduced), root cause, smallest fix, regression test kept, browser check when the bug was visible. | `{{finish}}` plus root cause and the failing-then-passing test |
@@ -1195,7 +1205,7 @@ The **guardrails** (in this order): the folder check (compare `git remote get-ur
 
 **Finish** sentences: `Review` commits with the ticket key, merges the latest `{{project.defaultBranch}}` into the branch, re-runs the checks, pushes, opens a pull request if a forge CLI is set up and sets Review, without merging. `MergeWhenVerified` does the same, then merges the branch back, re-runs the checks, pushes, sets Done and reports the merge commit; it stops at Review on non-trivial conflicts or a failing check.
 
-Every type with the guardrails stays below 4 500 characters with the longest values the fields allow (10-character project key, ticket number 2 147 483 647, 500-character repository URL, 100-character branch, a 150-character public URL): about 4 400 at most, and about 3 600 for TKT's own values.
+Every type with the guardrails stays below 4 500 characters with the longest values the fields allow (10-character project key, ticket number 2 147 483 647, 500-character repository URL, 100-character branch, a 150-character public URL): just under 4 500 at most, and about 3 700 for TKT's own values.
 
 ## 14. Onboarding
 
@@ -1405,3 +1415,179 @@ For people connecting Claude Code over MCP (section 9, TKT-59):
   3. **Check the connection**: turns green once the token's `LastUsedAt` is set (the token created in the guide, else a live token that was used). While waiting it re-reads the token list every 5 seconds, not while the tab is hidden, and on window focus; it stops when green or when the panel closes.
   Opening the panel focuses its heading; closing it (×) removes the query parameter and returns focus to Generate token. The two optional checklist items (14.3) tick themselves off after a real MCP call with the PAT.
 - Onboarding state itself is not available over MCP (14.1, D-132).
+
+## 15. Achievements
+
+Users earn private, tiered achievements for real actions, through any channel. They make the app more pleasant and nudge people towards features they haven't tried. They are not a performance metric. Epic TKT-61; decisions D-144 (privacy, HR/DPO position, no backfill) and D-145 (criterion definitions, start stamping). The domain term is **Achievement**; "Badge" is the design system's UI component.
+
+### 15.1 Feature flag and privacy
+
+- Everything sits behind the string-variant flag `achievements` (6.13), evaluated per user: the projector, the REST API, the MCP tools and the UI. While it is off for the caller, every achievements endpoint returns 404 `achievements.disabled` and the MCP tools are missing from `tools/list` (`AchievementsGate`, the same pattern as `AgentGate`).
+- An achievement is visible only to its owner, Admins included. There is no admin or manager view of individuals, no leaderboard (not even per team), no export, no points and nothing time-based (no streaks, night-owl or weekend achievements). A user may share an individual achievement (TKT-97); others then see its name, icon and tier, never dates (D-144).
+- No project or ticket id is stored with an achievement, so nothing can reveal a private project.
+- Achievements are monotonic: an earned tier is never revoked, even when the counted entities are later deleted. Only the opt-out deletes them.
+- On by default. A one-click opt-out deletes the user's achievement data (15.11, TKT-68). User anonymisation (I-57) deletes it too.
+
+### 15.2 Catalogue
+
+The catalogue is code (`AchievementCatalog`), not an admin-editable table. Each entry has a stable id (lower-case kebab case, at most 50 characters, never renamed or reused), a name, a description, a "how to earn" hint (non-secret entries only; secret entries stay masked until earned), a Tabler icon name in kebab case, ascending tier thresholds and a secret flag. A once-only achievement has the single threshold 1. Each entry has exactly one criterion (15.4); adding one is described in backend.md ("Adding an achievement").
+
+| Id | Name | Counts | Tiers | Icon |
+| --- | --- | --- | --- | --- |
+| `reporter` | Reporter | Tickets created | 1 / 10 / 50 / 250 | `file-plus` |
+| `closer` | Closer | Tickets moved to Done | 1 / 10 / 50 / 250 | `circle-check` |
+| `ready-for-review` | Ready for review | Tickets moved to Review (stands in for "opened a PR" until I-50) | 1 / 10 / 50 / 250 | `git-pull-request` |
+| `bug-hunter` | Bug hunter | Bugs created | 1 / 10 / 50 | `bug` |
+| `exterminator` | Exterminator | Bugs moved to Done | 1 / 10 / 50 | `bug-off` |
+| `conversationalist` | Conversationalist | Comments on tickets and docs | 1 / 25 / 100 / 500 | `messages` |
+| `connector` | Connector | Ticket links added | 1 / 10 / 50 | `link` |
+| `show-me` | Show me | Attachments on tickets and docs | 1 / 10 | `paperclip` |
+| `triage` | Triage | Tickets assigned to someone else | 10 / 50 / 200 | `user-share` |
+| `test-author` | Test author | Test cases created | 1 / 10 / 50 | `test-pipe` |
+| `regression-runner` | Regression runner | Regression results recorded | 10 / 100 / 500 | `checklist` |
+| `found-it` | Found it | Bugs filed from failed regression items | 1 / 10 | `zoom-exclamation` |
+| `full-sweep` | Full sweep | Regression sessions completed | 1 / 5 / 25 | `list-check` |
+| `board-builder` | Board builder | A board created | once | `layout-kanban` |
+| `spring-cleaning` | Spring cleaning | A board archived | once | `archive` |
+| `delegator` | Delegator | Tickets delegated to an agent | 1 / 10 / 50 | `robot` |
+| `machine-whisperer` | Machine whisperer | A write through MCP | once | `plug-connected` |
+| `epic-finisher` | Epic finisher | An Epic moved to Done with all of its children Done | once | `flag-check` |
+| `shout-out` | Shout-out | A teammate mentioned | once | `speakerphone` |
+| `second-thoughts` (secret) | Second thoughts | Your own delete undone | once | `arrow-back-up` |
+| `unblocker` (secret) | Unblocker | A ticket finished that blocked three open tickets | once | `lock-open` |
+| `grand-tour` (secret) | Grand tour | A ticket you worked on went through all eight statuses | once | `route` |
+
+`epic-finisher` and `shout-out` (TKT-95) were the first entries added through the extension point, and the secret `second-thoughts`, `unblocker` and `grand-tour` (TKT-96) followed the same way. Secret entries have no "how to earn" hint and stay masked until earned.
+
+### 15.3 Data
+
+- `users.achievements_hidden` (bool, default false): the user opted out.
+- `users.achievements_started_at` (timestamptz, null): the user's start **S**. Only activity at or after S counts.
+- `user_achievements(user_id, achievement_id varchar(50), tier smallint, unlocked_at, seen_at null)`, primary key `(user_id, achievement_id, tier)`, deleted with the user. One row per earned tier; `seen_at` is set when the owner has seen the unlock (TKT-67). `shared_at` (null) is set on the tier-1 row while the owner shares the achievement (15.7, D-150).
+- `achievement_projector_state(id, processed_until)`: the projector's single-row watermark (TKT-64).
+
+### 15.4 Criteria
+
+Counts come from data that is already recorded: `activity_entries` (every channel writes through `IActivityLog`, which stamps actor and channel) and creator columns of tables. The rules shared by every criterion (D-145):
+
+- **After S only:** `occurred_at >= S` for activity, `created_at >= S` for table rows. There is no backfill.
+- **Distinct entities per user:** an entity counts once for a user however often the action repeats (moving a ticket in and out of Done counts once). Someone else's action on the same entity doesn't matter.
+- **Alive entities only:** a ticket counts while it and its project are not deleted (archived projects and boards still count); a doc while it and its project are not deleted. Exceptions are listed below.
+- **Every channel:** web, REST with a PAT and MCP all count, except where a criterion is about the channel.
+- **No other user's data:** a user's count reads only their own entries and rows.
+
+| Id | Counts, for user U after S |
+| --- | --- |
+| `reporter` | Alive tickets U created (`tickets.created_by_id`): single, batch and regression bugs. |
+| `bug-hunter` | `reporter` tickets whose type is Bug when evaluated. |
+| `closer` | Distinct alive tickets U moved to Done (a `status` change by PATCH, MCP or a board move). A ticket created in Done has no status change and doesn't count. |
+| `exterminator` | `closer` tickets whose type is Bug when evaluated. |
+| `ready-for-review` | Distinct alive tickets U moved to Review. |
+| `triage` | Distinct alive tickets U assigned to another user, at creation (`assigneeId` in the `ticket.created` entry) or later (an `assignee` change). Assigning yourself, including the delegation auto-assign, and unassigning don't count. |
+| `conversationalist` | Comments U wrote on alive tickets and docs that are not deleted. |
+| `connector` | Links U added that still exist (links are removed on unlink and when a linked ticket is deleted). Includes the link added when filing a regression bug. |
+| `show-me` | Attachments U uploaded to alive tickets and docs that still exist. |
+| `test-author` | Test cases U created that still exist (archived ones count), in projects that are not deleted. |
+| `regression-runner` | Distinct session items U recorded a result for, other than resetting to Waiting for execution; projects not deleted. |
+| `found-it` | Alive bugs U filed from a failed regression item (Create bug, or `createBug` when recording). |
+| `full-sweep` | Regression sessions U completed (not cancelled); projects not deleted. |
+| `board-builder` | Boards U created that are not deleted. |
+| `spring-cleaning` | Boards U archived, even if they were deleted later. |
+| `delegator` | Distinct alive tickets U delegated to an agent (web only). |
+| `machine-whisperer` | Any activity U wrote over MCP. MCP calls that write no activity (watch, unwatch, mark notifications read), reads and REST with a PAT don't count. |
+| `epic-finisher` | An Epic U moved to Done that, when evaluated, is alive and still Done and has at least one non-deleted **direct** child, all of them Done. A childless Epic doesn't count. The children's state is read at evaluation, so an Epic closed before its last child counts once that child is Done (D-148). |
+| `shout-out` | U's first new ticket, description change, comment or comment edit that newly mentions a user other than U, on an alive ticket and, for comments, a comment that is not deleted. Mentions are found with the D-96 rules (`MentionRules`): a new text counts every mention, an edit only mentions the old text didn't have; self-mentions and mentions in code don't count. Doc-comment mentions don't count (D-96). Users who already hold it are skipped (D-148). |
+| `second-thoughts` | A ticket or doc U restored that U deleted: the latest `ticket.deleted` or `doc.deleted` entry of that ticket or doc before the restore is U's, at or after S, and the restore came within the undo window (10 minutes). An Owner restoring someone else's delete, or an older delete from the trash, doesn't count; neither does restoring a doc version. Ticket delete and restore are Owner-only, so Members earn it through docs. |
+| `unblocker` | A ticket U moved to Done that, when evaluated, is alive and still Done and is the source of a Blocks link to at least 3 alive tickets that are not Done. Tickets that block it, and other link types, don't count. |
+| `grand-tour` | A ticket U worked on, meaning U changed its status at least once after S, whose status changes after S by anyone cover all 8 statuses, counting both the old and the new status of each change (so the status it had at S counts). Alive tickets only. |
+
+The evaluator computes every criterion for a batch of users, each with their own S, in a fixed number of queries that does not depend on the number of users, and returns per user and achievement the current count and the tier it reaches (the progress TKT-65 shows). It never writes; the after-commit projector (TKT-64) awards tiers. It is not an `IActivityObserver`, so an evaluator failure never fails a user's write (D-144).
+
+### 15.5 Start of counting (S)
+
+- S is stamped the first time the flag is seen on for a user whose S is empty: by the achievements API (`AchievementsGate` sets S to now), or by the projector when it finds the user's activity (S is then the earliest entry of the current cycle window, so the first action after the flag flip is not lost).
+- Turning the flag off and on again keeps S. The flag is an operational switch, not an opt-out, so activity while it was off counts once it is back on.
+- Opting out sets `achievements_hidden`, clears S and deletes the user's achievements. Opting back in sets S to now: counting restarts from zero.
+- A user who opted out gets no S and is skipped by the projector.
+
+### 15.6 REST and MCP
+
+Every endpoint and tool serves the caller's own achievements only, Admins included: none takes a user id, and none returns or changes another user's rows (TKT-65). Showing a shared achievement to others is the separate read path in 15.7. While the flag is off for the caller, and after they opted out, every endpoint returns 404 `achievements.disabled` (the opt-out answer carries a hint to opt back in) and `list_my_achievements` fails with that code. Every call stamps S as in 15.5 (D-147).
+
+| Method and path | Purpose |
+| --- | --- |
+| `GET /api/v1/me/achievements` | `{ startedAt, items }`: S, and the whole catalogue in catalogue order. An item is `{ id, name, description, howToEarn, icon, secret, masked, tier, shared, tiers: [{ tier, threshold, unlockedAt, seenAt }], progress: { count, nextTier, nextThreshold } }`. `tier` is the highest tier earned (0 for none); `shared` is true while the caller shares it (15.7), false for unearned and masked entries; `unlockedAt` and `seenAt` are null while a tier is not earned or not seen. `progress.count` is computed live by the evaluator for the caller from S; `nextTier` is the tier after the highest earned one and `nextThreshold` its threshold, both null once the top tier is earned (the count can reach it shortly before the projector awards it). `howToEarn` is null for secret entries. A secret entry not earned yet is masked: `masked: true`, `secret: true`, `tier: 0`, `tiers: []` and `id`, `name`, `description`, `howToEarn`, `icon` and `progress` null. |
+| `GET /api/v1/me/achievements/unseen` | `{ count, items: [{ id, name, tier, icon }] }`: the caller's earned tiers with no `seenAt`, oldest unlock first, one item per tier. The unlock toast polls it with the notification poll; it evaluates no criteria and answers in under 50 ms (p95), like the unread count (6.16). |
+| `POST /api/v1/me/achievements/seen` | `{ ids: [...] }` (1 to 100 achievement ids): sets `seenAt` on every earned, unseen tier of those achievements; a tier already seen keeps its time, unknown or unearned ids are ignored. Returns the remaining unseen tiers in the `GET /unseen` shape. Needs write-scoped credentials (a ReadOnly PAT gets 403 `pat.readOnlyScope`); `validation` (400) for no ids or more than 100. |
+
+`GET` accepts any credential (cookie or PAT, read-only included). The read-only MCP tool `list_my_achievements` (no inputs) returns the `GET /api/v1/me/achievements` shape and is listed in `tools/list` only while the flag is on for the token's user (`[FeatureGate(typeof(AchievementsGate))]`). Marking seen has no tool: it is personal UI state.
+
+### 15.7 Sharing
+
+A user may share individual earned achievements; everything else stays visible only to them (D-144). A shared achievement is visible to **every signed-in user**, with no shared project needed, and Admins see no more than anyone else. Nothing is shared until the user shares it. Decision D-150 (TKT-97).
+
+- **Storage:** `user_achievements.shared_at` on the achievement's tier-1 row (15.3). The projector always inserts every tier up to the one reached, so the tier-1 row exists whenever any tier is earned. A share covers the achievement, not a tier: others see the highest tier, including tiers earned after sharing.
+- **Opt-out** deletes the user's `user_achievements` rows (TKT-68), and the shares with them; nothing else needs deleting.
+
+| Method and path | Purpose |
+| --- | --- |
+| `PUT /api/v1/me/achievements/{id}/share` | Shares the caller's earned achievement `id`. Idempotent: sharing again keeps the first `shared_at`. Returns the item in the `GET /api/v1/me/achievements` item shape, with `shared: true`. 404 `achievements.notEarned` when the caller has not earned it, unknown ids included (a secret id reveals nothing). Needs write-scoped credentials (403 `pat.readOnlyScope`). Like every `/me/achievements` call: 404 `achievements.disabled` while the flag is off for the caller or after an opt-out, and it stamps S. |
+| `DELETE /api/v1/me/achievements/{id}/share` | Stops sharing it. Idempotent; same response, errors and credentials as `PUT`, with `shared: false`. |
+| `GET /api/v1/users/{id}/achievements` | `{ items: [{ id, name, icon, tier }] }`: the user's shared achievements in catalogue order, `tier` the highest earned. Never dates, counts, progress or anything about projects or tickets; unshared, unearned and secret-but-unshared achievements are never returned. Any signed-in user and any credential (read-only PAT included); `200` with empty `items` while the user shares nothing. 404 `achievements.disabled` while the flag is off for the viewer. 404 `user.notFound` when the user is unknown, deactivated, opted out or has the flag off, so the answer never tells which. It does not stamp the viewer's S, and a viewer who opted out may still read others' shares. |
+
+MCP: `share_achievement` and `unshare_achievement` (input `id`) call the same handler as `PUT` and `DELETE` and return the same item; they are idempotent, need a read-write token and are listed only while the flag is on for the token's user. Reading another user's shares has no tool: the web app's user card (TKT-98) is its only consumer. The response carries no user data at all, so the card's name-only rule (no email) holds.
+
+### 15.8 Projector
+
+Tiers are awarded after commit by the `AchievementProjector` background service, never inside a user's write (D-144, D-149), so a failing criterion cannot fail or slow a save.
+
+- **Cycle** (every `AchievementProjector:Interval`, default 15 s): under an advisory lock, in one transaction, it reads the users with activity since the watermark minus a 2-minute overlap (`occurred_at` is stamped before commit). It keeps those who are active, have not opted out and have the flag on (evaluated for the whole batch at once), stamps S where it is empty (15.5), evaluates only the criteria their actions trigger and that they do not hold at top tier, inserts every newly reached tier and advances the watermark. Without a watermark the first cycle starts 2 minutes back: there is no backfill.
+- **Idempotent:** tiers are inserted with `ON CONFLICT DO NOTHING` and counts are recomputed from source data, so re-running a cycle or the sweep adds nothing. Every unlock is unseen (`seen_at` empty).
+- **Failure:** a failing cycle rolls back, including the watermark, is logged and is retried on the next interval, so nothing is lost.
+- **Nightly sweep** (`AchievementProjector:SweepAtUtc`, default 03:00 UTC): the same evaluation over the whole catalogue for every active, started, non-hidden user with the flag on, in batches of 500. It never stamps S, so it covers only activity after each user's start.
+- Deactivated users, users who opted out and users with the flag off are skipped and get no S.
+
+### 15.9 Web: Profile → Achievements
+
+The look is `docs/design/mockups/achievements.html`, layout-and-screens §3.9b and the design system's "Achievement medal" (TKT-66, D-151).
+
+- A third Profile tab, `/profile/achievements` (view `profile.achievements`). The tab and the route exist only while the `achievements` flag is on for the user; a 404 `achievements.disabled` (opted out) hides the tab for the rest of the session and sends the user back to `/profile`.
+- A lock line says who can see them. Three groups without totals or percentages: **Earned** (highest tier first, one-time achievements after the tiered ones), **Still to earn** (closest to the next threshold first) and **Secret** (masked entries as "???"), each in catalogue order on ties. Earned secrets join Earned with a "Secret" badge.
+- A tile shows the 48px medal, name, the tier in words ("Gold", "Earned", "Not earned yet"), the description and, for tiered achievements, a bar and "23 of 50 to Gold" (nothing while the count is 0; "Highest tier" at the top).
+- The grid has one tab stop: arrows move in 2D across the groups, Home/End jump, Enter or a click opens the detail popover (description, the tier ladder of an earned tiered medal, "How to earn" for a locked one; a masked secret gets no hint). Esc closes it and returns focus to the tile.
+- While nothing is earned yet, an empty state says "Achievements start counting now" (no backfill, D-144), with Still to earn below.
+- Opening the tab marks every earned, unseen tier seen (`POST /me/achievements/seen` with the ids).
+
+**How to earn** (TKT-93, D-154). The detail of an achievement with no tier earned yet shows its `howToEarn` hint and, when a matching learn action exists, a footer with one sentence saying what it starts and a **Show me** button. The button closes the popover and starts the action through `LearnActions` (D-143): the backlog tour for Reporter, Bug hunter, Closer, Ready for review, Exterminator and Triage, the test cases tour for Test author, the "Your first project" walkthrough at Create a board for Board builder, and Help → Connect an AI agent for Machine whisperer. It is hidden while its target cannot start (for example no project to open a tour in). Secret entries never get a hint or an action. The nudge stays in the popover: no toasts, notifications or emails about unearned achievements, and nothing shows while the achievements UI is hidden.
+
+### 15.10 Unlock toast
+
+The look is section 5 of `docs/design/mockups/achievements.html` and layout-and-screens §2 (avatar menu). Decision D-152 (TKT-67).
+
+- **Polling:** `GET /me/achievements/unseen` rides on the notification poll (6.16: every minute while the tab is visible, on window focus and at sign-in) and runs only while achievements are on for the user (`AchievementsAccess`). A 404 `achievements.disabled` turns achievements off for the session, as on the tab. There is no other loop.
+- **Toast:** one two-line toast per newly unseen tier, bottom-right for 5 s (paused while hovered or focused): the 32px medal, "Name · Tier" (a one-time achievement shows its name alone), the achievement's description as the second line, **View** (opens `/profile/achievements`) and Dismiss. Several toasts show one after another. More than 3 new tiers at once collapse into one summary toast: up to three stacked medals, "5 new achievements" and "Reporter, Connector, Machine whisperer and 2 more."
+- **Once per tier:** a tier is toasted at most once per browser, even across reloads and tabs, as long as it stays unseen; the remembered tiers are kept per user in `localStorage` and pruned to the tiers still unseen. Toasting doesn't mark anything seen; only opening the tab does (15.9).
+- **Dot:** while any tier is unseen, the avatar carries an 8px accent dot with no number, its label reads "Account: name, new achievements", and the account menu's Achievements item shows a "New" badge. The tab's `POST /seen` answer clears them at once.
+- No confetti and no animation of its own; the snack bar's entry animation is off under reduced motion. The copy names what the user did, never a comparison.
+
+### 15.11 Opt-out
+
+Achievements are on by default; each user can turn them off, and doing so deletes their data (D-144, TKT-68, D-153).
+
+- **API:** `PATCH /api/v1/me` takes `achievementsHidden` (boolean, optional, next to `displayName` and the avatar fields), through `UpdateMyProfile`, web session only like the rest of `PATCH /me` (a ReadOnly PAT gets 403 `pat.readOnlyScope`, a ReadWrite PAT 403 `auth.cookieSessionRequired`). `GET /me`, `PATCH /me` and the login response carry `achievementsHidden`. There is no MCP tool: the opt-out is a personal setting, like the rest of the profile.
+- **Opting out** (`true`), in one transaction: sets `achievements_hidden`, clears S and deletes every `user_achievements` row of the user, shares included, so others stop seeing them at once. It holds the projector's advisory lock, so a running cycle cannot award a tier after the delete. The projector, the sweep and the gate skip the user from then on, and every `/me/achievements` endpoint answers 404 `achievements.disabled`.
+- **Opting in** (`false`): clears `achievements_hidden` and sets S to now. Counting restarts from zero; nothing from before the opt-in counts, earlier activity included (no backfill).
+- Both are idempotent: opting out again deletes nothing more, opting in again keeps S.
+- **Flag off:** while the `achievements` flag is off for the caller, a request with `achievementsHidden` is rejected with 404 `achievements.disabled` and nothing in it is applied, other fields included. Requests without it are unaffected.
+- The change is not written to the activity log: who opted out is not visible to anyone else (D-144).
+- **Web:** Profile → General has an Achievements card while the flag is on (`docs/design/mockups/achievements.html` §6): an "Earn achievements" switch, on by default, with the copy that they are private unless shared. Turning it off opens an inline confirm, "Turn off and delete your achievements?", with "Turn off and delete" and "Keep them"; turning it on needs no confirm. The save is optimistic: the Achievements tab and every other achievements element disappear (or return) at once through `AchievementsAccess`, and roll back with an error toast if the save fails.
+
+### 15.12 User card and sharing in the web app
+
+The look is `docs/design/mockups/achievements.html` (tab, detail and "A teammate's shared achievements"), layout-and-screens §2 "User card" and the design system's "Achievement medal" (TKT-98, D-155).
+
+- **Share on the tab:** every earned tile has a Share control ("Share", or "Shared" that reads "Unshare" on hover), and the detail popover of an earned medal a Share/Unshare button with a line on who sees it. A shared medal carries the shared marker and its accessible name ends in ", shared" (owner's views only). The change is optimistic: the medal switches at once, the server's item replaces it, a failure puts it back with a danger toast (Retry), and success shows "Reporter is shared" / "Reporter is no longer shared" with Undo. `S` shares or unshares the focused tile (no other `S` shortcut is registered on the profile pages). The tile's Share control is pointer-only; keyboard users use `S` or the detail's button, so the grid keeps one tab stop (D-151).
+- **User card** (`tk-user-card`): the only place another user's shared achievements appear. It shows the 32px avatar, the display name (never the email; "You" on your own card) and, while there is something to show, "Shared achievements": 32px medals with name and tier ("Earned" for one-time achievements), in catalogue order, with no dates, counts, progress or comparison. Each item's accessible name is "name, tier".
+- **No section** while achievements are off for the viewer (no request is made), while the read answers 404 (`user.notFound` or `achievements.disabled`) or fails, and while the person shares nothing. Name and avatar always show. Your own card says "Shared by you" and links to Profile → Achievements (also with nothing shared; not after an opt-out).
+- **Opening it:** on click or Enter on a person's name or avatar where a click does nothing else (comment and history authors, the watchers list, the Reporter field for readers), as a dialog that takes focus; Esc or a click outside closes it and returns focus. Where the click already edits something (board card and backlog row assignee avatars, the editable Reporter field) it opens after 500ms of hover, like the ticket key tooltip, and closes when the pointer leaves the avatar and the card, on Esc, or on a click.
+- **Loading:** the shares are fetched when the card opens (`GET /users/{id}/achievements`); the medal list is a deferred chunk, so pages that show cards don't load the medal glyphs.

@@ -56,7 +56,7 @@ public sealed class AuthTests(TicketingApiFactory api)
 
         // Assert
         var body = await response.ReadAsync<CurrentUserDto>();
-        Assert.Equal(new CurrentUserDto(user.Id, user.Email, user.DisplayName, GlobalRole.User), body);
+        Assert.Equal(new CurrentUserDto(user.Id, user.Email, user.DisplayName, GlobalRole.User, false), body);
         var cookies = response.Headers.GetValues("Set-Cookie").ToList();
         Assert.Contains(cookies, c => c.StartsWith("tkt_session=", StringComparison.Ordinal) && c.Contains("httponly", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(cookies, c => c.StartsWith("XSRF-TOKEN=", StringComparison.Ordinal) && !c.Contains("httponly", StringComparison.OrdinalIgnoreCase));

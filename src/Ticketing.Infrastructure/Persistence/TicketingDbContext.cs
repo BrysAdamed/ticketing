@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Ticketing.Application.Abstractions;
+using Ticketing.Domain.Achievements;
 using Ticketing.Domain.Activity;
 using Ticketing.Domain.Agents;
 using Ticketing.Domain.Attachments;
@@ -34,6 +35,10 @@ public sealed class TicketingDbContext(DbContextOptions<TicketingDbContext> opti
     public DbSet<PersonalAccessToken> PersonalAccessTokens => Set<PersonalAccessToken>();
 
     public DbSet<UserGuideState> UserGuideStates => Set<UserGuideState>();
+
+    public DbSet<UserAchievement> UserAchievements => Set<UserAchievement>();
+
+    public DbSet<AchievementProjectorState> AchievementProjectorStates => Set<AchievementProjectorState>();
 
     public DbSet<Project> Projects => Set<Project>();
 

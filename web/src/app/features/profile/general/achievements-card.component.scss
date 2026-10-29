@@ -1,0 +1,147 @@
+:host {
+  display: block;
+}
+
+.card {
+  padding: 20px 24px 24px;
+  background: var(--tk-surface);
+  border: 1px solid var(--tk-border);
+  border-radius: var(--tk-radius-lg);
+
+  > header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+
+    h2 {
+      margin: 0;
+      font-size: var(--tk-text-lg);
+      line-height: var(--tk-leading-lg);
+      font-weight: var(--tk-weight-semibold);
+    }
+
+    p {
+      margin: 0;
+      font-size: var(--tk-text-sm);
+    }
+  }
+}
+
+.icon-tile {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--tk-bg-subtle);
+  color: var(--tk-text-muted);
+  flex: none;
+}
+
+.row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.text {
+  flex: 1;
+
+  .label {
+    display: block;
+    font-weight: var(--tk-weight-medium);
+  }
+
+  p {
+    margin: 2px 0 0;
+    color: var(--tk-text-muted);
+    font-size: var(--tk-text-sm);
+    line-height: var(--tk-leading-sm);
+  }
+
+  p + p {
+    margin-top: 6px;
+  }
+}
+
+.switch {
+  position: relative;
+  flex: none;
+  width: 32px;
+  height: 18px;
+  margin-top: 1px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--tk-radius-full);
+  background: var(--tk-border-strong);
+  cursor: pointer;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: var(--tk-shadow-xs);
+    transition: transform var(--tk-duration-fast) var(--tk-ease-out);
+  }
+
+  &.on {
+    background: var(--tk-accent);
+
+    &::after {
+      transform: translateX(14px);
+    }
+  }
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.6;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--tk-focus);
+    outline-offset: 2px;
+  }
+}
+
+.confirm {
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid var(--tk-danger-border);
+  background: var(--tk-danger-bg);
+  border-radius: var(--tk-radius-md);
+
+  b {
+    display: block;
+    font-weight: var(--tk-weight-semibold);
+    margin-bottom: 2px;
+  }
+
+  p {
+    margin: 0 0 10px;
+    color: var(--tk-text-muted);
+    font-size: var(--tk-text-sm);
+  }
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.danger {
+  --mat-button-filled-container-color: var(--tk-danger);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}

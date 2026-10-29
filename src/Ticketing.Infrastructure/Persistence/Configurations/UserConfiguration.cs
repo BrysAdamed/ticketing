@@ -15,6 +15,7 @@ internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.SecurityStamp).HasMaxLength(User.SecurityStampLength);
         builder.Property(u => u.AvatarIcon).HasMaxLength(AvatarCatalog.KeyMaxLength);
         builder.Property(u => u.AvatarColor).HasMaxLength(AvatarCatalog.KeyMaxLength);
+        builder.Property(u => u.AchievementsHidden).HasDefaultValue(false);
         builder.Property(u => u.RowVersion).IsXminRowVersion();
 
         builder.HasIndex(u => u.Email).IsUnique();

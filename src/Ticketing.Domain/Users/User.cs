@@ -54,6 +54,12 @@ public sealed class User
 
     public Guid? DeactivatedById { get; private set; }
 
+    /// <summary>The user opted out of achievements (spec 15.5): nothing is counted or shown until they opt back in.</summary>
+    public bool AchievementsHidden { get; private set; }
+
+    /// <summary>When the user's achievements started (S, spec 15.5): only activity from then on counts. Null until started.</summary>
+    public DateTimeOffset? AchievementsStartedAt { get; private set; }
+
     public uint RowVersion { get; private set; }
 
     public bool HasPassword => PasswordHash is not null;
@@ -138,6 +144,34 @@ public sealed class User
         DeactivatedById = actorId;
         SetPasswordTokenHash = null;
         SetPasswordTokenExpiresAt = null;
+    }
+
+    /// <summary>
+    /// Stamps the start of the user's achievements the first time the flag is seen on for them (D-145). An existing start is
+    /// kept, so turning the flag off and on again does not restart counting. Returns whether the start was set now.
+    /// </summary>
+    public bool StartAchievements(DateTimeOffset at)
+    {
+        if (AchievementsHidden || AchievementsStartedAt is not null)
+            return false;
+        AchievementsStartedAt = at;
+        return true;
+    }
+
+    /// <summary>Opting out clears the start; the caller deletes the earned achievements in the same transaction.</summary>
+    public void OptOutOfAchievements()
+    {
+        AchievementsHidden = true;
+        AchievementsStartedAt = null;
+    }
+
+    /// <summary>Opting (back) in restarts counting from <paramref name="now"/>: nothing from before counts (D-144).</summary>
+    public void OptInToAchievements(DateTimeOffset now)
+    {
+        if (!AchievementsHidden && AchievementsStartedAt is not null)
+            return;
+        AchievementsHidden = false;
+        AchievementsStartedAt = now;
     }
 
     public void Reactivate()

@@ -1,0 +1,176 @@
+<div class="tk-page-body">
+  @switch (store.status()) {
+    @case ('loading') {
+      <div
+        class="skeleton"
+        role="status"
+        aria-label="Loading"
+        aria-busy="true"
+        data-testid="skeleton"
+      >
+        @if (skeletonVisible()) {
+          <span class="bone intro-bone"></span>
+          <span class="bone group-bone"></span>
+          <div class="grid">
+            @for (s of skeletons; track s) {
+              <div class="tile skel">
+                <span class="bone hex"></span>
+                <div class="tx">
+                  <span class="bone" [style.width.%]="62 - s * 4"></span>
+                  <span class="bone" style="width: 28%"></span>
+                  <span class="bone" [style.width.%]="84 - s * 3"></span>
+                  @if (s % 2 === 0) {
+                    <span class="bone bar-bone" [style.width.%]="70 - s * 2"></span>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    }
+    @case ('error') {
+      <tk-empty-state
+        tone="danger"
+        icon="tablerAlertTriangle"
+        title="Couldn't load your achievements"
+        description="Something went wrong on our side. Try again in a moment."
+      >
+        <button mat-stroked-button type="button" (click)="store.load()">Try again</button>
+      </tk-empty-state>
+    }
+    @case ('loaded') {
+      @if (store.nothingEarned()) {
+        <div class="empty" data-testid="achievements-empty">
+          <tk-icon class="empty-icon" name="tablerAward" [size]="32" />
+          <h2>Achievements start counting now</h2>
+          <p>
+            What you do in Ticketing from today on counts towards them. Work from before today isn't
+            included.
+          </p>
+          <p class="only-me">
+            <tk-icon name="tablerLock" [size]="12" />Only you can see them unless you share one.
+          </p>
+        </div>
+      } @else {
+        <p class="intro" data-testid="achievements-privacy">
+          <tk-icon name="tablerLock" [size]="14" />Only you can see these, Admins included, unless
+          you share one. Others then see its name and tier, never when you earned it.
+        </p>
+      }
+      @for (group of groups(); track group.id; let first = $first) {
+        <h2 class="group" [id]="'achievements-group-' + group.id">{{ group.title }}</h2>
+        <div
+          class="grid"
+          role="list"
+          [attr.aria-labelledby]="'achievements-group-' + group.id"
+          [attr.data-testid]="'achievements-group-' + group.id"
+          [attr.data-achievement-grid]="first ? '' : null"
+        >
+          @for (tile of group.tiles; track tile.key) {
+            <div
+              class="tile"
+              role="listitem"
+              [class.masked]="tile.item.masked"
+              [attr.data-testid]="'achievement-tile-' + tile.key"
+              [attr.data-tier]="tile.item.tier"
+            >
+              <tk-achievement-medal
+                [achievementId]="tile.item.id"
+                [icon]="tile.item.icon"
+                [tier]="tile.item.tier"
+                [tierCount]="tile.tierCount"
+                [shared]="tile.item.shared"
+              />
+              <div class="tx">
+                <div class="name">
+                  <span class="name-text">{{ tile.item.name ?? '???' }}</span>
+                  @if (tile.item.tier > 0) {
+                    <button
+                      type="button"
+                      class="share"
+                      tabindex="-1"
+                      [class.on]="tile.item.shared"
+                      [attr.aria-pressed]="tile.item.shared"
+                      [attr.aria-label]="'Share ' + tile.item.name"
+                      [attr.data-testid]="'achievement-share-' + tile.key"
+                      [title]="
+                        tile.item.shared
+                          ? 'Shared with everyone signed in · click to stop sharing  S'
+                          : 'Share with everyone signed in  S'
+                      "
+                      (click)="toggleShare(tile)"
+                    >
+                      @if (tile.item.shared) {
+                        <span class="when-idle"
+                          ><tk-icon name="tablerUsers" [size]="14" />Shared</span
+                        >
+                        <span class="when-hover"
+                          ><tk-icon name="tablerX" [size]="14" />Unshare</span
+                        >
+                      } @else {
+                        <tk-icon name="tablerShare" [size]="14" />Share
+                      }
+                    </button>
+                  }
+                </div>
+                <div class="tier">
+                  {{ tile.tierText }}
+                  @if (tile.item.secret && !tile.item.masked) {
+                    <span class="secret-badge">Secret</span>
+                  }
+                </div>
+                <div class="desc" [id]="'achievement-desc-' + tile.key">
+                  {{ tile.item.description ?? 'It turns up when you least expect it.' }}
+                </div>
+                @if (tile.progress; as progress) {
+                  <div class="progress" [class.top]="progress.fraction === null">
+                    @if (progress.fraction !== null) {
+                      <span class="bar" aria-hidden="true">
+                        <i
+                          [style.width.%]="progress.fraction * 100"
+                          [style.background]="barColor(tile)"
+                        ></i>
+                      </span>
+                    }
+                    <span class="tnum">{{ progress.text }}</span>
+                  </div>
+                }
+              </div>
+              <button
+                type="button"
+                class="open"
+                data-achievement-open
+                aria-haspopup="dialog"
+                [attr.aria-label]="tile.label"
+                [attr.aria-describedby]="'achievement-desc-' + tile.key"
+                [attr.aria-expanded]="detail()?.tile?.key === tile.key"
+                [attr.data-testid]="'achievement-open-' + tile.key"
+                [tabIndex]="indexOf(tile) === tabStop() ? 0 : -1"
+                (focus)="focused(tile)"
+                (click)="open(tile, $event.currentTarget)"
+                (keydown)="onTileKeydown($event, tile)"
+              ></button>
+            </div>
+          }
+        </div>
+      }
+    }
+  }
+</div>
+
+<ng-template
+  cdkConnectedOverlay
+  cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+  [cdkConnectedOverlayOrigin]="overlayOrigin()"
+  [cdkConnectedOverlayOpen]="detail() !== null"
+  [cdkConnectedOverlayHasBackdrop]="true"
+  [cdkConnectedOverlayPositions]="positions"
+  (backdropClick)="close()"
+  (detach)="close()"
+  (overlayKeydown)="onOverlayKeydown($event)"
+>
+  @if (detailTile(); as tile) {
+    <tk-achievement-detail [tile]="tile" (closed)="close()" (shareToggled)="toggleShare(tile)" />
+  }
+</ng-template>

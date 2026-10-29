@@ -215,6 +215,52 @@ Pill chip: 20px high, radius `full`, 1px `--tk-border`, transparent background, 
 
 Circle with initials (first letters of first and last name, `xs`/600). Background is the `--tk-palette-{hash(userId) mod 8}` tint at 20% (light) / 28% (dark), and the text is the matching `-fg`. An uploaded image replaces the initials. Unassigned shows a dashed 1px `--tk-border-strong` circle with a 12px `tablerUser` glyph in `--tk-text-subtle`. Stacks overlap by 6px and have a 2px ring in the surface color.
 
+### Achievement medal
+
+`tk-achievement-medal` (`shared/ui`), reference [`mockups/achievements.html`](./mockups/achievements.html). An achievement is private recognition, not a score (D-144). The component is the medal only; the tab, toast and user card place it next to its name and tier.
+
+**Shape**: a pointy-top hexagon on a 48-unit grid, drawn as our own SVG (no new dependency). Layers, from the outside in:
+1. **Ring**: the outer hexagon (radius 22) stroked 2.5 in the tier colour. One-time ("once") achievements have no tier, so their ring is a thin 1.25 stroke in the palette colour.
+2. **Body**: the inner hexagon (radius 17.5) filled with `--tk-palette-{n}` mixed at `--tk-tint-avatar` over the surface, with a 1.25 stroke in `--tk-palette-{n}`. `n = hash(achievementId) mod 8`, the same FNV-1a rule as labels, so a medal has the same colour everywhere and for everyone.
+3. **Glyph**: the catalogue's Tabler icon, 18/48 of the width, stroked 2 in `--tk-palette-{n}-fg`.
+4. **Pips**: one dot per tier reached under the hexagon (bronze 1, silver 2, gold 3, platinum 4), filled in the tier colour. Pip count is the tier's ordinal, never "of how many", so it reads the same for every achievement.
+
+**Tier tokens** (new in `_tokens.scss`; each is at least 3:1 against `--tk-bg` and `--tk-surface` in its theme):
+
+| Token | Light | Dark | Pips |
+|---|---|---|---|
+| `--tk-tier-bronze` | `#a3622b` | `#d39463` | 1 |
+| `--tk-tier-silver` | `#7b8494` | `#b9c0cc` | 2 |
+| `--tk-tier-gold` | `#a67c00` | `#e2b53e` | 3 |
+| `--tk-tier-platinum` | `#3d8796` | `#7fcfdc` | 4 |
+
+The progress bar towards the next tier is 4px, `full` radius, on a `--tk-bg-active` track (it must show on `--tk-surface` in dark too), filled with the next tier's colour, and always has its text ("23 of 50 to Gold").
+
+**Sizes**: 64 (detail popover), 48 (tab grid), 32 (toast, user card), 20 (inline). Pips are drawn at 32 and up; at 20 the viewBox drops the pip row and the tier must be written next to the medal.
+
+**States**:
+
+| State | Look | Accessible name |
+|---|---|---|
+| Locked | No ring, body unfilled with a dashed 1.5 `--tk-border-strong` outline, glyph in `--tk-text-subtle` | "Connector, not earned yet" |
+| In progress | Locked, plus the progress bar and its text beside the medal | "Triage, not earned yet, 4 of 10 to Bronze" |
+| Bronze to Platinum | Tier ring and 1 to 4 pips | "Closer, Gold" |
+| Once | Thin palette ring, no pips; tier text "Earned" | "Board builder, earned" |
+| Secret, locked | Locked with a `?` glyph; name "???"; no hint and no Show me | "Secret achievement, not earned yet" |
+| Secret, earned | Like Once, name revealed, a gray "Secret" badge in the tile | "Second thoughts, secret, earned" |
+| Shared | An 18px accent circle with `tablerUsers` at the lower right, 2px surface ring; owner's own views only | "Closer, Gold, shared" |
+
+**Accessibility**: tier is carried by pips and by text, never by colour alone. When the name and tier are written next to the medal (tile, toast, user card), the SVG is `aria-hidden` and the container's accessible name is "name, tier" (plus "shared" for the owner). Standalone, the SVG is `role="img"` with that name. The tab grid has one roving tab stop (arrows, Home/End, Enter opens the detail, `S` shares or unshares).
+
+**Copy**: recognition, never a score.
+- Say what the person did: "You've moved 10 tickets to Done." Not "Great job!", not "Top 10%".
+- No totals or completion ("7 of 22", "32% complete"), no ranks, leaderboards, comparisons with others, points or streaks, and nothing time-based ("this week", "3 days in a row", "night owl").
+- Counts appear only in the owner's own progress ("23 of 50 to Gold"). Others see name, tier and medal: no dates, counts or progress.
+- Privacy is stated where the data appears: "Only you can see these, Admins included, unless you share one."
+- Hints say how to earn something, in the imperative: "Open a ticket and link it to another one." Secret entries get no hint.
+
+**Where a teammate's shared medals appear**: the **user card** (`tk-user-card`), a popover with the person's avatar, name and email, and a "Shared achievements" list of 32px medals with name and tier, in catalogue order. It has no achievements section at all when the person shared nothing, opted out, or the flag is off for the viewer. See layout-and-screens §2 "User card".
+
 ### Keys and counts
 
 The ticket key (`PAY-128`) is `base`, tabular, `--tk-text-muted` in rows and `--tk-text` in detail breadcrumbs. Story points are a 20px `--tk-bg-muted` pill with tabular `xs` 500 text. Comment, child and test case counts use a 14px icon plus number in `--tk-text-subtle`, and are hidden when zero.
@@ -230,7 +276,7 @@ The ticket key (`PAY-128`) is `base`, tabular, `--tk-text-muted` in rows and `--
 ## 10. Accessibility
 
 - Focus: `outline: 2px solid var(--tk-focus); outline-offset: 2px` on controls, and `-2px` (inset) on rows and cards. Use `:focus-visible` only.
-- Never use color alone: status has shape, priority has bars, badges have text, and failed items have an icon.
+- Never use color alone: status has shape, priority has bars, badges have text, failed items have an icon, and achievement tiers have pips and a written tier.
 - Hit targets are at least 24×24px, even when the glyph is 14px.
 - Respect `prefers-reduced-motion` and `prefers-contrast: more` (with more contrast, switch `--tk-border` to `--tk-border-strong`).
 - The theme is stored per user (`light | dark | system`). An inline script in `index.html` sets `data-theme` before Angular boots, so the page does not flash in the wrong theme.

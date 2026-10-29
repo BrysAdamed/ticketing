@@ -23,6 +23,33 @@ function entry(overrides: Partial<ActivityEntry>): ActivityEntry {
 }
 
 describe('describeEntry', () => {
+  it('renders a creation the same way when its payload carries the assignee id', () => {
+    // Act
+    const line = describeEntry(
+      entry({
+        action: 'ticket.created',
+        newValue: {
+          key: 'WEB-1',
+          title: 'Login',
+          type: 'Bug',
+          status: 'ToDo',
+          priority: 'High',
+          assigneeId: bob.id,
+          location: 'backlog',
+        },
+      }),
+      users,
+    );
+
+    // Assert
+    expect(line).toMatchObject({
+      icon: 'tablerPlus',
+      verb: 'created the ticket',
+      from: null,
+      to: null,
+    });
+  });
+
   it('renders a delegation with its template version and app, never a prompt or folder', () => {
     // Act
     const line = describeEntry(

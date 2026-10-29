@@ -20,6 +20,9 @@ internal sealed class ActivityEntryConfiguration : IEntityTypeConfiguration<Acti
         builder.HasIndex(a => new { a.ActorId, a.ProjectId })
             .HasFilter("field = 'status' AND action = 'ticket.field.changed'")
             .HasDatabaseName("ix_activity_entries_actor_status_changes");
+        builder.HasIndex(a => new { a.ActorId, a.Action, a.Field, a.OccurredAt })
+            .HasFilter("actor_id IS NOT NULL")
+            .HasDatabaseName("ix_activity_entries_actor_action");
         builder.HasIndex(a => a.OccurredAt);
     }
 }

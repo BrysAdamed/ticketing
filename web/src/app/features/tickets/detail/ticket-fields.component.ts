@@ -9,6 +9,7 @@ import {
 } from '@angular/core';
 import { MatTooltip } from '@angular/material/tooltip';
 import { ContextualHintComponent } from '@core/onboarding/hints/contextual-hint.component';
+import { UserCardDirective } from '@core/users/user-card/user-card.directive';
 import { FieldHints } from '@core/tickets/field-hints';
 import { MoveTarget, MoveTargets } from '@core/tickets/move-targets';
 import { ProjectPeople } from '@core/tickets/project-people';
@@ -85,6 +86,7 @@ const RESOLUTION_OPTIONS: PickerOption<Resolution>[] = RESOLUTIONS.map((r) => ({
     LabelsPickerDirective,
     SearchPickerDirective,
     ContextualHintComponent,
+    UserCardDirective,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '[class.grid]': 'layout() === "grid"' },
@@ -214,17 +216,30 @@ const RESOLUTION_OPTIONS: PickerOption<Resolution>[] = RESOLUTIONS.map((r) => ({
       </div>
       <div class="field">
         <span class="fl">Reporter</span>
-        <button
-          type="button"
-          class="fv"
-          data-testid="field-reporter"
-          [disabled]="!canEdit()"
-          [tkSearchPicker]="reporterSearch()"
-          pickerPlaceholder="Reporter…"
-          (picked)="setReporter($event)"
-        >
-          <tk-user [user]="t.reporter" />
-        </button>
+        @if (canEdit()) {
+          <button
+            type="button"
+            class="fv"
+            data-testid="field-reporter"
+            [tkSearchPicker]="reporterSearch()"
+            pickerPlaceholder="Reporter…"
+            [tkUserCard]="t.reporter"
+            tkUserCardTrigger="hover"
+            (picked)="setReporter($event)"
+          >
+            <tk-user [user]="t.reporter" />
+          </button>
+        } @else {
+          <button
+            type="button"
+            class="fv"
+            data-testid="field-reporter"
+            [attr.aria-label]="'Reporter ' + t.reporter.displayName"
+            [tkUserCard]="t.reporter"
+          >
+            <tk-user [user]="t.reporter" />
+          </button>
+        }
       </div>
     </div>
     <div class="fgroup">

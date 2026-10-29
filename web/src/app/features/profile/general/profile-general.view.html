@@ -55,6 +55,10 @@
 
     <tk-avatar-card [user]="user" />
 
+    @if (store.achievementsAvailable()) {
+      <tk-achievements-card />
+    }
+
     <section class="card" aria-labelledby="password-heading">
       <header>
         <span class="icon-tile"><tk-icon name="tablerShieldLock" [size]="16" /></span>

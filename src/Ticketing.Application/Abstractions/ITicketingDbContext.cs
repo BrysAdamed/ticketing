@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Ticketing.Domain.Achievements;
 using Ticketing.Domain.Activity;
 using Ticketing.Domain.Agents;
 using Ticketing.Domain.Attachments;
@@ -35,6 +36,10 @@ public interface ITicketingDbContext
     DbSet<PersonalAccessToken> PersonalAccessTokens { get; }
 
     DbSet<UserGuideState> UserGuideStates { get; }
+
+    DbSet<UserAchievement> UserAchievements { get; }
+
+    DbSet<AchievementProjectorState> AchievementProjectorStates { get; }
 
     DbSet<Project> Projects { get; }
 

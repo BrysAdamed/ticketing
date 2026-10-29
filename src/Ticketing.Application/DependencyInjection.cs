@@ -2,6 +2,7 @@ using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Ticketing.Application.Abstractions;
 using Ticketing.Application.Access;
+using Ticketing.Application.Achievements;
 using Ticketing.Application.Agents;
 using Ticketing.Application.Collaboration;
 using Ticketing.Application.Docs;
@@ -24,7 +25,19 @@ public static class DependencyInjection
         services.AddScoped<AgentPromptAccess>();
         services.AddScoped<DocPublisher>();
         services.AddSingleton<DocExportQueue>();
+        services.AddScoped<AchievementsGate>();
+        services.AddScoped<AchievementEvaluator>();
+        services.AddScoped<AchievementProjection>();
+        services.AddAchievementCriteria(typeof(DependencyInjection).Assembly);
         services.AddHandlers(typeof(DependencyInjection).Assembly);
+        return services;
+    }
+
+    /// <summary>Registers every concrete <see cref="IAchievementCriterion"/> in the assembly; criteria are stateless singletons.</summary>
+    public static IServiceCollection AddAchievementCriteria(this IServiceCollection services, Assembly assembly)
+    {
+        foreach (var criterion in assembly.GetTypes().Where(t => t is { IsClass: true, IsAbstract: false } && typeof(IAchievementCriterion).IsAssignableFrom(t)))
+            services.AddSingleton(typeof(IAchievementCriterion), criterion);
         return services;
     }
 

@@ -71,6 +71,19 @@
       <tk-user [user]="null" />
       <tk-avatar [userId]="store.users[0].id" [name]="store.users[0].displayName" [size]="32" />
     </div>
+    <div class="row">
+      <b [tkUserCard]="store.users[0]" data-testid="ui-kit-user-card">{{
+        store.users[0].displayName
+      }}</b>
+      <tk-avatar
+        [userId]="store.users[1].id"
+        [name]="store.users[1].displayName"
+        [showTitle]="false"
+        [tkUserCard]="store.users[1]"
+        tkUserCardTrigger="hover"
+      />
+      <span class="tk-subtle">User card: click or Enter on the name, hover the avatar</span>
+    </div>
   </section>
 
   <section>
@@ -127,6 +140,39 @@
     <div class="md-pair">
       <tk-markdown-editor [value]="store.markdown()" (valueChange)="store.markdown.set($event)" />
       <tk-markdown [source]="store.markdown()" />
+    </div>
+  </section>
+
+  <section class="wide" data-testid="ui-kit-medals">
+    <h2>Achievement medal</h2>
+    <div class="medal-states">
+      @for (medal of medals; track medal.state) {
+        <div class="medal-state">
+          <tk-achievement-medal
+            [achievementId]="medal.id"
+            [icon]="medal.icon"
+            [tier]="medal.tier"
+            [tierCount]="medal.tierCount"
+            [label]="medal.label"
+          />
+          <span class="medal-name">{{ medal.state }}</span>
+          <span class="tk-muted">{{ medal.progress ?? medal.tierText }}</span>
+          <span class="tk-subtle medal-aria">"{{ medal.label }}"</span>
+        </div>
+      }
+    </div>
+    <div class="medal-sizes">
+      @for (size of medalSizes; track size) {
+        <div class="medal-state">
+          <tk-achievement-medal
+            achievementId="reporter"
+            icon="file-plus"
+            [tier]="2"
+            [size]="size"
+          />
+          <span class="tk-subtle">{{ size }}px</span>
+        </div>
+      }
     </div>
   </section>
 

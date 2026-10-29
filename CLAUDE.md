@@ -42,6 +42,7 @@ cd e2e && npm run typecheck && npx playwright test   # against the running stack
 - **Schema**: v1 has shipped, so `InitialCreate` is frozen. Every schema change is a new, additive migration; never edit or regenerate a merged one (ADR 0006, backend.md). On a snapshot merge conflict, drop your own migration, merge `main`, re-add it.
 - **Frontend**: features live in `web/src/app/features/<name>/` and may not import each other; shared clients go in `core/`, reusable UI in `shared/`. Every routed page is a store + view pair registered through the view registry (`defineView` / `viewRoute`) so A/B variants can be added later (ADR 0008). Other features extend the ticket view via `provideTicketDetailSection`, never by editing it.
 - **UI quality**: match `docs/design/` (design system, mockups); design tokens live in `web/src/styles/_tokens.scss`. Skeletons instead of spinners, optimistic updates with rollback, keyboard shortcuts registered via `ShortcutService`, light and dark theme both checked.
+- **Achievements**: consider achievements in every new epic and feature: plan a catalogue entry (or a linked ticket for one) for real actions worth one, or say in the ticket that none fits (slice-playbook.md definition of done, backend.md "Designing an achievement").
 - **Tests**: integration tests for every use case including permission and leak paths; Vitest for non-trivial frontend logic; Playwright specs seed data through the API helper, never the UI.
 
 ## Style

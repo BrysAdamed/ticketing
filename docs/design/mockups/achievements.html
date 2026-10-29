@@ -1,0 +1,1480 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Achievements · Ticketing mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400..600&display=swap">
+<style>
+/* Tokens: snapshot of web/src/styles/_tokens.scss (dark via [data-theme="dark"] or prefers-color-scheme), plus the proposed --tk-tier-* */
+:root {
+  color-scheme: light;
+
+  --tk-gray-0: #ffffff;
+  --tk-gray-25: #fbfbfc;
+  --tk-gray-50: #f7f7f8;
+  --tk-gray-100: #efeff2;
+  --tk-gray-150: #e7e7eb;
+  --tk-gray-200: #dedfe4;
+  --tk-gray-300: #cbccd3;
+  --tk-gray-400: #a4a6af;
+  --tk-gray-500: #80838d;
+  --tk-gray-600: #62656e;
+  --tk-gray-700: #464851;
+  --tk-gray-750: #36383f;
+  --tk-gray-800: #2a2b31;
+  --tk-gray-850: #212226;
+  --tk-gray-900: #1a1b1f;
+  --tk-gray-925: #151619;
+  --tk-gray-950: #0f1013;
+
+  --tk-iris-50: #f0f1fd;
+  --tk-iris-100: #e2e4fb;
+  --tk-iris-200: #c9cdf7;
+  --tk-iris-300: #a6acf0;
+  --tk-iris-400: #8188e6;
+  --tk-iris-500: #6169db;
+  --tk-iris-600: #4f55c9;
+  --tk-iris-700: #4245a8;
+  --tk-iris-800: #383a87;
+  --tk-iris-900: #31336b;
+  --tk-iris-950: #1e1f40;
+
+  --tk-red: #e5484d;
+  --tk-red-fg: #ce2c31;
+  --tk-orange: #f76b15;
+  --tk-orange-fg: #cc4e00;
+  --tk-amber: #e8a317;
+  --tk-amber-fg: #9a5b00;
+  --tk-green: #30a46c;
+  --tk-green-fg: #18794e;
+  --tk-grass: #46a758;
+  --tk-grass-fg: #2a7e3b;
+  --tk-teal: #12a594;
+  --tk-teal-fg: #0d7d70;
+  --tk-cyan: #00a2c7;
+  --tk-cyan-fg: #107d98;
+  --tk-blue: #2f7ae5;
+  --tk-blue-fg: #1f63c4;
+  --tk-violet: #8e4ec6;
+  --tk-violet-fg: #7a3fb0;
+  --tk-pink: #d6409f;
+  --tk-pink-fg: #c2298a;
+  --tk-gray: #80838d;
+  --tk-gray-fg: #62656e;
+
+  --tk-tint-bg: 10%;
+  --tk-tint-border: 24%;
+
+  --tk-bg: #ffffff;
+  --tk-bg-sidebar: var(--tk-gray-50);
+  --tk-bg-subtle: var(--tk-gray-50);
+  --tk-bg-muted: var(--tk-gray-100);
+  --tk-bg-inset: var(--tk-gray-50);
+  --tk-surface: #ffffff;
+  --tk-surface-raised: #ffffff;
+  --tk-bg-hover: rgb(26 27 31 / 0.045);
+  --tk-bg-active: rgb(26 27 31 / 0.08);
+  --tk-overlay-mask: rgb(15 16 19 / 0.32);
+  --tk-inverse-bg: var(--tk-gray-900);
+  --tk-inverse-text: var(--tk-gray-0);
+
+  --tk-border-subtle: var(--tk-gray-100);
+  --tk-border: var(--tk-gray-150);
+  --tk-border-strong: var(--tk-gray-200);
+  --tk-border-input: var(--tk-gray-200);
+  --tk-border-input-hover: var(--tk-gray-300);
+
+  --tk-text: var(--tk-gray-900);
+  --tk-text-muted: var(--tk-gray-600);
+  --tk-text-subtle: var(--tk-gray-500);
+  --tk-text-disabled: var(--tk-gray-400);
+  --tk-text-on-solid: #ffffff;
+
+  --tk-accent: var(--tk-iris-600);
+  --tk-accent-hover: var(--tk-iris-700);
+  --tk-accent-active: var(--tk-iris-800);
+  --tk-accent-fg: var(--tk-iris-600);
+  --tk-accent-subtle: var(--tk-iris-50);
+  --tk-accent-subtle-hover: var(--tk-iris-100);
+  --tk-accent-border: var(--tk-iris-200);
+  --tk-selection: color-mix(in srgb, var(--tk-iris-500) 9%, transparent);
+  --tk-focus: var(--tk-iris-500);
+
+  --tk-shadow-xs: 0 1px 2px rgb(16 17 20 / 0.06);
+  --tk-shadow-sm: 0 1px 3px rgb(16 17 20 / 0.08), 0 1px 2px rgb(16 17 20 / 0.04);
+  --tk-shadow-md: 0 6px 16px -4px rgb(16 17 20 / 0.12), 0 2px 4px -2px rgb(16 17 20 / 0.06);
+  --tk-shadow-lg: 0 18px 44px -10px rgb(16 17 20 / 0.22), 0 4px 12px -4px rgb(16 17 20 / 0.08);
+
+  --tk-skeleton: var(--tk-gray-100);
+  --tk-skeleton-shine: var(--tk-gray-50);
+
+  --tk-font-sans: "Inter Variable", "InterVariable", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --tk-font-mono: ui-monospace, "SFMono-Regular", "Cascadia Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --tk-font-features: "cv05", "cv11", "calt";
+  --tk-text-xs: 11px;
+  --tk-leading-xs: 16px;
+  --tk-text-sm: 12px;
+  --tk-leading-sm: 16px;
+  --tk-text-base: 13px;
+  --tk-leading-base: 20px;
+  --tk-text-md: 14px;
+  --tk-leading-md: 20px;
+  --tk-text-lg: 15px;
+  --tk-leading-lg: 22px;
+  --tk-text-xl: 18px;
+  --tk-leading-xl: 24px;
+  --tk-text-2xl: 22px;
+  --tk-leading-2xl: 28px;
+  --tk-text-3xl: 28px;
+  --tk-leading-3xl: 32px;
+  --tk-weight-regular: 400;
+  --tk-weight-medium: 500;
+  --tk-weight-semibold: 600;
+  --tk-tracking-tight: -0.015em;
+  --tk-tracking-caps: 0.04em;
+
+  --tk-space-0: 0;
+  --tk-space-0-5: 2px;
+  --tk-space-1: 4px;
+  --tk-space-1-5: 6px;
+  --tk-space-2: 8px;
+  --tk-space-3: 12px;
+  --tk-space-4: 16px;
+  --tk-space-5: 20px;
+  --tk-space-6: 24px;
+  --tk-space-8: 32px;
+  --tk-space-10: 40px;
+  --tk-space-12: 48px;
+  --tk-space-16: 64px;
+
+  --tk-radius-xs: 3px;
+  --tk-radius-sm: 4px;
+  --tk-radius-md: 6px;
+  --tk-radius-lg: 8px;
+  --tk-radius-xl: 12px;
+  --tk-radius-full: 999px;
+
+  --tk-duration-instant: 80ms;
+  --tk-duration-fast: 120ms;
+  --tk-duration-base: 150ms;
+  --tk-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --tk-ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --tk-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  --tk-control-h-sm: 24px;
+  --tk-control-h: 28px;
+  --tk-control-h-lg: 32px;
+  --tk-row-h: 32px;
+  --tk-row-h-group: 32px;
+  --tk-topbar-h: 44px;
+  --tk-sidebar-w: 232px;
+  --tk-sidebar-w-collapsed: 48px;
+  --tk-peek-w: 640px;
+  --tk-detail-aside-w: 280px;
+  --tk-board-col-w: 272px;
+  --tk-content-max-w: 1440px;
+  --tk-icon-sm: 14px;
+  --tk-icon: 16px;
+  --tk-avatar-sm: 20px;
+  --tk-avatar: 24px;
+  --tk-avatar-lg: 32px;
+
+  --tk-z-sticky: 10;
+  --tk-z-sidebar: 20;
+  --tk-z-peek: 30;
+  --tk-z-bulkbar: 40;
+
+  --tk-success: var(--tk-green);
+  --tk-success-fg: var(--tk-green-fg);
+  --tk-success-bg: color-mix(in srgb, var(--tk-green) var(--tk-tint-bg), transparent);
+  --tk-success-border: color-mix(in srgb, var(--tk-green) var(--tk-tint-border), transparent);
+  --tk-warning: var(--tk-amber);
+  --tk-warning-fg: var(--tk-amber-fg);
+  --tk-warning-bg: color-mix(in srgb, var(--tk-amber) var(--tk-tint-bg), transparent);
+  --tk-warning-border: color-mix(in srgb, var(--tk-amber) var(--tk-tint-border), transparent);
+  --tk-warning-on-solid: var(--tk-gray-950);
+  --tk-danger: var(--tk-red);
+  --tk-danger-fg: var(--tk-red-fg);
+  --tk-danger-bg: color-mix(in srgb, var(--tk-red) var(--tk-tint-bg), transparent);
+  --tk-danger-border: color-mix(in srgb, var(--tk-red) var(--tk-tint-border), transparent);
+  --tk-info: var(--tk-blue);
+  --tk-info-fg: var(--tk-blue-fg);
+  --tk-info-bg: color-mix(in srgb, var(--tk-blue) var(--tk-tint-bg), transparent);
+  --tk-info-border: color-mix(in srgb, var(--tk-blue) var(--tk-tint-border), transparent);
+
+  --tk-red-bg: color-mix(in srgb, var(--tk-red) var(--tk-tint-bg), transparent);
+  --tk-orange-bg: color-mix(in srgb, var(--tk-orange) var(--tk-tint-bg), transparent);
+  --tk-amber-bg: color-mix(in srgb, var(--tk-amber) var(--tk-tint-bg), transparent);
+  --tk-green-bg: color-mix(in srgb, var(--tk-green) var(--tk-tint-bg), transparent);
+  --tk-grass-bg: color-mix(in srgb, var(--tk-grass) var(--tk-tint-bg), transparent);
+  --tk-teal-bg: color-mix(in srgb, var(--tk-teal) var(--tk-tint-bg), transparent);
+  --tk-cyan-bg: color-mix(in srgb, var(--tk-cyan) var(--tk-tint-bg), transparent);
+  --tk-blue-bg: color-mix(in srgb, var(--tk-blue) var(--tk-tint-bg), transparent);
+  --tk-violet-bg: color-mix(in srgb, var(--tk-violet) var(--tk-tint-bg), transparent);
+  --tk-pink-bg: color-mix(in srgb, var(--tk-pink) var(--tk-tint-bg), transparent);
+  --tk-gray-bg: color-mix(in srgb, var(--tk-gray) var(--tk-tint-bg), transparent);
+
+  --tk-type-epic: var(--tk-violet);
+  --tk-type-spike: var(--tk-orange);
+  --tk-type-userstory: var(--tk-green);
+  --tk-type-technical: var(--tk-blue);
+  --tk-type-bug: var(--tk-red);
+
+  --tk-status-todo: var(--tk-gray);
+  --tk-status-inprogress: var(--tk-blue);
+  --tk-status-onhold: var(--tk-amber);
+  --tk-status-review: var(--tk-violet);
+  --tk-status-readyfortesting: var(--tk-cyan);
+  --tk-status-testing: var(--tk-teal);
+  --tk-status-readyfordeploy: var(--tk-grass);
+  --tk-status-done: var(--tk-green);
+  --tk-category-todo: var(--tk-gray);
+  --tk-category-inprogress: var(--tk-blue);
+  --tk-category-done: var(--tk-green);
+
+  --tk-priority-highest: var(--tk-red);
+  --tk-priority-high: var(--tk-orange);
+  --tk-priority-bar: var(--tk-text-muted);
+  --tk-priority-bar-off: var(--tk-gray-200);
+  --tk-severity-critical: var(--tk-red);
+  --tk-severity-major: var(--tk-red-fg);
+  --tk-severity-major-bg: var(--tk-red-bg);
+  --tk-severity-minor: var(--tk-amber-fg);
+  --tk-severity-minor-bg: var(--tk-amber-bg);
+  --tk-severity-trivial: var(--tk-gray-fg);
+  --tk-severity-trivial-bg: var(--tk-gray-bg);
+
+  --tk-testcase-new: var(--tk-blue);
+  --tk-testcase-manual: var(--tk-violet);
+  --tk-testcase-automatic: var(--tk-teal);
+
+  --tk-run-waiting: var(--tk-gray);
+  --tk-run-passed: var(--tk-green);
+  --tk-run-failed: var(--tk-red);
+  --tk-run-blocked: var(--tk-amber);
+  --tk-run-skipped: var(--tk-gray-400);
+
+  --tk-palette-0: var(--tk-blue);
+  --tk-palette-1: var(--tk-violet);
+  --tk-palette-2: var(--tk-pink);
+  --tk-palette-3: var(--tk-orange);
+  --tk-palette-4: var(--tk-amber);
+  --tk-palette-5: var(--tk-green);
+  --tk-palette-6: var(--tk-teal);
+  --tk-palette-7: var(--tk-cyan);
+  --tk-palette-0-fg: var(--tk-blue-fg);
+  --tk-palette-1-fg: var(--tk-violet-fg);
+  --tk-palette-2-fg: var(--tk-pink-fg);
+  --tk-palette-3-fg: var(--tk-orange-fg);
+  --tk-palette-4-fg: var(--tk-amber-fg);
+  --tk-palette-5-fg: var(--tk-green-fg);
+  --tk-palette-6-fg: var(--tk-teal-fg);
+  --tk-palette-7-fg: var(--tk-cyan-fg);
+  --tk-tint-avatar: 20%;
+
+  --tk-red-solid: #ce2c31;
+  /* Proposed in TKT-92: achievement tiers (ring and pips) */
+  --tk-tier-bronze: #a3622b;
+  --tk-tier-silver: #7b8494;
+  --tk-tier-gold: #a67c00;
+  --tk-tier-platinum: #3d8796;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --tk-red: #ec5d5e;
+  --tk-red-fg: #ff9592;
+  --tk-orange: #ff801f;
+  --tk-orange-fg: #ffa057;
+  --tk-amber: #f5b83d;
+  --tk-amber-fg: #ffca16;
+  --tk-green: #33b074;
+  --tk-green-fg: #3dd68c;
+  --tk-grass: #53b365;
+  --tk-grass-fg: #71d083;
+  --tk-teal: #1fb5a2;
+  --tk-teal-fg: #0bd8b6;
+  --tk-cyan: #23afd0;
+  --tk-cyan-fg: #4ccce6;
+  --tk-blue: #3e8ef7;
+  --tk-blue-fg: #70b8ff;
+  --tk-violet: #9e6ad8;
+  --tk-violet-fg: #baa7ff;
+  --tk-pink: #de51a8;
+  --tk-pink-fg: #ff8dcc;
+  --tk-gray: #80838d;
+  --tk-gray-fg: #a4a6af;
+
+  --tk-tint-bg: 16%;
+  --tk-tint-border: 32%;
+  --tk-tint-avatar: 28%;
+
+  --tk-bg: var(--tk-gray-925);
+  --tk-bg-sidebar: var(--tk-gray-950);
+  --tk-bg-subtle: var(--tk-gray-900);
+  --tk-bg-muted: var(--tk-gray-900);
+  --tk-bg-inset: var(--tk-gray-950);
+  --tk-surface: var(--tk-gray-900);
+  --tk-surface-raised: var(--tk-gray-850);
+  --tk-bg-hover: rgb(255 255 255 / 0.045);
+  --tk-bg-active: rgb(255 255 255 / 0.08);
+  --tk-overlay-mask: rgb(0 0 0 / 0.55);
+  --tk-inverse-bg: var(--tk-gray-750);
+  --tk-inverse-text: #ececef;
+
+  --tk-border-subtle: var(--tk-gray-850);
+  --tk-border: var(--tk-gray-800);
+  --tk-border-strong: var(--tk-gray-750);
+  --tk-border-input: var(--tk-gray-750);
+  --tk-border-input-hover: var(--tk-gray-700);
+
+  --tk-text: #ececef;
+  --tk-text-muted: var(--tk-gray-400);
+  --tk-text-subtle: var(--tk-gray-500);
+  --tk-text-disabled: var(--tk-gray-600);
+
+  --tk-accent: var(--tk-iris-500);
+  --tk-accent-hover: var(--tk-iris-400);
+  --tk-accent-active: var(--tk-iris-300);
+  --tk-accent-fg: var(--tk-iris-300);
+  --tk-accent-subtle: color-mix(in srgb, var(--tk-iris-500) 16%, transparent);
+  --tk-accent-subtle-hover: color-mix(in srgb, var(--tk-iris-500) 24%, transparent);
+  --tk-accent-border: color-mix(in srgb, var(--tk-iris-500) 40%, transparent);
+  --tk-selection: color-mix(in srgb, var(--tk-iris-500) 14%, transparent);
+  --tk-focus: var(--tk-iris-400);
+
+  --tk-shadow-xs: 0 1px 2px rgb(0 0 0 / 0.3);
+  --tk-shadow-sm: 0 1px 3px rgb(0 0 0 / 0.4), 0 1px 2px rgb(0 0 0 / 0.3);
+  --tk-shadow-md: 0 8px 20px -4px rgb(0 0 0 / 0.5), 0 2px 6px -2px rgb(0 0 0 / 0.4);
+  --tk-shadow-lg: 0 20px 48px -8px rgb(0 0 0 / 0.65), 0 6px 16px -6px rgb(0 0 0 / 0.5);
+
+  --tk-skeleton: var(--tk-gray-850);
+  --tk-skeleton-shine: var(--tk-gray-800);
+
+  --tk-priority-bar-off: var(--tk-gray-750);
+  --tk-run-skipped: var(--tk-gray-600);
+
+  --tk-red-solid: #d93036;
+  --tk-tier-bronze: #d39463;
+  --tk-tier-silver: #b9c0cc;
+  --tk-tier-gold: #e2b53e;
+  --tk-tier-platinum: #7fcfdc;
+}
+
+:root[data-density="compact"] {
+  --tk-row-h: 28px;
+  --tk-row-h-group: 28px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --tk-duration-instant: 0ms;
+    --tk-duration-fast: 0ms;
+    --tk-duration-base: 0ms;
+  }
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+  color-scheme: dark;
+
+  --tk-red: #ec5d5e;
+  --tk-red-fg: #ff9592;
+  --tk-orange: #ff801f;
+  --tk-orange-fg: #ffa057;
+  --tk-amber: #f5b83d;
+  --tk-amber-fg: #ffca16;
+  --tk-green: #33b074;
+  --tk-green-fg: #3dd68c;
+  --tk-grass: #53b365;
+  --tk-grass-fg: #71d083;
+  --tk-teal: #1fb5a2;
+  --tk-teal-fg: #0bd8b6;
+  --tk-cyan: #23afd0;
+  --tk-cyan-fg: #4ccce6;
+  --tk-blue: #3e8ef7;
+  --tk-blue-fg: #70b8ff;
+  --tk-violet: #9e6ad8;
+  --tk-violet-fg: #baa7ff;
+  --tk-pink: #de51a8;
+  --tk-pink-fg: #ff8dcc;
+  --tk-gray: #80838d;
+  --tk-gray-fg: #a4a6af;
+
+  --tk-tint-bg: 16%;
+  --tk-tint-border: 32%;
+  --tk-tint-avatar: 28%;
+
+  --tk-bg: var(--tk-gray-925);
+  --tk-bg-sidebar: var(--tk-gray-950);
+  --tk-bg-subtle: var(--tk-gray-900);
+  --tk-bg-muted: var(--tk-gray-900);
+  --tk-bg-inset: var(--tk-gray-950);
+  --tk-surface: var(--tk-gray-900);
+  --tk-surface-raised: var(--tk-gray-850);
+  --tk-bg-hover: rgb(255 255 255 / 0.045);
+  --tk-bg-active: rgb(255 255 255 / 0.08);
+  --tk-overlay-mask: rgb(0 0 0 / 0.55);
+  --tk-inverse-bg: var(--tk-gray-750);
+  --tk-inverse-text: #ececef;
+
+  --tk-border-subtle: var(--tk-gray-850);
+  --tk-border: var(--tk-gray-800);
+  --tk-border-strong: var(--tk-gray-750);
+  --tk-border-input: var(--tk-gray-750);
+  --tk-border-input-hover: var(--tk-gray-700);
+
+  --tk-text: #ececef;
+  --tk-text-muted: var(--tk-gray-400);
+  --tk-text-subtle: var(--tk-gray-500);
+  --tk-text-disabled: var(--tk-gray-600);
+
+  --tk-accent: var(--tk-iris-500);
+  --tk-accent-hover: var(--tk-iris-400);
+  --tk-accent-active: var(--tk-iris-300);
+  --tk-accent-fg: var(--tk-iris-300);
+  --tk-accent-subtle: color-mix(in srgb, var(--tk-iris-500) 16%, transparent);
+  --tk-accent-subtle-hover: color-mix(in srgb, var(--tk-iris-500) 24%, transparent);
+  --tk-accent-border: color-mix(in srgb, var(--tk-iris-500) 40%, transparent);
+  --tk-selection: color-mix(in srgb, var(--tk-iris-500) 14%, transparent);
+  --tk-focus: var(--tk-iris-400);
+
+  --tk-shadow-xs: 0 1px 2px rgb(0 0 0 / 0.3);
+  --tk-shadow-sm: 0 1px 3px rgb(0 0 0 / 0.4), 0 1px 2px rgb(0 0 0 / 0.3);
+  --tk-shadow-md: 0 8px 20px -4px rgb(0 0 0 / 0.5), 0 2px 6px -2px rgb(0 0 0 / 0.4);
+  --tk-shadow-lg: 0 20px 48px -8px rgb(0 0 0 / 0.65), 0 6px 16px -6px rgb(0 0 0 / 0.5);
+
+  --tk-skeleton: var(--tk-gray-850);
+  --tk-skeleton-shine: var(--tk-gray-800);
+
+  --tk-priority-bar-off: var(--tk-gray-750);
+  --tk-run-skipped: var(--tk-gray-600);
+
+  --tk-red-solid: #d93036;
+  --tk-tier-bronze: #d39463;
+  --tk-tier-silver: #b9c0cc;
+  --tk-tier-gold: #e2b53e;
+  --tk-tier-platinum: #7fcfdc;
+  }
+}
+
+/* Shared mockup components */
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{font-family:var(--tk-font-sans);font-feature-settings:var(--tk-font-features);font-size:var(--tk-text-base);line-height:var(--tk-leading-base);color:var(--tk-text);background:var(--tk-bg);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;min-width:1100px}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+a{color:inherit;text-decoration:none}
+:focus-visible{outline:2px solid var(--tk-focus);outline-offset:2px}
+.tnum{font-variant-numeric:tabular-nums}
+.muted{color:var(--tk-text-muted)}
+.subtle{color:var(--tk-text-subtle)}
+
+.i{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.i-sm{width:14px;height:14px}
+.i-xs{width:12px;height:12px}
+.gl{width:14px;height:14px;flex:none}
+
+.ty-epic{color:var(--tk-type-epic)}.ty-spike{color:var(--tk-type-spike)}.ty-story{color:var(--tk-type-userstory)}.ty-tech{color:var(--tk-type-technical)}.ty-bug{color:var(--tk-type-bug)}
+.st-todo{color:var(--tk-status-todo)}.st-inprogress{color:var(--tk-status-inprogress)}.st-onhold{color:var(--tk-status-onhold)}.st-review{color:var(--tk-status-review)}.st-rft{color:var(--tk-status-readyfortesting)}.st-testing{color:var(--tk-status-testing)}.st-rfd{color:var(--tk-status-readyfordeploy)}.st-done{color:var(--tk-status-done)}
+.pr-highest{color:var(--tk-priority-highest)}.pr-high{color:var(--tk-priority-high)}.pr-medium,.pr-low,.pr-lowest{color:var(--tk-priority-bar)}
+
+/* App shell */
+.app{display:grid;grid-template-columns:var(--tk-sidebar-w) minmax(0,1fr);height:100vh}
+.sidebar{background:var(--tk-bg-sidebar);border-right:1px solid var(--tk-border);display:flex;flex-direction:column;min-height:0}
+.sb-head{height:var(--tk-topbar-h);display:flex;align-items:center;gap:8px;padding:0 12px 0 14px;flex:none}
+.logo{width:20px;height:20px;border-radius:6px;background:var(--tk-accent);display:grid;place-items:center;flex:none}
+.logo svg{width:14px;height:14px}
+.sb-head .name{font-weight:600;letter-spacing:-.01em}
+.sb-head .end{margin-left:auto;color:var(--tk-text-subtle);display:flex}
+.sb-scroll{flex:1;overflow:auto;padding:4px 8px 8px}
+.sb-sec{margin-top:14px}
+.sb-label{display:flex;align-items:center;height:24px;padding:0 8px;font-size:var(--tk-text-xs);font-weight:500;letter-spacing:var(--tk-tracking-caps);text-transform:uppercase;color:var(--tk-text-subtle)}
+.nav{display:flex;align-items:center;gap:8px;height:28px;padding:0 8px;border-radius:var(--tk-radius-md);color:var(--tk-text-muted);font-weight:500;white-space:nowrap}
+.nav:hover{background:var(--tk-bg-hover);color:var(--tk-text)}
+.nav.active{background:var(--tk-bg-active);color:var(--tk-text)}
+.nav .count{margin-left:auto;font-size:var(--tk-text-xs);color:var(--tk-text-subtle);font-variant-numeric:tabular-nums}
+.nav.child{padding-left:30px;font-weight:400}
+.nav .chev{margin-left:auto;color:var(--tk-text-subtle)}
+.ptile{width:16px;height:16px;border-radius:4px;display:grid;place-items:center;font-size:9px;font-weight:700;flex:none;letter-spacing:0}
+.p0{background:color-mix(in srgb,var(--tk-palette-0) var(--tk-tint-avatar),transparent);color:var(--tk-palette-0-fg)}
+.p1{background:color-mix(in srgb,var(--tk-palette-1) var(--tk-tint-avatar),transparent);color:var(--tk-palette-1-fg)}
+.p2{background:color-mix(in srgb,var(--tk-palette-2) var(--tk-tint-avatar),transparent);color:var(--tk-palette-2-fg)}
+.p3{background:color-mix(in srgb,var(--tk-palette-3) var(--tk-tint-avatar),transparent);color:var(--tk-palette-3-fg)}
+.p4{background:color-mix(in srgb,var(--tk-palette-4) var(--tk-tint-avatar),transparent);color:var(--tk-palette-4-fg)}
+.p5{background:color-mix(in srgb,var(--tk-palette-5) var(--tk-tint-avatar),transparent);color:var(--tk-palette-5-fg)}
+.p6{background:color-mix(in srgb,var(--tk-palette-6) var(--tk-tint-avatar),transparent);color:var(--tk-palette-6-fg)}
+.p7{background:color-mix(in srgb,var(--tk-palette-7) var(--tk-tint-avatar),transparent);color:var(--tk-palette-7-fg)}
+.sb-foot{border-top:1px solid var(--tk-border);padding:8px;display:flex;gap:4px;flex:none}
+
+.main{display:flex;flex-direction:column;min-width:0;min-height:0}
+.topbar{height:var(--tk-topbar-h);flex:none;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:16px;padding:0 12px 0 20px;border-bottom:1px solid var(--tk-border);background:var(--tk-bg)}
+.crumbs{display:flex;align-items:center;gap:6px;color:var(--tk-text-muted);min-width:0;white-space:nowrap}
+.crumbs .sep{color:var(--tk-text-disabled)}
+.crumbs .cur{color:var(--tk-text);font-weight:500}
+.crumbs a:hover{color:var(--tk-text)}
+.search{width:340px;height:28px;display:flex;align-items:center;gap:8px;padding:0 6px 0 10px;border:1px solid var(--tk-border);border-radius:var(--tk-radius-md);background:var(--tk-bg-subtle);color:var(--tk-text-subtle)}
+.search:hover{border-color:var(--tk-border-strong)}
+.search .k{margin-left:auto}
+.tb-right{display:flex;align-items:center;justify-content:flex-end;gap:6px}
+
+/* Controls */
+.btn{height:28px;display:inline-flex;align-items:center;gap:6px;padding:0 10px;border-radius:var(--tk-radius-md);font-weight:500;white-space:nowrap;border:1px solid transparent;transition:background var(--tk-duration-instant),border-color var(--tk-duration-instant)}
+.btn-primary{background:var(--tk-accent);color:var(--tk-text-on-solid)}
+.btn-primary:hover{background:var(--tk-accent-hover)}
+.btn-secondary{background:var(--tk-surface);border-color:var(--tk-border-strong);color:var(--tk-text);box-shadow:var(--tk-shadow-xs)}
+.btn-secondary:hover{background:var(--tk-bg-subtle)}
+.btn-ghost{color:var(--tk-text-muted)}
+.btn-ghost:hover{background:var(--tk-bg-hover);color:var(--tk-text)}
+.btn-icon{width:28px;padding:0;justify-content:center}
+.btn-sm{height:24px;padding:0 8px;font-size:var(--tk-text-sm)}
+.btn-sm.btn-icon{width:24px;padding:0}
+.btn .kbd{margin-left:2px}
+.btn-primary .kbd{background:rgb(255 255 255 / .18);border-color:transparent;color:inherit}
+.kbd{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border:1px solid var(--tk-border);border-bottom-width:2px;border-radius:var(--tk-radius-xs);font-size:var(--tk-text-xs);line-height:1;font-weight:500;color:var(--tk-text-subtle);background:var(--tk-surface);font-family:var(--tk-font-sans)}
+.seg{display:inline-flex;padding:2px;border-radius:var(--tk-radius-md);background:var(--tk-bg-muted);gap:2px}
+.seg button{height:22px;padding:0 8px;border-radius:var(--tk-radius-sm);color:var(--tk-text-muted);font-weight:500;font-size:var(--tk-text-sm)}
+.seg button.on{background:var(--tk-surface);color:var(--tk-text);box-shadow:var(--tk-shadow-xs)}
+
+.fchip{height:24px;display:inline-flex;align-items:center;gap:6px;padding:0 8px;border:1px dashed var(--tk-border-strong);border-radius:var(--tk-radius-md);color:var(--tk-text-muted);font-size:var(--tk-text-sm);font-weight:500}
+.fchip:hover{background:var(--tk-bg-hover);color:var(--tk-text)}
+.fchip.on{border-style:solid;border-color:var(--tk-accent-border);background:var(--tk-accent-subtle);color:var(--tk-accent-fg)}
+.fchip .n{font-variant-numeric:tabular-nums}
+.finput{height:24px;width:200px;display:inline-flex;align-items:center;gap:6px;padding:0 6px 0 8px;border:1px solid var(--tk-border);border-radius:var(--tk-radius-md);color:var(--tk-text-subtle);font-size:var(--tk-text-sm);background:var(--tk-surface)}
+.finput .kbd{margin-left:auto}
+
+/* Atoms */
+.av{width:20px;height:20px;border-radius:50%;display:inline-grid;place-items:center;font-size:9px;font-weight:600;flex:none;letter-spacing:.01em}
+.av-24{width:24px;height:24px;font-size:10px}
+.av-none{border:1px dashed var(--tk-border-strong);color:var(--tk-text-subtle);background:transparent}
+.badge{height:20px;display:inline-flex;align-items:center;gap:4px;padding:0 6px;border-radius:var(--tk-radius-sm);font-size:var(--tk-text-xs);font-weight:500;white-space:nowrap;flex:none}
+.badge .dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+.b-critical{background:var(--tk-severity-critical);color:var(--tk-text-on-solid)}
+.b-major{background:var(--tk-severity-major-bg);color:var(--tk-severity-major)}
+.b-minor{background:var(--tk-severity-minor-bg);color:var(--tk-severity-minor)}
+.b-trivial{background:var(--tk-severity-trivial-bg);color:var(--tk-severity-trivial)}
+.b-blue{background:var(--tk-blue-bg);color:var(--tk-blue-fg)}
+.b-violet{background:var(--tk-violet-bg);color:var(--tk-violet-fg)}
+.b-teal{background:var(--tk-teal-bg);color:var(--tk-teal-fg)}
+.b-green{background:var(--tk-green-bg);color:var(--tk-green-fg)}
+.b-red{background:var(--tk-red-bg);color:var(--tk-red-fg)}
+.b-amber{background:var(--tk-amber-bg);color:var(--tk-amber-fg)}
+.b-gray{background:var(--tk-gray-bg);color:var(--tk-gray-fg)}
+.lbl{height:20px;display:inline-flex;align-items:center;gap:5px;padding:0 7px 0 6px;border:1px solid var(--tk-border);border-radius:var(--tk-radius-full);font-size:var(--tk-text-xs);font-weight:500;color:var(--tk-text-muted);white-space:nowrap;flex:none}
+.lbl::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--c)}
+.l0{--c:var(--tk-palette-0)}.l1{--c:var(--tk-palette-1)}.l2{--c:var(--tk-palette-2)}.l3{--c:var(--tk-palette-3)}.l4{--c:var(--tk-palette-4)}.l5{--c:var(--tk-palette-5)}.l6{--c:var(--tk-palette-6)}.l7{--c:var(--tk-palette-7)}
+.more{font-size:var(--tk-text-xs);color:var(--tk-text-subtle);font-weight:500}
+.pts{min-width:20px;height:18px;padding:0 5px;display:inline-grid;place-items:center;border-radius:var(--tk-radius-full);background:var(--tk-bg-muted);border:1px solid var(--tk-border-subtle);font-size:var(--tk-text-xs);font-weight:500;color:var(--tk-text-muted);font-variant-numeric:tabular-nums;flex:none}
+.cnt{display:inline-flex;align-items:center;gap:3px;color:var(--tk-text-subtle);font-size:var(--tk-text-xs);font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap}
+.parent{height:20px;max-width:170px;display:inline-flex;align-items:center;gap:4px;padding:0 7px 0 5px;border:1px solid var(--tk-border);border-radius:var(--tk-radius-sm);font-size:var(--tk-text-xs);font-weight:500;color:var(--tk-text-muted);white-space:nowrap;overflow:hidden;flex:none}
+.parent span{overflow:hidden;text-overflow:ellipsis}
+.cb{width:14px;height:14px;border:1px solid var(--tk-border-input-hover);border-radius:var(--tk-radius-xs);background:var(--tk-surface);display:grid;place-items:center;flex:none}
+.cb.on{background:var(--tk-accent);border-color:var(--tk-accent)}
+.cb.on svg{width:10px;height:10px;stroke:#fff;stroke-width:3;fill:none;stroke-linecap:round;stroke-linejoin:round}
+
+.theme-btn{display:inline-flex}
+/* Page */
+.content{flex:1;overflow:auto;position:relative}
+.phead{height:52px;display:flex;align-items:center;gap:10px;padding:4px 20px 0 24px}
+.phead h1{font-size:var(--tk-text-xl);line-height:var(--tk-leading-xl);font-weight:600;letter-spacing:var(--tk-tracking-tight);margin:0}
+.phead .count{color:var(--tk-text-subtle);font-size:var(--tk-text-md);font-variant-numeric:tabular-nums}
+.phead .right{margin-left:auto;display:flex;gap:6px;align-items:center}
+.toolbar{height:40px;display:flex;align-items:center;gap:6px;padding:0 20px 0 24px;border-bottom:1px solid var(--tk-border);position:sticky;top:0;background:var(--tk-bg);z-index:3}
+.toolbar .right{margin-left:auto;display:flex;gap:4px;align-items:center}
+.toolbar .vsep{width:1px;height:16px;background:var(--tk-border);margin:0 4px}
+.ghead{position:sticky;top:40px;z-index:2;height:var(--tk-row-h-group);display:flex;align-items:center;gap:8px;padding:0 20px 0 14px;background:var(--tk-bg-subtle);border-bottom:1px solid var(--tk-border-subtle);font-weight:500}
+.ghead .chev{color:var(--tk-text-subtle);display:flex}
+.ghead .gcount{color:var(--tk-text-subtle);font-weight:500;font-variant-numeric:tabular-nums}
+.ghead .gpts{color:var(--tk-text-subtle);font-size:var(--tk-text-sm);font-weight:400}
+.ghead .btn{margin-left:auto}
+.row{height:var(--tk-row-h);display:flex;align-items:center;gap:8px;padding:0 20px 0 12px;border-bottom:1px solid var(--tk-border-subtle);position:relative;cursor:default}
+.row:hover{background:var(--tk-bg-hover)}
+.row.sel{background:var(--tk-selection)}
+.row.sel:hover{background:color-mix(in srgb,var(--tk-iris-500) 14%,transparent)}
+.row.focus{background:var(--tk-bg-hover)}
+.row.focus::before{content:"";position:absolute;left:0;top:-1px;bottom:0;width:2px;background:var(--tk-accent)}
+.c-check{width:18px;display:grid;place-items:center;flex:none}
+.row .cb{opacity:0;transition:opacity var(--tk-duration-instant)}
+.row:hover .cb,.selecting .row .cb{opacity:1}
+.key{width:58px;color:var(--tk-text-muted);flex:none;font-variant-numeric:tabular-nums}
+.title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:0 1 auto}
+.fill{flex:1 1 0;min-width:12px}
+.tags{display:flex;gap:4px;flex:none;align-items:center}
+.metas{display:flex;gap:10px;width:112px;justify-content:flex-end;flex:none}
+.pslot{width:26px;display:flex;justify-content:center;flex:none}
+.ver{width:40px;color:var(--tk-text-subtle);font-size:var(--tk-text-sm);font-variant-numeric:tabular-nums;flex:none}
+.date{width:42px;text-align:right;color:var(--tk-text-subtle);font-size:var(--tk-text-sm);flex:none;font-variant-numeric:tabular-nums}
+.qc{margin:4px 12px 4px 8px;height:34px;border:1px solid var(--tk-accent);border-radius:var(--tk-radius-md);background:var(--tk-surface);box-shadow:0 0 0 3px var(--tk-accent-subtle);padding:0 10px 0 6px}
+.qc:hover{background:var(--tk-surface)}
+.qc-type{display:inline-flex;align-items:center;gap:2px;height:24px;padding:0 4px 0 6px;border-radius:var(--tk-radius-sm);color:var(--tk-text-subtle)}
+.qc-type:hover{background:var(--tk-bg-hover)}
+.qc-input{flex:1;min-width:0;white-space:nowrap}
+.caret{display:inline-block;width:1px;height:16px;background:var(--tk-accent);vertical-align:-3px;margin-left:1px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.qc-hints{display:flex;align-items:center;gap:6px;color:var(--tk-text-subtle);font-size:var(--tk-text-sm);white-space:nowrap}
+.qc-hints .dotsep{color:var(--tk-text-disabled)}
+.bulk{position:fixed;left:calc(50% + var(--tk-sidebar-w) / 2);transform:translateX(-50%);bottom:24px;height:40px;display:flex;align-items:center;gap:2px;padding:0 6px 0 8px;background:var(--tk-surface-raised);border:1px solid var(--tk-border);border-radius:var(--tk-radius-lg);box-shadow:var(--tk-shadow-lg);z-index:50;white-space:nowrap}
+.bulk .n{font-weight:500;display:flex;align-items:center;gap:8px;padding:0 6px 0 4px}
+.bulk .vsep{width:1px;height:20px;background:var(--tk-border);margin:0 4px}
+.bulk .btn-ghost{color:var(--tk-text)}
+.bulk .danger{color:var(--tk-danger-fg)}
+.menu{position:absolute;bottom:46px;left:96px;width:248px;background:var(--tk-surface-raised);border:1px solid var(--tk-border);border-radius:var(--tk-radius-lg);box-shadow:var(--tk-shadow-md);padding:4px;z-index:60}
+.menu .msearch{height:34px;display:flex;align-items:center;gap:8px;padding:0 10px;border-bottom:1px solid var(--tk-border);margin:-4px -4px 4px;color:var(--tk-text-subtle)}
+.menu .msearch .kbd{margin-left:auto}
+.menu .opt{height:28px;display:flex;align-items:center;gap:8px;padding:0 8px;border-radius:var(--tk-radius-sm)}
+.menu .opt.hl{background:var(--tk-bg-hover)}
+.menu .opt .k{margin-left:auto;color:var(--tk-text-subtle);font-size:var(--tk-text-xs);font-variant-numeric:tabular-nums;width:12px;text-align:center}
+.menu .mlabel{font-size:var(--tk-text-xs);color:var(--tk-text-subtle);padding:6px 8px 2px;font-weight:500}
+.footer-note{padding:20px 24px 96px;color:var(--tk-text-subtle);font-size:var(--tk-text-sm)}
+/* Achievements mockup: gallery of states (TKT-92) */
+body{min-width:1320px;height:auto}
+.sheet{max-width:1320px;margin:0 auto;padding:20px 24px 72px}
+.sheet-head{display:flex;align-items:center;gap:10px;height:44px}
+.sheet-head h1{font-size:var(--tk-text-xl);line-height:var(--tk-leading-xl);font-weight:600;letter-spacing:var(--tk-tracking-tight);margin:0}
+.sheet-head .end{margin-left:auto;display:flex;gap:6px}
+.sheet-intro{color:var(--tk-text-muted);max-width:820px;margin:0 0 8px}
+.sec{margin-top:28px}
+.sec-head{display:flex;align-items:baseline;gap:10px;margin-bottom:10px}
+.sec-head h2{font-size:var(--tk-text-lg);line-height:var(--tk-leading-lg);font-weight:600;margin:0}
+.sec-head .ref{font-size:var(--tk-text-sm);color:var(--tk-text-subtle)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.cap{display:flex;align-items:center;gap:8px;font-size:var(--tk-text-xs);font-weight:500;letter-spacing:var(--tk-tracking-caps);text-transform:uppercase;color:var(--tk-text-subtle);margin:0 0 6px}
+.frame{position:relative;isolation:isolate;border:1px solid var(--tk-border);border-radius:var(--tk-radius-lg);overflow:hidden;background:var(--tk-bg)}
+.app.mini{height:600px}
+.app.mini .content{overflow:hidden}
+.ghost-rows{padding:8px 24px}
+.ghost-row{height:32px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--tk-border-subtle)}
+.bar{height:8px;border-radius:var(--tk-radius-full);background:var(--tk-skeleton)}
+
+.legend{display:flex;gap:16px;flex-wrap:wrap;color:var(--tk-text-subtle);font-size:var(--tk-text-sm);margin-top:8px}
+.legend code,.ref code,.note code{font-family:var(--tk-font-mono);font-size:11px}
+
+/* Achievement medal (tk-achievement-medal) */
+.m0{--m:var(--tk-palette-0);--m-fg:var(--tk-palette-0-fg)}
+.m1{--m:var(--tk-palette-1);--m-fg:var(--tk-palette-1-fg)}
+.m2{--m:var(--tk-palette-2);--m-fg:var(--tk-palette-2-fg)}
+.m3{--m:var(--tk-palette-3);--m-fg:var(--tk-palette-3-fg)}
+.m4{--m:var(--tk-palette-4);--m-fg:var(--tk-palette-4-fg)}
+.m5{--m:var(--tk-palette-5);--m-fg:var(--tk-palette-5-fg)}
+.m6{--m:var(--tk-palette-6);--m-fg:var(--tk-palette-6-fg)}
+.m7{--m:var(--tk-palette-7);--m-fg:var(--tk-palette-7-fg)}
+.t-bronze{--t:var(--tk-tier-bronze)}
+.t-silver{--t:var(--tk-tier-silver)}
+.t-gold{--t:var(--tk-tier-gold)}
+.t-platinum{--t:var(--tk-tier-platinum)}
+.md{display:block;flex:none;width:48px;height:56px;overflow:visible;color:var(--m-fg)}
+.md.sq{height:48px}
+.md-xl{width:96px;height:112px}
+.md-l{width:64px;height:74.67px}
+.md-s{width:32px;height:37.33px}
+.md-s.sq{height:32px}
+.md-xs{width:20px;height:20px}
+.md .ring{fill:none;stroke:var(--t);stroke-width:2.5;stroke-linejoin:round}
+.md .body{fill:color-mix(in srgb,var(--m) var(--tk-tint-avatar),var(--tk-surface));stroke:var(--m);stroke-width:1.25;stroke-linejoin:round}
+.md .gly{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.md .pip{fill:var(--t)}
+.md.once .ring{stroke:var(--m);stroke-width:1.25}
+.md.locked{color:var(--tk-text-subtle)}
+.md.locked .ring{display:none}
+.md.locked .body{fill:none;stroke:var(--tk-border-strong);stroke-width:1.5;stroke-dasharray:3.5 3}
+.mdw{position:relative;display:inline-block;flex:none}
+.mdw .shr{position:absolute;right:-3px;top:28px;width:18px;height:18px;border-radius:50%;background:var(--tk-accent);color:var(--tk-text-on-solid);display:grid;place-items:center;box-shadow:0 0 0 2px var(--tk-surface)}
+.mdw .shr svg{width:11px;height:11px;stroke-width:2.25}
+
+/* Gallery of medal states */
+.panel{border:1px solid var(--tk-border);border-radius:var(--tk-radius-lg);background:var(--tk-surface);padding:20px}
+.states{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:8px}
+.state{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
+.state .s-name{font-weight:500;font-size:var(--tk-text-sm)}
+.state .s-tier{font-size:var(--tk-text-xs);color:var(--tk-text-muted)}
+.state .s-aria{font-size:var(--tk-text-xs);color:var(--tk-text-subtle);font-family:var(--tk-font-mono);line-height:14px}
+.minibar{width:44px;height:4px;border-radius:var(--tk-radius-full);background:var(--tk-bg-active);overflow:hidden}
+.minibar i{display:block;height:100%;background:var(--t)}
+.anat{display:grid;grid-template-columns:auto 1fr 1fr;gap:28px;align-items:center}
+.anat ol{margin:0;padding-left:18px;display:grid;gap:6px;color:var(--tk-text-muted)}
+.anat ol b{color:var(--tk-text);font-weight:500}
+.sizes{display:flex;align-items:flex-end;gap:20px;margin-top:16px}
+.sizes .sz{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:var(--tk-text-xs);color:var(--tk-text-subtle)}
+.tok{width:100%;border-collapse:collapse;font-size:var(--tk-text-sm)}
+.tok th{text-align:left;font-weight:500;color:var(--tk-text-subtle);font-size:var(--tk-text-xs);padding:0 8px 6px 0}
+.tok td{padding:5px 8px 5px 0;border-top:1px solid var(--tk-border-subtle);font-variant-numeric:tabular-nums}
+.tok code{font-family:var(--tk-font-mono);font-size:11.5px}
+.sw{display:inline-block;width:12px;height:12px;border-radius:50%;vertical-align:-2px;margin-right:6px;background:var(--t)}
+.pips-t{display:inline-flex;gap:3px;vertical-align:1px;margin-right:6px}
+.pips-t i{width:6px;height:6px;border-radius:50%;background:var(--t)}
+
+/* Profile page */
+.ppage{padding:0}
+.ptabs{display:flex;gap:4px;padding:0 20px 0 16px;border-bottom:1px solid var(--tk-border);height:40px;align-items:stretch}
+.ptabs a{display:flex;align-items:center;padding:0 10px;color:var(--tk-text-muted);font-weight:500;position:relative}
+.ptabs a:hover{color:var(--tk-text)}
+.ptabs a.on{color:var(--tk-text)}
+.ptabs a.on::after{content:"";position:absolute;left:8px;right:8px;bottom:-1px;height:2px;border-radius:2px;background:var(--tk-accent)}
+.pbody{padding:20px 24px 32px;max-width:1008px}
+.pintro{display:flex;align-items:center;gap:8px;color:var(--tk-text-muted);margin:0 0 4px}
+.pintro .i{color:var(--tk-text-subtle)}
+.agroup{display:flex;align-items:center;gap:8px;margin:20px 0 8px;font-size:var(--tk-text-xs);font-weight:500;letter-spacing:var(--tk-tracking-caps);text-transform:uppercase;color:var(--tk-text-subtle)}
+.agrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.ach{position:relative;display:flex;gap:12px;padding:12px 10px 12px 12px;border:1px solid var(--tk-border);border-radius:var(--tk-radius-lg);background:var(--tk-surface);min-height:104px;cursor:default}
+.ach:hover{border-color:var(--tk-border-strong)}
+.ach.kfocus{outline:2px solid var(--tk-focus);outline-offset:-2px}
+.ach .tx{min-width:0;flex:1;display:flex;flex-direction:column;gap:1px}
+.ach .nm{display:flex;align-items:center;gap:6px;font-weight:600;min-height:24px}
+.ach .nm .end{margin-left:auto}
+.ach .tr{display:flex;align-items:center;gap:6px;font-size:var(--tk-text-xs);font-weight:500;color:var(--tk-text-muted)}
+.ach .ds{font-size:var(--tk-text-sm);line-height:var(--tk-leading-sm);color:var(--tk-text-muted);margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ach.secret-un .nm{color:var(--tk-text-muted);letter-spacing:.08em}
+.prog{display:flex;align-items:center;gap:8px;margin-top:auto;padding-top:8px;font-size:var(--tk-text-xs);color:var(--tk-text-subtle);font-variant-numeric:tabular-nums;white-space:nowrap}
+.prog .pb{flex:1;height:4px;border-radius:var(--tk-radius-full);background:var(--tk-bg-active);overflow:hidden;min-width:40px}
+.prog .pb i{display:block;height:100%;border-radius:var(--tk-radius-full);background:var(--t)}
+.prog.top{color:var(--tk-text-subtle)}
+.badge.b-secret{background:var(--tk-bg-active);color:var(--tk-text-muted)}
+.share{height:24px;display:inline-flex;align-items:center;gap:5px;padding:0 8px;border-radius:var(--tk-radius-md);font-size:var(--tk-text-sm);font-weight:500;color:var(--tk-text-muted);flex:none}
+.share:hover,.share.hov{background:var(--tk-bg-hover);color:var(--tk-text)}
+.share.on{background:var(--tk-accent-subtle);color:var(--tk-accent-fg)}
+.share.on.hov{background:var(--tk-accent-subtle-hover)}
+.share .i{width:14px;height:14px}
+
+/* Skeleton */
+.sk-hex{width:44px;height:48px;flex:none;background:var(--tk-skeleton);clip-path:polygon(50% 0,96% 25%,96% 75%,50% 100%,4% 75%,4% 25%);margin:2px 2px 0}
+.sk{background:linear-gradient(90deg,var(--tk-skeleton) 0,var(--tk-skeleton-shine) 50%,var(--tk-skeleton) 100%);background-size:200% 100%;animation:shimmer 1.4s linear infinite}
+@keyframes shimmer{0%{background-position:100% 0}100%{background-position:-100% 0}}
+@media (prefers-reduced-motion: reduce){.sk{animation:none}}
+.ach.skel{gap:12px}
+.ach.skel .tx{gap:8px;padding-top:4px}
+
+/* Empty state */
+.empty{max-width:400px;margin:28px auto 8px;text-align:center}
+.empty .ei{width:32px;height:32px;color:var(--tk-text-subtle);stroke-width:1.5}
+.empty h3{margin:12px 0 4px;font-size:var(--tk-text-lg);font-weight:600}
+.empty p{margin:0 0 4px;color:var(--tk-text-muted)}
+
+/* Medal detail popover */
+.apop{width:340px;background:var(--tk-surface-raised);border:1px solid var(--tk-border);border-radius:var(--tk-radius-lg);box-shadow:var(--tk-shadow-md);position:relative}
+.apop-h{display:flex;gap:14px;align-items:center;padding:16px 12px 8px 16px}
+.apop-h .t{flex:1;min-width:0}
+.apop-h h3{margin:0;font-size:var(--tk-text-lg);line-height:var(--tk-leading-lg);font-weight:600}
+.apop-h .tr{font-size:var(--tk-text-sm);color:var(--tk-text-muted);display:flex;align-items:center;gap:6px}
+.apop-h .x{align-self:flex-start}
+.apop-b{padding:0 16px 12px;color:var(--tk-text-muted)}
+.apop-b p{margin:0 0 10px}
+.apop-lbl{font-size:var(--tk-text-xs);font-weight:500;letter-spacing:var(--tk-tracking-caps);text-transform:uppercase;color:var(--tk-text-subtle);margin:4px 0 4px}
+.howto{display:flex;gap:8px;padding:8px 10px;border-radius:var(--tk-radius-md);background:var(--tk-bg-subtle);color:var(--tk-text);margin-bottom:10px}
+.howto .i{color:var(--tk-text-subtle);margin-top:2px}
+.ladder{display:grid;gap:0;margin:0 0 8px}
+.ladder .lr{display:flex;align-items:center;gap:8px;height:28px;border-bottom:1px solid var(--tk-border-subtle);color:var(--tk-text)}
+.ladder .lr:last-child{border-bottom:0}
+.ladder .lr .n{color:var(--tk-text-muted);font-variant-numeric:tabular-nums}
+.ladder .lr .end{margin-left:auto;display:flex;align-items:center;gap:4px;font-size:var(--tk-text-sm)}
+.ladder .lr.done .end{color:var(--tk-success-fg)}
+.ladder .lr.next .end{color:var(--tk-text-subtle)}
+.ladder .lr.todo{color:var(--tk-text-muted)}
+.apop-f{display:flex;align-items:center;gap:8px;padding:10px 12px 12px 16px;border-top:1px solid var(--tk-border-subtle)}
+.apop-f .note{font-size:var(--tk-text-sm);color:var(--tk-text-subtle);flex:1;line-height:var(--tk-leading-sm)}
+
+/* Toasts */
+.toasts{display:flex;flex-direction:column;align-items:flex-end;gap:8px;padding:24px;background:var(--tk-bg-subtle);min-height:100%}
+.tst{display:flex;align-items:center;gap:10px;min-height:48px;max-width:420px;width:420px;padding:8px 6px 8px 10px;background:var(--tk-surface-raised);border:1px solid var(--tk-border);border-radius:var(--tk-radius-lg);box-shadow:var(--tk-shadow-md)}
+.tst .msg{flex:1;min-width:0;display:flex;flex-direction:column;line-height:18px}
+.tst .msg b{font-weight:600}
+.tst .msg span{color:var(--tk-text-muted);font-size:var(--tk-text-sm)}
+.tst .act{padding:2px 6px;border-radius:var(--tk-radius-sm);color:var(--tk-accent-fg);font-weight:500}
+.tst .act:hover{background:var(--tk-bg-hover)}
+.stack{display:flex;flex:none}
+.stack .md{margin-left:-10px;filter:drop-shadow(0 0 0 var(--tk-surface-raised))}
+.stack .md:first-child{margin-left:0}
+
+/* Top bar avatar menu */
+.avbtn{position:relative;display:inline-grid;place-items:center;width:28px;height:28px;border-radius:var(--tk-radius-md)}
+.avbtn.on{background:var(--tk-bg-active)}
+.avdot{position:absolute;top:2px;right:1px;width:8px;height:8px;border-radius:50%;background:var(--tk-accent);box-shadow:0 0 0 2px var(--tk-bg)}
+.amenu{position:absolute;top:40px;right:10px;width:248px;background:var(--tk-surface-raised);border:1px solid var(--tk-border);border-radius:var(--tk-radius-lg);box-shadow:var(--tk-shadow-md);padding:4px;z-index:60}
+.am-who{display:flex;align-items:center;gap:10px;padding:8px 8px 10px}
+.am-who div>b{display:block;font-weight:600;line-height:18px}
+.am-who div>span{display:block;color:var(--tk-text-subtle);font-size:var(--tk-text-sm);line-height:16px}
+.hm{height:30px;display:flex;align-items:center;gap:8px;padding:0 8px;border-radius:var(--tk-radius-sm);color:var(--tk-text)}
+.hm .i{color:var(--tk-text-muted)}
+.hm.hl{background:var(--tk-bg-hover)}
+.hm .k{margin-left:auto;display:flex;gap:6px;align-items:center;color:var(--tk-text-subtle);font-size:var(--tk-text-xs)}
+.hm-sep{height:1px;background:var(--tk-border);margin:4px -4px}
+.newb{height:18px;padding:0 6px;border-radius:var(--tk-radius-sm);background:var(--tk-accent-subtle);color:var(--tk-accent-fg);font-size:var(--tk-text-xs);font-weight:500;display:inline-flex;align-items:center;gap:4px}
+.newb::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--tk-accent)}
+
+/* Profile general: achievements card */
+.gcard{padding:20px 24px 20px;background:var(--tk-surface);border:1px solid var(--tk-border);border-radius:var(--tk-radius-lg);max-width:640px}
+.gcard>header{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.gcard h2{margin:0;font-size:var(--tk-text-lg);line-height:var(--tk-leading-lg);font-weight:600}
+.gcard header p{margin:0;font-size:var(--tk-text-sm);color:var(--tk-text-muted)}
+.icon-tile{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--tk-bg-subtle);color:var(--tk-text-muted);flex:none}
+.trow{display:flex;align-items:flex-start;gap:12px}
+.trow .tl{flex:1}
+.trow .tl b{display:block;font-weight:500}
+.trow .tl p{margin:2px 0 0;color:var(--tk-text-muted);font-size:var(--tk-text-sm);line-height:var(--tk-leading-sm)}
+.trow .tl p+p{margin-top:6px}
+.tgl{width:32px;height:18px;border-radius:var(--tk-radius-full);background:var(--tk-border-strong);position:relative;flex:none;margin-top:1px}
+.tgl::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:var(--tk-shadow-xs);transition:transform var(--tk-duration-fast) var(--tk-ease-out)}
+.tgl.on{background:var(--tk-accent)}
+.tgl.on::after{transform:translateX(14px)}
+.confirm{margin-top:14px;padding:12px;border:1px solid var(--tk-danger-border);background:var(--tk-danger-bg);border-radius:var(--tk-radius-md)}
+.confirm b{display:block;font-weight:600;margin-bottom:2px}
+.confirm p{margin:0 0 10px;color:var(--tk-text-muted);font-size:var(--tk-text-sm)}
+.confirm .acts{display:flex;gap:8px}
+.btn-danger{background:var(--tk-red-solid);color:var(--tk-text-on-solid)}
+.offnote{margin-top:12px;display:flex;gap:8px;align-items:center;font-size:var(--tk-text-sm);color:var(--tk-text-subtle)}
+
+/* Teammate user card */
+.thread{padding:20px 24px;max-width:720px}
+.cmt{border:1px solid var(--tk-border);border-radius:var(--tk-radius-lg);background:var(--tk-surface);margin-bottom:10px}
+.cmt-h{display:flex;align-items:center;gap:8px;height:40px;padding:0 12px}
+.cmt-h .who{display:inline-flex;align-items:center;gap:8px;font-weight:600;border-radius:var(--tk-radius-sm);padding:2px 4px 2px 2px;margin-left:-2px}
+.cmt-h .who:hover,.cmt-h .who.on{background:var(--tk-bg-hover)}
+.cmt-h .who.on{outline:2px solid var(--tk-focus);outline-offset:1px}
+.cmt-h .when{color:var(--tk-text-subtle);font-size:var(--tk-text-sm)}
+.cmt-b{padding:0 12px 12px 44px;font-size:var(--tk-text-md);line-height:var(--tk-leading-md)}
+.cmt-b p{margin:0}
+.ucard{width:300px;background:var(--tk-surface-raised);border:1px solid var(--tk-border);border-radius:var(--tk-radius-lg);box-shadow:var(--tk-shadow-md)}
+.ucard.float{position:absolute;z-index:20}
+.uc-h{display:flex;align-items:center;gap:10px;padding:14px 14px 12px}
+.uc-h .av{width:32px;height:32px;font-size:12px}
+.uc-h div>b{display:block;font-weight:600;line-height:18px}
+.uc-h div>span{display:block;color:var(--tk-text-subtle);font-size:var(--tk-text-sm);line-height:16px}
+.uc-s{border-top:1px solid var(--tk-border-subtle);padding:10px 14px 12px}
+.uc-s .apop-lbl{margin:0 0 6px}
+.uc-list{display:grid;gap:2px}
+.uc-item{display:flex;align-items:center;gap:10px;height:40px;padding:0 6px;margin:0 -6px;border-radius:var(--tk-radius-md)}
+.uc-item:hover{background:var(--tk-bg-hover)}
+.uc-item .n{font-weight:500;line-height:16px}
+.uc-item .tr{font-size:var(--tk-text-xs);color:var(--tk-text-muted);display:flex;align-items:center;gap:4px}
+.uc-f{border-top:1px solid var(--tk-border-subtle);padding:8px 14px 10px;font-size:var(--tk-text-sm)}
+.uc-f a{color:var(--tk-accent-fg);font-weight:500}
+.onlyme{display:flex;gap:6px;align-items:center;color:var(--tk-text-subtle);font-size:var(--tk-text-xs)}
+</style>
+<script>
+function tkTheme(){var r=document.documentElement,c=r.getAttribute('data-theme');var d=c?c==='dark':matchMedia('(prefers-color-scheme: dark)').matches;r.setAttribute('data-theme',d?'light':'dark');}
+</script>
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="logo" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="none" stroke="#fff" stroke-width="1.5"/><path d="M7 7 7 4.25A2.75 2.75 0 1 1 4.25 7Z" fill="#fff"/></symbol>
+
+  <symbol id="s-todo" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.75" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+  <symbol id="s-inprogress" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.75" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M7 7 7 3.5A3.5 3.5 0 0 1 10.5 7Z" fill="currentColor"/></symbol>
+  <symbol id="s-onhold" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.75" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M5.6 4.9v4.2M8.4 4.9v4.2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
+  <symbol id="s-review" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.75" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M7 7 7 3.5A3.5 3.5 0 0 1 7 10.5Z" fill="currentColor"/></symbol>
+  <symbol id="s-rft" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.75" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M7 7 7 3.5A3.5 3.5 0 1 1 4.525 9.475Z" fill="currentColor"/></symbol>
+  <symbol id="s-testing" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.75" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M7 7 7 3.5A3.5 3.5 0 1 1 3.5 7Z" fill="currentColor"/></symbol>
+  <symbol id="s-rfd" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.75" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M7 7 7 3.5A3.5 3.5 0 1 1 4.525 4.525Z" fill="currentColor"/></symbol>
+  <symbol id="s-done" viewBox="0 0 14 14"><circle cx="7" cy="7" r="6.5" fill="currentColor"/><path d="M4.4 7.2 6.2 9l3.4-3.6" fill="none" style="stroke:#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+
+  <symbol id="p-highest" viewBox="0 0 14 14"><rect x="1" y="1" width="12" height="12" rx="3" fill="currentColor"/><path d="M7 3.8v4" fill="none" style="stroke:#fff" stroke-width="1.7" stroke-linecap="round"/><circle cx="7" cy="10.2" r="1" style="fill:#fff"/></symbol>
+  <symbol id="p-high" viewBox="0 0 14 14"><rect x="1.5" y="8" width="2.5" height="4.5" rx=".75" fill="currentColor"/><rect x="5.75" y="5" width="2.5" height="7.5" rx=".75" fill="currentColor"/><rect x="10" y="2" width="2.5" height="10.5" rx=".75" fill="currentColor"/></symbol>
+  <symbol id="p-medium" viewBox="0 0 14 14"><rect x="1.5" y="8" width="2.5" height="4.5" rx=".75" fill="currentColor"/><rect x="5.75" y="5" width="2.5" height="7.5" rx=".75" fill="currentColor"/><rect x="10" y="2" width="2.5" height="10.5" rx=".75" style="fill:var(--tk-priority-bar-off)"/></symbol>
+  <symbol id="p-low" viewBox="0 0 14 14"><rect x="1.5" y="8" width="2.5" height="4.5" rx=".75" fill="currentColor"/><rect x="5.75" y="5" width="2.5" height="7.5" rx=".75" style="fill:var(--tk-priority-bar-off)"/><rect x="10" y="2" width="2.5" height="10.5" rx=".75" style="fill:var(--tk-priority-bar-off)"/></symbol>
+  <symbol id="p-lowest" viewBox="0 0 14 14"><rect x="1.5" y="8" width="2.5" height="4.5" rx=".75" style="fill:var(--tk-priority-bar-off)"/><rect x="5.75" y="5" width="2.5" height="7.5" rx=".75" style="fill:var(--tk-priority-bar-off)"/><rect x="10" y="2" width="2.5" height="10.5" rx=".75" style="fill:var(--tk-priority-bar-off)"/></symbol>
+
+  <symbol id="t-epic" viewBox="0 0 24 24"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></symbol>
+  <symbol id="t-spike" viewBox="0 0 24 24"><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"/><path d="M8.5 2h7"/><path d="M7 16h10"/></symbol>
+  <symbol id="t-story" viewBox="0 0 24 24"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></symbol>
+  <symbol id="t-tech" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></symbol>
+  <symbol id="t-bug" viewBox="0 0 24 24"><path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3.003 3.003 0 1 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6.53 9C4.6 8.8 3 7.1 3 5"/><path d="M6 13H2"/><path d="M3 21c0-2.1 1.7-3.9 3.8-4"/><path d="M20.97 5c0 2.1-1.6 3.8-3.5 4"/><path d="M22 13h-4"/><path d="M17.2 17c2.1.1 3.8 1.9 3.8 4"/></symbol>
+
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+  <symbol id="i-chev-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-chev-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="i-chev-up" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></symbol>
+  <symbol id="i-mywork" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3"/><path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M3 12h.01"/><path d="M3 18h.01"/><path d="M3 6h.01"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M8 6h13"/></symbol>
+  <symbol id="i-board" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M8 7v7"/><path d="M12 7v4"/><path d="M16 7v9"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></symbol>
+  <symbol id="i-checks" viewBox="0 0 24 24"><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/></symbol>
+  <symbol id="i-history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24"><path d="M20 7h-9"/><path d="M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="i-flag" viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/></symbol>
+  <symbol id="i-panel" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/></symbol>
+  <symbol id="i-contrast" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 18a6 6 0 0 0 0-12v12z"/></symbol>
+  <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M21 4h-7"/><path d="M10 4H3"/><path d="M21 12h-9"/><path d="M8 12H3"/><path d="M21 20h-5"/><path d="M12 20H3"/><path d="M14 2v4"/><path d="M8 10v4"/><path d="M16 18v4"/></symbol>
+  <symbol id="i-filter" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M7 12h10"/><path d="M10 18h4"/></symbol>
+  <symbol id="i-sort" viewBox="0 0 24 24"><path d="m21 16-4 4-4-4"/><path d="M17 20V4"/><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/></symbol>
+  <symbol id="i-comment" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol>
+  <symbol id="i-tree" viewBox="0 0 24 24"><path d="M21 12h-8"/><path d="M21 6H8"/><path d="M21 18h-8"/><path d="M3 6v4c0 1.1.9 2 2 2h3"/><path d="M3 10v6c0 1.1.9 2 2 2h3"/></symbol>
+  <symbol id="i-hand" viewBox="0 0 24 24"><path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2"/><path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></symbol>
+  <symbol id="i-bot" viewBox="0 0 24 24"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></symbol>
+  <symbol id="i-dashed" viewBox="0 0 24 24"><path d="M10.1 2.182a10 10 0 0 1 3.8 0"/><path d="M13.9 21.818a10 10 0 0 1-3.8 0"/><path d="M17.609 3.721a10 10 0 0 1 2.69 2.7"/><path d="M2.182 13.9a10 10 0 0 1 0-3.8"/><path d="M20.279 17.609a10 10 0 0 1-2.7 2.69"/><path d="M21.818 10.1a10 10 0 0 1 0 3.8"/><path d="M3.721 6.391a10 10 0 0 1 2.7-2.69"/><path d="M6.391 20.279a10 10 0 0 1-2.69-2.7"/></symbol>
+  <symbol id="i-check-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="i-x-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></symbol>
+  <symbol id="i-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2"/></symbol>
+  <symbol id="i-tag" viewBox="0 0 24 24"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5"/></symbol>
+  <symbol id="i-bold" viewBox="0 0 24 24"><path d="M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8"/></symbol>
+  <symbol id="i-italic" viewBox="0 0 24 24"><path d="M19 4h-9"/><path d="M14 20H5"/><path d="M15 4 9 20"/></symbol>
+  <symbol id="i-code" viewBox="0 0 24 24"><path d="m16 18 6-6-6-6"/><path d="m8 6-6 6 6 6"/></symbol>
+  <symbol id="i-clip" viewBox="0 0 24 24"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></symbol>
+  <symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></symbol>
+  <symbol id="i-expand" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+  <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></symbol>
+  <symbol id="i-grip" viewBox="0 0 24 24"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2-3v-3a7 7 0 0 1 4-6"/><path d="M9 17v1a3 3 0 0 0 6 0v-1"/></symbol>
+  <symbol id="i-sparkles" viewBox="0 0 24 24"><path d="M16 18a2 2 0 0 1 2 2a2 2 0 0 1 2-2a2 2 0 0 1-2-2a2 2 0 0 1-2 2zm0-12a2 2 0 0 1 2 2a2 2 0 0 1 2-2a2 2 0 0 1-2-2a2 2 0 0 1-2 2zm-7 12a6 6 0 0 1 6-6a6 6 0 0 1-6-6a6 6 0 0 1-6 6a6 6 0 0 1 6 6z"/></symbol>
+  <symbol id="i-route" viewBox="0 0 24 24"><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M12 19h4.5a3.5 3.5 0 0 0 0-7h-8a3.5 3.5 0 0 1 0-7h3.5"/></symbol>
+  <symbol id="i-rocket" viewBox="0 0 24 24"><path d="M4 13a8 8 0 0 1 7 7a6 6 0 0 0 3-5a9 9 0 0 0 6-8a3 3 0 0 0-3-3a9 9 0 0 0-8 6a6 6 0 0 0-5 3"/><path d="M7 14a6 6 0 0 0-3 6a6 6 0 0 0 6-3"/><circle cx="15" cy="9" r="1"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01"/><path d="M11 12h1v4h1"/></symbol>
+  <symbol id="i-keyboard" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h0"/><path d="M10 10h0"/><path d="M14 10h0"/><path d="M18 10h0"/><path d="M6 14h0"/><path d="M18 14h0"/><path d="M10 14h4"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8.1 8.1 0 0 0-15.5-2m-.5-4v4h4"/><path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"/></symbol>
+  <symbol id="i-compass" viewBox="0 0 24 24"><path d="m8 16 2-6 6-2-2 6-6 2"/><circle cx="12" cy="12" r="9"/></symbol>
+  <symbol id="i-plug" viewBox="0 0 24 24"><path d="M9.785 6l8.215 8.215l-2.054 2.054a5.81 5.81 0 1 1-8.215-8.215z"/><path d="M4 20l3.5-3.5"/><path d="M15 4l-3.5 3.5"/><path d="M20 9l-3.5 3.5"/></symbol>
+  <symbol id="i-key" viewBox="0 0 24 24"><path d="M16.555 3.843l3.602 3.602a2.877 2.877 0 0 1 0 4.069l-2.643 2.643a2.877 2.877 0 0 1-4.069 0l-.301-.301l-6.558 6.558a2 2 0 0 1-1.239.578l-.175.008h-1.172a1 1 0 0 1-.993-.883l-.007-.117v-1.172a2 2 0 0 1 .467-1.284l.119-.13l.414-.414h2v-2h2v-2l2.144-2.144l-.301-.301a2.877 2.877 0 0 1 0-4.069l2.643-2.643a2.877 2.877 0 0 1 4.069 0z"/><path d="M15 9h.01"/></symbol>
+  <symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></symbol>
+  <symbol id="i-flag-check" viewBox="0 0 24 24"><path d="M5 5a5 5 0 0 1 7 0a5 5 0 0 0 7 0v9a5 5 0 0 1-7 0a5 5 0 0 0-7 0v-9z"/><path d="M5 21v-7"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0-4 0"/><path d="M21 12c-2.4 4-5.4 6-9 6c-3.6 0-6.6-2-9-6c2.4-4 5.4-6 9-6c3.6 0 6.6 2 9 6"/></symbol>
+</svg>
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="hx-ring" viewBox="0 0 48 48"><path d="M24 2 43.05 13v22L24 46 4.95 35V13Z"/></symbol>
+  <symbol id="hx-body" viewBox="0 0 48 48"><path d="M24 6.5 39.16 15.25v17.5L24 41.5 8.84 32.75v-17.5Z"/></symbol>
+
+  <symbol id="g-award" viewBox="0 0 24 24"><circle cx="12" cy="9" r="6"/><path d="m12 15 3.4 5.89 1.6-3.23 3.6.23-3.4-5.89"/><path d="m6.8 12-3.4 5.89 3.6-.23 1.6 3.23 3.4-5.89"/></symbol>
+  <symbol id="g-closer" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="g-reporter" viewBox="0 0 24 24"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/><path d="M12 11v6"/><path d="M9 14h6"/></symbol>
+  <symbol id="g-review" viewBox="0 0 24 24"><path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0-4 0"/><path d="M21 12c-2.4 4-5.4 6-9 6c-3.6 0-6.6-2-9-6c2.4-4 5.4-6 9-6c3.6 0 6.6 2 9 6"/></symbol>
+  <symbol id="g-talk" viewBox="0 0 24 24"><path d="M21 14l-3-3h-7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v10"/><path d="M14 15v2a1 1 0 0 1-1 1H6l-3 3V11a1 1 0 0 1 1-1h2"/></symbol>
+  <symbol id="g-board" viewBox="0 0 24 24"><path d="M4 4h6"/><path d="M14 4h6"/><rect x="4" y="8" width="6" height="12" rx="2"/><rect x="14" y="8" width="6" height="6" rx="2"/></symbol>
+  <symbol id="g-plug" viewBox="0 0 24 24"><path d="M9.785 6l8.215 8.215l-2.054 2.054a5.81 5.81 0 1 1-8.215-8.215z"/><path d="M4 20l3.5-3.5"/><path d="M15 4l-3.5 3.5"/><path d="M20 9l-3.5 3.5"/></symbol>
+  <symbol id="g-undo" viewBox="0 0 24 24"><path d="M9 14l-4-4 4-4"/><path d="M5 10h11a4 4 0 1 1 0 8h-1"/></symbol>
+  <symbol id="g-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></symbol>
+  <symbol id="g-triage" viewBox="0 0 24 24"><path d="M21 17h-8l-3.5-5H3"/><path d="M21 7h-8l-3.495 5"/><path d="M18 10l3-3-3-3"/><path d="M18 20l3-3-3-3"/></symbol>
+  <symbol id="g-test" viewBox="0 0 24 24"><path d="M9.615 20H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8"/><path d="M14 19l2 2 4-4"/><path d="M9 8h4"/><path d="M9 12h2"/></symbol>
+  <symbol id="g-run" viewBox="0 0 24 24"><path d="M7 4v16l13-8z"/></symbol>
+  <symbol id="g-robot" viewBox="0 0 24 24"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></symbol>
+  <symbol id="g-bug" viewBox="0 0 24 24"><path d="M9 7.13v-1a3 3 0 1 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6 13H2"/><path d="M22 13h-4"/></symbol>
+  <symbol id="g-question" viewBox="0 0 24 24"><path d="M8 8a3.5 3 0 0 1 3.5-3h1a3.5 3 0 0 1 3.5 3a3 3 0 0 1-2 3a3 4 0 0 0-2 4"/><path d="M12 19v.01"/></symbol>
+  <symbol id="i-share" viewBox="0 0 24 24"><circle cx="6" cy="12" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><path d="M8.7 10.7l6.6-3.4"/><path d="M8.7 13.3l6.6 3.4"/></symbol>
+  <symbol id="i-logout" viewBox="0 0 24 24"><path d="M14 8V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-2"/><path d="M9 12h12l-3-3"/><path d="M18 15l3-3"/></symbol>
+</svg>
+
+<div class="sheet">
+  <div class="sheet-head">
+    <span class="logo"><svg><use href="#logo"/></svg></span>
+    <h1>Achievements</h1>
+    <span class="subtle">Ticketing mockup · TKT-92 for TKT-66, TKT-67, TKT-68, TKT-93, TKT-98 · D-144</span>
+    <div class="end"><button class="btn btn-secondary btn-sm theme-btn" onclick="tkTheme()" title="Toggle light / dark"><svg class="i i-sm" aria-hidden="true"><use href="#i-contrast"/></svg>Theme</button></div>
+  </div>
+  <p class="sheet-intro">Private recognition for real actions. Everything here is visible only to its owner, Admins included, until the owner shares a single medal; others then see its name, tier and medal, never when it was earned. No totals, ranks, comparisons or anything time-based. The whole surface is hidden when the <code style="font-family:var(--tk-font-mono);font-size:12px">achievements</code> flag is off for the viewer or the user opted out.</p>
+
+  <!-- 1. Medal anatomy and states -->
+  <section class="sec" id="medal">
+    <div class="sec-head"><h2>Medal: anatomy, sizes and states</h2><span class="ref"><code>tk-achievement-medal</code> in <code>shared/ui</code> · design-system §8 "Achievement medal"</span></div>
+    <div class="panel">
+      <div class="anat">
+        <svg class="md md-xl m5 t-gold" viewBox="0 0 48 56" role="img" aria-label="Closer, Gold"><use href="#hx-ring" class="ring" width="48" height="48"/><use href="#hx-body" class="body" width="48" height="48"/><use href="#g-closer" class="gly" x="15" y="15" width="18" height="18"/><circle class="pip" cx="17" cy="52.5" r="2.25"/><circle class="pip" cx="24" cy="52.5" r="2.25"/><circle class="pip" cx="31" cy="52.5" r="2.25"/></svg>
+        <ol>
+          <li><b>Ring</b>: hexagon outline in the tier colour, 2.5 units at the 48 grid. One-time medals get a thin ring in the palette colour instead.</li>
+          <li><b>Body</b>: hexagon filled with <code>--tk-palette-n</code> mixed at <code>--tk-tint-avatar</code> over the surface, 1.25 stroke in <code>--tk-palette-n</code>. <code>n = hash(id) mod 8</code>, like labels and avatars.</li>
+          <li><b>Glyph</b>: the Tabler icon from the catalogue, 18 of 48, stroked in <code>--tk-palette-n-fg</code>.</li>
+          <li><b>Pips</b>: one dot per tier reached (bronze 1 to platinum 4), so tier never depends on colour. Drawn at 32px and up; below that the tier is written next to the medal.</li>
+        </ol>
+        <table class="tok">
+          <tr><th>Proposed token</th><th>Light</th><th>Dark</th></tr>
+          <tr class="t-bronze"><td><span class="pips-t"><i></i></span><code>--tk-tier-bronze</code></td><td><code>#a3622b</code></td><td><code>#d39463</code></td></tr>
+          <tr class="t-silver"><td><span class="pips-t"><i></i><i></i></span><code>--tk-tier-silver</code></td><td><code>#7b8494</code></td><td><code>#b9c0cc</code></td></tr>
+          <tr class="t-gold"><td><span class="pips-t"><i></i><i></i><i></i></span><code>--tk-tier-gold</code></td><td><code>#a67c00</code></td><td><code>#e2b53e</code></td></tr>
+          <tr class="t-platinum"><td><span class="pips-t"><i></i><i></i><i></i><i></i></span><code>--tk-tier-platinum</code></td><td><code>#3d8796</code></td><td><code>#7fcfdc</code></td></tr>
+          <tr><td colspan="3" class="subtle" style="font-size:var(--tk-text-xs)">Each is at least 3:1 against <code>--tk-bg</code> and <code>--tk-surface</code> in its theme. Locked uses <code>--tk-border-strong</code>, dashed.</td></tr>
+        </table>
+      </div>
+      <div class="sizes">
+        <div class="sz"><svg class="md md-l m0 t-silver" viewBox="0 0 48 56" aria-hidden="true"><use href="#hx-ring" class="ring" width="48" height="48"/><use href="#hx-body" class="body" width="48" height="48"/><use href="#g-reporter" class="gly" x="15" y="15" width="18" height="18"/><circle class="pip" cx="20.5" cy="52.5" r="2.25"/><circle class="pip" cx="27.5" cy="52.5" r="2.25"/></svg>64 · detail popover</div>
+        <div class="sz"><svg class="md m0 t-silver" viewBox="0 0 48 56" aria-hidden="true"><use href="#hx-ring" class="ring" width="48" height="48"/><use href="#hx-body" class="body" width="48" height="48"/><use href="#g-reporter" class="gly" x="15" y="15" width="18" height="18"/><circle class="pip" cx="20.5" cy="52.5" r="2.25"/><circle class="pip" cx="27.5" cy="52.5" r="2.25"/></svg>48 · tab grid</div>
+        <div class="sz"><svg class="md md-s m0 t-silver" viewBox="0 0 48 56" aria-hidden="true"><use href="#hx-ring" class="ring" width="48" height="48"/><use href="#hx-body" class="body" width="48" height="48"/><use href="#g-reporter" class="gly" x="15" y="15" width="18" height="18"/><circle class="pip" cx="20.5" cy="52.5" r="2.25"/><circle class="pip" cx="27.5" cy="52.5" r="2.25"/></svg>32 · toast, user card</div>
+        <div class="sz"><svg class="md md-xs sq m0 t-silver" viewBox="0 0 48 48" aria-hidden="true"><use href="#hx-ring" class="ring" width="48" height="48"/><use href="#hx-body" class="body" width="48" height="48"/><use href="#g-reporter" class="gly" x="15" y="15" width="18" height="18"/></svg>20 · no pips, tier as text</div>
+      </div>
+    </div>
+
+    <div class="cap" style="margin-top:16px">Every state, with its accessible name</div>
+    <div class="panel">
+      <div class="states">
+        <div class="state"><svg class="md m4 locked" viewBox="0 0 48 56" aria-hidden="true"><use href="#hx-body" class="body" width="48" height="48"/><use href="#g-link" class="gly" x="15" y="15" width="18" height="18"/></svg><span class="s-name">Locked</span><span class="s-tier">Not earned yet</span><span class="s-aria">"Connector, not earned yet"</span></div>
+        <div class="state"><svg class="md m4 locked" viewBox="0 0 48 56" aria-hidden="true"><use href="#hx-body" class="body" width="48" height="48"/><use href="#g-triage" class="gly" x="15" y="15" width="18" height="18"/></svg><span class="minibar t-bronze"><i style="width:40%"></i></span><span class="s-name">In progress</span><span class="s-tier">4 of 10 to Bronze</span><span class="s-aria">"Triage, not earned yet, 4 of 10 to Bronze"</span></div>
+        <div class="state"><svg class="md m1 t-bronze" viewBox="0 0 48 56" aria-hidden="true"><use href="#hx-ring" class="ring" width="48" height="48"/><use href="#hx-body" class="body" width="48" height="48"/><use href="#g-talk" class="gly" x="15" y="15" width="18" height="18"/><circle class="pip" cx="24" cy="52.5" r="2.25"/></svg><span class="s-name">Bronze</span><span class="s-tier">1 pip</span><span class="s-aria">"Conversationalist, Bronze"</span></div>
+        <div class="state"><svg class="md m0 t-silver" viewBox="0 0 48 56" aria-hidden="true"><use href="#hx-ring" class="ring" width="48" height="48"/><use href="#hx-body" class="body" width="48" height="48"/><use href="#g-reporter" class="gly" x="15" y="15" width="18" height="18"/><circle class="pip" cx="20.5" cy="52.5" r="2.25"/><circle class="pip" cx="27.5" cy="52.5" r="2.25"/></svg><span class="s-name">Silver</span><span class="s-tier">2 pips</span><span class="s-aria">"Reporter, Silver"</span></div>
+        <div class="state"><svg class="md m5 t-gold" viewBox="0 0 48 56" aria-hidden="true"><use href="#hx-ring" class="ring" width="48" height="48"/><use href="#hx-body" class="body" width="48" height="48"/><use href="#g-closer" class="gly" x="15" y="15" width="18" height="18"/><circle class="pip" cx="17" cy="52.5" r="2.25"/><circle class="pip" cx="24" cy="52.5" r="2.25"/><circle class="pip" cx="31" cy="52.5" r="2.25"/></svg><span class="s-name">Gold</span><span class="s-tier">3 pips</span><span class="s-aria">"Closer, Gold"</span></div>
+        <div class="state"><svg class="md m6 t-platinum" viewBox="0 0 48 56" aria-hidden="true"><use href="#hx-ring" class="ring" width="48" height="48"/><use href="#hx-body" class="body" width="48" height="48"/><use href="#g-review" class="gly" x="15" y="15" width="18" height="18"/><circle class="pip" cx="13.5" cy="52.5" r="2.25"/><circle class="pip" cx="20.5" cy="52.5" r="2.25"/><circle class="pip" cx="27.5" cy="52.5" r="2.25"/><circle class="pip" cx="34.5" cy="52.5" r="2.25"/></svg><span class="s-name">Platinum</span><span class="s-tier">4 pips</span><span class="s-aria">"Ready for review, Platinum"</span></div>
+        <div class="state"><svg class="md m3 once" viewBox="0 0 48 56" aria-hidden="true"><use href="#hx-ring" class="ring" width="48" height="48"/><use href="#hx-body" class="body" width="48" height="48"/><use href="#g-board" class="gly" x="15" y="15" width="18" height="18"/></svg><span class="s-name">One-time</span><span class="s-tier">Thin ring, no pips</span><span class="s-aria">"Board builder, earned"</span></div>
+        <div class="state"><svg class="md m2 locked" viewBox="0 0 48 56" aria-hidden="true"><use href="#hx-body" class="body" width="48" height="48"/><use href="#g-question" class="gly" x="15" y="15" width="18" height="18"/></svg><span class="s-name">Secret, locked</span><span class="s-tier">??? · no hint</span><span class="s-aria">"Secret achievement, not earned yet"</span></div>
+        <div class="state"><svg class="md m2 once" viewBox="0 0 48 56" aria-hidden="true"><use href="#hx-ring" class="ring" width="48" height="48"/><use href="#hx-body" class="body" width="48" height="48"/><use href="#g-undo" class="gly" x="15" y="15" width="18" height="18"/></svg><span class="s-name">Secret, earned</span><span class="s-tier">Name revealed</span><span class="s-aria">"Second thoughts, secret, earned"</span></div>
+        <div class="state"><span class="mdw"><svg class="md m5 t-gold" viewBox="0 0 48 56" aria-hidden="true"><use href="#hx-ring" class="ring" width="48" height="48"/><use href="#hx-body" class="body" width="48" height="48"/><use href="#g-closer" class="gly" x="15" y="15" width="18" height="18"/><circle class="pip" cx="17" cy="52.5" r="2.25"/><circle class="pip" cx="24" cy="52.5" r="2.25"/><circle class="pip" cx="31" cy="52.5" r="2.25"/></svg><span class="shr"><svg class="i" aria-hidden="true"><use href="#i-users"/></svg></span></span><span class="s-name">Shared</span><span class="s-tier">Owner's view only</span><span class="s-aria">"Closer, Gold, shared"</span></div>
+      </div>
+    </div>
+    <div class="legend"><span>The medal is <code>aria-hidden</code> when its name and tier are written next to it; standalone it is <code>role="img"</code> with the name shown above.</span><span>The shared marker appears only in the owner's own views; teammates never see it.</span></div>
+  </section>
+
+  <!-- 2. Achievements tab -->
+  <section class="sec" id="tab">
+    <div class="sec-head"><h2>Profile → Achievements tab</h2><span class="ref">view <code>profile.achievements</code> · TKT-66, share control TKT-98 · tile <em>Closer</em> has keyboard focus, <em>Board builder</em>'s control is hovered</span></div>
+    <div class="frame">
+      <div class="app mini" style="height:1130px">
+        <aside class="sidebar">
+          <div class="sb-head"><span class="logo"><svg><use href="#logo"/></svg></span><span class="name">Ticketing</span></div>
+          <div class="sb-scroll">
+            <a class="nav" href="#"><svg class="i" aria-hidden="true"><use href="#i-mywork"/></svg>My work<span class="count">4</span></a>
+            <div class="sb-sec">
+              <div class="sb-label">Projects</div>
+              <a class="nav" href="#"><span class="ptile p0">P</span>Payments<span class="chev"><svg class="i i-sm" aria-hidden="true"><use href="#i-chev-right"/></svg></span></a>
+              <a class="nav" href="#"><span class="ptile p5">W</span>Web app<span class="chev"><svg class="i i-sm" aria-hidden="true"><use href="#i-chev-right"/></svg></span></a>
+            </div>
+            <div class="sb-sec">
+              <div class="sb-label">Boards</div>
+              <a class="nav" href="#"><svg class="i" aria-hidden="true"><use href="#i-board"/></svg>Web Sprint 42</a>
+            </div>
+          </div>
+          <div class="sb-foot"><button class="btn btn-ghost btn-sm" onclick="tkTheme()"><svg class="i i-sm" aria-hidden="true"><use href="#i-contrast"/></svg>Theme</button></div>
+        </aside>
+        <div class="main">
+          <header class="topbar">
+            <nav class="crumbs"><span>Profile</span><span class="sep">›</span><span class="cur">Achievements</span></nav>
+            <button class="search"><svg class="i i-sm" aria-hidden="true"><use href="#i-search"/></svg><span>Search or jump to…</span><span class="k"><span class="kbd">Ctrl K</span></span></button>
+            <div class="tb-right">
+              <button class="btn btn-primary"><svg class="i i-sm" aria-hidden="true"><use href="#i-plus"/></svg>New ticket<span class="kbd">C</span></button>
+              <button class="btn btn-ghost btn-icon" title="Notifications"><svg class="i" aria-hidden="true"><use href="#i-bell"/></svg></button>
+              <button class="btn btn-ghost btn-icon" title="Help"><svg class="i" aria-hidden="true"><use href="#i-help"/></svg></button>
+              <button class="avbtn" aria-label="Account menu"><span class="av av-24 p4">KD</span></button>
+            </div>
+          </header>
+          <div class="content ppage">
+            <div class="phead"><h1>Profile</h1></div>
+            <nav class="ptabs" aria-label="Profile sections"><a href="#">Profile</a><a href="#">Access tokens</a><a href="#" class="on" aria-current="page">Achievements</a></nav>
+            <div class="pbody">
+              <p class="pintro"><svg class="i i-sm" aria-hidden="true"><use href="#i-lock"/></svg>Only you can see these, Admins included, unless you share one. Others then see its name and tier, never when you earned it.</p>
+
+              <div class="agroup">Earned</div>
+              <div class="agrid" role="grid" aria-label="Earned achievements">
+                <div class="ach kfocus" tabindex="0" role="gridcell" aria-label="Closer, Gold, shared">
+                  <span class="mdw"><svg class="md m5 t-gold" viewBox="0 0 48 56" aria-hidden="true"><use href="#hx-ring" class="ring" width="48" height="48"/><use href="#hx-body" class="body" width="48" height="48"/><use href="#g-closer" class="gly" x="15" y="15" width="18" height="18"/><circle class="pip" cx="17" cy="52.5" r="2.25"/><circle class="pip" cx="24" cy="52.5" r="2.25"/><circle class="pip" cx="31" cy="52.5" r="2.25"/></svg><span class="shr"><svg class="i" aria-hidden="true"><use href="#i-users"/></svg></span></span>
+                  <div class="tx">
+                    <div class="nm">Closer<span class="end"><button class="share on" aria-pressed="true" title="Shared with everyone signed in"><svg class="i" aria-hidden="true"><use href="#i-users"/></svg>Shared</button></span></div>
+                    <div class="tr">Gold</div>
+                    <div class="ds">Tickets you were the first to move to Done.</div>
+                    <div class="prog t-platinum"><span class="pb"><i style="width:24%"></i></span><span>61 of 250 to Platinum</span></div>
+                  </div>
+                </div>
+                <div class="ach" tabindex="-1" role="gridcell">
+                  <svg class="md m0 t-silver" viewBox="0 0 48 56" aria-hidden="true"><use href="#hx-ring" class="ring" width="48" height="48"/><use href="#hx-body" class="body" width="48" height="48"/><use href="#g-reporter" class="gly" x="15" y="15" width="18" height="18"/><circle class="pip" cx="20.5" cy="52.5" r="2.25"/><circle class="pip" cx="27.5" cy="52.5" r="2.25"/></svg>
+                  <div class="tx">
+                    <div class="nm">Reporter<span class="end"><button class="share" aria-pressed="false"><svg class="i" aria-hidden="true"><use href="#i-share"/></svg>Share</button></span></div>
+                    <div class="tr">Silver</div>
+                    <div class="ds">Tickets you created.</div>
+                    <div class="prog t-gold"><span class="pb"><i style="width:46%"></i></span><span>23 of 50 to Gold</span></div>
+                  </div>
+                </div>
+                <div class="ach" tabindex="-1" role="gridcell">
+                  <svg class="md m6 t-platinum" viewBox="0 0 48 56" aria-hidden="true"><use href="#hx-ring" class="ring" width="48" height="48"/><use href="#hx-body" class="body" width="48" height="48"/><use href="#g-review" class="gly" x="15" y="15" width="18" height="18"/><circle class="pip" cx="13.5" cy="52.5" r="2.25"/><circle class="pip" cx="20.5" cy="52.5" r="2.25"/><circle class="pip" cx="27.5" cy="52.5" r="2.25"/><circle class="pip" cx="34.5" cy="52.5" r="2.25"/></svg>
+                  <div class="tx">
+                    <div class="nm">Ready for review<span class="end"><button class="share" aria-pressed="false"><svg class="i" aria-hidden="true"><use href="#i-share"/></svg>Share</button></span></div>
+                    <div class="tr">Platinum</div>
+                    <div class="ds">Tickets you moved to Review.</div>
+                    <div class="prog top"><span>Highest tier</span></div>
+                  </div>
+                </div>
+                <div class="ach" tabindex="-1" role="gridcell">
+                  <svg class="md m1 t-bronze" viewBox="0 0 48 56" aria-hidden="true"><use href="#hx-ring" class="ring" width="48" height="48"/><use href="#hx-body" class="body" width="48" height="48"/><use href="#g-talk" class="gly" x="15" y="15" width="18" height="18"/><circle class="pip" cx="24" cy="52.5" r="2.25"/></svg>
+                  <div class="tx">
+                    <div class="nm">Conversationalist<span class="end"><button class="share" aria-pressed="false"><svg class="i" aria-hidden="true"><use href="#i-share"/></svg>Share</button></span></div>
+                    <div class="tr">Bronze</div>
+                    <div class="ds">Comments you added.</div>
+                    <div class="prog t-silver"><span class="pb"><i style="width:36%"></i></span><span>9 of 25 to Silver</span></div>
+                  </div>
+                </div>
+                <div class="ach" tabindex="-1" role="gridcell">
+                  <span class="mdw"><svg class="md m3 once" viewBox="0 0 48 56" aria-hidden="true"><use href="#hx-ring" class="ring" width="48" height="48"/><use href="#hx-body" class="body" width="48" height="48"/><use href="#g-board" class="gly" x="15" y="15" width="18" height="18"/></svg><span class="shr"><svg class="i" aria-hidden="true"><use href="#i-users"/></svg></span></span>
+                  <div class="tx">
+                    <div class="nm">Board builder<span class="end"><button class="share on hov" aria-pressed="true" title="Stop sharing"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg>Unshare</button></span></div>
+                    <div class="tr">Earned</div>
+                    <div class="ds">You created a board.</div>
+                  </div>
+                </div>
+                <div class="ach" tabindex="-1" role="gridcell">
+                  <svg class="md m7 once" viewBox="0 0 48 56" aria-hidden="true"><use href="#hx-ring" class="ring" width="48" height="48"/><use href="#hx-body" class="body" width="48" height="48"/><use href="#g-plug" class="gly" x="15" y="15" width="18" height="18"/></svg>
+                  <div class="tx">
+                    <div class="nm">Machine whisperer<span class="end"><button class="share" aria-pressed="false"><svg class="i" aria-hidden="true"><use href="#i-share"/></svg>Share</button></span></div>
+                    <div class="tr">Earned</div>
+                    <div class="ds">Your first change made through MCP.</div>
+                  </div>
+                </div>
+                <div class="ach" tabindex="-1" role="gridcell">
+                  <svg class="md m2 once" viewBox="0 0 48 56" aria-hidden="true"><use href="#hx-ring" class="ring" width="48" height="48"/><use href="#hx-body" class="body" width="48" height="48"/><use href="#g-undo" class="gly" x="15" y="15" width="18" height="18"/></svg>
+                  <div class="tx">
+                    <div class="nm">Second thoughts<span class="end"><button class="share" aria-pressed="false"><svg class="i" aria-hidden="true"><use href="#i-share"/></svg>Share</button></span></div>
+                    <div class="tr">Earned<span class="badge b-secret">Secret</span></div>
+                    <div class="ds">You changed your mind and undid a delete.</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="agroup">Still to earn</div>
+              <div class="agrid" role="grid" aria-label="Achievements still to earn">
+                <div class="ach" tabindex="-1" role="gridcell">
+                  <svg class="md m4 locked" viewBox="0 0 48 56" aria-hidden="true"><use href="#hx-body" class="body" width="48" height="48"/><use href="#g-triage" class="gly" x="15" y="15" width="18" height="18"/></svg>
+                  <div class="tx">
+                    <div class="nm">Triage</div>
+                    <div class="tr">Not earned yet</div>
+                    <div class="ds">Tickets you assigned to a teammate.</div>
+                    <div class="prog t-bronze"><span class="pb"><i style="width:40%"></i></span><span>4 of 10 to Bronze</span></div>
+                  </div>
+                </div>
+                <div class="ach" tabindex="-1" role="gridcell">
+                  <svg class="md m4 locked" viewBox="0 0 48 56" aria-hidden="true"><use href="#hx-body" class="body" width="48" height="48"/><use href="#g-link" class="gly" x="15" y="15" width="18" height="18"/></svg>
+                  <div class="tx">
+                    <div class="nm">Connector</div>
+                    <div class="tr">Not earned yet</div>
+                    <div class="ds">Links you added between tickets.</div>
+                  </div>
+                </div>
+                <div class="ach" tabindex="-1" role="gridcell">
+                  <svg class="md m6 locked" viewBox="0 0 48 56" aria-hidden="true"><use href="#hx-body" class="body" width="48" height="48"/><use href="#g-test" class="gly" x="15" y="15" width="18" height="18"/></svg>
+                  <div class="tx">
+                    <div class="nm">Test author</div>
+                    <div class="tr">Not earned yet</div>
+                    <div class="ds">Test cases you wrote.</div>
+                  </div>
+                </div>
+                <div class="ach" tabindex="-1" role="gridcell">
+                  <svg class="md m7 locked" viewBox="0 0 48 56" aria-hidden="true"><use href="#hx-body" class="body" width="48" height="48"/><use href="#g-run" class="gly" x="15" y="15" width="18" height="18"/></svg>
+                  <div class="tx">
+                    <div class="nm">Regression runner</div>
+                    <div class="tr">Not earned yet</div>
+                    <div class="ds">Results you recorded in regression sessions.</div>
+                    <div class="prog t-bronze"><span class="pb"><i style="width:30%"></i></span><span>3 of 10 to Bronze</span></div>
+                  </div>
+                </div>
+                <div class="ach" tabindex="-1" role="gridcell">
+                  <svg class="md m1 locked" viewBox="0 0 48 56" aria-hidden="true"><use href="#hx-body" class="body" width="48" height="48"/><use href="#g-robot" class="gly" x="15" y="15" width="18" height="18"/></svg>
+                  <div class="tx">
+                    <div class="nm">Delegator</div>
+                    <div class="tr">Not earned yet</div>
+                    <div class="ds">Tickets you delegated to an agent.</div>
+                  </div>
+                </div>
+                <div class="ach" tabindex="-1" role="gridcell">
+                  <svg class="md m2 locked" viewBox="0 0 48 56" aria-hidden="true"><use href="#hx-body" class="body" width="48" height="48"/><use href="#g-bug" class="gly" x="15" y="15" width="18" height="18"/></svg>
+                  <div class="tx">
+                    <div class="nm">Bug hunter</div>
+                    <div class="tr">Not earned yet</div>
+                    <div class="ds">Bugs you reported.</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="agroup">Secret</div>
+              <div class="agrid" role="grid" aria-label="Secret achievements">
+                <div class="ach secret-un" tabindex="-1" role="gridcell" aria-label="Secret achievement, not earned yet">
+                  <svg class="md m0 locked" viewBox="0 0 48 56" aria-hidden="true"><use href="#hx-body" class="body" width="48" height="48"/><use href="#g-question" class="gly" x="15" y="15" width="18" height="18"/></svg>
+                  <div class="tx">
+                    <div class="nm">???</div>
+                    <div class="tr">Secret</div>
+                    <div class="ds">It turns up when you least expect it.</div>
+                  </div>
+                </div>
+                <div class="ach secret-un" tabindex="-1" role="gridcell" aria-label="Secret achievement, not earned yet">
+                  <svg class="md m5 locked" viewBox="0 0 48 56" aria-hidden="true"><use href="#hx-body" class="body" width="48" height="48"/><use href="#g-question" class="gly" x="15" y="15" width="18" height="18"/></svg>
+                  <div class="tx">
+                    <div class="nm">???</div>
+                    <div class="tr">Secret</div>
+                    <div class="ds">It turns up when you least expect it.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="legend"><span>Groups: Earned (highest tier first), Still to earn (closest first), Secret. No totals, no "7 of 22", no percentages.</span><span>One roving tab stop: arrows move through the grid, Home/End jump, Enter opens the detail, <span class="kbd">S</span> shares or unshares the focused earned medal.</span><span>Share is optimistic and rolls back with a danger toast; success toast: "Closer is shared · Undo".</span><span>Opening the tab marks unseen achievements as seen.</span></div>
+  </section>
+
+  <!-- 3. Detail popovers -->
+  <section class="sec" id="detail">
+    <div class="sec-head"><h2>Medal detail: how to earn and Show me, tiers and sharing</h2><span class="ref">opens from a tile on click or Enter · CDK overlay, <code>role="dialog"</code> · hint and learn action TKT-93 (D-143)</span></div>
+    <div class="frame" style="padding:24px;background:var(--tk-bg-subtle)">
+      <div style="display:flex;gap:20px;align-items:flex-start;justify-content:center">
+        <div class="apop" role="dialog" aria-labelledby="d1">
+          <div class="apop-h">
+            <svg class="md md-l m4 locked" viewBox="0 0 48 56" aria-hidden="true"><use href="#hx-body" class="body" width="48" height="48"/><use href="#g-link" class="gly" x="15" y="15" width="18" height="18"/></svg>
+            <div class="t"><h3 id="d1">Connector</h3><div class="tr">Not earned yet</div></div>
+            <button class="btn btn-ghost btn-sm btn-icon x" aria-label="Close  Esc"><svg class="i i-sm" aria-hidden="true"><use href="#i-x"/></svg></button>
+          </div>
+          <div class="apop-b">
+            <p>Links you added between tickets.</p>
+            <div class="apop-lbl">How to earn</div>
+            <div class="howto"><svg class="i i-sm" aria-hidden="true"><use href="#i-info"/></svg><span>Open a ticket and link it to another one, for example "blocks" or "relates to". Your first link earns Bronze.</span></div>
+          </div>
+          <div class="apop-f">
+            <span class="note">Starts the ticket tour at the Links section.</span>
+            <button class="btn btn-secondary"><svg class="i i-sm" aria-hidden="true"><use href="#i-compass"/></svg>Show me</button>
+          </div>
+        </div>
+
+        <div class="apop" role="dialog" aria-labelledby="d2">
+          <div class="apop-h">
+            <span class="mdw"><svg class="md md-l m5 t-gold" viewBox="0 0 48 56" aria-hidden="true"><use href="#hx-ring" class="ring" width="48" height="48"/><use href="#hx-body" class="body" width="48" height="48"/><use href="#g-closer" class="gly" x="15" y="15" width="18" height="18"/><circle class="pip" cx="17" cy="52.5" r="2.25"/><circle class="pip" cx="24" cy="52.5" r="2.25"/><circle class="pip" cx="31" cy="52.5" r="2.25"/></svg></span>
+            <div class="t"><h3 id="d2">Closer</h3><div class="tr">Gold</div></div>
+            <button class="btn btn-ghost btn-sm btn-icon x" aria-label="Close  Esc"><svg class="i i-sm" aria-hidden="true"><use href="#i-x"/></svg></button>
+          </div>
+          <div class="apop-b">
+            <p>Tickets you were the first to move to Done.</p>
+            <div class="apop-lbl">Tiers</div>
+            <div class="ladder">
+              <div class="lr done t-bronze"><span class="pips-t"><i></i></span>Bronze<span class="n">1</span><span class="end"><svg class="i i-sm" aria-hidden="true"><use href="#i-check"/></svg>Earned</span></div>
+              <div class="lr done t-silver"><span class="pips-t"><i></i><i></i></span>Silver<span class="n">10</span><span class="end"><svg class="i i-sm" aria-hidden="true"><use href="#i-check"/></svg>Earned</span></div>
+              <div class="lr done t-gold"><span class="pips-t"><i></i><i></i><i></i></span>Gold<span class="n">50</span><span class="end"><svg class="i i-sm" aria-hidden="true"><use href="#i-check"/></svg>Earned</span></div>
+              <div class="lr next t-platinum"><span class="pips-t"><i></i><i></i><i></i><i></i></span>Platinum<span class="n">250</span><span class="end tnum">61 so far</span></div>
+            </div>
+          </div>
+          <div class="apop-f">
+            <span class="note">Not shared. Sharing shows everyone signed in the name and tier, never when you earned it.</span>
+            <button class="share" aria-pressed="false" style="height:28px;border:1px solid var(--tk-border-strong)"><svg class="i" aria-hidden="true"><use href="#i-share"/></svg>Share</button>
+          </div>
+        </div>
+
+        <div class="apop" role="dialog" aria-labelledby="d3" style="width:300px">
+          <div class="apop-h">
+            <svg class="md md-l m0 locked" viewBox="0 0 48 56" aria-hidden="true"><use href="#hx-body" class="body" width="48" height="48"/><use href="#g-question" class="gly" x="15" y="15" width="18" height="18"/></svg>
+            <div class="t"><h3 id="d3">???</h3><div class="tr">Secret · not earned yet</div></div>
+            <button class="btn btn-ghost btn-sm btn-icon x" aria-label="Close  Esc"><svg class="i i-sm" aria-hidden="true"><use href="#i-x"/></svg></button>
+          </div>
+          <div class="apop-b">
+            <p>A secret achievement. It turns up when you least expect it, so there is no hint.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="legend"><span>Show me appears only when a matching learn action or tour can start right now (same rule as empty states, D-143); otherwise the hint stands alone.</span><span>Secret entries never get a hint or Show me. Nudges stay here: no toasts or notifications about unearned achievements.</span></div>
+  </section>
+
+  <!-- 4. Loading and empty -->
+  <section class="sec" id="states">
+    <div class="sec-head"><h2>Loading skeleton and empty state</h2><span class="ref">skeleton after 120ms, held at least 250ms · empty = nothing earned yet (no backfill, D-144)</span></div>
+    <div class="grid2">
+      <div>
+        <div class="cap">Loading</div>
+        <div class="frame" style="height:440px">
+          <nav class="ptabs" aria-label="Profile sections"><a href="#">Profile</a><a href="#">Access tokens</a><a href="#" class="on">Achievements</a></nav>
+          <div class="pbody" aria-busy="true">
+            <p class="pintro"><span class="bar sk" style="width:340px"></span></p>
+            <div class="agroup"><span class="bar sk" style="width:56px"></span></div>
+            <div class="agrid" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+              <div class="ach skel"><span class="sk-hex sk"></span><div class="tx"><span class="bar sk" style="width:62%"></span><span class="bar sk" style="width:28%"></span><span class="bar sk" style="width:84%"></span><span class="bar sk" style="width:70%;height:4px;margin-top:6px"></span></div></div>
+              <div class="ach skel"><span class="sk-hex sk"></span><div class="tx"><span class="bar sk" style="width:48%"></span><span class="bar sk" style="width:22%"></span><span class="bar sk" style="width:76%"></span></div></div>
+              <div class="ach skel"><span class="sk-hex sk"></span><div class="tx"><span class="bar sk" style="width:70%"></span><span class="bar sk" style="width:30%"></span><span class="bar sk" style="width:58%"></span><span class="bar sk" style="width:64%;height:4px;margin-top:6px"></span></div></div>
+              <div class="ach skel"><span class="sk-hex sk"></span><div class="tx"><span class="bar sk" style="width:54%"></span><span class="bar sk" style="width:26%"></span><span class="bar sk" style="width:80%"></span></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="cap">Nothing earned yet</div>
+        <div class="frame" style="height:440px">
+          <nav class="ptabs" aria-label="Profile sections"><a href="#">Profile</a><a href="#">Access tokens</a><a href="#" class="on">Achievements</a></nav>
+          <div class="pbody">
+            <div class="empty">
+              <svg class="i ei" aria-hidden="true"><use href="#g-award"/></svg>
+              <h3>Achievements start counting now</h3>
+              <p>What you do in Ticketing from today on counts towards them. Work from before today isn't included.</p>
+              <p class="onlyme" style="justify-content:center;margin-top:8px"><svg class="i i-xs" aria-hidden="true"><use href="#i-lock"/></svg>Only you can see them unless you share one.</p>
+            </div>
+            <div class="agroup">Still to earn</div>
+            <div class="agrid" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+              <div class="ach">
+                <svg class="md m0 locked" viewBox="0 0 48 56" aria-hidden="true"><use href="#hx-body" class="body" width="48" height="48"/><use href="#g-reporter" class="gly" x="15" y="15" width="18" height="18"/></svg>
+                <div class="tx"><div class="nm">Reporter</div><div class="tr">Not earned yet</div><div class="ds">Tickets you created.</div></div>
+              </div>
+              <div class="ach">
+                <svg class="md m5 locked" viewBox="0 0 48 56" aria-hidden="true"><use href="#hx-body" class="body" width="48" height="48"/><use href="#g-closer" class="gly" x="15" y="15" width="18" height="18"/></svg>
+                <div class="tx"><div class="nm">Closer</div><div class="tr">Not earned yet</div><div class="ds">Tickets you were the first to move to Done.</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="legend"><span>The empty state has no create action: there is nothing to create. The grid below it is the way in, each locked medal with its hint.</span><span>Same copy after opting back in, because counting restarts from zero.</span></div>
+  </section>
+
+  <!-- 5. Toasts and avatar dot -->
+  <section class="sec" id="unlock">
+    <div class="sec-head"><h2>Unlock toast, summary toast and the avatar-menu dot</h2><span class="ref">TKT-67 · unseen count rides on the notification poll · bottom-right, 5s, pauses on hover</span></div>
+    <div class="grid2">
+      <div>
+        <div class="cap">Toasts</div>
+        <div class="frame" style="height:340px">
+          <div class="toasts">
+            <div class="cap" style="align-self:flex-start">One unlock</div>
+            <div class="tst" role="status">
+              <svg class="md md-s m5 t-silver" viewBox="0 0 48 56" aria-hidden="true"><use href="#hx-ring" class="ring" width="48" height="48"/><use href="#hx-body" class="body" width="48" height="48"/><use href="#g-closer" class="gly" x="15" y="15" width="18" height="18"/><circle class="pip" cx="20.5" cy="52.5" r="2.25"/><circle class="pip" cx="27.5" cy="52.5" r="2.25"/></svg>
+              <div class="msg"><b>Closer · Silver</b><span>You've moved 10 tickets to Done.</span></div>
+              <button class="act">View</button>
+              <button class="btn btn-ghost btn-sm btn-icon" aria-label="Dismiss"><svg class="i i-sm" aria-hidden="true"><use href="#i-x"/></svg></button>
+            </div>
+            <div class="tst" role="status">
+              <svg class="md md-s m3 once" viewBox="0 0 48 56" aria-hidden="true"><use href="#hx-ring" class="ring" width="48" height="48"/><use href="#hx-body" class="body" width="48" height="48"/><use href="#g-board" class="gly" x="15" y="15" width="18" height="18"/></svg>
+              <div class="msg"><b>Board builder</b><span>You created your first board.</span></div>
+              <button class="act">View</button>
+              <button class="btn btn-ghost btn-sm btn-icon" aria-label="Dismiss"><svg class="i i-sm" aria-hidden="true"><use href="#i-x"/></svg></button>
+            </div>
+            <div class="cap" style="align-self:flex-start;margin-top:8px">More than 3 at once</div>
+            <div class="tst" role="status">
+              <span class="stack">
+                <svg class="md md-s m0 t-bronze" viewBox="0 0 48 56" aria-hidden="true"><use href="#hx-ring" class="ring" width="48" height="48"/><use href="#hx-body" class="body" width="48" height="48"/><use href="#g-reporter" class="gly" x="15" y="15" width="18" height="18"/><circle class="pip" cx="24" cy="52.5" r="2.25"/></svg>
+                <svg class="md md-s m4 t-bronze" viewBox="0 0 48 56" aria-hidden="true"><use href="#hx-ring" class="ring" width="48" height="48"/><use href="#hx-body" class="body" width="48" height="48"/><use href="#g-link" class="gly" x="15" y="15" width="18" height="18"/><circle class="pip" cx="24" cy="52.5" r="2.25"/></svg>
+                <svg class="md md-s m7 once" viewBox="0 0 48 56" aria-hidden="true"><use href="#hx-ring" class="ring" width="48" height="48"/><use href="#hx-body" class="body" width="48" height="48"/><use href="#g-plug" class="gly" x="15" y="15" width="18" height="18"/></svg>
+              </span>
+              <div class="msg"><b>5 new achievements</b><span>Reporter, Connector, Machine whisperer and 2 more.</span></div>
+              <button class="act">View</button>
+              <button class="btn btn-ghost btn-sm btn-icon" aria-label="Dismiss"><svg class="i i-sm" aria-hidden="true"><use href="#i-x"/></svg></button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="cap">Dot on the avatar · menu open</div>
+        <div class="frame" style="height:340px">
+          <header class="topbar" style="position:relative;grid-template-columns:1fr auto">
+            <nav class="crumbs"><span>Payments</span><span class="sep">›</span><span class="cur">Backlog</span></nav>
+            <div class="tb-right">
+              <button class="btn btn-ghost btn-icon" title="Notifications"><svg class="i" aria-hidden="true"><use href="#i-bell"/></svg></button>
+              <button class="btn btn-ghost btn-icon" title="Help"><svg class="i" aria-hidden="true"><use href="#i-help"/></svg></button>
+              <button class="avbtn on" aria-label="Account menu, new achievements" aria-haspopup="menu" aria-expanded="true"><span class="av av-24 p4">KD</span><span class="avdot"></span></button>
+            </div>
+            <div class="amenu" role="menu" aria-label="Account">
+              <div class="am-who"><span class="av av-24 p4">KD</span><div><b>Kasia Dąbrowska</b><span>kasia@example.com</span></div></div>
+              <div class="hm-sep"></div>
+              <div class="hm" role="menuitem"><svg class="i" aria-hidden="true"><use href="#i-user"/></svg>Profile</div>
+              <div class="hm hl" role="menuitem"><svg class="i" aria-hidden="true"><use href="#g-award"/></svg>Achievements<span class="k"><span class="newb">New</span></span></div>
+              <div class="hm" role="menuitem"><svg class="i" aria-hidden="true"><use href="#i-key"/></svg>Access tokens</div>
+              <div class="hm-sep"></div>
+              <div class="hm" role="menuitem"><svg class="i" aria-hidden="true"><use href="#i-contrast"/></svg>Theme<span class="k">System</span></div>
+              <div class="hm" role="menuitem"><svg class="i" aria-hidden="true"><use href="#i-sliders"/></svg>Density<span class="k">Comfortable</span></div>
+              <div class="hm-sep"></div>
+              <div class="hm" role="menuitem"><svg class="i" aria-hidden="true"><use href="#i-logout"/></svg>Sign out</div>
+            </div>
+          </header>
+        </div>
+      </div>
+    </div>
+    <div class="legend"><span>The toast names what you did, never how you compare. No confetti; under reduced motion it appears without the 4px slide.</span><span>The dot carries no number. Its meaning is in the button's label and the "New" badge, not in the colour.</span><span>The dot clears when the Achievements tab opens.</span></div>
+  </section>
+
+  <!-- 6. Opt-out -->
+  <section class="sec" id="optout">
+    <div class="sec-head"><h2>Opt-out on Profile → General</h2><span class="ref">TKT-68 · saved through <code>PATCH /me</code> · on by default (D-144)</span></div>
+    <div class="grid2">
+      <div>
+        <div class="cap">On (default)</div>
+        <div class="frame" style="padding:20px;background:var(--tk-bg-subtle)">
+          <section class="gcard" aria-labelledby="g1">
+            <header><span class="icon-tile"><svg class="i" aria-hidden="true"><use href="#g-award"/></svg></span><div><h2 id="g1">Achievements</h2><p>Small moments of recognition for things you do in Ticketing.</p></div></header>
+            <div class="trow">
+              <div class="tl"><b>Earn achievements</b>
+                <p>They're private: nobody else sees them, Admins included, unless you share one. Shared ones show their name and tier, never when you earned them.</p>
+                <p>Turning this off deletes your achievements and anything you shared. If you turn it back on, counting starts again from that moment.</p>
+              </div>
+              <button class="tgl on" role="switch" aria-checked="true" aria-label="Earn achievements"></button>
+            </div>
+          </section>
+        </div>
+      </div>
+      <div>
+        <div class="cap">Turning off: inline confirm, then off</div>
+        <div class="frame" style="padding:20px;background:var(--tk-bg-subtle);display:grid;gap:12px">
+          <section class="gcard" aria-labelledby="g2">
+            <header><span class="icon-tile"><svg class="i" aria-hidden="true"><use href="#g-award"/></svg></span><div><h2 id="g2">Achievements</h2><p>Small moments of recognition for things you do in Ticketing.</p></div></header>
+            <div class="trow">
+              <div class="tl"><b>Earn achievements</b><p>They're private: nobody else sees them, Admins included, unless you share one.</p></div>
+              <button class="tgl on" role="switch" aria-checked="true" aria-label="Earn achievements"></button>
+            </div>
+            <div class="confirm" role="alertdialog" aria-labelledby="c1">
+              <b id="c1">Turn off and delete your achievements?</b>
+              <p>Everything you've earned and shared is deleted now. This can't be undone.</p>
+              <div class="acts"><button class="btn btn-danger">Turn off and delete</button><button class="btn btn-secondary">Keep them</button></div>
+            </div>
+          </section>
+          <section class="gcard" aria-labelledby="g3">
+            <header><span class="icon-tile"><svg class="i" aria-hidden="true"><use href="#g-award"/></svg></span><div><h2 id="g3">Achievements</h2><p>Small moments of recognition for things you do in Ticketing.</p></div></header>
+            <div class="trow">
+              <div class="tl"><b>Earn achievements</b><p>Off. Nothing is counted and nothing is stored. Turn it on to start counting from that moment.</p></div>
+              <button class="tgl" role="switch" aria-checked="false" aria-label="Earn achievements"></button>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+    <div class="legend"><span>Off hides the tab, the menu item, the dot, toasts and your shared medals on your user card.</span><span>Turning on needs no confirm and shows the empty state's copy on the tab.</span></div>
+  </section>
+
+  <!-- 7. Teammate surface -->
+  <section class="sec" id="teammate">
+    <div class="sec-head"><h2>A teammate's shared achievements: the user card</h2><span class="ref">TKT-98 · proposed <code>tk-user-card</code> in <code>shared/ui</code> · opens from a person's name or avatar</span></div>
+    <div class="grid2">
+      <div>
+        <div class="cap">Opened from a comment author (keyboard focus on the name)</div>
+        <div class="frame" style="height:400px">
+          <div class="thread">
+            <div class="cmt">
+              <div class="cmt-h"><button class="who on" aria-haspopup="dialog" aria-expanded="true"><span class="av av-24 p1">AK</span>Anna Kowalska</button><span class="when">2h ago</span></div>
+              <div class="cmt-b"><p>Retries are in. Moving this to Review.</p></div>
+            </div>
+            <div class="ucard float" role="dialog" aria-labelledby="u1" style="top:66px;left:24px">
+              <div class="uc-h"><span class="av p1">AK</span><div><b id="u1">Anna Kowalska</b><span>anna.kowalska@example.com</span></div></div>
+              <div class="uc-s">
+                <div class="apop-lbl">Shared achievements</div>
+                <div class="uc-list">
+                  <div class="uc-item"><svg class="md md-s m5 t-platinum" viewBox="0 0 48 56" aria-hidden="true"><use href="#hx-ring" class="ring" width="48" height="48"/><use href="#hx-body" class="body" width="48" height="48"/><use href="#g-closer" class="gly" x="15" y="15" width="18" height="18"/><circle class="pip" cx="13.5" cy="52.5" r="2.25"/><circle class="pip" cx="20.5" cy="52.5" r="2.25"/><circle class="pip" cx="27.5" cy="52.5" r="2.25"/><circle class="pip" cx="34.5" cy="52.5" r="2.25"/></svg><div><div class="n">Closer</div><div class="tr">Platinum</div></div></div>
+                  <div class="uc-item"><svg class="md md-s m6 t-silver" viewBox="0 0 48 56" aria-hidden="true"><use href="#hx-ring" class="ring" width="48" height="48"/><use href="#hx-body" class="body" width="48" height="48"/><use href="#g-test" class="gly" x="15" y="15" width="18" height="18"/><circle class="pip" cx="20.5" cy="52.5" r="2.25"/><circle class="pip" cx="27.5" cy="52.5" r="2.25"/></svg><div><div class="n">Test author</div><div class="tr">Silver</div></div></div>
+                  <div class="uc-item"><svg class="md md-s m1 t-bronze" viewBox="0 0 48 56" aria-hidden="true"><use href="#hx-ring" class="ring" width="48" height="48"/><use href="#hx-body" class="body" width="48" height="48"/><use href="#g-robot" class="gly" x="15" y="15" width="18" height="18"/><circle class="pip" cx="24" cy="52.5" r="2.25"/></svg><div><div class="n">Delegator</div><div class="tr">Bronze</div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="cap">Variants</div>
+        <div class="frame" style="height:400px;padding:20px;background:var(--tk-bg-subtle);display:flex;gap:16px;align-items:flex-start">
+          <div style="display:grid;gap:6px">
+            <div class="cap">Shared nothing, opted out or flag off</div>
+            <div class="ucard" role="dialog" aria-labelledby="u2" style="width:260px">
+              <div class="uc-h"><span class="av p3">MW</span><div><b id="u2">Marek Wiśniewski</b><span>marek.w@example.com</span></div></div>
+            </div>
+          </div>
+          <div style="display:grid;gap:6px">
+            <div class="cap">Your own card</div>
+            <div class="ucard" role="dialog" aria-labelledby="u3" style="width:260px">
+              <div class="uc-h"><span class="av p4">KD</span><div><b id="u3">Kasia Dąbrowska</b><span>You</span></div></div>
+              <div class="uc-s">
+                <div class="apop-lbl">Shared by you</div>
+                <div class="uc-list">
+                  <div class="uc-item"><svg class="md md-s m5 t-gold" viewBox="0 0 48 56" aria-hidden="true"><use href="#hx-ring" class="ring" width="48" height="48"/><use href="#hx-body" class="body" width="48" height="48"/><use href="#g-closer" class="gly" x="15" y="15" width="18" height="18"/><circle class="pip" cx="17" cy="52.5" r="2.25"/><circle class="pip" cx="24" cy="52.5" r="2.25"/><circle class="pip" cx="31" cy="52.5" r="2.25"/></svg><div><div class="n">Closer</div><div class="tr">Gold</div></div></div>
+                  <div class="uc-item"><svg class="md md-s m3 once" viewBox="0 0 48 56" aria-hidden="true"><use href="#hx-ring" class="ring" width="48" height="48"/><use href="#hx-body" class="body" width="48" height="48"/><use href="#g-board" class="gly" x="15" y="15" width="18" height="18"/></svg><div><div class="n">Board builder</div><div class="tr">Earned</div></div></div>
+                </div>
+              </div>
+              <div class="uc-f"><a href="#">Manage in Profile → Achievements</a></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="legend"><span>Opens on click or Enter on a person's name or avatar where clicking does nothing else today (comment and history authors, watchers, Reporter); hover for 500ms elsewhere (row and card avatars, whose click edits the assignee).</span><span>Esc closes and returns focus. Order follows the catalogue, not tier, so the list never reads as a ranking. No dates, counts or "x of y".</span></div>
+  </section>
+</div>
+</body>
+</html>

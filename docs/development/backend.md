@@ -55,6 +55,8 @@ Configuration (environment variables override `appsettings*.json`):
 | `Pdf__Url`, `Pdf__Username` | Gotenberg (default `http://pdf:3000`, `ticketing`) |
 | `Pdf__BundlePath` | The print bundle (`print.js`, `print.css`, fonts); `/app/print` in the image, `../../web/dist/print` in Development |
 | `Pdf__WarmUp` | Render a small page after startup so the first export is fast (default true) |
+| `AchievementProjector__Interval` | Time between achievement projector cycles (default `00:00:15`; compose: `TICKETING_ACHIEVEMENTS_INTERVAL`). e2e runs lower it so an unlock shows within seconds ([spec §15.8](../product/01-refined-spec.md#158-projector)). |
+| `AchievementProjector__Enabled`, `AchievementProjector__SweepAtUtc` | Run the projector in this instance (default true; integration tests turn it off and call `AchievementProjection` directly); time of day (UTC) of the nightly safety sweep (default `03:00`) |
 
 Logs are JSON on the console (`simple` in Development).
 
@@ -228,6 +230,53 @@ For configuration-dependent tests (for example rate limits), derive a host on th
 Run `dotnet test` without the `rtk` prefix: rtk filters the test runner output and reports zero tests.
 
 Performance tests carry `[Trait("Category", "Performance")]`. `DashboardPerformanceTests` seeds two 50 000-ticket projects with `INSERT ... SELECT`, asserts the dashboard's p95 stays under 500 ms and writes timings, per-statement durations and `EXPLAIN ANALYZE` plans to `dashboard-performance.txt` next to the test binaries. Skip them in a quick loop with `dotnet test -- --filter-not-trait "Category=Performance"`.
+
+## Designing an achievement
+
+Every new epic and feature is checked for achievements while it is planned (slice playbook, definition of done). The outcome is either a catalogue entry with its criterion, a linked ticket for one, or a line in the ticket saying none fits. "None fits" is a fine answer; most features don't need one.
+
+**What makes a good one.** An achievement rewards a real action a person chose to take and nudges them towards a feature they may not have tried: filing a bug from a failed regression item (`found-it`), creating a board (`board-builder`), delegating a ticket to an agent (`delegator`). Good candidates are the first use of a new feature and the actions that make the tracker better for everyone (linking, testing, triage). Bad candidates are actions people take anyway with no choice in them (opening a page, signing in) and anything that only rewards volume.
+
+**Hard rules** (D-144, spec 15.1). An idea that breaks one of these is dropped, not adapted:
+
+- Nothing time-based: no streaks, no "within a day", no night-owl or weekend achievements.
+- No points, currency or totals across achievements.
+- No ranking, leaderboard or comparison between people, not even per team. An achievement says what you did, never how you did against others.
+- No project or ticket id is stored with an earned tier, and the name and description never need one.
+- Only activity at or after the user's start S counts; there is no backfill.
+- Monotonic: an earned tier is never revoked, even when the counted entities are deleted later.
+- Every channel counts (web, REST with a PAT, MCP), unless the achievement is about the channel itself (`machine-whisperer`).
+
+**Tiers.** Thresholds follow how often the action naturally happens, so the first tier is reachable in normal work and the last one is rare:
+
+- Once-only (`[1]`) for a feature you only need to discover: `board-builder`, `spring-cleaning`, `machine-whisperer`.
+- `1 / 10` for occasional actions: `show-me`, `found-it`.
+- `1 / 10 / 50` for regular actions: `bug-hunter`, `connector`, `delegator`, `test-author`.
+- `1 / 10 / 50 / 250` for everyday work: `reporter`, `closer`, `ready-for-review`; `1 / 25 / 100 / 500` for the most frequent (`conversationalist`).
+- Start above 1 when a single action means nothing: `triage` starts at 10, `regression-runner` at 10.
+
+**Secret.** Make it secret only when it is a pleasant surprise rather than a goal, and announcing it would invite gaming or the wrong behaviour: undoing your own delete (`second-thoughts`), closing a ticket that blocks three open ones (`unblocker`), a ticket you worked on passing through every status (`grand-tour`). A secret entry has no "how to earn" hint and stays masked until earned. Achievements meant to nudge towards a feature are never secret, because the hint is the nudge.
+
+**Criteria stay set-based.** A criterion counts for a whole batch of users, each with their own S, in a fixed number of queries: one `SELECT ... GROUP BY s.user_id` over `subjects`, or a computed criterion that runs a fixed number of queries per batch. Never a query per user or per entity. If the count needs data that is not recorded, add it additively to the activity payload or a table column first (as D-145 did for `assigneeId`). Declare in `Triggers` the activity actions that can raise the count (`board.created` for `board-builder`, the comment actions for `conversationalist`) so the projector can skip it; use `null` only when any action can (`machine-whisperer`). A criterion that needs state at a point in time, or someone else's action, needs a decision (`D-xx`) before it is built.
+
+## Adding an achievement
+
+Achievements (spec 15, D-144, D-145) are a catalogue in code plus one criterion per entry. Adding one touches no evaluator, projector, API or UI code:
+
+1. **Catalogue entry** in `Domain/Achievements/AchievementCatalog.cs`: add an id constant and an `AchievementDefinition` to `All`.
+   - The id is lower-case kebab case, at most 50 characters. It is stored with every earned tier, so it is never renamed or reused.
+   - Give a name, a description, a "how to earn" hint (non-secret only; a secret entry passes `null` and `secret: true`), a Tabler icon name in kebab case (`file-plus`) and ascending thresholds (`[1]` for once-only). Register the icon in `MEDAL_GLYPHS` (`web/src/app/shared/ui/achievement-medal/medal-glyphs.ts`), or the medal draws the award glyph (D-151). A once-only entry also goes in `ONE_TIME_ACHIEVEMENTS` (`achievement-medal.logic.ts`), so the user card writes its shared tier as "Earned" (D-155).
+2. **Criterion** in `Application/Achievements/Criteria/`: an `internal sealed class` deriving from one of these. It is discovered by scanning.
+   - `SqlAchievementCriterion`: `Sql` is one `SELECT s.user_id, <count>::int AS count FROM subjects s ... GROUP BY s.user_id` over the CTE `subjects(user_id, started_at)`. The evaluator runs all SQL criteria of a batch in one `UNION ALL` query. Inline constants (action codes, enum values) but never user input.
+   - `ComputedAchievementCriterion`, when the count needs C# (for example parsing mentions): `CountAsync(db, subjects, ct)` is called once per batch and must use a fixed number of queries, never one per user. `CriterionSql.OverSubjects<T>` runs its SQL over the same `subjects` CTE (see `ShoutOutCriterion`).
+   - Set `AchievementId` to the catalogue id, and `Triggers` to the activity actions that can raise the count (`null` when any action can).
+3. **Follow the shared rules** with the `CriterionSql` helpers (`ActorEntries`, `StatusChangesTo`, `AliveTicket`, `AliveProject`, `TicketOrDoc`):
+   - Count only rows at or after `s.started_at`.
+   - Count distinct entities, of the subject only.
+   - Count only alive entities unless the definition says otherwise.
+   - New activity payload fields are additive. Old entries simply lack them, which no-backfill makes harmless.
+4. **Tests** in `tests/Ticketing.IntegrationTests/Achievements/`, through REST and MCP (`AchievementTestData`): counting after S only, distinct or first time per entity, deleted entities, channel independence, and no other user's data. `AchievementEvaluatorTests` fails while an entry has no criterion or a criterion has no entry.
+5. **Docs**: a row in spec 15.2 and 15.4, and a `D-xx` when the definition needed a choice.
 
 ## Error codes
 

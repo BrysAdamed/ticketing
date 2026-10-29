@@ -85,6 +85,7 @@
 }
 
 .user {
+  position: relative;
   display: inline-flex;
   padding: 2px;
   margin-left: 2px;
@@ -92,6 +93,39 @@
   border-radius: 50%;
   background: none;
   cursor: pointer;
+}
+
+.unseen-dot {
+  position: absolute;
+  top: 1px;
+  right: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--tk-accent);
+  box-shadow: 0 0 0 2px var(--tk-bg);
+}
+
+.new-badge {
+  margin-left: auto;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px;
+  border-radius: var(--tk-radius-sm);
+  background: var(--tk-accent-subtle);
+  color: var(--tk-accent-fg);
+  font-size: var(--tk-text-xs);
+  font-weight: var(--tk-weight-medium);
+
+  &::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--tk-accent);
+  }
 }
 
 .who {

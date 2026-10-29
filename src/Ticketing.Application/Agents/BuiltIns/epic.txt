@@ -1,7 +1,7 @@
 Plan the epic {{ticket.key}} so its children can be delegated one at a time. Do not change code in this run.
 
 1. Read the epic with get_ticket (goal, scope, order, definition of done, comments, links) and every child. Read the specs and designs it references, the repository's CLAUDE.md, and enough code to know what exists.
-2. Find the gaps: work the goal needs that no child covers, children without testable acceptance criteria or too large for one branch, and unwritten dependencies. Put a Spike first wherever an unknown blocks the design.
+2. Find the gaps: work the goal needs that no child covers, children without testable acceptance criteria or too large for one branch, and unwritten dependencies. Put a Spike first wherever an unknown blocks the design. If CLAUDE.md asks to consider achievements, check whether the epic adds actions worth one (see its guide); if so, a child ticket for it is one of the gaps.
 3. Create the missing children in one create_tickets call (parentKey {{ticket.key}}, idempotencyKey "{{ticket.key}}-plan"), each with why it is needed, acceptance criteria as a checklist and the spec sections it covers; refer to the epic's definition of done instead of copying it.
 4. Refine existing children only by adding to them. Never delete tickets or rewrite what people wrote; comment where a child conflicts with the epic.
 5. Link real dependencies with link_tickets type Blocks (A Blocks B: B starts after A is Done). Leave independent work unlinked so it can run in parallel.

@@ -89,6 +89,25 @@ describe('LearnActions', () => {
     expect(item.run).toHaveBeenCalledTimes(1);
   });
 
+  it('runs any Help item only while it is registered and enabled', () => {
+    // Arrange
+    const learn = setup();
+    const disabled = signal(true);
+    const item = walkthroughItem({ id: 'help.connect-agent', disabled });
+
+    // Act / Assert
+    expect(learn.canRunHelpItem('help.connect-agent')).toBe(false);
+    registered.set([item]);
+    expect(learn.canRunHelpItem('help.connect-agent')).toBe(false);
+    learn.runHelpItem('help.connect-agent');
+    expect(item.run).not.toHaveBeenCalled();
+
+    disabled.set(false);
+    expect(learn.canRunHelpItem('help.connect-agent')).toBe(true);
+    learn.runHelpItem('help.connect-agent');
+    expect(item.run).toHaveBeenCalledTimes(1);
+  });
+
   it('does not run a hidden walkthrough', () => {
     // Arrange
     const learn = setup();

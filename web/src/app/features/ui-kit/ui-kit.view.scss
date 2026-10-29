@@ -62,3 +62,34 @@ h2 {
   gap: 16px;
   align-items: start;
 }
+
+.medal-states {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  gap: 16px 8px;
+}
+
+.medal-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+  font-size: var(--tk-text-xs);
+}
+
+.medal-name {
+  font-size: var(--tk-text-sm);
+  font-weight: var(--tk-weight-medium);
+}
+
+.medal-aria {
+  font-family: var(--tk-font-mono);
+}
+
+.medal-sizes {
+  display: flex;
+  align-items: flex-end;
+  gap: 20px;
+  margin-top: 20px;
+}

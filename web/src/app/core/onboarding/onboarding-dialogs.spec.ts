@@ -60,7 +60,7 @@ describe('OnboardingDialogs', () => {
   }
 
   function signIn(id = 'u1', globalRole: CurrentUser['globalRole'] = 'User'): void {
-    user.set({ id, email: `${id}@x.test`, displayName: id, globalRole });
+    user.set({ id, email: `${id}@x.test`, displayName: id, globalRole, achievementsHidden: false });
   }
 
   async function settle(): Promise<void> {

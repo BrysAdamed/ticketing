@@ -75,7 +75,7 @@ public sealed class MyAchievementsTests(TicketingApiFactory api)
         Assert.Equal(AchievementCatalog.All.Select(a => a.Id), items.Select(i => i.GetProperty("id").GetString()));
         var reporter = items[0];
         Assert.Equal(
-            ["id", "name", "description", "howToEarn", "icon", "secret", "masked", "tier", "tiers", "progress"],
+            ["id", "name", "description", "howToEarn", "icon", "secret", "masked", "tier", "shared", "tiers", "progress"],
             reporter.EnumerateObject().Select(p => p.Name));
         Assert.Equal(["tier", "threshold", "unlockedAt", "seenAt"], reporter.GetProperty("tiers")[0].EnumerateObject().Select(p => p.Name));
         Assert.Equal(["count", "nextTier", "nextThreshold"], reporter.GetProperty("progress").EnumerateObject().Select(p => p.Name));
@@ -250,7 +250,7 @@ public sealed class MyAchievementsTests(TicketingApiFactory api)
         Assert.Equal(0, unseen.Count);
         Assert.Equal(0, seen.Count);
         Assert.All(overMcp.GetProperty("items").EnumerateArray(), i => Assert.Equal(0, i.GetProperty("tier").GetInt32()));
-        Assert.Equal(HttpStatusCode.NotFound, byUserId.StatusCode);
+        Assert.Empty((await byUserId.ReadAsync<SharedAchievementsDto>()).Items);
         Assert.All(byQuery.Items, i => Assert.Equal(0, i.Tier));
         Assert.Null(await SeenAtAsync(owner, AchievementCatalog.Reporter));
         Assert.Null(await SeenAtAsync(owner, AchievementCatalog.Closer));
@@ -289,8 +289,8 @@ public sealed class MyAchievementsTests(TicketingApiFactory api)
         var unlockedAt = DateTimeOffset.UtcNow;
 
         // Act
-        var masked = AchievementDto.From(secret, [], 3);
-        var earned = AchievementDto.From(secret, [new EarnedTier(1, unlockedAt, null)], 3);
+        var masked = AchievementDto.From(secret, [], 3, shared: false);
+        var earned = AchievementDto.From(secret, [new EarnedTier(1, unlockedAt, null)], 3, shared: false);
 
         // Assert
         Assert.Equal(

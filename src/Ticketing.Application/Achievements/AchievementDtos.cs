@@ -10,6 +10,7 @@ public sealed record MyAchievementsDto(DateTimeOffset StartedAt, IReadOnlyList<A
 /// would reveal it is null, it has no tiers and no progress.
 /// </summary>
 /// <param name="Tier">The highest tier the caller earned; 0 while none.</param>
+/// <param name="Shared">Whether the caller shares it with every signed-in user (spec 15.7); false while not earned.</param>
 /// <param name="Tiers">Every tier with its threshold, and when the caller earned and saw it (null while not).</param>
 /// <param name="Progress">The caller's live count towards the next tier.</param>
 public sealed record AchievementDto(
@@ -21,13 +22,14 @@ public sealed record AchievementDto(
     bool Secret,
     bool Masked,
     int Tier,
+    bool Shared,
     IReadOnlyList<AchievementTierDto> Tiers,
     AchievementProgressDto? Progress)
 {
-    internal static AchievementDto From(AchievementDefinition definition, IReadOnlyCollection<EarnedTier> earned, int count)
+    internal static AchievementDto From(AchievementDefinition definition, IReadOnlyCollection<EarnedTier> earned, int count, bool shared)
     {
         if (definition.Secret && earned.Count == 0)
-            return new(null, null, null, null, null, Secret: true, Masked: true, 0, [], null);
+            return new(null, null, null, null, null, Secret: true, Masked: true, 0, Shared: false, [], null);
 
         var tier = earned.Count == 0 ? 0 : earned.Max(e => e.Tier);
         var tiers = definition.Tiers
@@ -38,7 +40,7 @@ public sealed record AchievementDto(
             .ToList();
         var next = tier < definition.TopTier ? tier + 1 : (int?)null;
         var progress = new AchievementProgressDto(count, next, next is { } n ? definition.Tiers[n - 1] : null);
-        return new(definition.Id, definition.Name, definition.Description, definition.HowToEarn, definition.Icon, definition.Secret, Masked: false, tier, tiers, progress);
+        return new(definition.Id, definition.Name, definition.Description, definition.HowToEarn, definition.Icon, definition.Secret, Masked: false, tier, shared && earned.Count > 0, tiers, progress);
     }
 }
 
@@ -55,5 +57,14 @@ public sealed record AchievementProgressDto(int Count, int? NextTier, int? NextT
 public sealed record UnseenAchievementsDto(int Count, IReadOnlyList<UnseenAchievementDto> Items);
 
 public sealed record UnseenAchievementDto(string Id, string Name, int Tier, string Icon);
+
+/// <summary>
+/// Another user's shared achievements (spec 15.7), in catalogue order. Deliberately no dates, counts, progress or anything about
+/// projects or tickets (D-144).
+/// </summary>
+public sealed record SharedAchievementsDto(IReadOnlyList<SharedAchievementDto> Items);
+
+/// <param name="Tier">The owner's highest earned tier, including tiers earned after sharing.</param>
+public sealed record SharedAchievementDto(string Id, string Name, string Icon, int Tier);
 
 internal sealed record EarnedTier(int Tier, DateTimeOffset UnlockedAt, DateTimeOffset? SeenAt);

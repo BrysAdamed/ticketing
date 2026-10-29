@@ -36,7 +36,7 @@ public sealed class ApiSurfaceTests(TicketingApiFactory api)
     }
 
     [Fact]
-    public async Task Achievements_are_served_only_under_me_for_the_caller()
+    public async Task Achievements_are_served_under_me_for_the_caller_and_only_shared_ones_by_user_id()
     {
         // Act
         var document = await (await api.CreateBrowserClient().GetAsync("/api/v1/openapi.json", _ct)).ReadAsync<JsonElement>();
@@ -44,10 +44,20 @@ public sealed class ApiSurfaceTests(TicketingApiFactory api)
         // Assert
         var paths = document.GetProperty("paths").EnumerateObject().Select(p => p.Name).ToList();
         Assert.Equal(
-            ["/api/v1/me/achievements", "/api/v1/me/achievements/seen", "/api/v1/me/achievements/unseen"],
+            [
+                "/api/v1/me/achievements",
+                "/api/v1/me/achievements/seen",
+                "/api/v1/me/achievements/unseen",
+                "/api/v1/me/achievements/{id}/share",
+                "/api/v1/users/{userId}/achievements",
+            ],
             paths.Where(p => p.Contains("achievement", StringComparison.OrdinalIgnoreCase)).Order(StringComparer.Ordinal));
         var list = document.GetProperty("paths").GetProperty("/api/v1/me/achievements").GetProperty("get");
         Assert.False(list.TryGetProperty("parameters", out var parameters) && parameters.GetArrayLength() > 0);
+        var share = document.GetProperty("paths").GetProperty("/api/v1/me/achievements/{id}/share");
+        Assert.Equal(["delete", "put"], share.EnumerateObject().Select(p => p.Name).Where(n => n != "parameters").Order(StringComparer.Ordinal));
+        var shared = document.GetProperty("paths").GetProperty("/api/v1/users/{userId}/achievements");
+        Assert.Equal(["get"], shared.EnumerateObject().Select(p => p.Name).Where(n => n != "parameters"));
     }
 
     [Fact]

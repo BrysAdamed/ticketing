@@ -18,21 +18,33 @@ public static class ListMyAchievements
         public async Task<MyAchievementsDto> HandleAsync(Query request, CancellationToken cancellationToken)
         {
             var startedAt = await gate.EnsureParticipatingAsync(cancellationToken);
-            var me = currentUser.Id;
-
-            var earned = (await db.UserAchievements
-                    .AsNoTracking()
-                    .Where(a => a.UserId == me)
-                    .Select(a => new { a.AchievementId, a.Tier, a.UnlockedAt, a.SeenAt })
-                    .ToListAsync(cancellationToken))
-                .ToLookup(a => a.AchievementId, a => new EarnedTier(a.Tier, a.UnlockedAt, a.SeenAt), StringComparer.Ordinal);
-            var visible = AchievementCatalog.All.Where(d => !d.Secret || earned.Contains(d.Id)).Select(d => d.Id).ToList();
-            var counts = (await evaluator.EvaluateAsync([new AchievementSubject(me, startedAt)], visible, cancellationToken))
-                .ToDictionary(p => p.AchievementId, p => p.Count, StringComparer.Ordinal);
-
             return new MyAchievementsDto(
                 startedAt,
-                [.. AchievementCatalog.All.Select(d => AchievementDto.From(d, [.. earned[d.Id]], counts.GetValueOrDefault(d.Id)))]);
+                await LoadAsync(db, evaluator, currentUser.Id, startedAt, AchievementCatalog.All, cancellationToken));
         }
+    }
+
+    /// <summary>The <see cref="AchievementDto"/> of each of <paramref name="definitions"/> for <paramref name="userId"/>, in the given order.</summary>
+    internal static async Task<IReadOnlyList<AchievementDto>> LoadAsync(
+        ITicketingDbContext db,
+        AchievementEvaluator evaluator,
+        Guid userId,
+        DateTimeOffset startedAt,
+        IReadOnlyList<AchievementDefinition> definitions,
+        CancellationToken cancellationToken)
+    {
+        var ids = definitions.Select(d => d.Id).ToList();
+        var rows = await db.UserAchievements
+            .AsNoTracking()
+            .Where(a => a.UserId == userId && ids.Contains(a.AchievementId))
+            .Select(a => new { a.AchievementId, a.Tier, a.UnlockedAt, a.SeenAt, a.SharedAt })
+            .ToListAsync(cancellationToken);
+        var earned = rows.ToLookup(a => a.AchievementId, a => new EarnedTier(a.Tier, a.UnlockedAt, a.SeenAt), StringComparer.Ordinal);
+        var shared = rows.Where(a => a.SharedAt != null).Select(a => a.AchievementId).ToHashSet(StringComparer.Ordinal);
+        var visible = definitions.Where(d => !d.Secret || earned.Contains(d.Id)).Select(d => d.Id).ToList();
+        var counts = (await evaluator.EvaluateAsync([new AchievementSubject(userId, startedAt)], visible, cancellationToken))
+            .ToDictionary(p => p.AchievementId, p => p.Count, StringComparer.Ordinal);
+
+        return [.. definitions.Select(d => AchievementDto.From(d, [.. earned[d.Id]], counts.GetValueOrDefault(d.Id), shared.Contains(d.Id)))];
     }
 }

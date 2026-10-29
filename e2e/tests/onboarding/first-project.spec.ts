@@ -364,6 +364,8 @@ test.describe('"Your first project" walkthrough', () => {
             { email: user.email, password: PASSWORD },
             { keepGuides: (g) => g.id === WELCOME_GUIDE.id },
         );
+        const projects = await json<{ items: unknown[] }>(context.request, '/projects');
+        test.skip(projects.items.length > 0, 'public projects of other specs are writable');
         const walkthrough = new Walkthrough(page);
         await page.goto('/my-work');
         await expect(page.getByTestId('welcome-dialog')).toBeVisible();

@@ -119,6 +119,25 @@ public sealed class AchievementEvaluatorTests(TicketingApiFactory api)
     }
 
     [Fact]
+    public async Task Criteria_are_counted_with_jit_off_and_the_setting_does_not_outlive_the_evaluation()
+    {
+        // Arrange
+        var user = await api.CreateUserAsync();
+        var probe = new JitProbeCriterion();
+        await using var scope = api.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<ITicketingDbContext>();
+        var evaluator = new AchievementEvaluator(db, [probe]);
+
+        // Act
+        await evaluator.EvaluateAsync([new AchievementSubject(user.Id, DateTimeOffset.UtcNow)], null, _ct);
+        var afterwards = await CurrentJitAsync(db, _ct);
+
+        // Assert
+        Assert.Equal("off", probe.Jit);
+        Assert.Equal("on", afterwards);
+    }
+
+    [Fact]
     public async Task A_user_may_appear_only_once_in_a_batch()
     {
         // Arrange
@@ -157,6 +176,25 @@ public sealed class AchievementEvaluatorTests(TicketingApiFactory api)
         {
             Calls++;
             return Task.FromResult<IReadOnlyList<AchievementCount>>([new AchievementCount(userId, count)]);
+        }
+    }
+
+    private static Task<string> CurrentJitAsync(ITicketingDbContext db, CancellationToken cancellationToken) =>
+        db.Database.SqlQueryRaw<string>("SELECT current_setting('jit') AS \"Value\"").SingleAsync(cancellationToken);
+
+    private sealed class JitProbeCriterion : ComputedAchievementCriterion
+    {
+        public string? Jit { get; private set; }
+
+        public override string AchievementId => AchievementCatalog.Reporter;
+
+        public override IReadOnlyCollection<string>? Triggers => null;
+
+        public override async Task<IReadOnlyList<AchievementCount>> CountAsync(
+            ITicketingDbContext db, IReadOnlyList<AchievementSubject> subjects, CancellationToken cancellationToken)
+        {
+            Jit = await CurrentJitAsync(db, cancellationToken);
+            return [];
         }
     }
 

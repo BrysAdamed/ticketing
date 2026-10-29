@@ -27,7 +27,7 @@ public sealed class AchievementProjectorPerformanceCollection : ICollectionFixtu
 /// projects, 30 days of history by every user (tickets, status changes, assignments, comments), and in the cycle window every
 /// one of <see cref="Users"/> users wrote an entry of every action a criterion listens to, so every criterion runs for
 /// everyone and recounts about 4 000 entries per user. The evaluator's one query dominates. Writes timings, per-statement durations
-/// and its EXPLAIN ANALYZE to achievement-projector-performance.txt next to the test binaries.
+/// and its EXPLAIN ANALYZE (JIT off, as the evaluator runs it, D-149) to achievement-projector-performance.txt next to the test binaries.
 /// </summary>
 [Collection(nameof(AchievementProjectorPerformanceCollection))]
 [Trait("Category", "Performance")]
@@ -196,6 +196,8 @@ public sealed class AchievementProjectorPerformanceTests(TicketingApiFactory api
     {
         await using var connection = new NpgsqlConnection(api.ConnectionString);
         await connection.OpenAsync(_ct);
+        await using (var jitOff = new NpgsqlCommand("SET jit = off", connection))
+            await jitOff.ExecuteNonQueryAsync(_ct);
         await using var command = new NpgsqlCommand("EXPLAIN (ANALYZE, BUFFERS, COSTS OFF) " + statement.Sql, connection);
         foreach (var parameter in statement.Parameters)
             command.Parameters.Add(parameter.Clone());

@@ -1,19 +1,14 @@
 import { request } from '@playwright/test';
 import { AccessTokensPage } from '../../pages/identity.page';
-import { LoginPage } from '../../pages/login.page';
-import { ShellPage } from '../../pages/shell.page';
 import { expect, test } from '../../support/fixtures';
 import { BASE_URL } from '../../support/env';
+import { signInAs } from '../../support/session';
 import { PASSWORD, seedUser } from './identity';
 
 test('a user creates a token, calls the API with it and revokes it', async ({ browser, api }) => {
     // Arrange
     const user = await seedUser(api, 'pat');
-    const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
-    const page = await context.newPage();
-    await page.goto('/login');
-    await new LoginPage(page).signIn(user.email, PASSWORD);
-    await new ShellPage(page).expectVisible();
+    const { context, page } = await signInAs(browser, { email: user.email, password: PASSWORD });
     const tokens = new AccessTokensPage(page);
     await tokens.goto();
 

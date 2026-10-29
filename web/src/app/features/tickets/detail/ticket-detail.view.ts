@@ -22,6 +22,9 @@ import { MoveTarget, MoveTargets } from '@core/tickets/move-targets';
 import { TicketEvents } from '@core/tickets/ticket-events';
 import { PeekService } from '@core/layout/peek/peek';
 import { ConfirmService } from '@core/notify/confirm.service';
+import { TourAnchorDirective } from '@core/onboarding/engine/tour-anchor.directive';
+import { ViewTourAccess } from '@core/onboarding/view-tour-access';
+import { AuthService } from '@core/auth/auth.service';
 import { ToastService } from '@core/notify/toast.service';
 import { Shortcut, ShortcutService } from '@core/shortcuts/shortcut.service';
 import { ProjectPeople } from '@core/tickets/project-people';
@@ -37,6 +40,7 @@ import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.componen
 import { IconComponent } from '@shared/ui/icon/icon.component';
 import { SkeletonRowsComponent } from '@shared/ui/skeleton/skeleton-rows.component';
 import { TICKET_ICONS } from '../ticket-icons';
+import { TICKET_DETAIL_VIEW } from '../tickets.views';
 import { ActivityTab, TicketActivityComponent } from './ticket-activity.component';
 import { NewChild, TicketChildrenComponent } from './ticket-children.component';
 import { FieldEdit, TicketFieldsComponent } from './ticket-fields.component';
@@ -73,6 +77,7 @@ export type TicketPresentation = 'page' | 'peek';
     TicketTitleComponent,
     TicketDescriptionComponent,
     TicketWatchComponent,
+    TourAnchorDirective,
   ],
   providers: [TicketDetailStore, TicketHeaderHost],
   viewProviders: [provideIcons(TICKET_ICONS)],
@@ -133,6 +138,17 @@ export class TicketDetailView {
   private readonly fields = viewChild(TicketFieldsComponent);
 
   constructor() {
+    const auth = inject(AuthService);
+    inject(ViewTourAccess).provide(TICKET_DETAIL_VIEW.viewId, () => {
+      const ticket = this.store.ticket();
+      if (this.presentation() !== 'page' || !ticket) return null;
+      return {
+        canWrite: ticket.permissions.canEdit,
+        isOwner: ticket.myRole === 'Owner',
+        isAdmin: auth.isAdmin(),
+      };
+    });
+
     effect(() => {
       const key = this.ticketKey();
       untracked(() => void this.store.load(key));

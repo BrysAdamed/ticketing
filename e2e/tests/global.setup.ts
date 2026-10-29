@@ -2,6 +2,7 @@ import { expect, test as setup } from '@playwright/test';
 import { LoginPage } from '../pages/login.page';
 import { ShellPage } from '../pages/shell.page';
 import { ADMIN, ADMIN_STORAGE_STATE } from '../support/env';
+import { markGuidesSeen } from '../support/guides';
 
 setup('sign in as the bootstrap admin', async ({ page }) => {
     const login = new LoginPage(page);
@@ -10,5 +11,6 @@ setup('sign in as the bootstrap admin', async ({ page }) => {
 
     await new ShellPage(page).expectVisible();
     await expect(page).toHaveURL(/\/my-work$/);
+    await markGuidesSeen(page.request);
     await page.context().storageState({ path: ADMIN_STORAGE_STATE });
 });

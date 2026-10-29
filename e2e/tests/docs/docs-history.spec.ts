@@ -1,9 +1,9 @@
 import { DocHistoryPage } from '../../pages/doc-history.page';
 import { DocPagePage } from '../../pages/doc-page.page';
-import { LoginPage } from '../../pages/login.page';
 import { ShellPage } from '../../pages/shell.page';
 import { Api } from '../../support/api';
 import { expect, test } from '../../support/fixtures';
+import { signInAs } from '../../support/session';
 import { PASSWORD, seedUser } from '../identity/identity';
 
 interface Doc {
@@ -132,14 +132,12 @@ test.describe('docs history', () => {
         const doc = await pageWithHistory(api, projectKey);
         const viewer = await seedUser(api, 'viewer');
         await api.post(`/projects/${projectKey}/members`, { user: viewer.email, role: 'Viewer' });
-        const context = await browser.newContext({
-            storageState: { cookies: [], origins: [] },
-            viewport: { width: 1440, height: 900 },
-        });
-        const viewerPage = await context.newPage();
-        const login = new LoginPage(viewerPage);
-        await login.goto();
-        await login.signIn(viewer.email, PASSWORD);
+        const { context, page: viewerPage } = await signInAs(
+            browser,
+            { email: viewer.email, password: PASSWORD },
+            { contextOptions: { viewport: { width: 1440, height: 900 } } },
+        );
+        await viewerPage.goto('/my-work');
         await new ShellPage(viewerPage).expectVisible();
         const history = new DocHistoryPage(viewerPage);
 

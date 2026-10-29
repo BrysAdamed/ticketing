@@ -4,6 +4,7 @@ import { ShellPage } from '../../pages/shell.page';
 import { TicketPage } from '../../pages/ticket.page';
 import { Api } from '../../support/api';
 import { expect, test } from '../../support/fixtures';
+import { markGuidesSeenAs } from '../../support/guides';
 import { PASSWORD, seedUser } from './identity';
 
 interface TicketSummary {
@@ -55,6 +56,7 @@ test.describe('@avatars', () => {
     }) => {
         // Arrange
         const user = await seedUser(api, 'picker');
+        await markGuidesSeenAs({ email: user.email, password: PASSWORD });
         const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
         const page = await context.newPage();
         await page.goto('/login');

@@ -18,7 +18,11 @@ internal static class McpSetup
     public static IServiceCollection AddTicketingMcp(this IServiceCollection services)
     {
         services
-            .AddMcpServer(o => o.ServerInfo = new Implementation { Name = "ticketing", Version = ServerVersion.Current })
+            .AddMcpServer(o =>
+            {
+                o.ServerInfo = new Implementation { Name = "ticketing", Version = ServerVersion.Current };
+                o.ServerInstructions = McpServerInstructions.Text;
+            })
             .WithHttpTransport(o => o.Stateless = true)
             .AddAuthorizationFilters()
             .WithToolsFromAssembly(typeof(McpSetup).Assembly, Json)

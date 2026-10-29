@@ -37,6 +37,9 @@ import { MatTooltip } from '@angular/material/tooltip';
 import { ActivatedRoute, Params, Router } from '@angular/router';
 import { provideIcons } from '@ng-icons/core';
 import { PeekService } from '@core/layout/peek/peek';
+import { TourAnchorDirective } from '@core/onboarding/engine/tour-anchor.directive';
+import { ContextualHintComponent } from '@core/onboarding/hints/contextual-hint.component';
+import { LearnActions } from '@core/onboarding/learn-actions';
 import { ProjectContext } from '@core/projects/project-context';
 import { ShortcutService } from '@core/shortcuts/shortcut.service';
 import { ThemeService } from '@core/theme/theme.service';
@@ -118,6 +121,8 @@ const BULK_BAR_CLEARANCE_PX = 72;
     BacklogFiltersComponent,
     BacklogRowComponent,
     QuickCreateRowComponent,
+    TourAnchorDirective,
+    ContextualHintComponent,
   ],
   providers: [BacklogStore],
   viewProviders: [provideIcons(BACKLOG_ICONS)],
@@ -137,6 +142,7 @@ export class BacklogView {
   private readonly people = inject(ProjectPeople);
   private readonly moveTargets = inject(MoveTargets);
   protected readonly project = inject(ProjectContext);
+  protected readonly learn = inject(LearnActions);
 
   readonly projectKey = input.required<string>();
 
@@ -161,6 +167,9 @@ export class BacklogView {
     () => SORT_BY_OPTIONS.find((o) => o.value === this.store.sortBy())?.label ?? '',
   );
   protected readonly selectionCount = computed(() => this.store.selection().selected.size);
+  protected readonly firstTicketId = computed(
+    () => this.store.rows().find((row) => row.kind === 'ticket')?.id ?? null,
+  );
   protected readonly trackRow = (_: number, row: ListRow) => row.id;
   protected readonly labelSuggestions = (prefix: string) =>
     this.hints.get(this.store.projectKey(), 'labels', prefix);
@@ -664,6 +673,11 @@ export class BacklogView {
   }
 
   /// The virtual list needs a definite height: fill the window below the toolbar.
+  protected remeasure(): void {
+    const wrap = this.listWrap();
+    if (wrap) this.measure(wrap.nativeElement);
+  }
+
   private measure(element: HTMLElement): void {
     requestAnimationFrame(() =>
       this.listHeight.set(Math.max(240, window.innerHeight - element.getBoundingClientRect().top)),

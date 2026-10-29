@@ -33,6 +33,7 @@ web/src/
       layout/           shell, sidebar, top bar, breadcrumbs, peek panel, NavigationContext
       commands/         command palette + CommandRegistry
       shortcuts/        ShortcutService + "?" help dialog
+      help/             HelpMenuRegistry, provideHelpMenuItem (top-bar Help menu + palette Help group)
       notify/           ToastService, ConfirmService
       projects/         ProjectDirectory (readable projects), ProjectContext (current project)
       tickets/          ticket wire types, TicketsApi, TicketCache, TicketEvents, FieldHints, ProjectPeople,
@@ -40,6 +41,10 @@ web/src/
       testing/          test case and regression wire types, TestCasesApi, RegressionsApi
       notifications/    NotificationsApi, NotificationCenter (unread count polling, panel state), top bar bell + panel
       theme/            ThemeService (light / dark / system, density)
+      onboarding/       OnboardingStateService (D-132); engine/: guided tours (TourLauncher, TourAnchorRegistry,
+                        tkTourAnchor; the session is a lazy chunk, D-131); tours/: tour data + TOUR_CATALOGUE;
+                        TourAvailability + provideGuidedTours (eager), GuidedTours (lazy) (D-136);
+                        guides/: auto-shown guide data; hints/: HintService, tk-contextual-hint (D-137)
     shared/             presentational UI kit, domain enums, markdown, pipes. Never imports core or features.
     features/<name>/    one folder per feature: <name>.routes.ts, <name>.views.ts, <page>/<page>.store.ts + <page>.view.ts
 ```
@@ -125,14 +130,101 @@ Inside project sections, `inject(ProjectContext)` gives the current project (`pr
 | Toasts | `ToastService.show / success / warning / error(err)` with an optional `{ action: { label: 'Undo', run } }`, or `actions: [...]` for several (shown in order). |
 | Confirm | `await ConfirmService.confirm({ title, message, detail, confirmLabel, danger, requireText })`. For three answers, `choose({ …, alternativeLabel })` resolves `'confirm'`, `'alternative'` or `'cancel'` (Esc); the confirm button has the initial focus, so Enter picks it. |
 | Palette | `CommandRegistry.registerCommands([...], destroyRef)` or `provideCommands(() => [...])` in route providers. Use `registerSearchProvider({ id, remote: true, minQueryLength, search(q, signal) })` for API-backed results (debounced 120 ms, aborted when the query changes). `registerScope({ id, prefix, hint })` adds a query prefix such as `p:`: while it leads the query, commands are hidden, only providers listing the id in `scopes` run (`search(text, signal, scopeId)` gets the text without the prefix) and the footer shows the hint. Registering the command id `ticket.create` shows the top-bar "New ticket" button and turns on the global `C`. |
-| Shortcuts | `ShortcutService.registerScoped([{ keys, description, section, handler, allowInInputs }])` for the component's lifetime. The latest registration of the same keys wins (a page can take over `/`). Notation: `mod+k` (Ctrl or ⌘), `shift+enter`, `g b` (sequence), `escape`, `?`. Single keys are ignored while typing in a field unless `allowInInputs` is set, and every shortcut is ignored while an overlay with a backdrop (dialog, menu, picker) is open. Everything registered appears in the `?` sheet. `isRegistered(keys)` tells pickers whether to show their key hint (`PICKER_SHORTCUT_AVAILABLE`). |
+| Shortcuts | `ShortcutService.registerScoped([{ keys, description, section, handler, allowInInputs }])` for the component's lifetime. The latest registration of the same keys wins (a page can take over `/`). Notation: `mod+k` (Ctrl or ⌘), `shift+enter`, `g b` (sequence), `escape`, `?`. Single keys are ignored while typing in a field unless `allowInInputs` is set, Enter and Space on a focused button or link are left to the control (D-133), and every shortcut is ignored while an overlay with a backdrop (dialog, menu, picker) is open. Everything registered appears in the `?` sheet. `isRegistered(keys)` tells pickers whether to show their key hint (`PICKER_SHORTCUT_AVAILABLE`). |
 | Cached reads | `SwrCache.load(key, fetch, tags)` returns `{ cached, fresh }`: render `cached` at once, then `fresh` (D-84). While cached data is shown the refetch drives the shell's 2px top line. Tag entries (`project:KEY`, `ticketsTag(KEY)`, `MY_WORK_TAG`); `TicketEvents.emit` drops the ticket-list tags. `ApiClient.get` already shares identical in-flight GETs. |
 | Breadcrumbs | `data: { breadcrumb: 'Backlog' }` or `(route) => ({ label, projectKey })` on routes. Pages can call `Breadcrumbs.setTail([...])` for dynamic crumbs. |
 | Theme | `ThemeService.setPreference('light' \| 'dark' \| 'system')`, `toggle()`, `setDensity('compact')`. Stored in localStorage (`tk-theme`, `tk-density`) and applied as `data-theme` / `data-density` on `<html>` before Angular boots. |
 | Avatars | `AvatarDirectory` (`core/users/`, D-130) holds every chosen avatar from `GET /users/avatars`: loaded after sign-in, refetched when the tab becomes visible and the data is older than 5 minutes, `set(userId, avatar)` for an optimistic own save, cleared on sign-out. It is provided as `AVATAR_SOURCE` (`shared/avatars/avatar-source.ts`) so shared UI resolves avatars by user id (`resolveAvatar`). The icon art is a lazy chunk (`loadAvatarArt()`); add an icon by dropping its Fluent Emoji Flat SVG into `web/vendor/fluent-emoji/flat/<key>.svg`, adding the key to both catalogues (`AvatarCatalog.cs`, `shared/avatars/avatar-catalog.ts`) and running `npm run generate:avatars`. |
 | Notifications | `NotificationCenter` (`core/notifications/`): `unreadCount()` for the top bar bell, polled every 60 s and on window focus while signed in (no push), and the panel state (`open/close/toggle`, `filter` all \| unread, `groups()` by day, `loadMore()`). `markRead(n)` / `markAllRead()` are optimistic with rollback and a toast; `activate(n)` marks read and opens the ticket peek (or navigates to a regression item). REST calls go through `NotificationsApi` (`/me/notifications`). |
+| Help menu | Adding a Help menu item (D-133): `provideHelpMenuItem(() => ({ id: 'help.<name>', label, icon, order: HELP_MENU_ORDER.<slot>, visible, disabled, hint, run }))` in app or route providers, or `HelpMenuRegistry.register(item, destroyRef)`. The item appears in the top-bar Help menu (`core/help/`) and as a command in the palette's **Help** group; `visible` / `disabled` / `hint` take a signal or `computed`. Use an icon from `APP_ICONS`. The menu item's test id is the id with dots as dashes (`help-shortcuts`). Restart all guides is built in and always last; don't register it. menu: false offers an item in the palette only (one command per tour). |
+| Onboarding state | `OnboardingStateService` (`core/onboarding/`, D-132): loads `GET /me/onboarding` after the first render while signed in. `loaded()` (wait for it before auto-showing a guide), `isSeen(guideId, version)` (stored version >= `version`), `complete` / `dismiss(guideId, version)`, `forget(guideId)` and `resetAll()` (optimistic with rollback and a toast), `checklist()`, `ownsProjects()`, `createdAt()` (What's new entries dated before it count as seen), `load()` to refresh. Guide ids must match `GUIDE_ID_PATTERN`. REST calls go through `OnboardingApi`. Guides that show by themselves are declared in `core/onboarding/guides/` and collected in `AUTO_SHOWN_GUIDES` (`auto-guides.ts`, D-134), which the e2e suites import. |
+| Contextual hints | Adding a hint (spec 14.5, D-137): append `{ id: 'hint.<name>', version: 1, title, body, requires? }` to `HINTS` in `core/onboarding/guides/hints.ts` (plain data: it is part of `AUTO_SHOWN_GUIDES`, so the e2e guard marks it seen; `requires: 'write'` for a hint about a write action), then place `<tk-contextual-hint hint="hint.<name>" [canWrite]="…" />` (`core/onboarding/hints/`) where the confusion happens. In a picker, pass `<ng-template #hint><tk-contextual-hint hint="…" compact /></ng-template>` as `[pickerFooter]="hint"`. `HintService` decides: after `OnboardingStateService.loaded()`, unseen at its version, `canWrite` for write hints, not while a tour runs or another overlay with a backdrop (dialog, menu, picker) covers it, and only the first registered such hint on the page. "Got it" / × records `hint.<name>` `Dismissed`; Restart all guides brings it back. `(shownChange)` tells a page that measures its layout (the backlog) when it appears or goes. Raise `version` to show a hint again after its copy changes. |
+| Guided tours | Start a tour with `GuidedTours.start(viewId, { projectKey?, returnFocusTo? })` or `startCurrent()` (`core/onboarding/guided-tours.ts`, D-136), imported lazily from entry points (`const { GuidedTours } = await import('@core/onboarding/guided-tours')`). It works out access from what the view reports through `ViewTourAccess` (D-138), else from the open project (`OpenProjectState`) and `AuthService.isAdmin()`, opens the view first when the tour has a `path` and the user is elsewhere, and stores `Completed` / `Dismissed` at the tour's version (not `aborted` or `interrupted`). `TourAvailability` (eager) says which tour belongs to the view on screen (`current()`) and whether one `canStart(viewId)`. `NavigationContext.currentViewId()` is the deepest activated `viewRoute`'s view id. Never call `TourLauncher` from a feature. |
+| Getting-started checklist | `GettingStartedService` (`core/onboarding/checklist/`, D-135): `groups()`, `progress()` (`done` of `total` required items), `next()`, `visible()`, `completed()`, `dismiss()`, `restore()` (forgets the stored state and asks My work to focus the card), `refresh()`. Item copy, groups and hints are plain data in `checklist.model.ts`, keyed by the ids the server returns; link targets are resolved by the card (`features/my-work/checklist-card.component.ts`). Help → Getting started is `provideGettingStartedHelp()` in `app.config.ts`. |
 
 Built-in shortcuts: `Ctrl/⌘ K` and `/` open the palette, `?` opens the shortcut sheet, `[` toggles the sidebar, `C` creates a ticket (once registered). With `G` then a letter: `M` My work, `P` Projects, `O` Boards, `N` notifications panel, and, inside a project, `D` dashboard, `B` backlog, `T` test cases, `R` regressions, `W` docs. `Esc` closes the notifications panel, then the peek panel. In the Docs section `Ctrl/⌘ \` shows or hides the tree and `Ctrl/⌘ .` / `Ctrl/⌘ Shift .` copy the open doc's key / link (D-120). Shifted symbols are written with the unshifted key (`mod+shift+.`); `ShortcutService` matches them by `event.code`.
+
+## Adding a tour
+
+A tour (spec 14.4, D-131, D-136) is data plus anchors; the engine, the Help menu item and the palette command come for free.
+
+1. **Data file**, `core/onboarding/tours/<area>.tours.ts`: export a `TourDefinition`. Plain TypeScript: no Angular or package imports, only relative ones (`../engine/tour.model`), because e2e imports it through `@onboarding/tours/<area>.tours`.
+
+   ```ts
+   export const BACKLOG_TOUR: TourDefinition = {
+     id: 'tour.backlog.list',      // always `tour.<viewId>`
+     version: 1,                   // raise it to show the tour again to everyone who saw it
+     viewId: 'backlog.list',       // the view id, never a variant
+     title: 'Backlog',             // eyebrow "Backlog tour · Step n of m"
+     steps: [
+       { id: 'quick-create', anchor: 'backlog.quick-create', requires: 'write', title: '…', body: '…' },
+       { id: 'group-sort', anchor: 'backlog.group-sort', placement: 'below', title: '…', body: '…' },
+     ],
+   };
+   ```
+
+   Steps: stable `id`s (copy keys, i18n later), `requires: 'write' | 'owner' | 'admin'` for anything the user must be able to do (Viewers get the rest), `placement` as a preference only (the card flips or pushes to fit). Keep three to six steps and one or two sentences each.
+2. **Catalogue**: add an entry to `TOUR_CATALOGUE` in `tours/tour-catalogue.ts` with `viewId`, `title` (same as the definition's), `load: () => import('./<area>.tours').then((m) => m.X_TOUR)` and, when the view needs at most a project, a `path` (`'/projects/:projectKey/<section>'`, or `'/search'` without a project) so the palette command can start the tour from anywhere. A tour for one audience sets `requires: 'owner' | 'admin'` on the entry as well as on every step (D-139): others get neither "Tour of this page" nor the command. The entry's `requires` is checked against the same access as the steps (what the view reports, else the open project), so a `write` or `owner` tour has no `path`. The `tours.spec.ts` check fails when the entry and the definition disagree.
+3. **Anchors**: put `tkTourAnchor="<area>.<thing>"` on the element each step points at, **in every variant of the view and in every state that shows that part of the page** (the backlog puts `backlog.list` on the list and on both empty states). For one element out of a list, bind null on the others: `[tkTourAnchor]="row.id === firstId() ? 'backlog.rank' : null"`. An anchor that is only there with data (rows, "on boards") is fine: the step is skipped, with a dev-mode warning. If fewer than half of the tour's anchors resolve, the tour does not start, so make sure the frame of the page (header actions, toolbar, list or its empty state) always has its anchors.
+   Sections added through `provideTicketDetailSection` and header actions put their own anchors in their own templates (`ticket.test-cases`, `ticket.delegate`), and only while they show.
+   **The anchor rule (D-131)**: steps point at `tkTourAnchor` ids, never at CSS selectors or `data-testid`. An anchor id is part of the view's contract, like its view id: an A/B variant that has the feature exposes the same id, and one without it leaves it out (that step is skipped). Anchors must exist when the tour starts, so do not put them inside `@defer (on viewport)` blocks (the dashboard moved epic progress out of one, D-139).
+4. **Access outside a project**: `requires` steps are decided from the open project's role. A view with no open project (a board, a ticket page) reports what the user may do there in its constructor, from the data it loaded: `inject(ViewTourAccess).provide(BOARD_VIEW.viewId, () => store.tourAccess())`, returning null while loading or when it does not apply (D-138). Instance Admin steps and tours (dmin.users) need nothing more: `admin` comes from the user's instance role everywhere.
+5. **Version bump**: changing copy does not need one. Raise `version` when a tour gains steps users should see, so everyone who completed or dismissed the old version gets it as new again.
+6. **Tests**: a Vitest plan test for the role filter and the empty-page case (see `tours/tours.spec.ts`), and a Playwright spec that seeds data through the API, starts the tour from the Help menu and walks it with the keyboard (`e2e/tests/onboarding/backlog-tour.spec.ts`). Assert step titles from the imported definition rather than copying them.
+7. **Coverage (required)**: add a seeding recipe for the view id to `RECIPES` in `e2e/tests/onboarding/tour-anchors.spec.ts`. It seeds through the `Api` helper and returns the pages to open, one per state the tour has to work on (the dashboard lists an empty and a filled project). The spec runs every `TOUR_CATALOGUE` entry as the bootstrap Admin, asserts every step's `[data-tour]` anchor is visible and that "Tour of this page" starts with every step. A catalogue entry without a recipe fails the spec. `app/tour-views.spec.ts` (Vitest) fails when a tour's view id is not routed through `viewRoute`, so a renamed view id breaks the build, not the tour.
+
+Nothing else changes: "Tour of this page" enables itself on the view, and the palette gets `help.tour.<viewId>` ("Backlog tour"). Do not import `GuidedTours` statically into anything the initial bundle reaches; entry points import it lazily.
+
+### Action-driven steps and walkthroughs
+
+A walkthrough (`kind: 'walkthrough'`, D-142) spans pages and moves on when the user really does something. Its steps are the same `TourStep` data with a few more fields:
+
+```ts
+{
+  id: 'create-board',
+  anchor: 'boards.new',
+  route: '/boards',                                            // the engine goes here first
+  advanceWhen: { kind: 'condition', id: 'board.links-project' },  // or { kind: 'route', path }
+  action: { label: 'Create the board', does: 'custom', id: 'create-board' }, // or click-anchor / focus-anchor
+  waiting: 'Waiting for a board that links {projectKey}',     // {param} placeholders come from what was learnt
+  optional: false,                                             // true adds "Skip this step"
+  title: 'Create a board',
+  body: '…',
+}
+```
+
+- **Conditions live in code, not in the data.** The starter passes a `TourConditions` (`engine/tour-conditions.ts`) to `TourLauncher.start`: `check(id, params)` reads real data (a GET, never a store that only knows this tab) and returns `{ holds, params? }`; the params it learns (`ticketKey`, `boardId`) fill later routes and copy. `run(id, params)` performs `custom` actions (open a dialog with suggestions) and returns learnt params or null. `changes` says when to check again; `FirstProjectConditions` uses `ApiClient.writes` and window focus, and the engine adds navigation and "the user's dialog closed". Do not poll.
+- **The step is non-modal.** No backdrop, shortcuts stay live, clicks pass through the hole only, and the card hides while the user's own dialog, picker or the peek is open. Put the step's anchor on what the user acts on, and give the step an `action` so Enter on the card does it.
+- **Resume, don't repeat.** Start with `resume: {}` (or `{ skipOptional: true }`): the session checks the action steps in order and opens the first one not done (`resumeIndex`). Make every condition true for work done any other way (another dialog, a shortcut, REST, MCP), so a restart never asks for something the user already made.
+- **Pause.** In a walkthrough a navigation the session did not start re-checks the step, then pauses behind the "Continue the walkthrough" pill when the user is off the step's page. `TourLauncher.paused()` and `continue()` expose it; Help items can use them.
+- **Feature dialogs from core** go through a creator seam, like `TicketCreator`: `ProjectCreator.open(prefill)` and `BoardCreator.open(prefill)` load the feature dialog lazily through a token provided in `app.config.ts`.
+- **Starting the walkthrough** from another feature: `startFirstProjectWalkthrough(injector, { skipOptional? })` from `core/onboarding/walkthrough/first-project.help.ts`, or run the Help item `help.tour.first-project` (`HelpMenuRegistry.find`), as the welcome dialog and `LearnActions` do.
+- **Tests**: Vitest for the conditions with a stubbed `ApiClient` and for the resume rule (`walkthrough/first-project.spec.ts`), the engine behaviour with fake conditions (`engine/tour-session.walkthrough.spec.ts`), and one Playwright run of the whole walkthrough that asserts each step's anchor (`e2e/tests/onboarding/first-project.spec.ts`; the walkthrough is not in `TOUR_CATALOGUE`, so this spec is its anchor guard). `E2E_SCREENSHOTS=1` writes the step screenshots to `docs/screenshots/`.
+
+## Adding a What's new entry
+
+What's new (spec 14.2, D-140) is data; the dialog, the scheduling, Help → What's new and the e2e guard come for free.
+
+1. **Append** an entry to `WHATS_NEW_ENTRIES` in `core/onboarding/guides/whats-new.ts` (oldest first, plain TypeScript):
+
+   ```ts
+   {
+     id: 'whats-new.2027-02',      // always `whats-new.<date>`
+     version: 1,                   // raise it to show the entry again to everyone who saw it
+     date: '2027-02',              // the release month, yyyy-mm (UTC)
+     title: 'Board swimlanes and saved filters',
+     items: [
+       { title: 'Swimlanes', body: 'Group a board by assignee or epic. Press S to switch.' },
+       { title: 'Delegate to agent', body: '…', flag: 'agent.delegate' }, // hidden while the flag is off
+     ],
+   }
+   ```
+
+   Keep three to six items of one or two sentences each, describing what the user can do and where (a shortcut, a menu). Check each claim against the app; put `flag` on items behind a feature flag.
+2. **Date it by the release month.** Users created after the first day of that month never see it; everyone else gets it once, the oldest unseen entry first and at most one auto-shown dialog per browser session (the welcome dialog wins). Help → What's new lists every entry, newest first.
+3. **Tests**: `auto-dialogs.logic.spec.ts` checks every authored entry (id matches the date, valid month, at least one item, unique). The e2e guard picks the entry up through `AUTO_SHOWN_GUIDES`, so existing specs stay clear of it; `e2e/tests/onboarding/welcome.spec.ts` covers whichever entry is due.
+
+The pieces: `OnboardingDialogs` (`core/onboarding/onboarding-dialogs.ts`, eager and small) decides once per app load which dialog opens by itself (`nextAutoDialog` in `auto-dialogs.logic.ts`); `OnboardingDialogRunner` and the dialogs (`core/onboarding/dialogs/`) are one lazy chunk. To wait for a tour without loading the engine, read `ActiveTour.id()`.
 
 ## Tickets: shared services and extension points
 
@@ -215,10 +307,11 @@ Live catalogue: `/dev/ui-kit`. Import components one by one (all standalone, `tk
 | `tk-project-tile [projectKey]` | 16 px coloured key tile. |
 | `tk-skeleton-rows [count]` | Row skeletons. They appear only after 120 ms. |
 | `tk-empty-state icon title description` + projected actions | Empty and error states. `tone="danger"` for errors. |
+| `tk-hint title body [learnMoreLabel] [compact] (dismissed) (learnMore)` | Inline hint (`role="note"`, info tint): presentational only. Features place hints through `tk-contextual-hint` (core), which decides visibility. |
 | `tk-segmented [options] [(value)]` | Radio-group segmented control. |
 | `[tkSearchPicker]="searchFn" (picked)` | Like the inline picker, but options come from an async, debounced search (tickets by key or title). |
 | `[tkLabelsPicker]="labels" [labelSuggestions]="fn" (labelToggled)` | Multi-select labels popover with suggestions and "create new". Stays open while toggling. |
-| `[tkInlinePicker]="options" [pickerValue] (picked)` | CDK overlay listbox with a filter input, ↑/↓/Home/End/Enter/Esc and digits 1–9. Options may carry an `icon` (status, type, priority, severity glyph or a Tabler icon). `[pickerLoad]` loads options on open; `open(origin, options)` opens under another element. Optional `[pickerOptionTemplate]`. Ready-made options are in `shared/domain/picker-options.ts`. |
+| `[tkInlinePicker]="options" [pickerValue] (picked)` | CDK overlay listbox with a filter input, ↑/↓/Home/End/Enter/Esc and digits 1–9. Options may carry an `icon` (status, type, priority, severity glyph or a Tabler icon). `[pickerLoad]` loads options on open; `open(origin, options)` opens under another element. Optional `[pickerOptionTemplate]`, and `[pickerFooter]` (a template rendered under the options, e.g. a hint). Ready-made options are in `shared/domain/picker-options.ts`. |
 | `tk-markdown [source] [mentions]` | `renderMarkdown(source, { mentions })`: marked (GFM) → raw HTML escaped → DOMPurify, ticket keys linked to `/tickets/KEY` and doc keys (also `[text](KEY)`, `![caption](KEY)`) to `/docs/KEY` (router navigation), external links open in a new tab. With `references` (docs) known tickets become status chips, known docs title-linked, diagram embeds figures and anything else plain text (`shared/markdown/link-references.ts`). Mention tokens `@[Name](user:<id>)` (D-96) of the users in `mentions` become `.tk-mention` chips (16 px avatar, the chosen icon and colour through the `avatarOf` option, else initials on the user's stable tint, + current display name, `data-testid="mention-<id>"`), built with DOM APIs after sanitizing; any other token shows as plain `@Name`. Tokens in code stay code. Parser and caret helpers: `shared/markdown/mentions.ts`. |
 | `tk-markdown-editor [(value)] (submitted) (cancelled) [mentionSearch] [mentions]` | Write / Preview tabs. Ctrl/⌘+Enter submits and Esc cancels. Projected content goes in the footer. With `mentionSearch: (query, signal) => Promise<MentionCandidate[]>`, an `@` at a word start opens a people listbox at the caret (CDK overlay placed with a mirror div, `data-testid="mention-picker"`, rows `mention-option-<email>`): 150 ms debounce, the previous search aborted, at most 8 rows, "No one matches". ↑/↓ move, Enter or Tab insert the token, Esc closes only the picker; with nothing to pick, Enter and Tab keep their usual meaning. `mentions` (users already mentioned) lets Preview show chips. Offer it only on ticket descriptions and comments (D-96). |
 | `tk-route-tabs [tabs]` | Material tab nav bar over child routes. Project the `<router-outlet />`. |
@@ -256,6 +349,9 @@ Global CSS helpers (`styles/`): `.tk-page`, `.tk-page-header` (+ `.tk-page-count
   - Import `test` and `expect` from `e2e/support/fixtures.ts`. It provides page objects (`loginPage`, `shell`) and `api`.
   - `api` (`e2e/support/api.ts`) uses the admin cookie session and handles XSRF itself (it reads the `XSRF-TOKEN` cookie and echoes it as `X-XSRF-TOKEN`). Seed data through it (`api.createProject()`, `api.post(...)`), never through the UI. Use `uniqueProjectKey()` so parallel tests don't collide.
   - Page objects live in `e2e/pages/*.page.ts`. They expose locators and intent-level methods, never assertions about business rules.
+  - **Other users**: seed them with `seedUser(api, prefix)` (`e2e/tests/identity/identity.ts`) and sign them in with `signInAs(browser, { email, password: PASSWORD })` (`e2e/support/session.ts`). It returns `{ context, page }` with no page loaded yet (stub routes or add init scripts, then `page.goto`), signed in through the API.
+  - **Auto-shown guides (D-134)**: the welcome dialog, What's new and hints would cover what a spec drives, so `global.setup.ts` and `signInAs` mark every auto-shown guide `Completed` before the SPA loads (`markGuidesSeen(request, guides?)` in `e2e/support/guides.ts`; `markGuidesSeenAs(credentials)` for a user who must sign in through the login form). An onboarding spec that wants them opts in with `signInAs(browser, credentials, { keepGuides: true })`, or marks only some with `markGuidesSeen(context.request, [guide])`. The list is `AUTO_SHOWN_GUIDES` in `web/src/app/core/onboarding/auto-guides.ts`: **every guide that opens or appears by itself must be listed there** (through `guides/welcome.ts`, `guides/whats-new.ts` or `guides/hints.ts`), or the suite will meet it. `e2e/tests/onboarding/guide-guard.spec.ts` checks the guard. The welcome dialog and What's new open by themselves at most once per browser session (D-140), so a spec that wants one of them marks the other auto-shown guides seen (see `signInWithDialogs` in `e2e/tests/onboarding/welcome.spec.ts`).
+  - **Importing SPA data**: `e2e/tsconfig.json` maps `@onboarding/*` to `web/src/app/core/onboarding/*` (Playwright honours tsconfig `paths`), e.g. `import { AUTO_SHOWN_GUIDES } from '@onboarding/auto-guides'`. Files imported this way (guide lists, tour definitions in `tours/`, `onboarding.models.ts`) must stay plain TypeScript: no Angular or other package imports, relative imports only.
   - Timing budgets go in `*.perf.spec.ts`. The `chromium` project ignores them; the `perf` project runs them only when asked, alone: `E2E_PERF=1 npx playwright test --project=perf` (parallel workers skew the numbers).
 
 ### `data-testid` conventions
@@ -266,5 +362,6 @@ Use `getByTestId` (configured to `data-testid`) for anything the e2e tests drive
 - Sidebar links: `nav-<target>` (`nav-my-work`, `nav-project-PAY`, `nav-project-backlog`, `nav-admin-flags`). Project tabs: `project-tab-<path>`.
 - Every routed view host: `view-<viewId>` (`view-backlog.list`), so a test can wait for the page.
 - Repeated items: `<thing>-row-<stable key>` (`project-row-PAY`). Use the business key, never an index.
-- Palette items: `palette-item-<id>`. Segmented options: `<testId>-<value>`.
+- Hints: `hint-<name>` (`hint-free-transitions`) on the hint itself, its dismiss button `hint-dismiss`.
+- Palette items: `palette-item-<id>`. Help menu items: the item id with dots as dashes (`help-shortcuts`, `help-restart-guides`); the trigger keeps `shortcut-help`. Segmented options: `<testId>-<value>`.
 - Test ids are part of the e2e contract: keep them when you refactor markup, and don't put them on purely visual elements.

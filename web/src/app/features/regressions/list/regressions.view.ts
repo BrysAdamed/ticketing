@@ -88,11 +88,17 @@ import { StartSessionData, StartSessionDialog } from './start-session.dialog';
       <tk-empty-state
         icon="tablerHistory"
         title="No regression sessions"
-        description="Start one to run every Manual and Automatic test case against a version."
+        [description]="
+          canWrite()
+            ? 'Start one to run every Manual and Automatic test case against a version.'
+            : 'No one has run a regression in this project yet.'
+        "
+        learnLabel="How regressions work"
+        (learn)="explain()"
       >
         @if (canWrite() && filter() === 'All') {
-          <button mat-stroked-button type="button" (click)="start()">
-            Start regression <tk-kbd>N</tk-kbd>
+          <button mat-flat-button type="button" (click)="start()">
+            Start regression <tk-kbd tone="on-solid">N</tk-kbd>
           </button>
         }
       </tk-empty-state>
@@ -223,5 +229,16 @@ export class RegressionsView {
     );
     const session = await firstValueFrom(ref.afterClosed());
     if (session) void this.router.navigate([session.key], { relativeTo: this.route });
+  }
+
+  protected async explain(): Promise<void> {
+    const { RegressionsExplainerDialog } = await import('./regressions-explainer.dialog');
+    this.dialog.open(RegressionsExplainerDialog, {
+      width: '480px',
+      autoFocus: 'first-tabbable',
+      role: 'dialog',
+      ariaModal: true,
+      ariaLabelledBy: 'regressions-explainer-title',
+    });
   }
 }

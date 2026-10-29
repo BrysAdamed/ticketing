@@ -4,6 +4,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { toApiError } from '@core/api/api-error';
 import { ToastService } from '@core/notify/toast.service';
+import { TourAnchorDirective } from '@core/onboarding/engine/tour-anchor.directive';
 import { ProjectVisibility } from '@shared/domain/enums';
 import { MarkdownEditorComponent } from '@shared/markdown/markdown-editor.component';
 import { MarkdownViewerComponent } from '@shared/markdown/markdown-viewer.component';
@@ -24,6 +25,7 @@ const DESCRIPTION_MAX_LENGTH = 10_000;
     MarkdownViewerComponent,
     VisibilityCardsComponent,
     IconComponent,
+    TourAnchorDirective,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './settings-section.scss',
@@ -82,7 +84,7 @@ const DESCRIPTION_MAX_LENGTH = 10_000;
           </div>
         }
       </div>
-      <div class="field">
+      <div class="field" tkTourAnchor="project-settings.visibility">
         <span class="tk-field-label" id="settings-visibility">Visibility</span>
         <tk-visibility-cards
           labelledBy="settings-visibility"

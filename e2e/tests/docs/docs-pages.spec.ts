@@ -1,9 +1,9 @@
 import { Browser, Page as BrowserPage } from '@playwright/test';
 import { DocPagePage } from '../../pages/doc-page.page';
-import { LoginPage } from '../../pages/login.page';
 import { ShellPage } from '../../pages/shell.page';
 import { Api } from '../../support/api';
 import { expect, test } from '../../support/fixtures';
+import { signInAs } from '../../support/session';
 import { PASSWORD, seedUser } from '../identity/identity';
 
 interface Doc {
@@ -28,14 +28,13 @@ async function createPage(api: Api, projectKey: string, title: string, content: 
 }
 
 /// A second user (Member of a public project) in a browser context of their own.
-async function signInAs(browser: Browser, email: string): Promise<BrowserPage> {
-    const context = await browser.newContext({
-        storageState: { cookies: [], origins: [] },
-        viewport: { width: 1440, height: 900 },
-    });
-    const page = await context.newPage();
-    await page.goto('/login');
-    await new LoginPage(page).signIn(email, PASSWORD);
+async function signInMember(browser: Browser, email: string): Promise<BrowserPage> {
+    const { page } = await signInAs(
+        browser,
+        { email, password: PASSWORD },
+        { contextOptions: { viewport: { width: 1440, height: 900 } } },
+    );
+    await page.goto('/my-work');
     await new ShellPage(page).expectVisible();
     return page;
 }
@@ -145,7 +144,7 @@ test.describe('docs pages', () => {
         const projectKey = (await api.createProject({ visibility: 'Public' })).key;
         const doc = await createPage(api, projectKey, 'Shared', 'Base');
         const bea = await seedUser(api, 'presence');
-        const beaPage = await signInAs(browser, bea.email);
+        const beaPage = await signInMember(browser, bea.email);
         const beaView = new DocPagePage(beaPage);
         await beaView.goto(projectKey, doc.key);
         await expect(beaView.presence).toBeHidden();
@@ -174,7 +173,7 @@ test.describe('docs pages', () => {
         const projectKey = (await api.createProject({ visibility: 'Public' })).key;
         const doc = await createPage(api, projectKey, 'Plan', 'one\n\ntwo\n\nthree\n\nfour');
         const bea = await seedUser(api, 'merge');
-        const beaPage = await signInAs(browser, bea.email);
+        const beaPage = await signInMember(browser, bea.email);
         const beaView = new DocPagePage(beaPage);
         const view = new DocPagePage(page);
         await view.goto(projectKey, doc.key, true);

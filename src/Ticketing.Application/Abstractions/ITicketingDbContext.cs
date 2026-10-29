@@ -10,6 +10,7 @@ using Ticketing.Domain.Comments;
 using Ticketing.Domain.Docs;
 using Ticketing.Domain.FeatureFlags;
 using Ticketing.Domain.Idempotency;
+using Ticketing.Domain.Onboarding;
 using Ticketing.Domain.Projects;
 using Ticketing.Domain.Regressions;
 using Ticketing.Domain.TestCases;
@@ -32,6 +33,8 @@ public interface ITicketingDbContext
     DbSet<UserSession> UserSessions { get; }
 
     DbSet<PersonalAccessToken> PersonalAccessTokens { get; }
+
+    DbSet<UserGuideState> UserGuideStates { get; }
 
     DbSet<Project> Projects { get; }
 

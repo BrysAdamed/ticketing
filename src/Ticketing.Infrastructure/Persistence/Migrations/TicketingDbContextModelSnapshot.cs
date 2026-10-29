@@ -108,6 +108,10 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_activity_entries_actor_id_occurred_at")
                         .HasFilter("actor_id IS NOT NULL");
 
+                    b.HasIndex("ActorId", "ProjectId")
+                        .HasDatabaseName("ix_activity_entries_actor_status_changes")
+                        .HasFilter("field = 'status' AND action = 'ticket.field.changed'");
+
                     b.HasIndex("ProjectId", "OccurredAt")
                         .HasDatabaseName("ix_activity_entries_project_id_occurred_at")
                         .HasFilter("project_id IS NOT NULL");
@@ -975,6 +979,35 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_idempotency_records_expires_at");
 
                     b.ToTable("idempotency_records", (string)null);
+                });
+
+            modelBuilder.Entity("Ticketing.Domain.Onboarding.UserGuideState", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<string>("GuideId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("guide_id");
+
+                    b.Property<int>("State")
+                        .HasColumnType("integer")
+                        .HasColumnName("state");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("UserId", "GuideId")
+                        .HasName("pk_user_guide_state");
+
+                    b.ToTable("user_guide_state", (string)null);
                 });
 
             modelBuilder.Entity("Ticketing.Domain.Projects.Project", b =>
@@ -2164,6 +2197,16 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_idempotency_records_users_user_id");
+                });
+
+            modelBuilder.Entity("Ticketing.Domain.Onboarding.UserGuideState", b =>
+                {
+                    b.HasOne("Ticketing.Domain.Users.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_user_guide_state_users_user_id");
                 });
 
             modelBuilder.Entity("Ticketing.Domain.Projects.Project", b =>

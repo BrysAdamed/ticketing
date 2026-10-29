@@ -7,6 +7,8 @@ import {
   viewChild,
 } from '@angular/core';
 import { MatTooltip } from '@angular/material/tooltip';
+import { TourAnchorDirective } from '@core/onboarding/engine/tour-anchor.directive';
+import { ContextualHintComponent } from '@core/onboarding/hints/contextual-hint.component';
 import { BacklogItem, BacklogParent, UserRef } from '@core/tickets/ticket.models';
 import {
   Priority,
@@ -64,6 +66,8 @@ export type RowEdit =
     InlinePickerDirective,
     LabelsPickerDirective,
     SearchPickerDirective,
+    ContextualHintComponent,
+    TourAnchorDirective,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
@@ -86,6 +90,7 @@ export type RowEdit =
         [attr.aria-label]="'Select ' + item().key"
         [attr.aria-pressed]="selected()"
         data-testid="row-checkbox"
+        [tkTourAnchor]="tourFirst() ? 'backlog.select' : null"
         (click)="$event.stopPropagation(); toggleSelect.emit($event.shiftKey)"
       >
         @if (selected()) {
@@ -137,11 +142,16 @@ export type RowEdit =
       pickerShortcut="S"
       [attr.aria-label]="'Status: ' + statusLabel()"
       data-testid="row-status"
+      [tkTourAnchor]="tourFirst() ? 'backlog.status' : null"
+      [pickerFooter]="statusHint"
       (click)="$event.stopPropagation()"
       (picked)="edit.emit({ field: 'status', value: $event })"
     >
       <tk-status-icon [status]="item().status" />
     </button>
+    <ng-template #statusHint>
+      <tk-contextual-hint hint="hint.free-transitions" compact />
+    </ng-template>
     <span class="title" data-testid="row-title">{{ item().title }}</span>
     @if (
       item().severity === 'Critical' || item().severity === 'Blocker' || item().severity === 'Major'
@@ -245,6 +255,8 @@ export class BacklogRowComponent {
   readonly pending = input(false);
   /// False when the list is grouped by epic, where the group header already names the parent.
   readonly showParent = input(true);
+  /// The first ticket row exposes the backlog tour's `backlog.select` anchor on its checkbox.
+  readonly tourFirst = input(false);
   readonly assigneeSearch = input<SearchFn<UserRef | null>>(() => Promise.resolve([]));
   readonly labelSuggestions = input<(prefix: string) => Promise<readonly string[]>>(() =>
     Promise.resolve([]),

@@ -14,6 +14,7 @@ import {
 } from '@core/boards/board.models';
 import { BoardsApi } from '@core/boards/boards.api';
 import { ToastService } from '@core/notify/toast.service';
+import type { TourAccess } from '@core/onboarding/engine/tour.model';
 import { LoadStatus } from '@core/projects/project-directory';
 import { MoveChildren } from '@core/tickets/move-children';
 import { TicketEvents } from '@core/tickets/ticket-events';
@@ -64,6 +65,17 @@ export class BoardStore {
     () => new Set((this.board()?.projects ?? []).filter((p) => p.canWrite).map((p) => p.key)),
   );
   readonly canAddTickets = computed(() => !this.isArchived() && this.writableProjects().size > 0);
+  /// What the board tour may show (D-138): writing is placing cards, `owner` is managing the board.
+  readonly tourAccess = computed<TourAccess | null>(() => {
+    const board = this.board();
+    return board
+      ? {
+          canWrite: this.canAddTickets(),
+          isOwner: board.permissions.canManage,
+          isAdmin: this.auth.isAdmin(),
+        }
+      : null;
+  });
   readonly users = computed(() => new Map((this.board()?.users ?? []).map((u) => [u.id, u])));
   readonly parents = computed(() => new Map((this.board()?.parents ?? []).map((p) => [p.id, p])));
   readonly columns = computed<readonly BoardColumn[]>(() => this.board()?.columns ?? []);

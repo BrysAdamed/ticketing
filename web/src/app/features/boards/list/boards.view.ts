@@ -4,7 +4,9 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatTooltip } from '@angular/material/tooltip';
 import { Router, RouterLink } from '@angular/router';
 import { Board } from '@core/boards/board.models';
+import { LearnActions } from '@core/onboarding/learn-actions';
 import { ShortcutService } from '@core/shortcuts/shortcut.service';
+import { TourAnchorDirective } from '@core/onboarding/engine/tour-anchor.directive';
 import { AvatarComponent } from '@shared/ui/domain/avatar.component';
 import { ProjectTileComponent } from '@shared/ui/domain/project-tile.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
@@ -21,6 +23,7 @@ import { CreateBoardDialog, CreateBoardDialogData } from './create-board.dialog'
 @Component({
   selector: 'tk-boards-view',
   imports: [
+    TourAnchorDirective,
     RouterLink,
     MatButtonModule,
     MatTooltip,
@@ -39,7 +42,13 @@ import { CreateBoardDialog, CreateBoardDialogData } from './create-board.dialog'
       <h1>Boards</h1>
       <span class="tk-page-count">{{ store.counts().active }}</span>
       <div class="tk-page-actions">
-        <button mat-stroked-button type="button" data-testid="boards-new" (click)="openCreate()">
+        <button
+          mat-stroked-button
+          type="button"
+          data-testid="boards-new"
+          tkTourAnchor="boards.new"
+          (click)="openCreate()"
+        >
           <tk-icon name="tablerPlus" [size]="14" />New board
         </button>
       </div>
@@ -133,8 +142,10 @@ import { CreateBoardDialog, CreateBoardDialogData } from './create-board.dialog'
                 icon="tablerLayoutKanban"
                 title="No boards yet"
                 description="A board pulls tickets from one or more project backlogs, like a sprint."
+                [learnLabel]="learn.canStartWalkthrough() ? 'How boards work' : null"
+                (learn)="learn.startWalkthrough({ skipOptional: true })"
               >
-                <button mat-stroked-button type="button" (click)="openCreate()">New board</button>
+                <button mat-flat-button type="button" (click)="openCreate()">New board</button>
               </tk-empty-state>
             }
           </div>
@@ -290,6 +301,7 @@ import { CreateBoardDialog, CreateBoardDialogData } from './create-board.dialog'
 })
 export class BoardsView {
   protected readonly store = inject(BoardsStore);
+  protected readonly learn = inject(LearnActions);
   private readonly dialog = inject(MatDialog);
   private readonly router = inject(Router);
 

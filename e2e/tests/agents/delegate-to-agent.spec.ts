@@ -1,10 +1,11 @@
+import { TICKET_TOUR } from '@onboarding/tours/ticket.tours';
 import { DelegatePage } from '../../pages/delegate.page';
-import { LoginPage } from '../../pages/login.page';
 import { ShellPage } from '../../pages/shell.page';
 import { TicketPage } from '../../pages/ticket.page';
 import { Api } from '../../support/api';
 import { ADMIN_STORAGE_STATE } from '../../support/env';
 import { expect, test } from '../../support/fixtures';
+import { signInAs } from '../../support/session';
 import { PASSWORD, seedUser } from '../identity/identity';
 
 const FLAG = 'agent.delegate';
@@ -107,6 +108,43 @@ test.describe('delegate to agent', () => {
             'href',
             `/projects/${projectKey}/settings/agent`,
         );
+    });
+
+    test('with the flag on the ticket tour ends on the Delegate button', async ({
+        page,
+        api,
+        shell,
+    }) => {
+        // Arrange
+        await setFlag(api, true);
+        const { ticketKey } = await seed(api);
+        const ticket = new TicketPage(page);
+        const delegate = new DelegatePage(page, ticket.root);
+        const popover = page.getByTestId('tour-popover');
+        const steps = TICKET_TOUR.steps;
+        await ticket.goto(ticketKey);
+        await expect(delegate.button).toBeVisible();
+
+        // Act: start the tour from the Help menu and walk it with →
+        await shell.openHelp();
+        await shell.helpItem('help-tour-page').click();
+        for (let i = 1; i < steps.length; i++) {
+            await expect(popover.getByTestId('tour-step-count')).toContainText(`Step ${i} of`);
+            await page.keyboard.press('ArrowRight');
+        }
+
+        // Assert
+        await expect(popover.getByTestId('tour-step-count')).toHaveText(
+            `Ticket tour · Step ${steps.length} of ${steps.length}`,
+        );
+        await expect(popover.getByRole('heading')).toHaveText(steps[steps.length - 1].title);
+        await expect(ticket.root.locator('[data-tour="ticket.delegate"]')).toBeVisible();
+
+        // Act
+        await page.keyboard.press('Escape');
+
+        // Assert
+        await expect(popover).toBeHidden();
     });
 
     test('first use asks for the folder, launches Claude Code with the resolved prompt and records the delegation', async ({
@@ -277,8 +315,10 @@ test.describe('delegate to agent', () => {
             visibility: 'Public',
         });
         const outsiderComment = `From outside ${Date.now()}`;
-        const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
-        const page = await context.newPage();
+        const { context, page } = await signInAs(browser, {
+            email: viewer.email,
+            password: PASSWORD,
+        });
         await DelegatePage.stubLaunches(page);
         await page.addInitScript(
             ([key]) =>
@@ -288,8 +328,7 @@ test.describe('delegate to agent', () => {
                 ),
             [publicKey],
         );
-        await page.goto('/login');
-        await new LoginPage(page).signIn(viewer.email, PASSWORD);
+        await page.goto('/my-work');
         await new ShellPage(page).expectVisible();
         const ticket = new TicketPage(page);
         const delegate = new DelegatePage(page, ticket.root);
@@ -350,10 +389,11 @@ test.describe('delegate to agent', () => {
             })
         ).key;
         await api.post(`/tickets/${ticketKey}/links`, { targetKey: linked, type: 'RelatesTo' });
-        const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
-        const page = await context.newPage();
-        await page.goto('/login');
-        await new LoginPage(page).signIn(outsider.email, PASSWORD);
+        const { context, page } = await signInAs(browser, {
+            email: outsider.email,
+            password: PASSWORD,
+        });
+        await page.goto('/my-work');
         await new ShellPage(page).expectVisible();
         const linkedPage = new TicketPage(page);
         await linkedPage.goto(linked);

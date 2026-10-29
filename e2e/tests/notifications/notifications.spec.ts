@@ -1,10 +1,10 @@
 import { Browser, BrowserContext, Page as BrowserPage, TestInfo } from '@playwright/test';
-import { LoginPage } from '../../pages/login.page';
 import { NotificationsPanel } from '../../pages/notifications.page';
 import { ShellPage } from '../../pages/shell.page';
 import { TicketPage } from '../../pages/ticket.page';
 import { Api, Page } from '../../support/api';
 import { expect, test } from '../../support/fixtures';
+import { signInAs } from '../../support/session';
 import { PASSWORD, seedUser } from '../identity/identity';
 
 interface TicketSummary {
@@ -26,14 +26,12 @@ interface Member {
     api: Api;
 }
 
-/// Signs a freshly seeded user in through the UI in a browser context of their own and gives
-/// them an API helper with that session.
+/// Signs a freshly seeded user in in a browser context of their own and gives them an API helper
+/// with that session.
 async function signInNewUser(browser: Browser, admin: Api, testInfo: TestInfo): Promise<Member> {
     const user = await seedUser(admin, 'notify');
-    const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
-    const page = await context.newPage();
-    await page.goto('/login');
-    await new LoginPage(page).signIn(user.email, PASSWORD);
+    const { context, page } = await signInAs(browser, { email: user.email, password: PASSWORD });
+    await page.goto('/my-work');
     await new ShellPage(page).expectVisible();
     const storageState = testInfo.outputPath('member.json');
     await context.storageState({ path: storageState });

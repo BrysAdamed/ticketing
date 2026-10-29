@@ -15,6 +15,7 @@
         mat-stroked-button
         type="button"
         data-testid="backlog-new"
+        tkTourAnchor="backlog.quick-create"
         (click)="store.openCreate(null)"
       >
         <tk-icon class="btn-icon" name="tablerPlus" [size]="14" />New ticket<tk-kbd class="btn-kbd"
@@ -35,7 +36,7 @@
     (labelsOpened)="loadLabelOptions()"
     (versionsOpened)="loadVersionOptions()"
   />
-  <span class="right">
+  <span class="right" tkTourAnchor="backlog.group-sort">
     <button type="button" class="tbtn" [matMenuTriggerFor]="groupMenu" data-testid="group-by">
       <tk-icon name="tablerLayersSubtract" [size]="14" />Group: <b>{{ groupLabel() }}</b>
     </button>
@@ -90,6 +91,10 @@
   </div>
 }
 
+@if (store.hasData()) {
+  <tk-contextual-hint class="page-hint" hint="hint.backlog-vs-boards" (shownChange)="remeasure()" />
+}
+
 @if (store.status() === 'error' && !store.hasData()) {
   <tk-empty-state
     icon="tablerAlertCircle"
@@ -111,6 +116,7 @@
     <tk-empty-state
       icon="tablerSearch"
       title="No tickets match these filters"
+      tkTourAnchor="backlog.list"
       description="Try other filters or show done tickets."
     >
       <button mat-stroked-button type="button" (click)="clearFilters()">Clear filters</button>
@@ -119,7 +125,14 @@
     <tk-empty-state
       icon="tablerList"
       title="No tickets in backlog"
-      description="Create the first one or import from Jira."
+      tkTourAnchor="backlog.list"
+      [description]="
+        store.canWrite()
+          ? 'Create the first one. New tickets land here until you place them on a board.'
+          : 'Nothing has been planned in this project yet.'
+      "
+      [learnLabel]="learn.canStartTour('backlog.list') ? 'Take the tour' : null"
+      (learn)="learn.startTour('backlog.list')"
     >
       @if (store.canWrite()) {
         <button mat-flat-button type="button" (click)="store.openCreate(null)">
@@ -140,6 +153,7 @@
       role="grid"
       aria-label="Backlog"
       data-testid="backlog-list"
+      tkTourAnchor="backlog.list"
       cdkDropList
       cdkDropListSortingDisabled
       [cdkDropListDisabled]="!store.canDrag()"
@@ -163,6 +177,8 @@
           @case ('ticket') {
             <tk-backlog-row
               cdkDrag
+              [tkTourAnchor]="row.id === firstTicketId() ? 'backlog.rank' : null"
+              [tourFirst]="row.id === firstTicketId()"
               cdkDragLockAxis="y"
               [cdkDragDisabled]="!store.canDrag() || isPending(row.id)"
               [pending]="isPending(row.id)"
@@ -220,7 +236,7 @@
 }
 
 @if (store.hasData() && store.onBoardsCount() > 0) {
-  <div class="on-boards" data-testid="backlog-on-boards">
+  <div class="on-boards" data-testid="backlog-on-boards" tkTourAnchor="backlog.on-boards">
     <tk-icon name="tablerLayoutKanban" [size]="14" />
     {{ store.onBoardsCount() }} more {{ store.onBoardsCount() === 1 ? 'ticket' : 'tickets' }} on
     boards

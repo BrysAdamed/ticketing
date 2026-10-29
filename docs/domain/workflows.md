@@ -502,6 +502,73 @@ stateDiagram-v2
 
 Users change their own password with the current one. That rotates the security stamp: every other cookie session ends at its next request, and the current session is re-issued with the new stamp (D-55). Unknown, used, expired and deactivated users' links all give the same 404 (D-56).
 
+### First run
+
+Spec: [§14](../product/01-refined-spec.md#14-onboarding), [§4.18](../product/01-refined-spec.md#418-userguidestate-tkt-54), D-131, D-132.
+
+After the first sign-in the app guides the user to a first real action. The welcome dialog is due whenever the user has no `welcome` row, so the bootstrap Admin, who signs in with the password from the environment and never sees a set-password link, gets it too (with the Admin card "Set up your instance"). Users who had signed in before the onboarding release were marked as welcomed by the migration.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as User
+    participant SPA as Web app
+    participant API as Ticketing API
+    participant DB as PostgreSQL
+    alt Invited user
+        U->>SPA: Open set-password link, set password
+        U->>SPA: Sign in (email, password)
+    else Bootstrap Admin
+        U->>SPA: Sign in with the bootstrap credentials
+    end
+    SPA-->>U: My work rendered first
+    SPA->>API: GET /api/v1/me/onboarding (after first render)
+    API->>DB: Guide states, checklist EXISTS queries over ReadableProjects()
+    API-->>SPA: { checklist, guides, ownsProjects, createdAt }
+    alt No welcome row
+        SPA-->>U: Welcome dialog (member cards, or Admin "Set up your instance" first)
+        alt Take the tour
+            U->>SPA: Take the tour
+            SPA->>API: PUT /me/onboarding/guides/welcome (Completed)
+            SPA-->>U: "Your first project" walkthrough if the user cannot write anywhere yet, otherwise the tour of the current page
+        else Show me the checklist
+            U->>SPA: Show me the checklist
+            SPA->>API: PUT /me/onboarding/guides/welcome (Completed)
+            SPA-->>U: Checklist card on My work
+        else Close
+            U->>SPA: Esc or close
+            SPA->>API: PUT /me/onboarding/guides/welcome (Dismissed)
+        end
+    else Welcome done, a What's new entry due (dated on or after createdAt, not yet seen)
+        SPA-->>U: What's new highlights
+    end
+    Note over SPA,U: At most one auto-shown guide per sign-in. Tours never start by themselves.
+    U->>SPA: Real actions (create a ticket, comment, watch…) in the web app, over REST or MCP
+    SPA->>API: GET /api/v1/me/onboarding
+    API-->>SPA: Checklist items now done
+```
+
+The life of one guide (welcome, checklist, a What's new entry, a tour or a hint), per user:
+
+```mermaid
+stateDiagram-v2
+    direction LR
+    [*] --> None
+    None --> Completed: finished (tour end, welcome action, checklist done)
+    None --> Dismissed: closed early (Esc, Dismiss, close)
+    Completed --> None: guide version raised in code (stored version lower)
+    Dismissed --> None: guide version raised in code (stored version lower)
+    Completed --> None: Restart all guides
+    Dismissed --> None: Restart all guides
+    note right of None
+        No row in user_guide_state, or a row for an older version.
+        Auto-shown guides (welcome, What's new) may open;
+        tours wait for the Help menu, palette, welcome or an empty state.
+    end note
+```
+
+`None` is not stored: it is the absence of a row, or a row whose version is lower than the guide's current version. Replaying a completed tour from the Help menu does not need a reset; finishing it again only rewrites the row.
+
 ## 8. Feature flag evaluation and view variants
 
 Spec: [§6.13](../product/01-refined-spec.md#613-feature-flags-and-view-variants), [§4.15](../product/01-refined-spec.md#415-featureflag), D-14. Mechanics: [ADR 0007](../adr/0007-feature-flags.md), [ADR 0008](../adr/0008-ab-ready-views.md).

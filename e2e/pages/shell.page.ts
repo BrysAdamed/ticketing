@@ -1,6 +1,6 @@
 import { expect, Locator, Page } from '@playwright/test';
 
-/// The authenticated app frame: sidebar, top bar, user menu and command palette.
+/// The authenticated app frame: sidebar, top bar, user menu, Help menu and command palette.
 export class ShellPage {
     readonly root: Locator;
     readonly sidebar: Locator;
@@ -10,6 +10,8 @@ export class ShellPage {
     readonly userMenu: Locator;
     readonly paletteTrigger: Locator;
     readonly palette: Locator;
+    readonly helpTrigger: Locator;
+    readonly helpMenu: Locator;
 
     constructor(private readonly page: Page) {
         this.root = page.getByTestId('app-shell');
@@ -20,6 +22,8 @@ export class ShellPage {
         this.userMenu = page.getByTestId('user-menu');
         this.paletteTrigger = page.getByTestId('palette-trigger');
         this.palette = page.getByTestId('command-palette');
+        this.helpTrigger = this.topbar.getByTestId('shortcut-help');
+        this.helpMenu = page.getByRole('menu', { name: 'Help' });
     }
 
     async expectVisible(): Promise<void> {
@@ -39,6 +43,16 @@ export class ShellPage {
     async signOut(): Promise<void> {
         await this.userMenu.click();
         await this.page.getByTestId('menu-logout').click();
+    }
+
+    /// A Help menu item by its id with dots as dashes, for example `help-shortcuts`.
+    helpItem(testId: string): Locator {
+        return this.helpMenu.getByTestId(testId);
+    }
+
+    async openHelp(): Promise<void> {
+        await this.helpTrigger.click();
+        await expect(this.helpMenu).toBeVisible();
     }
 
     navLink(testId: string): Locator {

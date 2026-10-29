@@ -16,7 +16,14 @@ internal static class PostgresServer
     private static readonly SemaphoreSlim Gate = new(1, 1);
     private static bool _started;
 
-    public static async Task<string> CreateDatabaseAsync(CancellationToken cancellationToken)
+    public static Task<string> CreateDatabaseAsync(CancellationToken cancellationToken) =>
+        CreateDatabaseAsync($"TEMPLATE {TemplateDatabase}", cancellationToken);
+
+    /// <summary>A database without any migration applied, for tests that migrate step by step (data-rewriting migrations).</summary>
+    public static Task<string> CreateEmptyDatabaseAsync(CancellationToken cancellationToken) =>
+        CreateDatabaseAsync(string.Empty, cancellationToken);
+
+    private static async Task<string> CreateDatabaseAsync(string options, CancellationToken cancellationToken)
     {
         await Gate.WaitAsync(cancellationToken);
         try
@@ -28,7 +35,7 @@ internal static class PostgresServer
             }
 
             var name = $"ticketing_{Guid.NewGuid():N}";
-            await ExecuteAsync($"CREATE DATABASE \"{name}\" TEMPLATE {TemplateDatabase}", cancellationToken);
+            await ExecuteAsync($"CREATE DATABASE \"{name}\" {options}", cancellationToken);
             return ConnectionString(name);
         }
         finally

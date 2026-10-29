@@ -32,6 +32,7 @@
           <tk-ticket-header-actions-host [ticket]="t" [presentation]="presentation()" />
           @if (t.watchers; as watchers) {
             <tk-ticket-watch
+              tkTourAnchor="ticket.watch"
               [watchers]="watchers"
               [meId]="store.me()?.id ?? null"
               (toggled)="store.toggleWatch()"
@@ -110,6 +111,7 @@
         @if (presentation() === 'peek') {
           <tk-ticket-fields
             class="peek-fields"
+            tkTourAnchor="ticket.fields"
             layout="grid"
             [ticket]="t"
             [canEdit]="store.canEdit()"
@@ -131,6 +133,7 @@
 
         @if (t.type !== 'Spike' || (t.children?.length ?? 0) > 0) {
           <tk-ticket-children
+            tkTourAnchor="ticket.sub-tickets"
             [ticket]="t"
             [canEdit]="store.canEdit()"
             (created)="onChildCreated($event)"
@@ -139,6 +142,7 @@
         }
 
         <tk-ticket-links
+          tkTourAnchor="ticket.links"
           [ticket]="t"
           [canEdit]="store.canEdit()"
           (added)="onLinkAdded($event)"
@@ -146,7 +150,7 @@
         />
 
         @if (!hasTestCaseSection && (t.testCases?.length ?? 0) > 0) {
-          <section class="sec tc" data-testid="ticket-test-cases">
+          <section class="sec tc" data-testid="ticket-test-cases" tkTourAnchor="ticket.test-cases">
             <div class="sec-h">
               <h2>Test cases</h2>
               <span class="n tnum">{{ t.testCases!.length }}</span>
@@ -196,6 +200,7 @@
     @if (presentation() === 'page') {
       <aside class="dside" aria-label="Ticket fields">
         <tk-ticket-fields
+          tkTourAnchor="ticket.fields"
           [ticket]="t"
           [canEdit]="store.canEdit()"
           (changed)="onFieldChange($event)"

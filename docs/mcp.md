@@ -27,6 +27,33 @@ Or commit-free, per project, in `.mcp.json` (keep the token out of git — refer
 
 A `ReadOnly` token only lists and accepts the read tools. Tokens cannot manage users, tokens or feature flags; those stay in the web UI.
 
+### The Connect an AI agent guide
+
+The web app walks you through the same steps: **Help → Connect an AI agent** (also in the command palette, from the empty Access tokens page and from the two optional "Connect an AI agent" items of the getting-started checklist). It opens a panel on **Profile → Access tokens** with three steps (spec 14.8, D-141):
+
+1. **Create a token.** Opens the usual Generate token dialog with the name "Claude Code" filled in.
+2. **Copy the command.** The `claude mcp add` command above, with the new token in it. The secret stays in the page only while the guide is open, as in the show-once dialog. If you already have a token, the command shows `tkt_...` for you to replace.
+3. **Check the connection.** Run the command, start Claude Code and ask it to call `whoami`. The guide asks the server every 5 seconds whether the token has been used (its **Last used** is set) and turns green when it has; it stops asking when the check passes or the guide closes. The checklist's "Confirm the connection" ticks off from the same fact.
+
+## Server instructions
+
+On `initialize` the server sends the agent this primer (`McpServerOptions.ServerInstructions`, kept in `src/Ticketing.Api/Mcp/McpServerInstructions.cs`). It is sent on every connection, so it stays short; an integration test keeps the copy below identical to the code.
+
+<!-- mcp-server-instructions:start -->
+```text
+Ticketing is the team's issue tracker. Every call runs as the user who owns your access token, with their permissions.
+
+- Call `whoami` first: it returns who you act as, their global role and your token scope (a ReadOnly token cannot write).
+- Keys: tickets `WEB-42`, test cases `WEB-TC-7`, regression sessions `WEB-R-3`, docs `WEB-D-12`. Project keys never change; refer to things by key.
+- Statuses: ToDo, InProgress, OnHold, Review, ReadyForTesting, Testing, ReadyForDeploy, Done. Transitions are free: set any status from any status with `update_ticket`; there is no workflow to follow.
+- Backlog vs boards: a ticket lives in exactly one place, its project's backlog or one board. New tickets land in the backlog; `move_ticket` moves them between the backlog and boards (a board's columns are the statuses).
+- Not found can mean no access: private projects you cannot read, and everything in them, answer not found exactly like keys that do not exist.
+- Retries: create tools take `idempotencyKey`; repeating a call with the same key within 24 hours returns the original result instead of a duplicate. `update_ticket` takes `expectedVersion` to avoid overwriting someone else's change.
+- Errors come back as `{ code, message, hint }`; the hint says how to fix the call. Tool descriptions list the allowed values of every enum.
+- More: docs/mcp.md in the Ticketing repository, and Help → Connect an AI agent in the web app.
+```
+<!-- mcp-server-instructions:end -->
+
 ## Tools
 
 | Area | Tools |
@@ -44,7 +71,7 @@ A `ReadOnly` token only lists and accepts the read tools. Tokens cannot manage u
 | Docs | `list_docs`, `get_doc` (by `docKey`, or `projectKey` + `path`; optional `version`), `get_doc_history`, `get_doc_export_link`, `search_docs`, `list_doc_attachments`, `list_doc_comments`, `create_folder`, `create_page`, `create_diagram`, `update_doc`, `edit_doc` (find/replace), `restore_doc_version`, `move_doc`, `delete_doc`, `add_doc_comment`, `update_doc_comment`, `delete_doc_comment` |
 | Agents | `get_agent_prompt` (listed only while agent delegation is available to you: the `agent.delegate` flag is on and the instance has `TICKETING_PUBLIC_URL`) |
 
-Inputs and outputs are specified in [spec §9](product/01-refined-spec.md#9-mcp-server) and [§12](product/01-refined-spec.md#12-docs). Tickets, test cases, sessions and docs are referenced by key (`PAY-42`, `PAY-TC-7`, `PAY-R-3`, `PAY-D-12`); enum values are listed in each tool's description. Errors come back as `{ code, message, hint }`, plus details where a code has them (`doc.version.conflict` adds `currentVersion`, `updatedBy` and `updatedAt`).
+Inputs and outputs are specified in [spec §9](product/01-refined-spec.md#9-mcp-server) and [§12](product/01-refined-spec.md#12-docs). Tickets, test cases, sessions and docs are referenced by key (`PAY-42`, `PAY-TC-7`, `PAY-R-3`, `PAY-D-12`); enum values are listed in each tool's description. Onboarding state (guides a user completed or dismissed) has no tools: it is personal UI state, readable with a PAT at `GET /api/v1/me/onboarding` and writable only from the web session (D-132). Errors come back as `{ code, message, hint }`, plus details where a code has them (`doc.version.conflict` adds `currentVersion`, `updatedBy` and `updatedAt`).
 
 ### Docs
 

@@ -15,6 +15,10 @@
   transition: opacity var(--tk-duration-fast) var(--tk-ease-out);
 }
 
+.grid.preview {
+  margin-top: 24px;
+}
+
 .grid.refreshing {
   opacity: 0.6;
 }

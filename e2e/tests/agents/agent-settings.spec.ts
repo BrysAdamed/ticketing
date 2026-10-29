@@ -1,8 +1,8 @@
 import { AgentSettingsPage } from '../../pages/agent-settings.page';
-import { LoginPage } from '../../pages/login.page';
 import { Api } from '../../support/api';
 import { ADMIN_STORAGE_STATE } from '../../support/env';
 import { expect, test } from '../../support/fixtures';
+import { signInAs } from '../../support/session';
 import { PASSWORD, seedUser } from '../identity/identity';
 
 const FLAG = 'agent.delegate';
@@ -70,11 +70,11 @@ test.describe('agent settings tab', () => {
         const { projectKey } = await seedProject(api);
         const member = await seedUser(api, 'agent-member');
         await api.post(`/projects/${projectKey}/members`, { user: member.id, role: 'Member' });
-        const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
-        const page = await context.newPage();
-        const login = new LoginPage(page);
-        await login.goto(`/projects/${projectKey}/settings`);
-        await login.signIn(member.email, PASSWORD);
+        const { context, page } = await signInAs(browser, {
+            email: member.email,
+            password: PASSWORD,
+        });
+        await page.goto(`/projects/${projectKey}/settings`);
         const agent = new AgentSettingsPage(page);
 
         // Act

@@ -13,6 +13,8 @@ import { CommandPaletteService } from '../commands/command-palette.service';
 import { CommandRegistry } from '../commands/command-registry';
 import { matchScore } from '../commands/command';
 import { FeatureFlagService } from '../flags/feature-flag.service';
+import { HELP_MENU_ORDER, SHORTCUTS_HELP_ID } from '../help/help-menu';
+import { HelpMenuRegistry } from '../help/help-menu.registry';
 import { ProjectDirectory } from '../projects/project-directory';
 import { ShortcutHelpDialog } from '../shortcuts/shortcut-help.dialog';
 import { ShortcutService } from '../shortcuts/shortcut.service';
@@ -37,6 +39,7 @@ export class ShellActions {
   private readonly commands = inject(CommandRegistry);
   private readonly directory = inject(ProjectDirectory);
   private readonly flags = inject(FeatureFlagService);
+  private readonly help = inject(HelpMenuRegistry);
 
   showShortcuts(): void {
     if (this.dialog.getDialogById('tk-shortcut-help')) return;
@@ -216,14 +219,6 @@ export class ShellActions {
           run: () => this.layout.toggleSidebar(),
         },
         {
-          id: 'help.shortcuts',
-          label: 'Keyboard shortcuts',
-          group: PREFERENCES,
-          icon: 'tablerKeyboard',
-          shortcut: '?',
-          run: () => this.showShortcuts(),
-        },
-        {
           id: 'auth.logout',
           label: 'Sign out',
           group: PREFERENCES,
@@ -231,6 +226,19 @@ export class ShellActions {
           run: () => void this.auth.logout(),
         },
       ],
+      destroyRef,
+    );
+
+    this.help.register(
+      {
+        id: SHORTCUTS_HELP_ID,
+        label: 'Keyboard shortcuts',
+        icon: 'tablerKeyboard',
+        order: HELP_MENU_ORDER.shortcuts,
+        shortcut: '?',
+        keywords: ['keys', 'hotkeys'],
+        run: () => this.showShortcuts(),
+      },
       destroyRef,
     );
 

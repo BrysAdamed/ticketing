@@ -26,11 +26,18 @@ import { provideIcons } from '@ng-icons/core';
 import { apiErrorInterceptor } from '@core/api/api-error.interceptor';
 import { AuthService } from '@core/auth/auth.service';
 import { PageTitleStrategy } from '@core/layout/page-title';
+import { provideConnectAgentHelp } from '@core/onboarding/agent/connect-agent.help';
+import { provideGettingStartedHelp } from '@core/onboarding/checklist/getting-started.help';
 import { providePeekView } from '@core/layout/peek/peek';
+import { provideOnboardingDialogs } from '@core/onboarding/onboarding-dialogs';
+import { provideGuidedTours } from '@core/onboarding/tour-availability';
 import { ShortcutService } from '@core/shortcuts/shortcut.service';
 import { ThemeService } from '@core/theme/theme.service';
 import { AvatarDirectory } from '@core/users/avatar-directory';
 import { provideTicketCreation } from '@core/tickets/create-ticket';
+import { provideBoardCreation } from '@core/boards/create-board';
+import { provideFirstProjectWalkthrough } from '@core/onboarding/walkthrough/first-project.help';
+import { provideProjectCreation } from '@core/projects/create-project';
 import { provideTicketHeaderAction } from '@core/tickets/ticket-header-actions';
 import { provideTicketDetailSection } from '@core/tickets/ticket-sections';
 import { provideAttachments } from '@features/attachments/attachments.providers';
@@ -64,8 +71,19 @@ export const appConfig: ApplicationConfig = {
     provideIcons(APP_ICONS),
     providePeekView(TICKET_DETAIL_VIEW),
     provideSearch(),
+    provideGuidedTours(),
+    provideGettingStartedHelp(),
+    provideConnectAgentHelp(),
+    provideOnboardingDialogs(),
     provideAttachments(),
     provideDocsTicketSection(),
+    provideProjectCreation(() =>
+      import('@features/projects/list/new-project.dialog').then((m) => m.NewProjectDialog),
+    ),
+    provideBoardCreation(() =>
+      import('@features/boards/list/create-board.dialog').then((m) => m.CreateBoardDialog),
+    ),
+    provideFirstProjectWalkthrough(),
     provideTicketCreation(() =>
       import('@features/tickets/create/create-ticket.dialog').then((m) => m.CreateTicketDialog),
     ),

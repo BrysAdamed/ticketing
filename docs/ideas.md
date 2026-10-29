@@ -117,6 +117,11 @@ This file is the pool of unscheduled ideas. Once an idea is scheduled it becomes
 | I-52 | Multi-variant A/B tests with exposure tracking | Builds on the v1 flag contract and view registry. | M |
 | I-59 | Mobile layout | Checking tickets on the go. | M |
 | I-60 | Internationalization (Polish first) | Brief says English for now. | M |
+| I-127 | Admin-editable tours (tour CMS) | Tours, hints and What's new are authored in code (spec §14, TKT-52); an editor would let Admins adjust copy and steps without a release. Anchors stay code-owned (D-131). | M |
+| I-128 | Onboarding analytics and funnels | Which guides people finish or abandon, and how long the first real action takes. The ADR 0008 exposure hook is the seam; v1 of onboarding stores only per-user guide state (D-132). | M |
+| I-129 | Video content in guides | Short clips for flows that are hard to show with a spotlight. Needs hosting that works in air-gapped installs. | S |
+| I-130 | Full Preferences tab on the profile | Theme, density and other UI choices live in `localStorage` today; a server-side Preferences tab (layout-and-screens §3.10) would follow the user across browsers, reusing the typed-table decision of D-132. | S |
+| I-131 | Sample projects for new users | A ready-made example project to explore. Onboarding deliberately seeds nothing: the "Your first project" walkthrough has users create their own (spec §14.4). | S |
 
 ## Probably never
 

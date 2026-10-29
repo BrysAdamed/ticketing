@@ -14,6 +14,7 @@ import { RouterLink } from '@angular/router';
 import { provideIcons } from '@ng-icons/core';
 import { firstValueFrom } from 'rxjs';
 import { ToastService } from '@core/notify/toast.service';
+import { TourAnchorDirective } from '@core/onboarding/engine/tour-anchor.directive';
 import { TestCasesApi } from '@core/testing/testing.api';
 import { TestCaseSummary } from '@core/testing/testing.models';
 import { TicketCache } from '@core/tickets/ticket-cache';
@@ -26,12 +27,18 @@ import { RUN_STATUS_ICONS, TEST_CASE_ICONS } from '../test-case-icons';
 /// ticket's test cases with status and last result, quick add by title, and a link to the full editor.
 @Component({
   selector: 'tk-ticket-test-cases',
-  imports: [MatTooltip, RouterLink, TestCaseStatusBadgeComponent, IconComponent],
+  imports: [
+    MatTooltip,
+    RouterLink,
+    TestCaseStatusBadgeComponent,
+    IconComponent,
+    TourAnchorDirective,
+  ],
   viewProviders: [provideIcons(TEST_CASE_ICONS)],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'sec', 'data-testid': 'ticket-test-cases' },
   template: `
-    <div class="sec-h">
+    <div class="sec-h" tkTourAnchor="ticket.test-cases">
       <h2>Test cases</h2>
       @if (cases().length > 0) {
         <span class="n tnum">{{ cases().length }}</span>

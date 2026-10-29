@@ -65,6 +65,8 @@ public static class DependencyInjection
         services.AddOptions<MaintenanceOptions>().Bind(configuration.GetSection(MaintenanceOptions.Section));
         services.AddScoped<DataRetention>();
         services.AddHostedService<DataRetentionService>();
+        services.AddOptions<AchievementProjectorOptions>().Bind(configuration.GetSection(AchievementProjectorOptions.Section));
+        services.AddHostedService<AchievementProjector>();
         return services;
     }
 }

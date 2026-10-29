@@ -73,6 +73,7 @@ public sealed class TicketingApiFactory : WebApplicationFactory<Program>, IAsync
         builder.UseSetting("Auth:CookieSecurePolicy", "Always");
         builder.UseSetting("RateLimiting:LoginPermitsPerMinute", "100000");
         builder.UseSetting("Pdf:WarmUp", "false");
+        builder.UseSetting("AchievementProjector:Enabled", "false");
         builder.UseSetting("Logging:Console:FormatterName", "simple");
         builder.UseSetting("Logging:LogLevel:Default", "Warning");
         builder.UseSetting("Logging:LogLevel:Microsoft.AspNetCore", "Error");

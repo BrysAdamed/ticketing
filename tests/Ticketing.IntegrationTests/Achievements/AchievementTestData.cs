@@ -26,6 +26,19 @@ internal static class AchievementTestData
             .EvaluateAsync(subjects, achievementIds, TestContext.Current.CancellationToken);
     }
 
+    /// <summary>One projector cycle, as the background service runs it (the service itself is disabled in tests).</summary>
+    public static Task<ProjectionResult> RunCycleAsync(this TicketingApiFactory api) =>
+        api.ProjectAsync(p => p.RunCycleAsync(TestContext.Current.CancellationToken));
+
+    public static Task<ProjectionResult> SweepAsync(this TicketingApiFactory api) =>
+        api.ProjectAsync(p => p.SweepAsync(TestContext.Current.CancellationToken));
+
+    private static async Task<ProjectionResult> ProjectAsync(this TicketingApiFactory api, Func<AchievementProjection, Task<ProjectionResult>> run)
+    {
+        await using var scope = api.Services.CreateAsyncScope();
+        return await run(scope.ServiceProvider.GetRequiredService<AchievementProjection>());
+    }
+
     /// <summary>The count of <paramref name="achievementId"/> for <paramref name="user"/> counting from <paramref name="start"/>.</summary>
     public static async Task<int> CountAsync(this TicketingApiFactory api, TestUser user, DateTimeOffset start, string achievementId) =>
         (await api.EvaluateAsync([new AchievementSubject(user.Id, start)], [achievementId])).Single().Count;

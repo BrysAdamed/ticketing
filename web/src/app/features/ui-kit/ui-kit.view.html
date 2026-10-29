@@ -71,6 +71,19 @@
       <tk-user [user]="null" />
       <tk-avatar [userId]="store.users[0].id" [name]="store.users[0].displayName" [size]="32" />
     </div>
+    <div class="row">
+      <b [tkUserCard]="store.users[0]" data-testid="ui-kit-user-card">{{
+        store.users[0].displayName
+      }}</b>
+      <tk-avatar
+        [userId]="store.users[1].id"
+        [name]="store.users[1].displayName"
+        [showTitle]="false"
+        [tkUserCard]="store.users[1]"
+        tkUserCardTrigger="hover"
+      />
+      <span class="tk-subtle">User card: click or Enter on the name, hover the avatar</span>
+    </div>
   </section>
 
   <section>

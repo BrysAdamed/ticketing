@@ -66,8 +66,71 @@
 .name {
   display: flex;
   align-items: center;
+  gap: 8px;
   min-height: 24px;
   font-weight: var(--tk-weight-semibold);
+}
+
+.name-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.share {
+  position: relative;
+  z-index: 2;
+  height: 24px;
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: none;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--tk-radius-md);
+  background: none;
+  color: var(--tk-text-muted);
+  font: inherit;
+  font-size: var(--tk-text-sm);
+  font-weight: var(--tk-weight-medium);
+  cursor: pointer;
+  transition: background var(--tk-duration-instant);
+
+  &:hover {
+    background: var(--tk-bg-hover);
+    color: var(--tk-text);
+  }
+
+  &.on {
+    background: var(--tk-accent-subtle);
+    color: var(--tk-accent-fg);
+
+    &:hover {
+      background: var(--tk-accent-subtle-hover);
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--tk-focus);
+    outline-offset: 1px;
+  }
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .when-hover,
+  &.on:hover .when-idle {
+    display: none;
+  }
+
+  &.on:hover .when-hover {
+    display: inline-flex;
+  }
 }
 
 .masked .name {

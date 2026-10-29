@@ -31,4 +31,27 @@ export class AchievementsPage {
     openButton(id: string): Locator {
         return this.root.getByTestId(`achievement-open-${id}`);
     }
+
+    shareButton(id: string): Locator {
+        return this.root.getByTestId(`achievement-share-${id}`);
+    }
+
+    sharedMarker(id: string): Locator {
+        return this.tile(id).getByTestId('medal-shared');
+    }
+}
+
+/// The user card popover (`tk-user-card`) opened from a person's name or avatar.
+export class UserCard {
+    readonly root: Locator;
+    readonly achievements: Locator;
+
+    constructor(page: Page) {
+        this.root = page.getByTestId('user-card');
+        this.achievements = this.root.getByTestId('user-card-achievements');
+    }
+
+    achievement(id: string): Locator {
+        return this.root.getByTestId(`user-card-achievement-${id}`);
+    }
 }

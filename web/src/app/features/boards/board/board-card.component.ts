@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, ElementRef, inject, input } from '@
 import { MatTooltip } from '@angular/material/tooltip';
 import { BoardCard, BoardParent } from '@core/boards/board.models';
 import { UserRef } from '@core/tickets/ticket.models';
+import { UserCardDirective } from '@core/users/user-card/user-card.directive';
 import { AvatarComponent } from '@shared/ui/domain/avatar.component';
 import { SeverityBadgeComponent } from '@shared/ui/domain/domain-badges';
 import { LabelChipComponent } from '@shared/ui/domain/label-chip.component';
@@ -21,6 +22,7 @@ import { IconComponent } from '@shared/ui/icon/icon.component';
     PriorityIconComponent,
     TypeIconComponent,
     IconComponent,
+    UserCardDirective,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
@@ -47,7 +49,13 @@ import { IconComponent } from '@shared/ui/icon/icon.component';
       }
       <span class="av">
         @if (assignee(); as user) {
-          <tk-avatar [userId]="user.id" [name]="user.displayName" />
+          <tk-avatar
+            [userId]="user.id"
+            [name]="user.displayName"
+            [showTitle]="false"
+            [tkUserCard]="user"
+            tkUserCardTrigger="hover"
+          />
         } @else {
           <span class="none" title="Unassigned"><tk-icon name="tablerUser" [size]="12" /></span>
         }

@@ -10,7 +10,10 @@ import {
   signal,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { provideIcons } from '@ng-icons/core';
+import { tablerShare } from '@ng-icons/tabler-icons';
 import { Router } from '@angular/router';
+import { ShortcutService } from '@core/shortcuts/shortcut.service';
 import { tierColor } from '@shared/ui/achievement-medal/achievement-medal.logic';
 import { AchievementMedalComponent } from '@shared/ui/achievement-medal/achievement-medal.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
@@ -44,6 +47,7 @@ interface OpenDetail {
     IconComponent,
   ],
   providers: [ProfileAchievementsStore],
+  viewProviders: [provideIcons({ tablerShare })],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'tk-page', 'data-testid': 'view-profile.achievements' },
   templateUrl: './profile-achievements.view.html',
@@ -81,6 +85,15 @@ export class ProfileAchievementsView {
     Math.min(this.focusIndex(), Math.max(this.order().size - 1, 0)),
   );
   protected readonly detail = signal<OpenDetail | null>(null);
+  protected readonly detailTile = computed(() => {
+    const open = this.detail();
+    if (!open) return null;
+    return (
+      this.groups()
+        .flatMap((g) => g.tiles)
+        .find((t) => t.key === open.tile.key) ?? open.tile
+    );
+  });
   protected readonly overlayOrigin = computed(
     () => this.detail()?.origin ?? this.host.nativeElement,
   );
@@ -99,6 +112,27 @@ export class ProfileAchievementsView {
       if (this.store.status() === 'disabled')
         void router.navigate(['/profile'], { replaceUrl: true });
     });
+    inject(ShortcutService).registerScoped([
+      {
+        keys: 's',
+        section: 'Achievements',
+        description: 'Share or unshare the focused achievement',
+        handler: () => this.toggleFocusedShare(),
+      },
+    ]);
+  }
+
+  protected toggleShare(tile: AchievementTile): void {
+    const id = tile.item.id;
+    if (id && tile.item.tier > 0) void this.store.setShared(id, !tile.item.shared);
+  }
+
+  private toggleFocusedShare(): void {
+    const root = this.host.nativeElement;
+    const buttons = Array.from(root.querySelectorAll<HTMLElement>('[data-achievement-open]'));
+    const index = buttons.indexOf(root.ownerDocument.activeElement as HTMLElement);
+    const tile = index < 0 ? undefined : this.groups().flatMap((g) => g.tiles)[index];
+    if (tile) this.toggleShare(tile);
   }
 
   protected indexOf(tile: AchievementTile): number {

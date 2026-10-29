@@ -10,6 +10,7 @@ import { MatTooltip } from '@angular/material/tooltip';
 import { TourAnchorDirective } from '@core/onboarding/engine/tour-anchor.directive';
 import { ContextualHintComponent } from '@core/onboarding/hints/contextual-hint.component';
 import { BacklogItem, BacklogParent, UserRef } from '@core/tickets/ticket.models';
+import { UserCardDirective } from '@core/users/user-card/user-card.directive';
 import {
   Priority,
   PRIORITY_LABELS,
@@ -68,6 +69,7 @@ export type RowEdit =
     SearchPickerDirective,
     ContextualHintComponent,
     TourAnchorDirective,
+    UserCardDirective,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
@@ -235,7 +237,13 @@ export type RowEdit =
       (click)="$event.stopPropagation()"
       (picked)="edit.emit({ field: 'assignee', value: $event })"
     >
-      <tk-avatar [userId]="assignee()?.id" [name]="assignee()?.displayName" />
+      <tk-avatar
+        [userId]="assignee()?.id"
+        [name]="assignee()?.displayName"
+        [showTitle]="!assignee()"
+        [tkUserCard]="assignee()"
+        tkUserCardTrigger="hover"
+      />
     </button>
     <span class="date" [title]="item().updatedAt | absoluteTime">{{
       item().updatedAt | relativeTime

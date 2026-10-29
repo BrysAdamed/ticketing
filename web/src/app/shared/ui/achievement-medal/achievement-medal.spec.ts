@@ -1,7 +1,13 @@
 import { provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { AchievementMedalComponent } from './achievement-medal.component';
-import { medalLabel, pipPositions, progressText, tierText } from './achievement-medal.logic';
+import {
+  medalLabel,
+  pipPositions,
+  progressText,
+  sharedTierCount,
+  tierText,
+} from './achievement-medal.logic';
 import { medalGlyph } from './medal-glyphs';
 
 describe('achievement medal logic', () => {
@@ -40,6 +46,23 @@ describe('achievement medal logic', () => {
     expect(medalLabel({ name: null, tier: 0, tierCount: 0, secret: true, masked: true })).toBe(
       'Secret achievement, not earned yet',
     );
+    expect(
+      medalLabel({
+        name: 'Closer',
+        tier: 3,
+        tierCount: 4,
+        secret: false,
+        masked: false,
+        shared: true,
+      }),
+    ).toBe('Closer, Gold, shared');
+  });
+
+  it('draws shared one-time achievements with a single tier and the rest with four', () => {
+    // Act / Assert
+    expect(sharedTierCount('board-builder')).toBe(1);
+    expect(sharedTierCount('grand-tour')).toBe(1);
+    expect(sharedTierCount('reporter')).toBe(4);
   });
 
   it('centres one pip per tier reached', () => {
@@ -105,6 +128,18 @@ describe('AchievementMedalComponent', () => {
     // Assert
     expect(medal.querySelectorAll('.pip')).toHaveLength(0);
     expect(medal.querySelector('svg')?.getAttribute('viewBox')).toBe('0 0 48 48');
+  });
+
+  it('marks a shared medal for its owner, and only when asked', () => {
+    // Act
+    const shared = render({ achievementId: 'closer', tier: 3, shared: true });
+
+    // Assert
+    expect(shared.querySelector('[data-testid="medal-shared"]')).not.toBeNull();
+    TestBed.resetTestingModule();
+    expect(
+      render({ achievementId: 'closer', tier: 3 }).querySelector('[data-testid="medal-shared"]'),
+    ).toBeNull();
   });
 
   it('is an image with its name when standalone', () => {

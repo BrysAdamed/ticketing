@@ -11,6 +11,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { RouterLink } from '@angular/router';
 import { ConfirmService } from '@core/notify/confirm.service';
 import { TourAnchorDirective } from '@core/onboarding/engine/tour-anchor.directive';
+import { UserCardDirective } from '@core/users/user-card/user-card.directive';
 import { ActivityEntry, Comment, UserRef } from '@core/tickets/ticket.models';
 import {
   MarkdownEditorComponent,
@@ -45,6 +46,7 @@ type FeedItem =
     IconComponent,
     SegmentedControlComponent,
     TourAnchorDirective,
+    UserCardDirective,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'sec', 'data-testid': 'ticket-activity' },
@@ -79,8 +81,20 @@ type FeedItem =
           @let c = item.comment;
           <article class="cmt" [class.deleted]="c.deleted" [attr.data-testid]="'comment-' + c.id">
             <div class="cmt-h">
-              <tk-avatar [userId]="c.author.id" [name]="c.author.displayName" [size]="24" />
-              <b>{{ c.author.displayName }}</b>
+              <button
+                type="button"
+                class="who"
+                data-testid="comment-author"
+                [tkUserCard]="c.author"
+              >
+                <tk-avatar
+                  [userId]="c.author.id"
+                  [name]="c.author.displayName"
+                  [size]="24"
+                  [showTitle]="false"
+                />
+                <b>{{ c.author.displayName }}</b>
+              </button>
               @if (!c.author.isActive) {
                 <span class="subtle">(deactivated)</span>
               }
@@ -148,7 +162,7 @@ type FeedItem =
             <div class="ev">
               <span class="ic"><tk-icon [name]="line.icon" [size]="14" /></span>
               <span class="ev-t">
-                <b>{{ line.actor }}</b> {{ line.verb }}
+                <b class="actor" [tkUserCard]="line.actorUser">{{ line.actor }}</b> {{ line.verb }}
                 @if (line.from) {
                   <span class="pill">{{ line.from }}</span>
                 }

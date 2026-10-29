@@ -2,6 +2,7 @@ import { CdkConnectedOverlay, CdkOverlayOrigin, ConnectedPosition } from '@angul
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import { MatTooltip } from '@angular/material/tooltip';
 import { Watchers } from '@core/tickets/ticket.models';
+import { UserCardDirective } from '@core/users/user-card/user-card.directive';
 import { AvatarComponent } from '@shared/ui/domain/avatar.component';
 import { IconComponent } from '@shared/ui/icon/icon.component';
 
@@ -11,7 +12,14 @@ const PREVIEW = 3;
 /// few avatars, which opens the list of watchers.
 @Component({
   selector: 'tk-ticket-watch',
-  imports: [CdkConnectedOverlay, CdkOverlayOrigin, MatTooltip, AvatarComponent, IconComponent],
+  imports: [
+    CdkConnectedOverlay,
+    CdkOverlayOrigin,
+    MatTooltip,
+    AvatarComponent,
+    IconComponent,
+    UserCardDirective,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <button
@@ -65,7 +73,11 @@ const PREVIEW = 3;
           Watchers <span class="n tnum">{{ watchers().count }}</span>
         </div>
         @for (user of watchers().users; track user.id) {
-          <div class="row" [attr.data-testid]="'ticket-watcher-row-' + user.email">
+          <div
+            class="row"
+            [attr.data-testid]="'ticket-watcher-row-' + user.email"
+            [tkUserCard]="user"
+          >
             <tk-avatar [userId]="user.id" [name]="user.displayName" [showTitle]="false" />
             <span class="name">{{ user.displayName }}</span>
             @if (user.id === meId()) {
@@ -135,12 +147,16 @@ const PREVIEW = 3;
       text-transform: uppercase;
     }
     .row {
+      margin: 0 4px;
       height: 32px;
       display: flex;
       align-items: center;
       gap: 8px;
-      padding: 0 12px;
+      padding: 0 8px;
       font-size: var(--tk-text-base);
+    }
+    .row:hover {
+      background: var(--tk-bg-hover);
     }
     .name {
       min-width: 0;

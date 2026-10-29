@@ -85,6 +85,8 @@ Types: `uuid`, `text(n)` = string of at most n characters, `md(n)` = markdown st
 | CreatedAt, CreatedById | timestamptz, uuid? | CreatedById null for the bootstrap admin. |
 | LastLoginAt | timestamptz? | |
 | DeactivatedAt, DeactivatedById | timestamptz?, uuid? | |
+| AvatarIcon | text(32)? | A key of the code-defined avatar catalogue (`AvatarCatalog`, animal icons), else `user.avatar.unknown`. Null shows initials. Keys that later leave the catalogue are treated as null (D-129). |
+| AvatarColor | text(32)? | A named palette colour (`blue`, `violet`, `pink`, `orange`, `amber`, `green`, `teal`, `cyan`), else `user.avatar.color.unknown`. Null uses the colour hashed from the user id (D-129). |
 
 Invariants:
 
@@ -389,7 +391,8 @@ On a public project, a `Viewer` membership has no effect beyond rule 4: the user
 | Action | Admin | User |
 | --- | --- | --- |
 | Create, edit, deactivate, reactivate users; change global role; issue set-password links | Yes | No |
-| Change own display name and password | Yes | Yes |
+| Change own display name, avatar and password (web session only) | Yes | Yes |
+| Read the avatar directory (`GET /users/avatars`: every user who picked an avatar, deactivated users included; D-129) | Yes | Yes |
 | Create, list, revoke own PATs | Yes | Yes |
 | List own notifications (only those about projects still readable); mark them read (write-scoped credentials) | Yes | Yes |
 | List and revoke any user's PATs (never see secrets) | Yes | No |
@@ -621,7 +624,7 @@ Flag changes write ActivityEntries. Admin UI: list, create, edit, delete; shows 
 - Password policy: 12..128 characters, not equal to the email, checked against a bundled list of the 10 000 most common passwords. No composition rules.
 - Lockout: 5 failed logins in a row from one client address lock the account for that address for 15 minutes; other addresses can still sign in (D-74). A locked account, an unknown email and a wrong password all get the same answer, `401 auth.invalidCredentials`, after the same password-hashing work, so sign-in reveals neither which accounts exist nor which are locked. Sign-in is also rate limited per client address (20 per minute). The client address is the TCP peer unless the request came through a trusted proxy (D-73). Setting a password through a link lifts the account's lockouts.
 - Web session: HttpOnly, Secure, SameSite=Lax cookie with 12 hour sliding expiry, plus anti-forgery protection on cookie-authenticated writes. The session is also stored on the server; signing out deletes it, so a copied cookie stops working (D-75).
-- Users change their own display name and password (current password required).
+- Users change their own display name, avatar and password (current password required for the password). The avatar is one of 32 animal icons (or initials) on one of the 8 palette colours (or the automatic hashed colour), picked on Profile → General and saved at once (D-129, D-130).
 - Deactivate and reactivate per 4.1. No hard delete.
 
 ### 6.15 Watchers (I-32, D-93)

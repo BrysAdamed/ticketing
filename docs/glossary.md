@@ -28,6 +28,8 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Automation ratio**: Share of runnable test cases that are automated: `Automatic / (Manual + Automatic)` over non-archived cases; `New` cases do not count. Shown on the dashboard. [§7](product/01-refined-spec.md#7-project-dashboard)
 
+**Avatar**: The picture shown for a user: initials on a colour hashed from the user id, unless the user picked an animal icon (32 Fluent Emoji animals, D-130) and/or a named palette colour from the code-defined avatar catalogue. The web app reads every chosen avatar from one directory (`GET /users/avatars`); user DTOs and MCP tools do not carry it (D-129). [§4.1](product/01-refined-spec.md#41-user)
+
 **Backlink**: A doc whose latest content links to another doc (by key or `[text](KEY)`); listed under "Linked from" on the linked doc, readable and non-deleted ones only.
 
 **Backlog**: The ordered list of a project's tickets that are not on any board (`BoardId = null`). Every project has exactly one. [§6.4](product/01-refined-spec.md#64-backlog-and-boards)

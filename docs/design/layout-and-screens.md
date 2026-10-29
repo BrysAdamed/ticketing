@@ -153,6 +153,10 @@ Version: a `mat-autocomplete` that lists this project's previously used versions
 - Create/edit opens the peek panel (480px) with name, email, roles (multi-select checkboxes with a one-line description of each role) and active toggle. Disabling a user confirms and lists their open assignments count.
 - Empty and permission states follow the patterns above.
 
+### 3.9a Profile → general [`profile.general`]
+- Cards, max 640px: Profile (email, role, display name), **Avatar**, Password.
+- Avatar card: a live preview (32px avatar, and a mock card row with the 20px avatar); an "Animal" radio group of 48px tiles tinted with the current colour (roving tabindex: arrows in 2D, Home/End, Enter/Space picks; skeleton tiles while the art loads); a "Colour" radio group of `Automatic` plus the 8 palette colours, each swatch showing the avatar in that colour; `Use initials` (stroked, disabled when no animal is picked). Every pick saves at once, optimistically, with a toast and rollback on failure.
+
 ### 3.10 Profile → access tokens [`profile.tokens`]
 - Profile page has tabs `General · Access tokens · Preferences` (Preferences: theme, density, keyboard shortcut hints on/off).
 - Tokens table: Name, Token prefix (`tkt_pat_3fA9…` in mono, muted), Scopes (chips such as `api:read`, `api:write`, `mcp`), Created, Last used (relative, or "Never" in subtle), Expires (in warning-fg when under 7 days, "Expired" danger badge), and `Revoke` (ghost danger, with a confirm popover).

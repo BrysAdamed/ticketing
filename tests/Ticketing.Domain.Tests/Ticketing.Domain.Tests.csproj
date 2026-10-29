@@ -15,5 +15,6 @@
     <Using Include="Xunit" />
     <None Include="TestData\**\*" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\docs\architecture\flag-bucketing-vectors.json" Link="TestData\flag-bucketing-vectors.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\web\src\app\shared\avatars\avatar-catalog.ts" Link="TestData\avatar-catalog.ts" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

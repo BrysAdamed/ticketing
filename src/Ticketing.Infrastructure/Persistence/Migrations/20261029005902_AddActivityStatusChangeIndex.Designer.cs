@@ -14,8 +14,8 @@ using Ticketing.Infrastructure.Persistence;
 namespace Ticketing.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(TicketingDbContext))]
-    [Migration("20261028203637_AddUserGuideState")]
-    partial class AddUserGuideState
+    [Migration("20261029005902_AddActivityStatusChangeIndex")]
+    partial class AddActivityStatusChangeIndex
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -110,6 +110,10 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                     b.HasIndex("ActorId", "OccurredAt")
                         .HasDatabaseName("ix_activity_entries_actor_id_occurred_at")
                         .HasFilter("actor_id IS NOT NULL");
+
+                    b.HasIndex("ActorId", "ProjectId")
+                        .HasDatabaseName("ix_activity_entries_actor_status_changes")
+                        .HasFilter("field = 'status' AND action = 'ticket.field.changed'");
 
                     b.HasIndex("ProjectId", "OccurredAt")
                         .HasDatabaseName("ix_activity_entries_project_id_occurred_at")
@@ -1815,6 +1819,16 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
+
+                    b.Property<string>("AvatarColor")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("avatar_color");
+
+                    b.Property<string>("AvatarIcon")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("avatar_icon");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")

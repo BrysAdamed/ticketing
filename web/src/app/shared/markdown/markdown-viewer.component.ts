@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
 import { Router } from '@angular/router';
+import { AVATAR_SOURCE, resolveAvatar } from '../avatars/avatar-source';
 import { DIAGRAM_THEME } from '../diagrams/diagram-theme.token';
 import { highlightCodeBlocks } from './highlight-code';
 import { MentionUser } from './mentions';
@@ -34,6 +35,8 @@ export class MarkdownViewerComponent {
   private readonly router = inject(Router);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly theme = inject(DIAGRAM_THEME);
+  private readonly avatars = inject(AVATAR_SOURCE, { optional: true });
+  private readonly avatarOf = (userId: string) => resolveAvatar(this.avatars, userId, userId);
   private diagrams: AbortController | null = null;
 
   readonly source = input<string | null | undefined>('');
@@ -44,7 +47,7 @@ export class MarkdownViewerComponent {
     const source = this.source();
     if (source?.includes('mermaid')) this.theme();
     return this.sanitizer.bypassSecurityTrustHtml(
-      renderMarkdown(source, { mentions: this.mentions() }),
+      renderMarkdown(source, { mentions: this.mentions(), avatarOf: this.avatarOf }),
     );
   });
 

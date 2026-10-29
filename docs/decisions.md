@@ -886,6 +886,28 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
 - Rejected: a second request from the card to `GET …/docs/recent` (one more round trip, and MCP clients would not get it from `get_project_stats`); a dashboard widget registry for one widget; demo Canvas diagrams without pictures (embeds and PDFs would say "Preview not rendered yet" until a writer opened each one).
 - Rationale: one request still feeds the whole dashboard (spec 7), and the demo shows every Docs feature, PDF included, right after seeding.
 
+### D-129 Avatars are a code-defined catalogue served as one directory, not a field of every user DTO (TKT-69)
+
+- Context: users may pick a predefined avatar (an animal icon and a palette colour) instead of initials; no uploads. Users appear in seven separate reference DTOs (`UserRefDto` alone has about 25 projections), in REST and over MCP.
+- Decision:
+  - `User.AvatarIcon` and `User.AvatarColor` are two nullable `varchar(32)` columns (migration `AddUserAvatar`, no backfill, no check constraint). `User.ChangeAvatar` validates them against `Domain/Users/AvatarCatalog.cs`: icons with `Key`, `Label`, `Group` and an `UnlockRequirement` that is always null for now (the hook for achievement-unlocked bonus avatars, TKT-61); colours are the named keys of the `--tk-palette-0..7` design tokens, in that order, so a hashed index and a chosen colour mean the same hue. Both fields are independent: a null icon shows initials, a null colour the hashed colour.
+  - `PATCH /me` takes optional, nullable `avatarIcon` and `avatarColor` (cookie session only, like the display name). The change is one `user.field.changed` entry with field `avatar` and `{ icon, color }` values.
+  - The web app loads `GET /users/avatars` (`[{ id, icon, color }]`, only users who chose something, deactivated users included) once and joins it to any user reference by id. At D-04 scale that is a few KB; it sends a content-hash `ETag` with `Cache-Control: no-cache`, so revalidation is a 304. Keys no longer in the catalogue are dropped there, and keeping a stale key on a later PATCH resets it instead of failing.
+  - No user DTO and no MCP tool changes: `whoami` and `find_users` are unchanged.
+- Rejected: adding `avatar` to every user DTO (seven DTOs and dozens of projections to touch, and an LLM gains nothing from an icon key); a database catalogue table or check constraint (the catalogue evolves with the code and its icons ship in the SPA); colour indexes (a reordered palette would silently change everyone's colour).
+- Rationale: one small cacheable read gives the SPA every avatar with no change to the API's user shapes, and the catalogue can grow, or gain unlockable entries, without a migration.
+
+### D-130 Avatar art: vendored Fluent Emoji Flat in one lazy chunk, resolved by user id through `AVATAR_SOURCE` (TKT-70)
+
+- Context: TKT-69 shipped the catalogue and the directory; the web app has to draw the icons at 16-32 px in about 40 places, offline (the VM has no internet and the CSP allows only same-origin and `data:` images), without growing the initial bundle.
+- Decision:
+  - The 32 icons are Microsoft Fluent Emoji, Flat variant (MIT): `web/vendor/fluent-emoji/flat/<key>.svg` with the licence next to them. `npm run generate:avatars` (`web/scripts/generate-avatar-art.mjs`) runs them through SVGO into `shared/avatars/avatar-art.generated.ts`, one map from key to SVG string, imported only through `loadAvatarArt()` (a dynamic `import()`, so a hashed lazy chunk of about 50 KB). The licence is also served as `/licenses/fluent-emoji.txt` and listed in `THIRD_PARTY_NOTICES.md`. The domain catalogue was replaced to match the 32 keys (the earlier placeholder keys `paw`, `deer`, `bat`, `spider` fall back to initials); `shared/avatars/avatar-catalog.ts` mirrors it and a Vitest checks every key has art.
+  - Icons render as `<img alt="" src="data:image/svg+xml,…">`: no gradient `id` clashes between copies on a page, inside the CSP, and usable in DOM-built mention chips.
+  - `core/users/AvatarDirectory` loads `GET /users/avatars` after sign-in, refetches on `visibilitychange` when older than 5 minutes, applies the user's own save optimistically (a fetch in flight is discarded) and is cleared on sign-out with `SwrCache`. It loads the art once any avatar has an icon. `shared` sees it only through the `AVATAR_SOURCE` token (core provides it), so `tk-avatar` resolves the avatar by `userId` and none of its call sites changed. `renderMarkdown` stays Angular-free and takes an `avatarOf` option for mention chips.
+  - While the art loads, an avatar with an icon shows a blank tint rather than flashing initials; the profile picker shows skeleton tiles.
+- Rejected: OpenMoji (CC BY-SA: any recolour becomes share-alike); Twemoji (CC-BY needs visible attribution); inline `<svg>` (duplicate gradient ids on one page); an icon font or sprite (recolouring and multi-colour emoji do not fit); one static file per icon (32 requests and a cache-busting scheme of our own).
+- Rationale: one hashed chunk keeps the initial budget unchanged, `data:` images are the simplest thing the CSP and the mention chips both accept, and a token keeps `shared` free of `core`.
+
 ### D-131 Guided tours: home-grown engine on CDK Overlay and A11y, tour anchors in every view variant, onboarding owner decisions (TKT-53)
 
 - Context: epic TKT-52 (onboarding) needs guided tours per view that are keyboard and screen-reader accessible, work zoneless, keep the global shortcuts quiet while a step is open and survive A/B view variants. Spike TKT-53 compared a home-grown engine with the libraries. Details, measurements and the engine design for TKT-56: [research/tour-engine.md](research/tour-engine.md).

@@ -9,7 +9,7 @@ namespace Ticketing.IntegrationTests.Persistence;
 
 public sealed class AddUserGuideStateMigrationTests
 {
-    private const string PreviousMigration = "AddDocVersionSnapshots";
+    private const string PreviousMigration = "AddUserAvatar";
     private const string Migration = "AddUserGuideState";
     private readonly CancellationToken _ct = TestContext.Current.CancellationToken;
 

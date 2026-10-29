@@ -96,6 +96,54 @@ describe('renderMarkdown', () => {
       expect(dom.textContent?.trim()).toBe('Ping ALAnn Lee, thanks');
     });
 
+    it('draws the chosen icon on the chosen colour when avatarOf gives one', () => {
+      // Arrange
+      const src = 'data:image/svg+xml,%3Csvg%2F%3E';
+
+      // Act
+      const dom = parse(
+        renderMarkdown(`Ping ${token}`, {
+          mentions: [ann],
+          avatarOf: (userId) => (userId === id ? { palette: 6, src } : null),
+        }),
+      );
+      const avatar = dom.querySelector('.tk-mention-avatar');
+
+      // Assert
+      expect(avatar?.className).toBe('tk-mention-avatar tk-palette-6');
+      expect(avatar?.querySelector('img')?.getAttribute('src')).toBe(src);
+      expect(avatar?.querySelector('img')?.getAttribute('alt')).toBe('');
+      expect(avatar?.textContent).toBe('');
+      expect(dom.querySelector('.tk-mention')?.textContent).toBe('Ann Lee');
+    });
+
+    it('keeps initials on the chosen colour when the avatar has no image', () => {
+      // Act
+      const dom = parse(
+        renderMarkdown(`Ping ${token}`, {
+          mentions: [ann],
+          avatarOf: () => ({ palette: 3, src: null }),
+        }),
+      );
+
+      // Assert
+      expect(dom.querySelector('.tk-mention-avatar')?.className).toBe(
+        'tk-mention-avatar tk-palette-3',
+      );
+      expect(dom.querySelector('.tk-mention-avatar')?.textContent).toBe('AL');
+    });
+
+    it('draws initials on the hashed colour when avatarOf returns null', () => {
+      // Act
+      const plain = parse(renderMarkdown(`Ping ${token}`, { mentions: [ann] }));
+      const none = parse(
+        renderMarkdown(`Ping ${token}`, { mentions: [ann], avatarOf: () => null }),
+      );
+
+      // Assert
+      expect(none.innerHTML).toBe(plain.innerHTML);
+    });
+
     it('matches ids case-insensitively', () => {
       // Act
       const dom = parse(

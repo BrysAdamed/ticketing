@@ -13,7 +13,8 @@ public sealed record AchievementProgress(Guid UserId, string AchievementId, int 
 /// <summary>
 /// Computes achievement criteria for a batch of users, each from their own start S (spec 15.4, D-145). All SQL criteria run in
 /// one query and every computed criterion once per batch, so the number of queries does not depend on the number of users.
-/// The evaluator only reads: awarding tiers is the projector's job (TKT-64), showing progress the API's (TKT-65).
+/// They run in one transaction (the caller's, if any) with JIT off: the union's estimated cost makes PostgreSQL JIT-compile
+/// hundreds of expressions, which takes longer than running them (D-149). The evaluator only reads: awarding tiers is the projector's job (TKT-64), showing progress the API's (TKT-65).
 /// </summary>
 public sealed class AchievementEvaluator(ITicketingDbContext db, IEnumerable<IAchievementCriterion> criteria)
 {
@@ -37,15 +38,20 @@ public sealed class AchievementEvaluator(ITicketingDbContext db, IEnumerable<IAc
             return [];
 
         var subjectList = subjects.ToList();
-        var counts = new Dictionary<(Guid UserId, string AchievementId), int>();
-        var sqlCriteria = selected.Select(s => s.Criterion).OfType<SqlAchievementCriterion>().ToList();
-        foreach (var row in await SqlCountsAsync(subjectList, sqlCriteria, cancellationToken))
-            counts[(row.UserId, row.AchievementId)] = row.Count;
-        foreach (var criterion in selected.Select(s => s.Criterion).OfType<ComputedAchievementCriterion>())
+        var counts = await db.InTransactionAsync(async ct =>
         {
-            foreach (var count in await criterion.CountAsync(db, subjectList, cancellationToken))
-                counts[(count.UserId, criterion.AchievementId)] = count.Count;
-        }
+            await db.Database.ExecuteSqlRawAsync("SET LOCAL jit = off", ct);
+            var found = new Dictionary<(Guid UserId, string AchievementId), int>();
+            var sqlCriteria = selected.Select(s => s.Criterion).OfType<SqlAchievementCriterion>().ToList();
+            foreach (var row in await SqlCountsAsync(subjectList, sqlCriteria, ct))
+                found[(row.UserId, row.AchievementId)] = row.Count;
+            foreach (var criterion in selected.Select(s => s.Criterion).OfType<ComputedAchievementCriterion>())
+            {
+                foreach (var count in await criterion.CountAsync(db, subjectList, ct))
+                    found[(count.UserId, criterion.AchievementId)] = count.Count;
+            }
+            return found;
+        }, cancellationToken);
 
         return
         [

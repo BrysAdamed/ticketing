@@ -266,7 +266,7 @@ Achievements (spec 15, D-144, D-145) are a catalogue in code plus one criterion 
    - Give a name, a description, a "how to earn" hint (non-secret only; a secret entry passes `null` and `secret: true`), a Tabler icon name in kebab case (`file-plus`) and ascending thresholds (`[1]` for once-only).
 2. **Criterion** in `Application/Achievements/Criteria/`: an `internal sealed class` deriving from one of these. It is discovered by scanning.
    - `SqlAchievementCriterion`: `Sql` is one `SELECT s.user_id, <count>::int AS count FROM subjects s ... GROUP BY s.user_id` over the CTE `subjects(user_id, started_at)`. The evaluator runs all SQL criteria of a batch in one `UNION ALL` query. Inline constants (action codes, enum values) but never user input.
-   - `ComputedAchievementCriterion`, when the count needs C# (for example parsing mentions): `CountAsync(db, subjects, ct)` is called once per batch and must use a fixed number of queries, never one per user.
+   - `ComputedAchievementCriterion`, when the count needs C# (for example parsing mentions): `CountAsync(db, subjects, ct)` is called once per batch and must use a fixed number of queries, never one per user. `CriterionSql.OverSubjects<T>` runs its SQL over the same `subjects` CTE (see `ShoutOutCriterion`).
    - Set `AchievementId` to the catalogue id, and `Triggers` to the activity actions that can raise the count (`null` when any action can).
 3. **Follow the shared rules** with the `CriterionSql` helpers (`ActorEntries`, `StatusChangesTo`, `AliveTicket`, `AliveProject`, `TicketOrDoc`):
    - Count only rows at or after `s.started_at`.

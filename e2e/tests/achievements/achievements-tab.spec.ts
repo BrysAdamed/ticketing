@@ -3,42 +3,12 @@ import { Api, uniqueProjectKey } from '../../support/api';
 import { expect, test } from '../../support/fixtures';
 import { signInAs } from '../../support/session';
 import { PASSWORD, seedUser } from '../identity/identity';
-
-const FLAG = 'achievements';
-/// The projector runs every TICKETING_ACHIEVEMENTS_INTERVAL; the e2e stack sets it short.
-const PROJECTOR_TIMEOUT_MS = 120_000;
-
-interface Flag {
-    key: string;
-    targetUsers: { id: string }[];
-}
-
-interface MyAchievement {
-    id: string | null;
-    tier: number;
-}
-
-/// Turns the flag on for these users only, keeping any users other specs targeted.
-async function enableFor(api: Api, userIds: string[]): Promise<void> {
-    const flag = (await api.get<Flag[]>('/admin/flags')).find((f) => f.key === FLAG);
-    if (!flag) {
-        await api.post('/admin/flags', {
-            key: FLAG,
-            description: 'Achievements (TKT-61)',
-            enabled: true,
-            rolloutPercentage: 0,
-            targetUserIds: userIds,
-        });
-        return;
-    }
-    const targets = new Set([...flag.targetUsers.map((u) => u.id), ...userIds]);
-    await api.patch(`/admin/flags/${FLAG}`, { enabled: true, targetUserIds: [...targets] });
-}
-
-async function tierOf(api: Api, id: string): Promise<number> {
-    const { items } = await api.get<{ items: MyAchievement[] }>('/me/achievements');
-    return items.find((i) => i.id === id)?.tier ?? 0;
-}
+import {
+    ACHIEVEMENTS_FLAG as FLAG,
+    enableAchievementsFor as enableFor,
+    PROJECTOR_TIMEOUT_MS,
+    tierOf,
+} from './achievements';
 
 test.describe('@achievements profile tab', () => {
     test('a ticket created after the flag turned on unlocks Reporter on the tab', async ({

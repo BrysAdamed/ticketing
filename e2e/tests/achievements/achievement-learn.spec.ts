@@ -4,34 +4,11 @@ import { Api } from '../../support/api';
 import { expect, test } from '../../support/fixtures';
 import { signInAs } from '../../support/session';
 import { PASSWORD, seedUser } from '../identity/identity';
-
-const FLAG = 'achievements';
-
-interface Flag {
-    key: string;
-    targetUsers: { id: string }[];
-}
+import { enableAchievementsFor as enableFor } from './achievements';
 
 interface MyAchievement {
     id: string | null;
     masked: boolean;
-}
-
-/// Turns the flag on for these users only, keeping any users other specs targeted.
-async function enableFor(api: Api, userIds: string[]): Promise<void> {
-    const flag = (await api.get<Flag[]>('/admin/flags')).find((f) => f.key === FLAG);
-    if (!flag) {
-        await api.post('/admin/flags', {
-            key: FLAG,
-            description: 'Achievements (TKT-61)',
-            enabled: true,
-            rolloutPercentage: 0,
-            targetUserIds: userIds,
-        });
-        return;
-    }
-    const targets = new Set([...flag.targetUsers.map((u) => u.id), ...userIds]);
-    await api.patch(`/admin/flags/${FLAG}`, { enabled: true, targetUserIds: [...targets] });
 }
 
 test.describe('@achievements how to earn', () => {

@@ -3,27 +3,42 @@ import { AuthService } from '../auth/auth.service';
 import { FeatureFlagService } from '../flags/feature-flag.service';
 import { ACHIEVEMENTS_FLAG } from './achievement.models';
 
-/// Whether achievements show for the signed-in user: the `achievements` flag is on and the API
-/// has not answered `achievements.disabled` (an opt-out) for this user in this session.
+interface HiddenOverride {
+  userId: string;
+  hidden: boolean;
+}
+
+/// Whether achievements show for the signed-in user: the `achievements` flag is on and the user
+/// has not opted out. The opt-out comes from `/me` (`achievementsHidden`) and is overridden for
+/// the rest of the session by what happened since: an opt-out or opt-in saved on the profile, or
+/// an `achievements.disabled` answer from the API.
 @Injectable({ providedIn: 'root' })
 export class AchievementsAccess {
   private readonly flags = inject(FeatureFlagService);
   private readonly auth = inject(AuthService);
-  private readonly disabledFor = signal<string | null>(null);
+  private readonly override = signal<HiddenOverride | null>(null);
 
   readonly flagOn = computed(() => this.flags.isOn(ACHIEVEMENTS_FLAG));
   readonly enabled = computed(() => {
-    const userId = this.auth.currentUser()?.id;
-    return this.flagOn() && !!userId && this.disabledFor() !== userId;
+    const user = this.auth.currentUser();
+    if (!this.flagOn() || !user) return false;
+    const override = this.override();
+    const hidden = override?.userId === user.id ? override.hidden : !!user.achievementsHidden;
+    return !hidden;
   });
 
-  /// The API said `achievements.disabled` although the flag is on: the user opted out.
+  /// The user opted out, or the API said `achievements.disabled` although the flag is on.
   markDisabled(): void {
-    this.disabledFor.set(this.auth.currentUser()?.id ?? null);
+    this.mark(true);
   }
 
   /// The user opted (back) in, or the API answered again.
   markEnabled(): void {
-    this.disabledFor.set(null);
+    this.mark(false);
+  }
+
+  private mark(hidden: boolean): void {
+    const userId = this.auth.currentUser()?.id;
+    this.override.set(userId ? { userId, hidden } : null);
   }
 }

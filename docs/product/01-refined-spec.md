@@ -624,7 +624,7 @@ Flag changes write ActivityEntries. Admin UI: list, create, edit, delete; shows 
 - Password policy: 12..128 characters, not equal to the email, checked against a bundled list of the 10 000 most common passwords. No composition rules.
 - Lockout: 5 failed logins in a row from one client address lock the account for that address for 15 minutes; other addresses can still sign in (D-74). A locked account, an unknown email and a wrong password all get the same answer, `401 auth.invalidCredentials`, after the same password-hashing work, so sign-in reveals neither which accounts exist nor which are locked. Sign-in is also rate limited per client address (20 per minute). The client address is the TCP peer unless the request came through a trusted proxy (D-73). Setting a password through a link lifts the account's lockouts.
 - Web session: HttpOnly, Secure, SameSite=Lax cookie with 12 hour sliding expiry, plus anti-forgery protection on cookie-authenticated writes. The session is also stored on the server; signing out deletes it, so a copied cookie stops working (D-75).
-- Users change their own display name, avatar and password (current password required for the password). The avatar is one of 32 animal icons (or initials) on one of the 8 palette colours (or the automatic hashed colour), picked on Profile → General and saved at once (D-129, D-130).
+- Users change their own display name, avatar and password (current password required for the password). The avatar is one of 32 animal icons (or initials) on one of the 8 palette colours (or the automatic hashed colour), picked on Profile → General and saved at once (D-129, D-130). They can also turn achievements off there, which deletes their achievement data, and back on (15.11).
 - Deactivate and reactivate per 4.1. No hard delete.
 
 ### 6.15 Watchers (I-32, D-93)
@@ -1426,7 +1426,7 @@ Users earn private, tiered achievements for real actions, through any channel. T
 - An achievement is visible only to its owner, Admins included. There is no admin or manager view of individuals, no leaderboard (not even per team), no export, no points and nothing time-based (no streaks, night-owl or weekend achievements). A user may share an individual achievement (TKT-97); others then see its name, icon and tier, never dates (D-144).
 - No project or ticket id is stored with an achievement, so nothing can reveal a private project.
 - Achievements are monotonic: an earned tier is never revoked, even when the counted entities are later deleted. Only the opt-out deletes them.
-- On by default. A one-click opt-out deletes the user's achievement data (TKT-68). User anonymisation (I-57) deletes it too.
+- On by default. A one-click opt-out deletes the user's achievement data (15.11, TKT-68). User anonymisation (I-57) deletes it too.
 
 ### 15.2 Catalogue
 
@@ -1557,3 +1557,15 @@ The look is `docs/design/mockups/achievements.html`, layout-and-screens §3.9b a
 - The grid has one tab stop: arrows move in 2D across the groups, Home/End jump, Enter or a click opens the detail popover (description, the tier ladder of an earned tiered medal, "How to earn" for a locked one; a masked secret gets no hint). Esc closes it and returns focus to the tile.
 - While nothing is earned yet, an empty state says "Achievements start counting now" (no backfill, D-144), with Still to earn below.
 - Opening the tab marks every earned, unseen tier seen (`POST /me/achievements/seen` with the ids).
+
+### 15.11 Opt-out
+
+Achievements are on by default; each user can turn them off, and doing so deletes their data (D-144, TKT-68, D-153).
+
+- **API:** `PATCH /api/v1/me` takes `achievementsHidden` (boolean, optional, next to `displayName` and the avatar fields), through `UpdateMyProfile`, web session only like the rest of `PATCH /me` (a ReadOnly PAT gets 403 `pat.readOnlyScope`, a ReadWrite PAT 403 `auth.cookieSessionRequired`). `GET /me`, `PATCH /me` and the login response carry `achievementsHidden`. There is no MCP tool: the opt-out is a personal setting, like the rest of the profile.
+- **Opting out** (`true`), in one transaction: sets `achievements_hidden`, clears S and deletes every `user_achievements` row of the user, shares included, so others stop seeing them at once. It holds the projector's advisory lock, so a running cycle cannot award a tier after the delete. The projector, the sweep and the gate skip the user from then on, and every `/me/achievements` endpoint answers 404 `achievements.disabled`.
+- **Opting in** (`false`): clears `achievements_hidden` and sets S to now. Counting restarts from zero; nothing from before the opt-in counts, earlier activity included (no backfill).
+- Both are idempotent: opting out again deletes nothing more, opting in again keeps S.
+- **Flag off:** while the `achievements` flag is off for the caller, a request with `achievementsHidden` is rejected with 404 `achievements.disabled` and nothing in it is applied, other fields included. Requests without it are unaffected.
+- The change is not written to the activity log: who opted out is not visible to anyone else (D-144).
+- **Web:** Profile → General has an Achievements card while the flag is on (`docs/design/mockups/achievements.html` §6): an "Earn achievements" switch, on by default, with the copy that they are private unless shared. Turning it off opens an inline confirm, "Turn off and delete your achievements?", with "Turn off and delete" and "Keep them"; turning it on needs no confirm. The save is optimistic: the Achievements tab and every other achievements element disappear (or return) at once through `AchievementsAccess`, and roll back with an error toast if the save fails.

@@ -1,0 +1,85 @@
+<section
+  class="card"
+  aria-labelledby="achievements-heading"
+  data-testid="profile-achievements-card"
+>
+  <header>
+    <span class="icon-tile"><tk-icon name="tablerAward" [size]="16" /></span>
+    <div>
+      <h2 id="achievements-heading">Achievements</h2>
+      <p class="tk-muted">Small moments of recognition for things you do in Ticketing.</p>
+    </div>
+  </header>
+
+  <div class="row">
+    <div class="text">
+      <span class="label" aria-hidden="true">Earn achievements</span>
+      @if (store.achievementsOn()) {
+        <p>
+          They're private: nobody else sees them, Admins included, unless you share one. Shared ones
+          show their name and tier, never when you earned them.
+        </p>
+        <p>
+          Turning this off deletes your achievements and anything you shared. If you turn it back
+          on, counting starts again from that moment.
+        </p>
+      } @else {
+        <p>
+          Off. Nothing is counted and nothing is stored. Turn it on to start counting from that
+          moment.
+        </p>
+      }
+    </div>
+    <button
+      #toggleButton
+      type="button"
+      class="switch"
+      role="switch"
+      data-testid="profile-achievements-toggle"
+      [class.on]="store.achievementsOn()"
+      [attr.aria-checked]="store.achievementsOn()"
+      [attr.aria-controls]="store.confirmingOptOut() ? 'achievements-confirm' : null"
+      [disabled]="store.savingAchievements()"
+      (click)="toggle()"
+    >
+      <span class="sr-only">Earn achievements</span>
+    </button>
+  </div>
+
+  @if (store.confirmingOptOut()) {
+    <div
+      id="achievements-confirm"
+      class="confirm"
+      role="alertdialog"
+      aria-labelledby="achievements-confirm-title"
+      aria-describedby="achievements-confirm-text"
+      data-testid="profile-achievements-confirm"
+      (keydown.escape)="keep()"
+    >
+      <b id="achievements-confirm-title">Turn off and delete your achievements?</b>
+      <p id="achievements-confirm-text">
+        Everything you've earned and shared is deleted now. This can't be undone.
+      </p>
+      <div class="actions">
+        <button
+          mat-flat-button
+          type="button"
+          class="danger"
+          data-testid="profile-achievements-confirm-off"
+          (click)="confirm()"
+        >
+          Turn off and delete
+        </button>
+        <button
+          #keepButton
+          mat-stroked-button
+          type="button"
+          data-testid="profile-achievements-keep"
+          (click)="keep()"
+        >
+          Keep them
+        </button>
+      </div>
+    </div>
+  }
+</section>

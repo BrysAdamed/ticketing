@@ -1,8 +1,16 @@
 import { A11yModule } from '@angular/cdk/a11y';
-import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
+import { LearnActions } from '@core/onboarding/learn-actions';
 import { tierColor, tierName } from '@shared/ui/achievement-medal/achievement-medal.logic';
 import { AchievementMedalComponent } from '@shared/ui/achievement-medal/achievement-medal.component';
 import { IconComponent } from '@shared/ui/icon/icon.component';
+import {
+  AchievementLearnAction,
+  canStartLearn,
+  learnActionFor,
+  startLearn,
+} from './achievement-learn';
 import { AchievementTile } from './achievements.logic';
 
 interface LadderRow {
@@ -16,10 +24,11 @@ interface LadderRow {
 }
 
 /// The medal detail popover (mockup "Medal detail"): description, the tier ladder of an earned
-/// tiered medal, the "How to earn" hint of a locked one; no hint for a masked secret.
+/// tiered medal, the "How to earn" hint of a locked one with a "Show me" learn action while one can
+/// start (D-143, D-154); no hint and no action for a masked secret.
 @Component({
   selector: 'tk-achievement-detail',
-  imports: [A11yModule, AchievementMedalComponent, IconComponent],
+  imports: [A11yModule, MatButtonModule, AchievementMedalComponent, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div
@@ -91,7 +100,21 @@ interface LadderRow {
           }
         }
       </div>
-      <!-- TODO TKT-93: the "Show me" learn action goes in a footer here for locked, non-secret entries when one can start (D-143). -->
+      @if (learnAction(); as action) {
+        <footer class="learn" data-testid="achievement-learn">
+          <span class="note" [id]="learnNoteId()">{{ action.note }}</span>
+          <button
+            mat-stroked-button
+            type="button"
+            data-testid="achievement-show-me"
+            [attr.aria-describedby]="learnNoteId()"
+            (click)="showMe(action)"
+          >
+            <tk-icon name="tablerCompass" [size]="14" />
+            Show me
+          </button>
+        </footer>
+      }
     </div>
   `,
   styles: `
@@ -193,15 +216,38 @@ interface LadderRow {
     li.done .end {
       color: var(--tk-success-fg);
     }
+    .learn {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      border-top: 1px solid var(--tk-border-subtle);
+    }
+    .learn .note {
+      flex: 1;
+      font-size: var(--tk-text-sm);
+      line-height: var(--tk-leading-sm);
+      color: var(--tk-text-subtle);
+    }
+    .learn tk-icon {
+      margin-right: 4px;
+    }
   `,
 })
 export class AchievementDetailComponent {
   readonly tile = input.required<AchievementTile>();
   readonly closed = output<void>();
 
+  private readonly learn = inject(LearnActions);
+
   protected readonly item = computed(() => this.tile().item);
   protected readonly headingId = computed(() => `achievement-detail-${this.tile().key}`);
   protected readonly count = computed(() => this.item().progress?.count ?? 0);
+  protected readonly learnNoteId = computed(() => `achievement-learn-${this.tile().key}`);
+  protected readonly learnAction = computed(() => {
+    const action = learnActionFor(this.item());
+    return action && canStartLearn(this.learn, action.target) ? action : null;
+  });
   protected readonly ladder = computed<LadderRow[]>(() => {
     const { item, tierCount } = this.tile();
     if (item.masked || tierCount <= 1 || item.tier === 0) return [];
@@ -216,4 +262,9 @@ export class AchievementDetailComponent {
       next: t.tier === nextTier,
     }));
   });
+
+  protected showMe(action: AchievementLearnAction): void {
+    this.closed.emit();
+    startLearn(this.learn, action.target);
+  }
 }

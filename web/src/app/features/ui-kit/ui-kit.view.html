@@ -130,6 +130,39 @@
     </div>
   </section>
 
+  <section class="wide" data-testid="ui-kit-medals">
+    <h2>Achievement medal</h2>
+    <div class="medal-states">
+      @for (medal of medals; track medal.state) {
+        <div class="medal-state">
+          <tk-achievement-medal
+            [achievementId]="medal.id"
+            [icon]="medal.icon"
+            [tier]="medal.tier"
+            [tierCount]="medal.tierCount"
+            [label]="medal.label"
+          />
+          <span class="medal-name">{{ medal.state }}</span>
+          <span class="tk-muted">{{ medal.progress ?? medal.tierText }}</span>
+          <span class="tk-subtle medal-aria">"{{ medal.label }}"</span>
+        </div>
+      }
+    </div>
+    <div class="medal-sizes">
+      @for (size of medalSizes; track size) {
+        <div class="medal-state">
+          <tk-achievement-medal
+            achievementId="reporter"
+            icon="file-plus"
+            [tier]="2"
+            [size]="size"
+          />
+          <span class="tk-subtle">{{ size }}px</span>
+        </div>
+      }
+    </div>
+  </section>
+
   <section>
     <h2>Skeleton</h2>
     <tk-skeleton-rows [count]="4" [delayMs]="0" />

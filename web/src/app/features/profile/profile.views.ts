@@ -20,3 +20,11 @@ export const ACCESS_TOKENS_VIEW = defineView({
     default: () => import('./tokens/access-tokens.view').then((m) => m.AccessTokensView),
   },
 });
+
+export const PROFILE_ACHIEVEMENTS_VIEW = defineView({
+  viewId: 'profile.achievements',
+  variants: {
+    default: () =>
+      import('./achievements/profile-achievements.view').then((m) => m.ProfileAchievementsView),
+  },
+});

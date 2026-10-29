@@ -1546,3 +1546,14 @@ Tiers are awarded after commit by the `AchievementProjector` background service,
 - **Failure:** a failing cycle rolls back, including the watermark, is logged and is retried on the next interval, so nothing is lost.
 - **Nightly sweep** (`AchievementProjector:SweepAtUtc`, default 03:00 UTC): the same evaluation over the whole catalogue for every active, started, non-hidden user with the flag on, in batches of 500. It never stamps S, so it covers only activity after each user's start.
 - Deactivated users, users who opted out and users with the flag off are skipped and get no S.
+
+### 15.9 Web: Profile → Achievements
+
+The look is `docs/design/mockups/achievements.html`, layout-and-screens §3.9b and the design system's "Achievement medal" (TKT-66, D-151).
+
+- A third Profile tab, `/profile/achievements` (view `profile.achievements`). The tab and the route exist only while the `achievements` flag is on for the user; a 404 `achievements.disabled` (opted out) hides the tab for the rest of the session and sends the user back to `/profile`.
+- A lock line says who can see them. Three groups without totals or percentages: **Earned** (highest tier first, one-time achievements after the tiered ones), **Still to earn** (closest to the next threshold first) and **Secret** (masked entries as "???"), each in catalogue order on ties. Earned secrets join Earned with a "Secret" badge.
+- A tile shows the 48px medal, name, the tier in words ("Gold", "Earned", "Not earned yet"), the description and, for tiered achievements, a bar and "23 of 50 to Gold" (nothing while the count is 0; "Highest tier" at the top).
+- The grid has one tab stop: arrows move in 2D across the groups, Home/End jump, Enter or a click opens the detail popover (description, the tier ladder of an earned tiered medal, "How to earn" for a locked one; a masked secret gets no hint). Esc closes it and returns focus to the tile.
+- While nothing is earned yet, an empty state says "Achievements start counting now" (no backfill, D-144), with Still to earn below.
+- Opening the tab marks every earned, unseen tier seen (`POST /me/achievements/seen` with the ids).

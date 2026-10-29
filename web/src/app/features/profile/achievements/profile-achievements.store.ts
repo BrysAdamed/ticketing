@@ -32,6 +32,7 @@ export class ProfileAchievementsStore {
   /// them). `achievements.disabled` hides the tab for this session.
   async load(): Promise<void> {
     this.status.set('loading');
+    const since = this.access.since();
     try {
       const result = await firstValueFrom(this.api.list());
       this.items.set(result.items);
@@ -40,7 +41,7 @@ export class ProfileAchievementsStore {
     } catch (error) {
       const apiError = toApiError(error);
       if (apiError.isNotFound && apiError.code === ACHIEVEMENTS_DISABLED) {
-        this.access.markDisabled();
+        this.access.markDisabled(since);
         this.status.set('disabled');
       } else {
         this.status.set('error');
@@ -57,6 +58,7 @@ export class ProfileAchievementsStore {
     if (!item || item.tier <= 0 || item.shared === shared || this.sharing().has(id)) return;
     this.items.update((items) => withShared(items, id, shared));
     this.setPending(id, true);
+    const since = this.access.since();
     try {
       const updated = await firstValueFrom(
         shared ? this.shares.share(id) : this.shares.unshare(id),
@@ -69,7 +71,7 @@ export class ProfileAchievementsStore {
       this.items.update((items) => withShared(items, id, !shared));
       const apiError = toApiError(error);
       if (apiError.isNotFound && apiError.code === ACHIEVEMENTS_DISABLED) {
-        this.access.markDisabled();
+        this.access.markDisabled(since);
         this.status.set('disabled');
         return;
       }

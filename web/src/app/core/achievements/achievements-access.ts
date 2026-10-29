@@ -17,6 +17,7 @@ export class AchievementsAccess {
   private readonly flags = inject(FeatureFlagService);
   private readonly auth = inject(AuthService);
   private readonly override = signal<HiddenOverride | null>(null);
+  private changes = 0;
 
   readonly flagOn = computed(() => this.flags.isOn(ACHIEVEMENTS_FLAG));
   readonly enabled = computed(() => {
@@ -27,8 +28,16 @@ export class AchievementsAccess {
     return !hidden;
   });
 
-  /// The user opted out, or the API said `achievements.disabled` although the flag is on.
-  markDisabled(): void {
+  /// Taken before an API call whose `achievements.disabled` answer would call `markDisabled(since)`.
+  since(): number {
+    return this.changes;
+  }
+
+  /// The user opted out, or the API said `achievements.disabled` although the flag is on. Pass the
+  /// `since()` taken before the request: an answer to a request sent before a newer opt-in or opt-out
+  /// is stale (the opt-in may not have been saved yet) and is ignored.
+  markDisabled(since?: number): void {
+    if (since !== undefined && since !== this.changes) return;
     this.mark(true);
   }
 
@@ -39,6 +48,7 @@ export class AchievementsAccess {
 
   private mark(hidden: boolean): void {
     const userId = this.auth.currentUser()?.id;
+    this.changes++;
     this.override.set(userId ? { userId, hidden } : null);
   }
 }

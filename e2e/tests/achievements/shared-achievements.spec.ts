@@ -65,7 +65,7 @@ test.describe('@achievements sharing', () => {
         await expect(card.root).toBeVisible();
         await expect(card.root).toContainText(owner.displayName);
         await expect(card.root).not.toContainText(owner.email);
-        await expect(card.achievements).toContainText('Shared achievements');
+        await expect(card.achievements).toHaveAccessibleName('Shared achievements');
         await expect(card.achievement('reporter')).toHaveAccessibleName('Reporter, Bronze');
         await expect(card.achievement('closer')).toHaveCount(0);
 

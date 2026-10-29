@@ -50,13 +50,14 @@ export class AchievementUnlocks {
     const userId = this.auth.currentUser()?.id;
     if (!userId || !this.access.enabled()) return;
     const generation = ++this.generation;
+    const since = this.access.since();
     let unseen: UnseenAchievements;
     try {
       unseen = await firstValueFrom(this.api.unseen());
     } catch (error) {
       const apiError = toApiError(error);
       if (apiError.isNotFound && apiError.code === ACHIEVEMENTS_DISABLED)
-        this.access.markDisabled();
+        this.access.markDisabled(since);
       return;
     }
     if (generation !== this.generation || this.auth.currentUser()?.id !== userId) return;

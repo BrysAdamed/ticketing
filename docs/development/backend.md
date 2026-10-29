@@ -229,6 +229,25 @@ Run `dotnet test` without the `rtk` prefix: rtk filters the test runner output a
 
 Performance tests carry `[Trait("Category", "Performance")]`. `DashboardPerformanceTests` seeds two 50 000-ticket projects with `INSERT ... SELECT`, asserts the dashboard's p95 stays under 500 ms and writes timings, per-statement durations and `EXPLAIN ANALYZE` plans to `dashboard-performance.txt` next to the test binaries. Skip them in a quick loop with `dotnet test -- --filter-not-trait "Category=Performance"`.
 
+## Adding an achievement
+
+Achievements (spec 15, D-144, D-145) are a catalogue in code plus one criterion per entry. Adding one touches no evaluator, projector, API or UI code:
+
+1. **Catalogue entry** in `Domain/Achievements/AchievementCatalog.cs`: add an id constant and an `AchievementDefinition` to `All`.
+   - The id is lower-case kebab case, at most 50 characters. It is stored with every earned tier, so it is never renamed or reused.
+   - Give a name, a description, a "how to earn" hint (non-secret only; a secret entry passes `null` and `secret: true`), a Tabler icon name in kebab case (`file-plus`) and ascending thresholds (`[1]` for once-only).
+2. **Criterion** in `Application/Achievements/Criteria/`: an `internal sealed class` deriving from one of these. It is discovered by scanning.
+   - `SqlAchievementCriterion`: `Sql` is one `SELECT s.user_id, <count>::int AS count FROM subjects s ... GROUP BY s.user_id` over the CTE `subjects(user_id, started_at)`. The evaluator runs all SQL criteria of a batch in one `UNION ALL` query. Inline constants (action codes, enum values) but never user input.
+   - `ComputedAchievementCriterion`, when the count needs C# (for example parsing mentions): `CountAsync(db, subjects, ct)` is called once per batch and must use a fixed number of queries, never one per user.
+   - Set `AchievementId` to the catalogue id, and `Triggers` to the activity actions that can raise the count (`null` when any action can).
+3. **Follow the shared rules** with the `CriterionSql` helpers (`ActorEntries`, `StatusChangesTo`, `AliveTicket`, `AliveProject`, `TicketOrDoc`):
+   - Count only rows at or after `s.started_at`.
+   - Count distinct entities, of the subject only.
+   - Count only alive entities unless the definition says otherwise.
+   - New activity payload fields are additive. Old entries simply lack them, which no-backfill makes harmless.
+4. **Tests** in `tests/Ticketing.IntegrationTests/Achievements/`, through REST and MCP (`AchievementTestData`): counting after S only, distinct or first time per entity, deleted entities, channel independence, and no other user's data. `AchievementEvaluatorTests` fails while an entry has no criterion or a criterion has no entry.
+5. **Docs**: a row in spec 15.2 and 15.4, and a `D-xx` when the definition needed a choice.
+
 ## Error codes
 
 Every error response is RFC 9457 problem details with a stable `code`. MCP returns the same code. Codes look like `<area>.<subject>[.<problem>]` in camelCase, for example `ticket.parent.cycle`, `project.key.taken` or `auth.invalidCredentials`. Feature codes are constants in `Domain/<Feature>/<Feature>Errors.cs`. Cross-cutting codes are in `Application/Common/AppErrors`.

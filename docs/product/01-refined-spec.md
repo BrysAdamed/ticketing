@@ -1405,3 +1405,87 @@ For people connecting Claude Code over MCP (section 9, TKT-59):
   3. **Check the connection**: turns green once the token's `LastUsedAt` is set (the token created in the guide, else a live token that was used). While waiting it re-reads the token list every 5 seconds, not while the tab is hidden, and on window focus; it stops when green or when the panel closes.
   Opening the panel focuses its heading; closing it (×) removes the query parameter and returns focus to Generate token. The two optional checklist items (14.3) tick themselves off after a real MCP call with the PAT.
 - Onboarding state itself is not available over MCP (14.1, D-132).
+
+## 15. Achievements
+
+Users earn private, tiered achievements for real actions, through any channel. They make the app more pleasant and nudge people towards features they haven't tried. They are not a performance metric. Epic TKT-61; decisions D-144 (privacy, HR/DPO position, no backfill) and D-145 (criterion definitions, start stamping). The domain term is **Achievement**; "Badge" is the design system's UI component.
+
+### 15.1 Feature flag and privacy
+
+- Everything sits behind the string-variant flag `achievements` (6.13), evaluated per user: the projector, the REST API, the MCP tools and the UI. While it is off for the caller, every achievements endpoint returns 404 `achievements.disabled` and the MCP tools are missing from `tools/list` (`AchievementsGate`, the same pattern as `AgentGate`).
+- An achievement is visible only to its owner, Admins included. There is no admin or manager view of individuals, no leaderboard (not even per team), no export, no points and nothing time-based (no streaks, night-owl or weekend achievements). A user may share an individual achievement (TKT-97); others then see its name, icon and tier, never dates (D-144).
+- No project or ticket id is stored with an achievement, so nothing can reveal a private project.
+- Achievements are monotonic: an earned tier is never revoked, even when the counted entities are later deleted. Only the opt-out deletes them.
+- On by default. A one-click opt-out deletes the user's achievement data (TKT-68). User anonymisation (I-57) deletes it too.
+
+### 15.2 Catalogue
+
+The catalogue is code (`AchievementCatalog`), not an admin-editable table. Each entry has a stable id (lower-case kebab case, at most 50 characters, never renamed or reused), a name, a description, a "how to earn" hint (non-secret entries only; secret entries stay masked until earned), a Tabler icon name in kebab case, ascending tier thresholds and a secret flag. A once-only achievement has the single threshold 1. Each entry has exactly one criterion (15.4); adding one is described in backend.md ("Adding an achievement").
+
+| Id | Name | Counts | Tiers | Icon |
+| --- | --- | --- | --- | --- |
+| `reporter` | Reporter | Tickets created | 1 / 10 / 50 / 250 | `file-plus` |
+| `closer` | Closer | Tickets moved to Done | 1 / 10 / 50 / 250 | `circle-check` |
+| `ready-for-review` | Ready for review | Tickets moved to Review (stands in for "opened a PR" until I-50) | 1 / 10 / 50 / 250 | `git-pull-request` |
+| `bug-hunter` | Bug hunter | Bugs created | 1 / 10 / 50 | `bug` |
+| `exterminator` | Exterminator | Bugs moved to Done | 1 / 10 / 50 | `bug-off` |
+| `conversationalist` | Conversationalist | Comments on tickets and docs | 1 / 25 / 100 / 500 | `messages` |
+| `connector` | Connector | Ticket links added | 1 / 10 / 50 | `link` |
+| `show-me` | Show me | Attachments on tickets and docs | 1 / 10 | `paperclip` |
+| `triage` | Triage | Tickets assigned to someone else | 10 / 50 / 200 | `user-share` |
+| `test-author` | Test author | Test cases created | 1 / 10 / 50 | `test-pipe` |
+| `regression-runner` | Regression runner | Regression results recorded | 10 / 100 / 500 | `checklist` |
+| `found-it` | Found it | Bugs filed from failed regression items | 1 / 10 | `zoom-exclamation` |
+| `full-sweep` | Full sweep | Regression sessions completed | 1 / 5 / 25 | `list-check` |
+| `board-builder` | Board builder | A board created | once | `layout-kanban` |
+| `spring-cleaning` | Spring cleaning | A board archived | once | `archive` |
+| `delegator` | Delegator | Tickets delegated to an agent | 1 / 10 / 50 | `robot` |
+| `machine-whisperer` | Machine whisperer | A write through MCP | once | `plug-connected` |
+
+`epic-finisher` and `shout-out` (TKT-95) and the secret `second-thoughts`, `unblocker` and `grand-tour` (TKT-96) are added through the same extension point.
+
+### 15.3 Data
+
+- `users.achievements_hidden` (bool, default false): the user opted out.
+- `users.achievements_started_at` (timestamptz, null): the user's start **S**. Only activity at or after S counts.
+- `user_achievements(user_id, achievement_id varchar(50), tier smallint, unlocked_at, seen_at null)`, primary key `(user_id, achievement_id, tier)`, deleted with the user. One row per earned tier; `seen_at` is set when the owner has seen the unlock (TKT-67).
+- `achievement_projector_state(id, processed_until)`: the projector's single-row watermark (TKT-64).
+
+### 15.4 Criteria
+
+Counts come from data that is already recorded: `activity_entries` (every channel writes through `IActivityLog`, which stamps actor and channel) and creator columns of tables. The rules shared by every criterion (D-145):
+
+- **After S only:** `occurred_at >= S` for activity, `created_at >= S` for table rows. There is no backfill.
+- **Distinct entities per user:** an entity counts once for a user however often the action repeats (moving a ticket in and out of Done counts once). Someone else's action on the same entity doesn't matter.
+- **Alive entities only:** a ticket counts while it and its project are not deleted (archived projects and boards still count); a doc while it and its project are not deleted. Exceptions are listed below.
+- **Every channel:** web, REST with a PAT and MCP all count, except where a criterion is about the channel.
+- **No other user's data:** a user's count reads only their own entries and rows.
+
+| Id | Counts, for user U after S |
+| --- | --- |
+| `reporter` | Alive tickets U created (`tickets.created_by_id`): single, batch and regression bugs. |
+| `bug-hunter` | `reporter` tickets whose type is Bug when evaluated. |
+| `closer` | Distinct alive tickets U moved to Done (a `status` change by PATCH, MCP or a board move). A ticket created in Done has no status change and doesn't count. |
+| `exterminator` | `closer` tickets whose type is Bug when evaluated. |
+| `ready-for-review` | Distinct alive tickets U moved to Review. |
+| `triage` | Distinct alive tickets U assigned to another user, at creation (`assigneeId` in the `ticket.created` entry) or later (an `assignee` change). Assigning yourself, including the delegation auto-assign, and unassigning don't count. |
+| `conversationalist` | Comments U wrote on alive tickets and docs that are not deleted. |
+| `connector` | Links U added that still exist (links are removed on unlink and when a linked ticket is deleted). Includes the link added when filing a regression bug. |
+| `show-me` | Attachments U uploaded to alive tickets and docs that still exist. |
+| `test-author` | Test cases U created that still exist (archived ones count), in projects that are not deleted. |
+| `regression-runner` | Distinct session items U recorded a result for, other than resetting to Waiting for execution; projects not deleted. |
+| `found-it` | Alive bugs U filed from a failed regression item (Create bug, or `createBug` when recording). |
+| `full-sweep` | Regression sessions U completed (not cancelled); projects not deleted. |
+| `board-builder` | Boards U created that are not deleted. |
+| `spring-cleaning` | Boards U archived, even if they were deleted later. |
+| `delegator` | Distinct alive tickets U delegated to an agent (web only). |
+| `machine-whisperer` | Any activity U wrote over MCP. MCP calls that write no activity (watch, unwatch, mark notifications read), reads and REST with a PAT don't count. |
+
+The evaluator computes every criterion for a batch of users, each with their own S, in a fixed number of queries that does not depend on the number of users, and returns per user and achievement the current count and the tier it reaches (the progress TKT-65 shows). It never writes; the after-commit projector (TKT-64) awards tiers. It is not an `IActivityObserver`, so an evaluator failure never fails a user's write (D-144).
+
+### 15.5 Start of counting (S)
+
+- S is stamped the first time the flag is seen on for a user whose S is empty: by the achievements API (`AchievementsGate` sets S to now), or by the projector when it finds the user's activity (S is then the earliest entry of the current cycle window, so the first action after the flag flip is not lost).
+- Turning the flag off and on again keeps S. The flag is an operational switch, not an opt-out, so activity while it was off counts once it is back on.
+- Opting out sets `achievements_hidden`, clears S and deletes the user's achievements. Opting back in sets S to now: counting restarts from zero.
+- A user who opted out gets no S and is skipped by the projector.

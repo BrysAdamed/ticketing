@@ -55,6 +55,8 @@ Configuration (environment variables override `appsettings*.json`):
 | `Pdf__Url`, `Pdf__Username` | Gotenberg (default `http://pdf:3000`, `ticketing`) |
 | `Pdf__BundlePath` | The print bundle (`print.js`, `print.css`, fonts); `/app/print` in the image, `../../web/dist/print` in Development |
 | `Pdf__WarmUp` | Render a small page after startup so the first export is fast (default true) |
+| `AchievementProjector__Interval` | Time between achievement projector cycles (default `00:00:15`; compose: `TICKETING_ACHIEVEMENTS_INTERVAL`). e2e runs lower it so an unlock shows within seconds ([spec §15.6](../product/01-refined-spec.md#156-projector)). |
+| `AchievementProjector__Enabled`, `AchievementProjector__SweepAtUtc` | Run the projector in this instance (default true; integration tests turn it off and call `AchievementProjection` directly); time of day (UTC) of the nightly safety sweep (default `03:00`) |
 
 Logs are JSON on the console (`simple` in Development).
 

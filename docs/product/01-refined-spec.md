@@ -1489,3 +1489,13 @@ The evaluator computes every criterion for a batch of users, each with their own
 - Turning the flag off and on again keeps S. The flag is an operational switch, not an opt-out, so activity while it was off counts once it is back on.
 - Opting out sets `achievements_hidden`, clears S and deletes the user's achievements. Opting back in sets S to now: counting restarts from zero.
 - A user who opted out gets no S and is skipped by the projector.
+
+### 15.6 Projector
+
+Tiers are awarded after commit by the `AchievementProjector` background service, never inside a user's write (D-144, D-149), so a failing criterion cannot fail or slow a save.
+
+- **Cycle** (every `AchievementProjector:Interval`, default 15 s): under an advisory lock, in one transaction, it reads the users with activity since the watermark minus a 2-minute overlap (`occurred_at` is stamped before commit). It keeps those who are active, have not opted out and have the flag on (evaluated for the whole batch at once), stamps S where it is empty (15.5), evaluates only the criteria their actions trigger and that they do not hold at top tier, inserts every newly reached tier and advances the watermark. Without a watermark the first cycle starts 2 minutes back: there is no backfill.
+- **Idempotent:** tiers are inserted with `ON CONFLICT DO NOTHING` and counts are recomputed from source data, so re-running a cycle or the sweep adds nothing. Every unlock is unseen (`seen_at` empty).
+- **Failure:** a failing cycle rolls back, including the watermark, is logged and is retried on the next interval, so nothing is lost.
+- **Nightly sweep** (`AchievementProjector:SweepAtUtc`, default 03:00 UTC): the same evaluation over the whole catalogue for every active, started, non-hidden user with the flag on, in batches of 500. It never stamps S, so it covers only activity after each user's start.
+- Deactivated users, users who opted out and users with the flag off are skipped and get no S.

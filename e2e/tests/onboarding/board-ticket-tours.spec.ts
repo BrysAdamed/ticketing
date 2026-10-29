@@ -31,8 +31,12 @@ async function seedBoard(api: Api, role: Role) {
         [hidden, 'Secret roadmap'],
     ])
         keys.push(
-            (await api.post<TicketSummary>(`/projects/${project}/tickets`, { title, type: 'Technical' }))
-                .key,
+            (
+                await api.post<TicketSummary>(`/projects/${project}/tickets`, {
+                    title,
+                    type: 'Technical',
+                })
+            ).key,
         );
     const board = await api.post<{ id: string }>('/boards', {
         name: `Tour ${mine}`,
@@ -86,7 +90,9 @@ class TourCard {
             `${this.tour.title} tour · Step ${index + 1} of ${steps.length}`,
         );
         await expect(this.title).toHaveText(steps[index].title);
-        await expect(this.page.locator(`[data-tour="${steps[index].anchor}"]`).first()).toBeVisible();
+        await expect(
+            this.page.locator(`[data-tour="${steps[index].anchor}"]`).first(),
+        ).toBeVisible();
     }
 
     /// Walks forward with → from the first step to the last, checking each one.

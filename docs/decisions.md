@@ -1137,6 +1137,19 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
 - Rejected: an unconditional step in the built-ins (it would ask unrelated repositories about Ticketing's achievements); a separate guide in `docs/domain/` (that folder holds the cross-cutting workflows, while the extension point already lives in backend.md).
 - Rationale: the check sits where features are planned and finished, costs one line, and only fires in repositories that opted in.
 
+### D-147 My achievements API: masked secrets as nulls, progress towards the next unearned tier, seen per achievement, and every call stamps S (TKT-65)
+
+- Question: what exactly do `GET /me/achievements`, `GET /me/achievements/unseen`, `POST /me/achievements/seen` and `list_my_achievements` return for secret entries, progress and an opted-out user, and which calls stamp S (spec 15.6)?
+- Decision:
+  - **Masked secrets keep their place and shape** in the catalogue order, with `masked: true` and `id`, `name`, `description`, `howToEarn`, `icon` and `progress` null, `tier: 0`, `tiers: []`. The id is masked too, because ids like `grand-tour` name the achievement. Unearned secrets are not evaluated at all.
+  - **Progress points at the next unearned tier**: `nextTier` = highest earned tier + 1 and `nextThreshold` its threshold, with the live `count` beside it. Not `TierFor(count)`: earned tiers are monotonic and the count may fall below them (deleted entities) or pass a threshold a little before the projector awards it, and the UI must never show a tier as next that is already earned.
+  - **Seen is per achievement, not per tier**: `{ ids }` marks every earned, unseen tier of each id, unknown ids are ignored (as with notifications), and the response is the remaining unseen list, so the toast needs no second call. A tier unlocked between the poll and the POST is marked too; the window is one poll, and the profile still shows it.
+  - **An opted-out user gets 404 `achievements.disabled`** on all three endpoints and the tool, the same code as the flag being off, with a hint to opt back in. The tool stays listed for them, since `[FeatureGate]` checks the flag only.
+  - **Every call stamps S** through `AchievementsGate.EnsureParticipatingAsync` (`EnsureStartedAsync`, D-145), the unseen poll and the read-only tool included. The conditional update is a primary-key no-op once S is set, and stamping on the poll starts counting when the user is first active with the flag on rather than when they first open the profile.
+  - `/unseen` reads only the caller's `user_achievements` rows (a primary-key prefix scan, at most one row per catalogue tier) and evaluates no criteria; p95 9 to 20 ms with 5 000 other users holding every tier (`UnseenAchievementsPerformanceTests`).
+- Rejected: dropping masked entries and returning a count (the UI shows "?" medals in place); `nextThreshold` from the count alone (could name an earned tier); per-tier seen markers `{ id, tier }` (more client state for a one-poll window); a separate code for opted-out users (the UI reads the opt-out from its own setting, TKT-68, and a distinct code would add nothing for other callers); a `mark_achievements_seen` MCP tool (seen state belongs to the web UI).
+- Rationale: the caller sees everything about their own achievements and nothing that reveals a secret, the poll stays as cheap as the notification count, and no path takes a user id, so no call can read another user's achievements.
+
 ## Product owner answers (v1 review, 2026-10-27)
 
 These were open questions (Q-01..Q-05); the product owner resolved them as follows.

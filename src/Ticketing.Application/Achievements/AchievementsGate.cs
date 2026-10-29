@@ -39,4 +39,12 @@ public sealed class AchievementsGate(IFeatureFlags flags, ITicketingDbContext db
             .ExecuteUpdateAsync(s => s.SetProperty(u => u.AchievementsStartedAt, now), cancellationToken);
         return await db.Users.AsNoTracking().Where(u => u.Id == currentUser.Id).Select(u => u.AchievementsStartedAt).SingleAsync(cancellationToken);
     }
+
+    /// <summary>
+    /// <see cref="EnsureStartedAsync"/> for the caller's own achievements: a user who opted out gets the same 404
+    /// <c>achievements.disabled</c> as while the flag is off. Returns the caller's start S.
+    /// </summary>
+    public async Task<DateTimeOffset> EnsureParticipatingAsync(CancellationToken cancellationToken) =>
+        await EnsureStartedAsync(cancellationToken)
+            ?? throw new AppException(ErrorKind.NotFound, AchievementErrors.Disabled, "You opted out of achievements.", "Opt back in from your profile to earn achievements again.");
 }

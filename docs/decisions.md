@@ -1150,6 +1150,18 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
 - Rejected: dropping masked entries and returning a count (the UI shows "?" medals in place); `nextThreshold` from the count alone (could name an earned tier); per-tier seen markers `{ id, tier }` (more client state for a one-poll window); a separate code for opted-out users (the UI reads the opt-out from its own setting, TKT-68, and a distinct code would add nothing for other callers); a `mark_achievements_seen` MCP tool (seen state belongs to the web UI).
 - Rationale: the caller sees everything about their own achievements and nothing that reveals a secret, the poll stays as cheap as the notification count, and no path takes a user id, so no call can read another user's achievements.
 
+### D-151 Achievements tab: a list per group with one stretched button per tile, ordering rules, `AchievementsAccess` in core, and a registered glyph set for the medal (TKT-66)
+
+- Question: the mockup marks the tab grid up as `role="grid"` with `gridcell` tiles, the tiles will carry a Share button (TKT-98), "highest tier first" does not say where one-time achievements go, and the tab must hide on an opt-out that only the API knows about. How are the tab, its keyboard model and the shared medal built?
+- Decision:
+  - **Markup**: each group is a `role="list"` labelled by its heading, each tile a `listitem` with a transparent `<button>` stretched over it. The button is the roving tab stop (one for the whole page, `gridMove` in `achievements.logic.ts`: arrows in 2D across groups at the same column, Home/End) and carries the accessible name "name, tier[, progress]"; the medal inside is `aria-hidden`. A `grid` needs `row` elements, which a responsive CSS grid doesn't have, and a whole-tile button could not contain the Share button TKT-98 adds next to it.
+  - **Ordering**: Earned sorts tiered achievements by tier, highest first, then one-time achievements (as in the mockup); Still to earn sorts by `count / nextThreshold`, closest first; ties keep catalogue order. A locked tile shows no bar while its count is 0, and one-time achievements never show one.
+  - **`AchievementsAccess`** (`core/achievements/`, root): `enabled()` is the `achievements` flag and no `achievements.disabled` answer for the signed-in user in this session. The profile layout shows the tab from it, and TKT-67 and TKT-68 use the same signal (`markDisabled` / `markEnabled`). The route has `featureGuard('achievements')`, so with the flag off `/profile/achievements` is a 404.
+  - **Medal glyphs**: `tk-achievement-medal` registers the catalogue's icons itself (`MEDAL_GLYPHS`, `shared/ui/achievement-medal/medal-glyphs.ts`) and maps kebab-case names to ng-icons names; an icon not registered draws `award` and a masked secret `question-mark`. Adding an achievement adds its glyph there (backend.md "Adding an achievement").
+  - **Seen**: the store posts the ids with an unseen earned tier once after each successful load and ignores a failure (the next open retries; TKT-67 owns the toast and the dot).
+- Rejected: `role="grid"` with gridcells (invalid without rows); a separate tab stop per group (more Tab presses for no gain); hiding the tab by calling the API from the layout on every profile visit (the flag already covers the common case and the view reports the opt-out); importing all Tabler icons (the bundle would grow by the whole set).
+- Rationale: valid ARIA with one tab stop, room for the share control without restructuring, and one source for "are achievements on" that the next stories reuse.
+
 ## Product owner answers (v1 review, 2026-10-27)
 
 These were open questions (Q-01..Q-05); the product owner resolved them as follows.

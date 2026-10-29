@@ -263,7 +263,7 @@ Achievements (spec 15, D-144, D-145) are a catalogue in code plus one criterion 
 
 1. **Catalogue entry** in `Domain/Achievements/AchievementCatalog.cs`: add an id constant and an `AchievementDefinition` to `All`.
    - The id is lower-case kebab case, at most 50 characters. It is stored with every earned tier, so it is never renamed or reused.
-   - Give a name, a description, a "how to earn" hint (non-secret only; a secret entry passes `null` and `secret: true`), a Tabler icon name in kebab case (`file-plus`) and ascending thresholds (`[1]` for once-only).
+   - Give a name, a description, a "how to earn" hint (non-secret only; a secret entry passes `null` and `secret: true`), a Tabler icon name in kebab case (`file-plus`) and ascending thresholds (`[1]` for once-only). Register the icon in `MEDAL_GLYPHS` (`web/src/app/shared/ui/achievement-medal/medal-glyphs.ts`), or the medal draws the award glyph (D-151).
 2. **Criterion** in `Application/Achievements/Criteria/`: an `internal sealed class` deriving from one of these. It is discovered by scanning.
    - `SqlAchievementCriterion`: `Sql` is one `SELECT s.user_id, <count>::int AS count FROM subjects s ... GROUP BY s.user_id` over the CTE `subjects(user_id, started_at)`. The evaluator runs all SQL criteria of a batch in one `UNION ALL` query. Inline constants (action codes, enum values) but never user input.
    - `ComputedAchievementCriterion`, when the count needs C# (for example parsing mentions): `CountAsync(db, subjects, ct)` is called once per batch and must use a fixed number of queries, never one per user.

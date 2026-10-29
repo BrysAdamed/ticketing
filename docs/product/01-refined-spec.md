@@ -1509,3 +1509,14 @@ Every endpoint and tool serves the caller's own achievements only, Admins includ
 | `POST /api/v1/me/achievements/seen` | `{ ids: [...] }` (1 to 100 achievement ids): sets `seenAt` on every earned, unseen tier of those achievements; a tier already seen keeps its time, unknown or unearned ids are ignored. Returns the remaining unseen tiers in the `GET /unseen` shape. Needs write-scoped credentials (a ReadOnly PAT gets 403 `pat.readOnlyScope`); `validation` (400) for no ids or more than 100. |
 
 `GET` accepts any credential (cookie or PAT, read-only included). The read-only MCP tool `list_my_achievements` (no inputs) returns the `GET /api/v1/me/achievements` shape and is listed in `tools/list` only while the flag is on for the token's user (`[FeatureGate(typeof(AchievementsGate))]`). Marking seen has no tool: it is personal UI state.
+
+### 15.7 Web: Profile → Achievements
+
+The look is `docs/design/mockups/achievements.html`, layout-and-screens §3.9b and the design system's "Achievement medal" (TKT-66, D-151).
+
+- A third Profile tab, `/profile/achievements` (view `profile.achievements`). The tab and the route exist only while the `achievements` flag is on for the user; a 404 `achievements.disabled` (opted out) hides the tab for the rest of the session and sends the user back to `/profile`.
+- A lock line says who can see them. Three groups without totals or percentages: **Earned** (highest tier first, one-time achievements after the tiered ones), **Still to earn** (closest to the next threshold first) and **Secret** (masked entries as "???"), each in catalogue order on ties. Earned secrets join Earned with a "Secret" badge.
+- A tile shows the 48px medal, name, the tier in words ("Gold", "Earned", "Not earned yet"), the description and, for tiered achievements, a bar and "23 of 50 to Gold" (nothing while the count is 0; "Highest tier" at the top).
+- The grid has one tab stop: arrows move in 2D across the groups, Home/End jump, Enter or a click opens the detail popover (description, the tier ladder of an earned tiered medal, "How to earn" for a locked one; a masked secret gets no hint). Esc closes it and returns focus to the tile.
+- While nothing is earned yet, an empty state says "Achievements start counting now" (no backfill, D-144), with Still to earn below.
+- Opening the tab marks every earned, unseen tier seen (`POST /me/achievements/seen` with the ids).

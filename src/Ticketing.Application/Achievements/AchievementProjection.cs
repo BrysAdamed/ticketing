@@ -99,7 +99,13 @@ public sealed class AchievementProjection(
         }
     }
 
-    private async Task LockAsync(CancellationToken cancellationToken) =>
+    private Task LockAsync(CancellationToken cancellationToken) => LockAsync(db, cancellationToken);
+
+    /// <summary>
+    /// Takes the projector's transaction-scoped advisory lock, so the caller's transaction never interleaves with a cycle or a
+    /// sweep batch. Must run inside <c>InTransactionAsync</c>.
+    /// </summary>
+    internal static async Task LockAsync(ITicketingDbContext db, CancellationToken cancellationToken) =>
         await db.Database.ExecuteSqlAsync($"SELECT pg_advisory_xact_lock(hashtextextended({LockKey}, 0))", cancellationToken);
 
     private async Task<List<Candidate>> EligibleAsync(List<Guid> userIds, bool requireStart, CancellationToken cancellationToken)

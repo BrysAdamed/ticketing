@@ -11,6 +11,7 @@ const ADMIN = {
   email: process.env.TICKETING_BOOTSTRAP_ADMIN_EMAIL ?? 'admin@ticketing.local',
   displayName: 'Ada Admin',
   globalRole: 'Admin',
+  achievementsHidden: false,
 };
 const PASSWORD = process.env.TICKETING_BOOTSTRAP_ADMIN_PASSWORD ?? 'ChangeMe-Admin-2026!';
 const PROJECTS = [
@@ -249,9 +250,26 @@ createServer(async (req, res) => {
   }
 
   if (!signedIn) return problem(res, 401, 'auth.unauthenticated', 'Not signed in.');
+  if (path === '/api/v1/me' && req.method === 'PATCH') {
+    const body = await readBody(req);
+    if (typeof body.achievementsHidden === 'boolean') {
+      ADMIN.achievementsHidden = body.achievementsHidden;
+      if (body.achievementsHidden) {
+        for (const a of ACHIEVEMENTS) {
+          a.tier = 0;
+          a.shared = false;
+          for (const t of a.tiers) t.unlockedAt = t.seenAt = null;
+          if (a.progress) a.progress.count = 0;
+        }
+      }
+    }
+    return send(res, 200, ADMIN);
+  }
   if (path === '/api/v1/me') return send(res, 200, ADMIN);
   if (path === '/api/v1/me/flags')
     return send(res, 200, { flags: { 'board.swimlanes': 'off', achievements: 'on' } });
+  if (path.startsWith('/api/v1/me/achievements') && ADMIN.achievementsHidden)
+    return problem(res, 404, 'achievements.disabled', 'You opted out of achievements.');
   if (path === '/api/v1/me/achievements')
     return send(res, 200, { startedAt: minutesAgo(60 * 24 * 7), items: ACHIEVEMENTS });
   if (path === '/api/v1/me/achievements/unseen') return send(res, 200, unseenAchievements());

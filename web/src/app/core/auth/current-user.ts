@@ -5,6 +5,8 @@ export interface CurrentUser {
   email: string;
   displayName: string;
   globalRole: GlobalRole;
+  /// The user opted out of achievements (spec 15.11).
+  achievementsHidden: boolean;
 }
 
 export interface LoginRequest {

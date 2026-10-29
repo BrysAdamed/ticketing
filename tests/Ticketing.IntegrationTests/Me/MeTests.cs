@@ -27,7 +27,7 @@ public sealed class MeTests(TicketingApiFactory api)
         var me = await (await client.GetAsync("/api/v1/me", _ct)).ReadAsync<CurrentUserDto>();
 
         // Assert
-        Assert.Equal(new CurrentUserDto(user.Id, user.Email, user.DisplayName, GlobalRole.Admin), me);
+        Assert.Equal(new CurrentUserDto(user.Id, user.Email, user.DisplayName, GlobalRole.Admin, false), me);
     }
 
     [Fact]
@@ -76,7 +76,7 @@ public sealed class MeTests(TicketingApiFactory api)
         var me = await (await client.PatchAsJsonAsync("/api/v1/me", new { displayName = "  New Name " }, _ct)).ReadAsync<CurrentUserDto>();
 
         // Assert
-        Assert.Equal(new CurrentUserDto(user.Id, user.Email, "New Name", GlobalRole.User), me);
+        Assert.Equal(new CurrentUserDto(user.Id, user.Email, "New Name", GlobalRole.User, false), me);
         var entry = await api.WithDbAsync(db => db.ActivityEntries.SingleAsync(a => a.EntityId == user.Id && a.Action == "user.field.changed", _ct));
         Assert.Equal("displayName", entry.Field);
     }

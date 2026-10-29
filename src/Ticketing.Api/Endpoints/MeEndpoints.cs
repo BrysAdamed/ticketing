@@ -20,9 +20,10 @@ public sealed class MeEndpoints : IEndpointModule
         me.MapPatch("", async (UpdateMyProfile.Command command, UpdateMyProfile.Handler handler, CancellationToken ct) =>
             TypedResults.Ok(await handler.HandleAsync(command, ct)))
             .RequireCookieSession()
-            .WithSummary("Changes the signed-in user's display name or avatar (avatarIcon, avatarColor; null resets) (web session only).")
+            .WithSummary("Changes the signed-in user's display name, avatar (avatarIcon, avatarColor; null resets) or achievements opt-out (achievementsHidden; opting out deletes the user's achievements) (web session only).")
             .ProducesProblem(StatusCodes.Status400BadRequest)
-            .ProducesProblem(StatusCodes.Status403Forbidden);
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         me.MapPost("/password", async (ChangeMyPassword.Command command, ChangeMyPassword.Handler handler, HttpContext http, CancellationToken ct) =>
             {

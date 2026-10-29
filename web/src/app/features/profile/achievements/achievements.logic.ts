@@ -61,6 +61,7 @@ export function tileOf(item: MyAchievement, catalogueIndex: number): Achievement
       secret: item.secret,
       masked: item.masked,
       progress: item.tier === 0 ? progress?.text : null,
+      shared: item.shared,
     }),
   };
 }
@@ -91,6 +92,15 @@ export function groupAchievements(items: readonly MyAchievement[]): AchievementG
       .sort((a, b) => closeness(b.item) - closeness(a.item) || byCatalogue(a, b)),
     secret: tiles.filter((t) => t.item.masked),
   };
+}
+
+/// The items with achievement `id` shared or not; an unearned one is never shared.
+export function withShared(
+  items: readonly MyAchievement[],
+  id: string,
+  shared: boolean,
+): MyAchievement[] {
+  return items.map((i) => (i.id === id && i.tier > 0 ? { ...i, shared } : i));
 }
 
 /// Ids of achievements with an earned tier not seen yet.

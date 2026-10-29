@@ -80,6 +80,7 @@ const achievement = (id, name, description, icon, thresholds, tier, count, extra
   secret: false,
   masked: false,
   tier,
+  shared: false,
   tiers: thresholds.map((threshold, i) => ({
     tier: i + 1,
     threshold,
@@ -95,7 +96,7 @@ const achievement = (id, name, description, icon, thresholds, tier, count, extra
 });
 const MASKED = {
   ...{ id: null, name: null, description: null, howToEarn: null, icon: null, progress: null },
-  ...{ secret: true, masked: true, tier: 0, tiers: [] },
+  ...{ secret: true, masked: true, tier: 0, shared: false, tiers: [] },
 };
 const ACHIEVEMENTS = [
   achievement('reporter', 'Reporter', 'Tickets you created.', 'file-plus', [1, 10, 50, 250], 2, 23),
@@ -273,6 +274,21 @@ createServer(async (req, res) => {
   if (path === '/api/v1/me/achievements')
     return send(res, 200, { startedAt: minutesAgo(60 * 24 * 7), items: ACHIEVEMENTS });
   if (path === '/api/v1/me/achievements/unseen') return send(res, 200, unseenAchievements());
+  const share = path.match(/^\/api\/v1\/me\/achievements\/([^/]+)\/share$/);
+  if (share && (req.method === 'PUT' || req.method === 'DELETE')) {
+    const item = ACHIEVEMENTS.find((a) => a.id === share[1] && a.tier > 0);
+    if (!item) return problem(res, 404, 'achievements.notEarned', 'Achievement not earned.');
+    item.shared = req.method === 'PUT';
+    return send(res, 200, item);
+  }
+  const sharedBy = path.match(/^\/api\/v1\/users\/([^/]+)\/achievements$/);
+  if (sharedBy && req.method === 'GET') {
+    const own = sharedBy[1] === ADMIN.id;
+    const items = ACHIEVEMENTS.filter((a) => a.tier > 0 && (own ? a.shared : a.id !== 'closer'))
+      .slice(0, 3)
+      .map(({ id, name, icon, tier }) => ({ id, name, icon, tier }));
+    return send(res, 200, { items });
+  }
   if (path === '/api/v1/me/achievements/seen' && req.method === 'POST') {
     const ids = new Set((await readBody(req)).ids ?? []);
     for (const a of ACHIEVEMENTS.filter((a) => ids.has(a.id)))

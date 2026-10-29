@@ -25,8 +25,23 @@ export interface MyAchievement {
   secret: boolean;
   masked: boolean;
   tier: number;
+  /// Whether the owner shares it with every signed-in user (spec 15.7); false while not earned.
+  shared: boolean;
   tiers: AchievementTier[];
   progress: AchievementProgress | null;
+}
+
+/// One of another user's shared achievements (`GET /users/{id}/achievements`, spec 15.7): no
+/// dates, counts or progress.
+export interface SharedAchievement {
+  id: string;
+  name: string;
+  icon: string;
+  tier: number;
+}
+
+export interface SharedAchievements {
+  items: SharedAchievement[];
 }
 
 export interface MyAchievements {

@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { UserCardDirective } from '@core/users/user-card/user-card.directive';
 import { PRIORITY_OPTIONS, TICKET_STATUS_OPTIONS } from '@shared/domain/picker-options';
 import { MarkdownEditorComponent } from '@shared/markdown/markdown-editor.component';
 import { MarkdownViewerComponent } from '@shared/markdown/markdown-viewer.component';
@@ -35,6 +36,7 @@ import { UiKitStore } from './ui-kit.store';
   selector: 'tk-ui-kit-view',
   imports: [
     MatButtonModule,
+    UserCardDirective,
     TypeIconComponent,
     StatusBadgeComponent,
     PriorityIconComponent,

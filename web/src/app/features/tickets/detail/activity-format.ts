@@ -18,6 +18,8 @@ export interface ActivityLine {
   id: string;
   occurredAt: string;
   actor: string;
+  /// The person behind `actor`; null for System.
+  actorUser: UserRef | null;
   icon: string;
   verb: string;
   from: string | null;
@@ -104,6 +106,7 @@ export function describeEntry(
     id: entry.id,
     occurredAt: entry.occurredAt,
     actor: entry.actor ? userName(entry.actor) : 'System',
+    actorUser: entry.actor,
     channel: entry.channel && entry.channel !== 'Web' ? WRITE_CHANNEL_LABELS[entry.channel] : null,
     from: null,
     to: null,

@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
+import { tablerUsers } from '@ng-icons/tabler-icons';
 import { paletteIndex } from '@shared/util/hash';
 import { isOnce, MedalSize, pipPositions, tierColor } from './achievement-medal.logic';
 import { MEDAL_GLYPHS, medalGlyph } from './medal-glyphs';
@@ -17,7 +18,7 @@ const GLYPH_SIZE = 18;
 @Component({
   selector: 'tk-achievement-medal',
   imports: [NgIcon],
-  viewProviders: [provideIcons(MEDAL_GLYPHS)],
+  viewProviders: [provideIcons({ ...MEDAL_GLYPHS, tablerUsers })],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     '[class.locked]': 'locked()',
@@ -50,6 +51,17 @@ const GLYPH_SIZE = 18;
       [style.left.px]="glyphOffset()"
       [style.top.px]="glyphOffset()"
     />
+    @if (shared() && !locked()) {
+      <span
+        class="shared"
+        data-testid="medal-shared"
+        [style.width.px]="markerPx()"
+        [style.height.px]="markerPx()"
+        [style.top.px]="markerTop()"
+      >
+        <ng-icon name="tablerUsers" [size]="markerGlyphPx()" strokeWidth="2.25" />
+      </span>
+    }
   `,
   styles: `
     :host {
@@ -97,6 +109,17 @@ const GLYPH_SIZE = 18;
       display: block;
       line-height: 0;
     }
+    .shared {
+      position: absolute;
+      right: -3px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--tk-accent);
+      color: var(--tk-text-on-solid);
+      box-shadow: 0 0 0 2px var(--tk-surface);
+      line-height: 0;
+    }
   `,
 })
 export class AchievementMedalComponent {
@@ -112,6 +135,8 @@ export class AchievementMedalComponent {
   /// Accessible name ("Closer, Gold"), usually `medalLabel(…)`; null when the name and tier are
   /// written next to the medal.
   readonly label = input<string | null>(null);
+  /// Draws the shared marker; only the owner's own views pass it (design-system §8).
+  readonly shared = input(false);
 
   protected readonly locked = computed(() => this.tier() <= 0);
   protected readonly once = computed(
@@ -137,4 +162,7 @@ export class AchievementMedalComponent {
   protected readonly glyph = computed(() => medalGlyph(this.icon()));
   protected readonly glyphPx = computed(() => `${(this.size() * GLYPH_SIZE) / GRID}px`);
   protected readonly glyphOffset = computed(() => (this.size() * GLYPH_OFFSET) / GRID);
+  protected readonly markerPx = computed(() => Math.max(14, Math.round((this.size() * 18) / GRID)));
+  protected readonly markerTop = computed(() => (this.size() * 28) / GRID);
+  protected readonly markerGlyphPx = computed(() => `${Math.round(this.markerPx() * 0.6)}px`);
 }

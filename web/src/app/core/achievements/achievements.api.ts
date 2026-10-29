@@ -1,7 +1,12 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiClient } from '../api/api-client';
-import { MyAchievements, UnseenAchievements } from './achievement.models';
+import {
+  MyAchievement,
+  MyAchievements,
+  SharedAchievements,
+  UnseenAchievements,
+} from './achievement.models';
 
 const BASE = '/me/achievements';
 
@@ -25,5 +30,22 @@ export class AchievementsApi {
   /// is still unseen.
   markSeen(ids: readonly string[]): Observable<UnseenAchievements> {
     return this.api.post<UnseenAchievements>(`${BASE}/seen`, { ids });
+  }
+
+  /// Shares an earned achievement with every signed-in user; returns the item with `shared: true`.
+  share(id: string): Observable<MyAchievement> {
+    return this.api.put<MyAchievement>(`${BASE}/${encodeURIComponent(id)}/share`, {});
+  }
+
+  /// Stops sharing it; returns the item with `shared: false`.
+  unshare(id: string): Observable<MyAchievement> {
+    return this.api.delete<MyAchievement>(`${BASE}/${encodeURIComponent(id)}/share`);
+  }
+
+  /// Another user's shared achievements in catalogue order. 404 `user.notFound` when the owner is
+  /// unknown, deactivated, opted out or has the flag off; 404 `achievements.disabled` while the
+  /// flag is off for the viewer.
+  sharedBy(userId: string): Observable<SharedAchievements> {
+    return this.api.get<SharedAchievements>(`/users/${encodeURIComponent(userId)}/achievements`);
   }
 }

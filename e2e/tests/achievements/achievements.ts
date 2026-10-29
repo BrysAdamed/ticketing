@@ -9,6 +9,12 @@ interface Flag {
     targetUsers: { id: string }[];
 }
 
+interface MyAchievement {
+    id: string | null;
+    tier: number;
+    shared: boolean;
+}
+
 /// Turns the flag on for these users only, keeping any users other specs targeted.
 export async function enableAchievementsFor(api: Api, userIds: string[]): Promise<void> {
     const flag = (await api.get<Flag[]>('/admin/flags')).find((f) => f.key === ACHIEVEMENTS_FLAG);
@@ -29,12 +35,15 @@ export async function enableAchievementsFor(api: Api, userIds: string[]): Promis
     });
 }
 
+/// The caller's achievement `id`; the first call stamps their start of counting.
+export async function myAchievement(api: Api, id: string): Promise<MyAchievement | undefined> {
+    const { items } = await api.get<{ items: MyAchievement[] }>('/me/achievements');
+    return items.find((i) => i.id === id);
+}
+
 /// The highest tier the API's user has earned of an achievement, 0 for none.
 export async function tierOf(api: Api, id: string): Promise<number> {
-    const { items } = await api.get<{ items: { id: string | null; tier: number }[] }>(
-        '/me/achievements',
-    );
-    return items.find((i) => i.id === id)?.tier ?? 0;
+    return (await myAchievement(api, id))?.tier ?? 0;
 }
 
 export async function unseenCount(api: Api): Promise<number> {

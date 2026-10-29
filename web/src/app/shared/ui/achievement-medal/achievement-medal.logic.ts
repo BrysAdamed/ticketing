@@ -47,6 +47,8 @@ export interface MedalLabelInput extends MedalTier {
   secret: boolean;
   masked: boolean;
   progress?: string | null;
+  /// The owner shares it; only the owner's own views say so.
+  shared?: boolean;
 }
 
 /// The accessible name of a medal or tile: name and tier written out, never tier by colour alone
@@ -60,8 +62,29 @@ export function medalLabel(input: MedalLabelInput): string {
     if (input.progress) parts.push(input.progress);
   } else {
     parts.push(isOnce(input) ? 'earned' : tierName(input.tier));
+    if (input.shared) parts.push('shared');
   }
   return parts.join(', ');
+}
+
+/// One-time achievements of the catalogue (spec 15.2, a single threshold of 1). Another user's
+/// shared achievements come with their tier only, so this tells "Earned" from "Bronze" there
+/// (D-155). Add the id when you add a one-time achievement.
+export const ONE_TIME_ACHIEVEMENTS: ReadonlySet<string> = new Set([
+  'board-builder',
+  'spring-cleaning',
+  'machine-whisperer',
+  'epic-finisher',
+  'shout-out',
+  'second-thoughts',
+  'unblocker',
+  'grand-tour',
+]);
+
+/// The tier count to draw a shared achievement with: 1 for a one-time achievement, else 4 (pips
+/// and the tier name depend only on the tier reached).
+export function sharedTierCount(id: string): number {
+  return ONE_TIME_ACHIEVEMENTS.has(id) ? 1 : TIER_NAMES.length;
 }
 
 /// The x positions of the pips on the 48-unit grid: one per tier reached, 7 units apart.

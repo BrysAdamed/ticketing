@@ -5,7 +5,8 @@ import { ACHIEVEMENTS_DISABLED, MyAchievement } from '@core/achievements/achieve
 import { AchievementUnlocks } from '@core/achievements/achievement-unlocks';
 import { AchievementsAccess } from '@core/achievements/achievements-access';
 import { AchievementsApi } from '@core/achievements/achievements.api';
-import { groupAchievements, unseenIds } from './achievements.logic';
+import { ToastService } from '@core/notify/toast.service';
+import { groupAchievements, unseenIds, withShared } from './achievements.logic';
 
 export type AchievementsStatus = 'loading' | 'loaded' | 'error' | 'disabled';
 
@@ -14,6 +15,7 @@ export class ProfileAchievementsStore {
   private readonly api = inject(AchievementsApi);
   private readonly access = inject(AchievementsAccess);
   private readonly unlocks = inject(AchievementUnlocks);
+  private readonly toast = inject(ToastService);
 
   readonly status = signal<AchievementsStatus>('loading');
   readonly items = signal<readonly MyAchievement[]>([]);
@@ -21,6 +23,8 @@ export class ProfileAchievementsStore {
   readonly nothingEarned = computed(
     () => this.status() === 'loaded' && this.groups().earned.length === 0,
   );
+  /// Ids whose share or unshare is on its way; a second toggle waits for the first.
+  readonly sharing = signal<ReadonlySet<string>>(new Set());
 
   /// Loads the catalogue, then marks every unseen earned tier seen (opening the tab is seeing
   /// them). `achievements.disabled` hides the tab for this session.
@@ -42,6 +46,45 @@ export class ProfileAchievementsStore {
       return;
     }
     await this.markSeen();
+  }
+
+  /// Shares or unshares an earned achievement: the medal changes at once, the server's item
+  /// replaces it, and a failure puts it back with a danger toast. Success offers Undo.
+  async setShared(id: string, shared: boolean): Promise<void> {
+    const item = this.items().find((i) => i.id === id);
+    if (!item || item.tier <= 0 || item.shared === shared || this.sharing().has(id)) return;
+    this.items.update((items) => withShared(items, id, shared));
+    this.setPending(id, true);
+    try {
+      const updated = await firstValueFrom(shared ? this.api.share(id) : this.api.unshare(id));
+      this.items.update((items) => items.map((i) => (i.id === id ? updated : i)));
+      this.toast.success(shared ? `${item.name} is shared` : `${item.name} is no longer shared`, {
+        action: { label: 'Undo', run: () => void this.setShared(id, !shared) },
+      });
+    } catch (error) {
+      this.items.update((items) => withShared(items, id, !shared));
+      const apiError = toApiError(error);
+      if (apiError.isNotFound && apiError.code === ACHIEVEMENTS_DISABLED) {
+        this.access.markDisabled();
+        this.status.set('disabled');
+        return;
+      }
+      this.toast.error(
+        shared ? `Couldn't share ${item.name}` : `Couldn't stop sharing ${item.name}`,
+        { action: { label: 'Retry', run: () => void this.setShared(id, shared) } },
+      );
+    } finally {
+      this.setPending(id, false);
+    }
+  }
+
+  private setPending(id: string, pending: boolean): void {
+    this.sharing.update((ids) => {
+      const next = new Set(ids);
+      if (pending) next.add(id);
+      else next.delete(id);
+      return next;
+    });
   }
 
   private async markSeen(): Promise<void> {

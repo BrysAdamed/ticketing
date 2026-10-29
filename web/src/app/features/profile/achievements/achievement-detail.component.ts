@@ -1,6 +1,8 @@
 import { A11yModule } from '@angular/cdk/a11y';
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { provideIcons } from '@ng-icons/core';
+import { tablerShare } from '@ng-icons/tabler-icons';
 import { LearnActions } from '@core/onboarding/learn-actions';
 import { tierColor, tierName } from '@shared/ui/achievement-medal/achievement-medal.logic';
 import { AchievementMedalComponent } from '@shared/ui/achievement-medal/achievement-medal.component';
@@ -24,11 +26,12 @@ interface LadderRow {
 }
 
 /// The medal detail popover (mockup "Medal detail"): description, the tier ladder of an earned
-/// tiered medal, the "How to earn" hint of a locked one with a "Show me" learn action while one can
-/// start (D-143, D-154); no hint and no action for a masked secret.
+/// tiered medal and its Share/Unshare row (D-155), the "How to earn" hint of a locked one with a
+/// "Show me" learn action while one can start (D-143, D-154); no hint and no action for a masked secret.
 @Component({
   selector: 'tk-achievement-detail',
   imports: [A11yModule, MatButtonModule, AchievementMedalComponent, IconComponent],
+  viewProviders: [provideIcons({ tablerShare })],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div
@@ -45,6 +48,7 @@ interface LadderRow {
           [icon]="item().icon"
           [tier]="item().tier"
           [tierCount]="tile().tierCount"
+          [shared]="item().shared"
           [size]="64"
         />
         <div class="title">
@@ -100,6 +104,28 @@ interface LadderRow {
           }
         }
       </div>
+      @if (item().tier > 0 && !item().masked) {
+        <div class="share-row" data-testid="achievement-detail-share">
+          <span class="note">{{
+            item().shared
+              ? 'Shared. Everyone signed in sees the name and tier, never when you earned it.'
+              : 'Not shared. Sharing shows everyone signed in the name and tier, never when you earned it.'
+          }}</span>
+          <button
+            type="button"
+            class="share"
+            data-testid="achievement-detail-share-toggle"
+            [class.on]="item().shared"
+            (click)="shareToggled.emit()"
+          >
+            @if (item().shared) {
+              <tk-icon name="tablerX" [size]="14" />Unshare
+            } @else {
+              <tk-icon name="tablerShare" [size]="14" />Share
+            }
+          </button>
+        </div>
+      }
       @if (learnAction(); as action) {
         <footer class="learn" data-testid="achievement-learn">
           <span class="note" [id]="learnNoteId()">{{ action.note }}</span>
@@ -223,7 +249,14 @@ interface LadderRow {
       padding: 10px 16px;
       border-top: 1px solid var(--tk-border-subtle);
     }
-    .learn .note {
+    .share-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px 12px 16px;
+      border-top: 1px solid var(--tk-border-subtle);
+    }
+    .note {
       flex: 1;
       font-size: var(--tk-text-sm);
       line-height: var(--tk-leading-sm);
@@ -232,11 +265,44 @@ interface LadderRow {
     .learn tk-icon {
       margin-right: 4px;
     }
+    .share {
+      height: 28px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      flex: none;
+      padding: 0 8px;
+      border: 1px solid var(--tk-border-strong);
+      border-radius: var(--tk-radius-md);
+      background: none;
+      color: var(--tk-text-muted);
+      font: inherit;
+      font-size: var(--tk-text-sm);
+      font-weight: var(--tk-weight-medium);
+      cursor: pointer;
+    }
+    .share:hover {
+      background: var(--tk-bg-hover);
+      color: var(--tk-text);
+    }
+    .share.on {
+      border-color: transparent;
+      background: var(--tk-accent-subtle);
+      color: var(--tk-accent-fg);
+    }
+    .share.on:hover {
+      background: var(--tk-accent-subtle-hover);
+    }
+    .share:focus-visible {
+      outline: 2px solid var(--tk-focus);
+      outline-offset: 1px;
+    }
   `,
 })
 export class AchievementDetailComponent {
   readonly tile = input.required<AchievementTile>();
   readonly closed = output<void>();
+  readonly shareToggled = output<void>();
 
   private readonly learn = inject(LearnActions);
 

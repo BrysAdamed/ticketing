@@ -27,6 +27,7 @@ function achievement(
     secret: false,
     masked: false,
     tier,
+    shared: false,
     tiers: thresholds.map((threshold, i) => ({
       tier: i + 1,
       threshold,
@@ -51,6 +52,7 @@ const MASKED: MyAchievement = {
   secret: true,
   masked: true,
   tier: 0,
+  shared: false,
   tiers: [],
   progress: null,
 };

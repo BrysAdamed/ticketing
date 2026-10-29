@@ -80,9 +80,40 @@
                 [icon]="tile.item.icon"
                 [tier]="tile.item.tier"
                 [tierCount]="tile.tierCount"
+                [shared]="tile.item.shared"
               />
               <div class="tx">
-                <div class="name">{{ tile.item.name ?? '???' }}</div>
+                <div class="name">
+                  <span class="name-text">{{ tile.item.name ?? '???' }}</span>
+                  @if (tile.item.tier > 0) {
+                    <button
+                      type="button"
+                      class="share"
+                      tabindex="-1"
+                      [class.on]="tile.item.shared"
+                      [attr.aria-pressed]="tile.item.shared"
+                      [attr.aria-label]="'Share ' + tile.item.name"
+                      [attr.data-testid]="'achievement-share-' + tile.key"
+                      [title]="
+                        tile.item.shared
+                          ? 'Shared with everyone signed in · click to stop sharing  S'
+                          : 'Share with everyone signed in  S'
+                      "
+                      (click)="toggleShare(tile)"
+                    >
+                      @if (tile.item.shared) {
+                        <span class="when-idle"
+                          ><tk-icon name="tablerUsers" [size]="14" />Shared</span
+                        >
+                        <span class="when-hover"
+                          ><tk-icon name="tablerX" [size]="14" />Unshare</span
+                        >
+                      } @else {
+                        <tk-icon name="tablerShare" [size]="14" />Share
+                      }
+                    </button>
+                  }
+                </div>
                 <div class="tier">
                   {{ tile.tierText }}
                   @if (tile.item.secret && !tile.item.masked) {
@@ -139,7 +170,7 @@
   (detach)="close()"
   (overlayKeydown)="onOverlayKeydown($event)"
 >
-  @if (detail(); as open) {
-    <tk-achievement-detail [tile]="open.tile" (closed)="close()" />
+  @if (detailTile(); as tile) {
+    <tk-achievement-detail [tile]="tile" (closed)="close()" (shareToggled)="toggleShare(tile)" />
   }
 </ng-template>

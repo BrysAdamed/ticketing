@@ -27,6 +27,7 @@ public static class DependencyInjection
         services.AddSingleton<DocExportQueue>();
         services.AddScoped<AchievementsGate>();
         services.AddScoped<AchievementEvaluator>();
+        services.AddScoped<AchievementProjection>();
         services.AddAchievementCriteria(typeof(DependencyInjection).Assembly);
         services.AddHandlers(typeof(DependencyInjection).Assembly);
         return services;

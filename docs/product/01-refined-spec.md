@@ -1536,3 +1536,13 @@ A user may share individual earned achievements; everything else stays visible o
 | `GET /api/v1/users/{id}/achievements` | `{ items: [{ id, name, icon, tier }] }`: the user's shared achievements in catalogue order, `tier` the highest earned. Never dates, counts, progress or anything about projects or tickets; unshared, unearned and secret-but-unshared achievements are never returned. Any signed-in user and any credential (read-only PAT included); `200` with empty `items` while the user shares nothing. 404 `achievements.disabled` while the flag is off for the viewer. 404 `user.notFound` when the user is unknown, deactivated, opted out or has the flag off, so the answer never tells which. It does not stamp the viewer's S, and a viewer who opted out may still read others' shares. |
 
 MCP: `share_achievement` and `unshare_achievement` (input `id`) call the same handler as `PUT` and `DELETE` and return the same item; they are idempotent, need a read-write token and are listed only while the flag is on for the token's user. Reading another user's shares has no tool: the web app's user card (TKT-98) is its only consumer. The response carries no user data at all, so the card's name-only rule (no email) holds.
+
+### 15.8 Projector
+
+Tiers are awarded after commit by the `AchievementProjector` background service, never inside a user's write (D-144, D-149), so a failing criterion cannot fail or slow a save.
+
+- **Cycle** (every `AchievementProjector:Interval`, default 15 s): under an advisory lock, in one transaction, it reads the users with activity since the watermark minus a 2-minute overlap (`occurred_at` is stamped before commit). It keeps those who are active, have not opted out and have the flag on (evaluated for the whole batch at once), stamps S where it is empty (15.5), evaluates only the criteria their actions trigger and that they do not hold at top tier, inserts every newly reached tier and advances the watermark. Without a watermark the first cycle starts 2 minutes back: there is no backfill.
+- **Idempotent:** tiers are inserted with `ON CONFLICT DO NOTHING` and counts are recomputed from source data, so re-running a cycle or the sweep adds nothing. Every unlock is unseen (`seen_at` empty).
+- **Failure:** a failing cycle rolls back, including the watermark, is logged and is retried on the next interval, so nothing is lost.
+- **Nightly sweep** (`AchievementProjector:SweepAtUtc`, default 03:00 UTC): the same evaluation over the whole catalogue for every active, started, non-hidden user with the flag on, in batches of 500. It never stamps S, so it covers only activity after each user's start.
+- Deactivated users, users who opted out and users with the flag off are skipped and get no S.

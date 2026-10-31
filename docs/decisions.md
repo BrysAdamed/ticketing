@@ -1256,6 +1256,13 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
 - Rejected: adding `role`/`ariaModal` at each `dialog.open` (the next new dialog forgets it); Material's `ariaModal: false` default (it relies on `aria-hidden` siblings only, and the welcome and What's new dialogs already shipped with `aria-modal="true"`).
 - Rationale: one place sets the accessible defaults, and a Material upgrade that adds a default reaches the app without a change here.
 
+### D-157 Picker footers join the focus order: Tab from the filter reaches the footer's buttons before it closes the picker (TKT-87)
+
+- Question: the compact hint in a status picker could only be dismissed with the mouse, because Tab from the filter closes the picker (D-137). How does a keyboard user dismiss it?
+- Decision: `InlinePickerPanelComponent` treats its footer as part of the picker's focus order. Tab from the filter moves to the footer's first focusable element when there is one; Shift+Tab from the first goes back to the filter; Tab past the last, or Escape anywhere in the footer, closes the picker as Tab and Escape do from the filter. When a footer control disappears after activation (the hint's × removes the hint), focus returns to the filter, so the picker stays usable. A footer without anything focusable (no hint shown) keeps the old behaviour: Tab closes the picker. The mechanism lives in `shared/`, knows nothing about hints, and works for any future footer action.
+- Rejected: a dedicated shortcut such as Alt+D announced in the hint (browsers reserve Alt+D and Alt+letter for their own UI, it has to be learned, and screen readers would not find it); moving the dismiss into the listbox as an option (it is not a value to pick, and the 1–9 digits would shift).
+- Rationale: Tab is how keyboard users look for buttons; the button stays a real button in the tab order, as spec 14.5 already promised for hints outside pickers.
+
 ## Product owner answers (v1 review, 2026-10-27)
 
 These were open questions (Q-01..Q-05); the product owner resolved them as follows.

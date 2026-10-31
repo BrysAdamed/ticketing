@@ -6,6 +6,7 @@ import {
   computed,
   ElementRef,
   inject,
+  Injector,
   input,
   output,
   signal,
@@ -27,6 +28,9 @@ import {
 
 let nextPanelId = 0;
 
+const FOCUSABLE =
+  'button:not([disabled]), a[href], input:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 /// Command-menu style listbox rendered in a CDK overlay by `InlinePickerDirective`.
 @Component({
   selector: 'tk-inline-picker-panel',
@@ -40,7 +44,12 @@ let nextPanelId = 0;
     SeverityBadgeComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { class: 'tk-popover', 'data-testid': 'inline-picker' },
+  host: {
+    class: 'tk-popover',
+    'data-testid': 'inline-picker',
+    '(keydown)': 'onFooterKeydown($event)',
+    '(click)': 'onFooterClick($event)',
+  },
   template: `
     <div class="search">
       <tk-icon name="tablerSearch" [size]="14" />
@@ -122,7 +131,9 @@ let nextPanelId = 0;
       }
     </div>
     @if (footer(); as footer) {
-      <ng-container [ngTemplateOutlet]="footer" />
+      <div #footerBox>
+        <ng-container [ngTemplateOutlet]="footer" />
+      </div>
     }
   `,
   styles: `
@@ -232,6 +243,9 @@ export class InlinePickerPanelComponent<T> {
   );
 
   private readonly input = viewChild.required<ElementRef<HTMLInputElement>>('input');
+  private readonly footerBox = viewChild<ElementRef<HTMLElement>>('footerBox');
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly injector = inject(Injector);
 
   constructor() {
     afterNextRender(() => {
@@ -276,9 +290,16 @@ export class InlinePickerPanelComponent<T> {
         event.stopPropagation();
         this.dismissed.emit();
         return;
-      case 'Tab':
-        this.dismissed.emit();
+      case 'Tab': {
+        const first = event.shiftKey ? undefined : this.footerFocusables()[0];
+        if (first) {
+          event.preventDefault();
+          first.focus();
+        } else {
+          this.dismissed.emit();
+        }
         return;
+      }
     }
     if (!this.query() && /^[1-9]$/.test(event.key) && !event.ctrlKey && !event.metaKey) {
       const option = this.filtered()[Number(event.key) - 1];
@@ -287,6 +308,45 @@ export class InlinePickerPanelComponent<T> {
         this.choose(option);
       }
     }
+  }
+
+  protected onFooterKeydown(event: KeyboardEvent): void {
+    if (!this.inFooter(event)) return;
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      this.dismissed.emit();
+      return;
+    }
+    if (event.key !== 'Tab') return;
+    const focusables = this.footerFocusables();
+    const index = focusables.indexOf(event.target as HTMLElement);
+    if (event.shiftKey && index <= 0) {
+      event.preventDefault();
+      this.input().nativeElement.focus();
+    } else if (!event.shiftKey && index === focusables.length - 1) {
+      this.dismissed.emit();
+    }
+  }
+
+  protected onFooterClick(event: MouseEvent): void {
+    if (!this.inFooter(event)) return;
+    afterNextRender(
+      () => {
+        if (!this.host.nativeElement.contains(this.host.nativeElement.ownerDocument.activeElement))
+          this.input().nativeElement.focus();
+      },
+      { injector: this.injector },
+    );
+  }
+
+  private inFooter(event: Event): boolean {
+    return !!this.footerBox()?.nativeElement.contains(event.target as Node);
+  }
+
+  private footerFocusables(): HTMLElement[] {
+    const box = this.footerBox()?.nativeElement;
+    return box ? [...box.querySelectorAll<HTMLElement>(FOCUSABLE)] : [];
   }
 
   protected choose(option: PickerOption<T>): void {

@@ -10,10 +10,13 @@ import {
   viewChild,
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { RouterLink } from '@angular/router';
 import { provideIcons } from '@ng-icons/core';
 import { tablerEye, tablerRoute } from '@ng-icons/tabler-icons';
+import { debounceTime, filter } from 'rxjs';
+import { ApiClient } from '@core/api/api-client';
 import { HelpMenuRegistry } from '@core/help/help-menu.registry';
 import { CONNECT_AGENT_PATH, CONNECT_AGENT_QUERY } from '@core/onboarding/agent/connect-agent';
 import { canWriteSomewhere, ChecklistEntry } from '@core/onboarding/checklist/checklist.model';
@@ -25,11 +28,12 @@ import { StatusIconComponent } from '@shared/ui/domain/status-icon.component';
 import { IconComponent } from '@shared/ui/icon/icon.component';
 
 const FIRST_PROJECT_HELP_ID = 'help.tour.first-project';
+export const WRITE_REFRESH_DEBOUNCE_MS = 800;
 
 /// The getting-started checklist card on My work (spec 14.3, D-135): progress over the required
 /// items, each item linking to where its action is done, the optional agent items in their own
-/// group, Dismiss, and a completed state. Refreshes when shown and on window focus, so actions
-/// done elsewhere (another tab, REST, MCP) tick items off.
+/// group, Dismiss, and a completed state. Refreshes when shown, on window focus (actions done
+/// elsewhere: another tab, REST, MCP) and after this app's successful writes, debounced.
 @Component({
   selector: 'tk-checklist-card',
   imports: [
@@ -226,6 +230,14 @@ export class ChecklistCardComponent {
   constructor() {
     void this.directory.load();
     if (untracked(this.checklist.loaded)) void this.checklist.refresh();
+
+    inject(ApiClient)
+      .writes.pipe(
+        debounceTime(WRITE_REFRESH_DEBOUNCE_MS),
+        filter(() => untracked(this.checklist.visible)),
+        takeUntilDestroyed(),
+      )
+      .subscribe(() => void this.checklist.refresh());
 
     effect(() => {
       if (this.checklist.visible() && this.progress().complete)

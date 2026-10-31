@@ -9,7 +9,7 @@ The Angular 22 SPA lives in `web/`. It uses standalone components, zoneless chan
 | `npm start` | `ng serve` on :4200. `proxy.conf.json` forwards `/api`, `/mcp`, `/scalar` and `/health` to the API on `http://localhost:5080`. |
 | `npm run start:mock` | Tiny Node stand-in for the API on :5080 (auth, `/me`, `/me/flags`, `/me/notifications`, `/me/achievements`, projects). Use it when the backend isn't running, and stop it before you start the real API, because both use port 5080. Sign in as `admin@ticketing.local` / `ChangeMe-Admin-2026!`. |
 | `npm run build` | Production build into `dist/ticketing-web/browser`. It fails over the bundle budget. |
-| `npm test` | Vitest run, once. `npm run test:watch` keeps watching. |
+| `npm test` | Vitest run, once. `npm run test:watch` keeps watching. `npm run test:perf` runs only the timing budgets (`*.perf.spec.ts`), which `npm test` skips. |
 | `npm run lint` | ESLint (angular-eslint, template a11y and the architecture import rules below). |
 | `npm run format` | Prettier. |
 
@@ -348,7 +348,7 @@ Global CSS helpers (`styles/`): `.tk-page`, `.tk-page-header` (+ `.tk-page-count
 
 ## Testing
 
-- **Unit (Vitest + TestBed, zoneless)**: `*.spec.ts` next to the code. Write them Arrange / Act / Assert. The current suite covers flag bucketing (shared vectors), view registry resolution and fallback, markdown sanitizing and key autolinks, auth guards, ApiError mapping and shortcuts.
+- **Unit (Vitest + TestBed, zoneless)**: `*.spec.ts` next to the code. Write them Arrange / Act / Assert. Wall-clock budgets go in `*.perf.spec.ts`: `npm test` excludes them so it stays deterministic under load, `npm run test:perf` runs them (alone, on an idle machine). The current suite covers flag bucketing (shared vectors), view registry resolution and fallback, markdown sanitizing and key autolinks, auth guards, ApiError mapping and shortcuts.
 - **E2E (`e2e/`, Playwright 1.64)**: `npm install && npx playwright install chromium`, then `npm run typecheck` (`tsc --noEmit`; Playwright only strips types, so type errors would otherwise go unnoticed) and `npm test`. It runs against an already running stack (`E2E_BASE_URL`, default `http://localhost:8080`, i.e. docker compose web → api; use `http://localhost:4200` with `ng serve`). The `setup` project signs in as the bootstrap admin (`E2E_ADMIN_EMAIL` / `E2E_ADMIN_PASSWORD`, falling back to `TICKETING_BOOTSTRAP_ADMIN_*`, default `admin@ticketing.local` / `ChangeMe-Admin-2026!`) and saves `.auth/admin.json`, so specs start signed in. To test anonymously, use `test.use({ storageState: { cookies: [], origins: [] } })`.
   - Import `test` and `expect` from `e2e/support/fixtures.ts`. It provides page objects (`loginPage`, `shell`) and `api`.
   - `api` (`e2e/support/api.ts`) uses the admin cookie session and handles XSRF itself (it reads the `XSRF-TOKEN` cookie and echoes it as `X-XSRF-TOKEN`). Seed data through it (`api.createProject()`, `api.post(...)`), never through the UI. Use `uniqueProjectKey()` so parallel tests don't collide.

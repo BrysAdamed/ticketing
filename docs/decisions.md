@@ -865,6 +865,8 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
 
 ### D-127 PDF export: the API resolves and admits, folders render in one request downloaded in the background, and the renderer is off without its secret (TKT-20)
 
+> Since D-171 (TKT-74) the bookmarks nest by folder depth through `aria-level`; the pages look the same.
+
 - Context: D-111 and D-112 fixed the pipeline (offline print bundle in Gotenberg) and the per-export header and footer. TKT-20 had to decide where limits live, how "folders as a background job" works, how MCP gets a download, how bookmarks nest and how an existing installation upgrades.
 - Decision:
   - **Bundle.** `web/src/print/` (entry `print-main.ts`, logic `print-document.ts`, `print.scss`) is built by `npm run build:print` (esbuild + sass) into `print.js`, `print.css` and the Inter latin and latin-ext fonts. The build fails when Angular, Excalidraw or React reach the bundle; ESLint forbids `@angular/*`, `@core`, `@features`, React and Excalidraw imports there. Embeds and diagram docs are drawn by the print code itself (Mermaid via `renderMermaid`, Canvas as the stored picture file), not by `features/docs/diagram`, whose renderer registry pulls Excalidraw.
@@ -1393,6 +1395,17 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
   - **Map**: Connector → ticket tour at Links; Conversationalist and Shout-out → at @mentions (the comment box); Delegator → at Delegate to agent; Regression runner → session tour at Record a result; Found it → at Create a bug from a failure; Full sweep → the explainer (completing a session has no tour step); Spring cleaning → board tour, with a note that archiving lives in the board settings (preferring a board the user owns). Show me (attachments) and Epic finisher stay unmapped: no tour step shows attachments or closing an Epic (TKT-117 for the attachments step).
 - Rejected: probing for targets at app start so the palette commands work everywhere (requests for every user on every load, for a rarely used command); a fallback from a session tour to the explainer when there is no session (D-143: an action does what its note says); bumping tour versions or adding steps here.
 - Rationale: one front door (`LearnActions`) still starts every learn action, the catalogue stays plain data, and any later tour that needs a ticket or a board is one `opens` value away.
+
+### D-171 PDF bookmarks nest by folder depth through `aria-level`, at most six levels (TKT-74)
+
+- Question: D-127 left folder PDF bookmarks flat, because Chromium's `generateDocumentOutline` follows heading levels and shifting the real heading tags by depth would change how pages look. Can they nest without that?
+- Decision:
+  - Chromium's outline follows the accessibility heading level, so `aria-level` on a heading moves its bookmark without changing its tag or style (checked in Gotenberg `8.39.0-chromium`). `buildPrint` sets it: a subfolder heading and a document title get their depth (direct children of the exported folder: 1; a single document: 1), a content heading `hN` of a document gets the title's level + N. The cover (level 1) and its Contents (2) are unchanged.
+  - Chromium leaves headings above level 6 out of the outline, so levels are capped at 6: from depth 5 down, a document's headings sit beside each other at level 6 instead of disappearing.
+  - A single document's headings now nest under its title as well (they used to be its siblings).
+  - `DocExportGotenbergTests` reads the outline (`PdfOutline`, a small parser for Skia's plain outline objects) and asserts a three-level folder and a single page.
+- Rejected: shifting the heading tags by depth (changes the printed page); dropping headings that would land beyond level 6 (they would vanish from the bookmarks).
+- Rationale: the bookmarks now mirror the folder tree like the contents page, at no cost to the printed layout.
 
 ## Product owner answers (v1 review, 2026-10-27)
 

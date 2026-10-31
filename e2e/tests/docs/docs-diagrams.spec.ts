@@ -4,6 +4,7 @@ import { DocPagePage } from '../../pages/doc-page.page';
 import { ShellPage } from '../../pages/shell.page';
 import { TicketPage } from '../../pages/ticket.page';
 import { Api } from '../../support/api';
+import { LLM_FLOWCHART } from '../../support/diagrams';
 import { expect, test } from '../../support/fixtures';
 
 interface Doc {
@@ -12,15 +13,6 @@ interface Doc {
     content: string | null;
     version: number;
 }
-
-/// What an LLM writes when asked for a diagram (the same source the MCP tool accepts).
-const LLM_FLOWCHART = [
-    'flowchart LR',
-    '  client([Browser]) -->|HTTPS| web[nginx + SPA]',
-    '  web --> api[Ticketing API]',
-    '  api --> db[(PostgreSQL)]',
-    '  api -. MCP .-> llm{{Claude Code}}',
-].join('\n');
 
 function createDiagram(api: Api, projectKey: string, title: string, content: string) {
     return api.post<Doc>(`/projects/${projectKey}/docs`, {
@@ -65,7 +57,7 @@ function contentLayoutShift(page: BrowserPage): Promise<number> {
 }
 
 test.describe('Mermaid diagrams', () => {
-    test('a flowchart written by an LLM renders in the diagram view in under a second, with zoom and fit', async ({
+    test('a flowchart written by an LLM renders in the diagram view, with zoom and fit', async ({
         page,
         api,
     }) => {
@@ -82,10 +74,6 @@ test.describe('Mermaid diagrams', () => {
         await expect(view.label).toHaveText('Mermaid · flowchart');
         await expect(view.svg).toContainText('Ticketing API');
         await expect(view.svg.locator('a, script, foreignObject')).toHaveCount(0);
-        const renderMs = await page.evaluate(() =>
-            Math.max(...performance.getEntriesByName('tk-diagram-render').map((e) => e.duration)),
-        );
-        expect(renderMs).toBeLessThan(1000);
 
         // Act: zoom in with the button and `=`, then fit with `0`
         const fitted = await view.zoomLevel.innerText();

@@ -1263,6 +1263,13 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
 - Rejected: a dedicated shortcut such as Alt+D announced in the hint (browsers reserve Alt+D and Alt+letter for their own UI, it has to be learned, and screen readers would not find it); moving the dismiss into the listbox as an option (it is not a value to pick, and the 1–9 digits would shift).
 - Rationale: Tab is how keyboard users look for buttons; the button stays a real button in the tab order, as spec 14.5 already promised for hints outside pickers.
 
+### D-158 A tour whose return-focus target is gone gives focus to the view's main heading, else the Help trigger (TKT-88)
+
+- Question: a tour started from the free-transitions hint's "Take the board tour" ended with focus on nothing, because the hint (and its button) is removed while a tour runs. Where does focus go when the element a tour should return to is no longer usable?
+- Decision: when a tour ends (completed, dismissed, aborted; not interrupted, where the interrupting overlay owns focus), `returnFocus` in the tour engine focuses the return target if it is still connected, not `body`, not disabled and not inside a `hidden`/`inert`/`aria-hidden` subtree. Otherwise it focuses the first `h1` inside `#main-content` (the view's title; it gets `tabindex="-1"` when it has none), and when there is none, the topbar's Help button, marked `data-tour-return`. If neither exists focus stays where it is. The hint that comes back after the tour is a new element, so the engine does not try to follow it.
+- Rejected: waiting for the hint to re-render and focusing its button (the engine would have to know about hints, and a dismissed or permission-hidden hint never comes back); always returning to the Help button (on a view it moves the user away from the content they were just shown).
+- Rationale: the main heading keeps the user in the view the tour just explained and is the next sensible reading position for a screen reader; the Help trigger is always in the shell and is where every other tour starts.
+
 ## Product owner answers (v1 review, 2026-10-27)
 
 These were open questions (Q-01..Q-05); the product owner resolved them as follows.

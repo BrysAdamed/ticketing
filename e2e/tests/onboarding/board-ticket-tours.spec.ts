@@ -241,8 +241,10 @@ test.describe('board tour', () => {
         // Act
         await page.keyboard.press('Escape');
 
-        // Assert: the hint was not dismissed, so it comes back
+        // Assert: the hint was not dismissed, so it comes back; its button left the page while the
+        // tour ran, so focus lands on the board's heading
         await expect(tour.root).toBeHidden();
+        await expect(page.getByTestId('board-name')).toBeFocused();
         await expect(hint).toBeVisible();
         await context.close();
     });

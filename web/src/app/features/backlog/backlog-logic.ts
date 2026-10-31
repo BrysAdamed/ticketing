@@ -387,6 +387,30 @@ export function stickyGroupAt(
   return { group, offset: nextTop < rowHeight ? nextTop - rowHeight : 0 };
 }
 
+export interface Box {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+
+/// Where a dragged backlog row would land: a board of the "On boards" panel, the panel itself (no
+/// board under the pointer, so the drop does nothing) or the list (reorder). Boards scrolled out of
+/// the panel do not count.
+export type DragTarget = { kind: 'board'; boardId: string } | { kind: 'panel' } | { kind: 'list' };
+
+export function dragTargetAt(
+  x: number,
+  y: number,
+  panel: Box | null,
+  boards: readonly { id: string; box: Box }[],
+): DragTarget {
+  const inside = (box: Box) => x >= box.left && x <= box.right && y >= box.top && y <= box.bottom;
+  if (!panel || !inside(panel)) return { kind: 'list' };
+  const board = boards.find((b) => inside(b.box));
+  return board ? { kind: 'board', boardId: board.id } : { kind: 'panel' };
+}
+
 export function categoryOrder(status: TicketStatus): number {
   return STATUS_CATEGORIES.indexOf(statusCategory(status));
 }

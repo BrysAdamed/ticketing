@@ -1,5 +1,7 @@
 import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { MatDialog } from '@angular/material/dialog';
+import { RegressionsExplainerDialog } from './dialogs/regressions-explainer.dialog';
 import { HelpMenuItem } from '../help/help-menu';
 import { HelpMenuRegistry } from '../help/help-menu.registry';
 import { GuidedTours } from './guided-tours';
@@ -20,10 +22,14 @@ function walkthroughItem(overrides: Partial<HelpMenuItem> = {}): HelpMenuItem {
 describe('LearnActions', () => {
   let registered: ReturnType<typeof signal<readonly HelpMenuItem[]>>;
   let start: ReturnType<typeof vi.fn>;
+  let prepare: ReturnType<typeof vi.fn>;
+  let dialogOpen: ReturnType<typeof vi.fn>;
 
   function setup(startable: readonly string[] = []): LearnActions {
     registered = signal<readonly HelpMenuItem[]>([]);
     start = vi.fn().mockResolvedValue('completed');
+    prepare = vi.fn();
+    dialogOpen = vi.fn();
     TestBed.configureTestingModule({
       providers: [
         provideZonelessChangeDetection(),
@@ -33,9 +39,10 @@ describe('LearnActions', () => {
         },
         {
           provide: TourAvailability,
-          useValue: { canStart: (viewId: string) => startable.includes(viewId) },
+          useValue: { canStart: (viewId: string) => startable.includes(viewId), prepare },
         },
         { provide: GuidedTours, useValue: { start } },
+        { provide: MatDialog, useValue: { open: dialogOpen } },
       ],
     });
     return TestBed.inject(LearnActions);
@@ -56,9 +63,36 @@ describe('LearnActions', () => {
 
     // Act
     await learn.startTour('project.dashboard');
+    await learn.startTour('ticket.detail', { step: 'links' });
 
     // Assert
-    expect(start).toHaveBeenCalledWith('project.dashboard');
+    expect(start).toHaveBeenCalledWith('project.dashboard', {});
+    expect(start).toHaveBeenCalledWith('ticket.detail', { step: 'links' });
+  });
+
+  it('prepares a tour through TourAvailability', () => {
+    // Arrange
+    const learn = setup();
+
+    // Act
+    learn.prepareTour('board.kanban');
+
+    // Assert
+    expect(prepare).toHaveBeenCalledWith('board.kanban');
+  });
+
+  it('opens the regressions explainer as a labelled dialog', async () => {
+    // Arrange
+    const learn = setup();
+
+    // Act
+    await learn.openRegressionsExplainer();
+
+    // Assert
+    expect(dialogOpen).toHaveBeenCalledWith(
+      RegressionsExplainerDialog,
+      expect.objectContaining({ ariaLabelledBy: 'regressions-explainer-title' }),
+    );
   });
 
   it('has no walkthrough while the first-project item is not registered', () => {

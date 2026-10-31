@@ -3,7 +3,10 @@ import { Api } from '../../support/api';
 import { expect, test } from '../../support/fixtures';
 import { signInAs } from '../../support/session';
 import { PASSWORD, seedUser } from '../identity/identity';
-import { ACHIEVEMENTS_FLAG as FLAG, enableAchievementsFor as enableFor } from './achievements';
+import {
+    ACHIEVEMENTS_FLAG as FLAG,
+    enableAchievementsFor as enableFor,
+} from '../../support/achievements';
 
 async function hidden(api: Api): Promise<boolean> {
     return (await api.get<{ achievementsHidden: boolean }>('/me')).achievementsHidden;

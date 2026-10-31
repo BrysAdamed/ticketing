@@ -1,5 +1,14 @@
 import { A11yModule } from '@angular/cdk/a11y';
-import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  output,
+  untracked,
+} from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { provideIcons } from '@ng-icons/core';
 import { tablerShare } from '@ng-icons/tabler-icons';
@@ -11,6 +20,7 @@ import {
   AchievementLearnAction,
   canStartLearn,
   learnActionFor,
+  prepareLearn,
   startLearn,
 } from './achievement-learn';
 import { AchievementTile } from './achievements.logic';
@@ -328,6 +338,14 @@ export class AchievementDetailComponent {
       next: t.tier === nextTier,
     }));
   });
+
+  constructor() {
+    const target = computed(() => learnActionFor(this.item())?.target ?? null);
+    effect(() => {
+      const learnTarget = target();
+      if (learnTarget) untracked(() => prepareLearn(this.learn, learnTarget));
+    });
+  }
 
   protected showMe(action: AchievementLearnAction): void {
     this.closed.emit();

@@ -8,7 +8,7 @@ import {
     enableAchievementsFor as enableFor,
     PROJECTOR_TIMEOUT_MS,
     tierOf,
-} from './achievements';
+} from '../../support/achievements';
 
 test.describe('@achievements profile tab', () => {
     test('a ticket created after the flag turned on unlocks Reporter on the tab', async ({

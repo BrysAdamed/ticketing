@@ -23,6 +23,7 @@ import {
   TourCatalogueEntry,
   tourCommandId,
 } from './tours/tour-catalogue';
+import { TourTargets } from './tour-targets';
 import { ViewTourAccess } from './view-tour-access';
 
 /// The tours the app offers; tests replace it.
@@ -39,6 +40,7 @@ export class TourAvailability {
   private readonly openProject = inject(OpenProjectState);
   private readonly auth = inject(AuthService);
   private readonly viewAccess = inject(ViewTourAccess);
+  private readonly targets = inject(TourTargets);
 
   readonly entries = inject(TOURS);
   /// The tour of the view on screen when the user is in its audience, or null.
@@ -52,13 +54,23 @@ export class TourAvailability {
   }
 
   /// Whether the tour of `viewId` can start now: the user is in its audience and on that view, or
-  /// the view needs at most a project and there is one to open.
+  /// the view needs at most a project and there is one to open, or `prepare` found what it opens.
   canStart(viewId: string): boolean {
     const entry = this.entry(viewId);
     if (!entry || !this.isForUser(entry)) return false;
     if (this.navigation.currentViewId() === viewId) return true;
+    if (entry.opens) return this.targets.get(entry.opens) !== null;
     if (!entry.path) return false;
     return !pathNeedsProject(entry.path) || this.targetProject() !== null;
+  }
+
+  /// Looks up what the tour of `viewId` opens when it has `opens` and the user is elsewhere, so
+  /// `canStart` can turn true; does nothing for other tours.
+  prepare(viewId: string): void {
+    const entry = this.entry(viewId);
+    if (entry?.opens && this.navigation.currentViewId() !== viewId) {
+      void this.targets.prepare(entry.opens);
+    }
   }
 
   /// The project a tour started away from its view opens (`pickTourProject`).

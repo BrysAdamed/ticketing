@@ -22,10 +22,11 @@ import { TourAnchorRegistry } from './engine/tour-anchor.registry';
 import { TourLauncher, TourResult } from './engine/tour-launcher';
 import { TourAccess, TourDefinition } from './engine/tour.model';
 import { GuidedTours } from './guided-tours';
-import { provideGuidedTours, TOURS } from './tour-availability';
+import { provideGuidedTours, TourAvailability, TOURS } from './tour-availability';
 import { OnboardingApi } from './onboarding.api';
 import { GuideState } from './onboarding.models';
 import { TourCatalogueEntry } from './tours/tour-catalogue';
+import { TourTarget, TourTargets } from './tour-targets';
 import { ViewTourAccess } from './view-tour-access';
 
 const TOUR: TourDefinition = {
@@ -69,6 +70,24 @@ const OWNER_ENTRY: TourCatalogueEntry = {
   load: () => Promise.resolve({ ...TOUR, id: 'tour.owner.view', viewId: 'owner.view' }),
 };
 
+const TICKET_TOUR: TourDefinition = {
+  id: 'tour.ticket.view',
+  version: 1,
+  viewId: 'ticket.view',
+  title: 'Ticket',
+  steps: [
+    { id: 'fields', anchor: 'ticket.fields', title: 'Fields', body: 'Fields' },
+    { id: 'links', anchor: 'ticket.links', title: 'Links', body: 'Links' },
+  ],
+};
+
+const TICKET_ENTRY: TourCatalogueEntry = {
+  viewId: 'ticket.view',
+  title: 'Ticket',
+  opens: 'ticket',
+  load: () => Promise.resolve(TICKET_TOUR),
+};
+
 const MEMBER: OpenProject = { key: 'WEB', name: 'Web', archived: false, role: 'Member' };
 
 @Component({ selector: 'tk-blank', template: 'blank' })
@@ -82,6 +101,15 @@ class ProjectPageComponent {
   }
 }
 
+@Component({ selector: 'tk-ticket-page', template: 'ticket' })
+class TicketPageComponent {
+  constructor() {
+    const anchors = inject(TourAnchorRegistry);
+    anchors.register('ticket.fields', document.body);
+    anchors.register('ticket.links', document.body);
+  }
+}
+
 const flush = () => new Promise<void>((resolve) => setTimeout(resolve));
 
 describe('GuidedTours', () => {
@@ -91,6 +119,8 @@ describe('GuidedTours', () => {
   let tours: GuidedTours;
   let isAdmin: ReturnType<typeof signal<boolean>>;
   let router: Router;
+  let target: ReturnType<typeof signal<TourTarget | null>>;
+  let targets: { get: () => TourTarget | null; prepare: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
     launcher = {
@@ -109,6 +139,8 @@ describe('GuidedTours', () => {
     };
     projects = signal<readonly ProjectSummary[]>([]);
     isAdmin = signal(false);
+    target = signal<TourTarget | null>(null);
+    targets = { get: () => target(), prepare: vi.fn().mockResolvedValue(null) };
     TestBed.configureTestingModule({
       providers: [
         provideZonelessChangeDetection(),
@@ -117,13 +149,15 @@ describe('GuidedTours', () => {
           { path: 'here', component: BlankComponent, data: { viewId: 'test.view' } },
           { path: 'admin-page', component: BlankComponent, data: { viewId: 'admin.view' } },
           { path: 'owner-page', component: BlankComponent, data: { viewId: 'owner.view' } },
+          { path: 'tickets/:key', component: TicketPageComponent, data: { viewId: 'ticket.view' } },
           {
             path: 'projects/:projectKey/test',
             component: ProjectPageComponent,
             data: { viewId: 'test.view' },
           },
         ]),
-        { provide: TOURS, useValue: [ENTRY, ADMIN_ENTRY, OWNER_ENTRY] },
+        { provide: TOURS, useValue: [ENTRY, ADMIN_ENTRY, OWNER_ENTRY, TICKET_ENTRY] },
+        { provide: TourTargets, useValue: targets },
         { provide: TourLauncher, useValue: launcher },
         { provide: OnboardingApi, useValue: api },
         { provide: ProjectDirectory, useValue: { projects } },
@@ -350,6 +384,77 @@ describe('GuidedTours', () => {
       expect(unknown).toBeNull();
       expect(noProject).toBeNull();
       expect(launcher.start).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('tours that open a ticket, a board or a session first', () => {
+    const ticketCommand = () =>
+      TestBed.inject(CommandRegistry)
+        .commands()
+        .find((c) => c.id === 'help.tour.ticket.view');
+
+    it('can start elsewhere only once prepare found something to open', () => {
+      // Arrange
+      const availability = TestBed.inject(TourAvailability);
+
+      // Act
+      availability.prepare('ticket.view');
+      availability.prepare('test.view');
+
+      // Assert
+      expect(targets.prepare).toHaveBeenCalledTimes(1);
+      expect(targets.prepare).toHaveBeenCalledWith('ticket');
+      expect(ticketCommand()!.available!()).toBe(false);
+
+      // Act
+      target.set({ url: '/tickets/WEB-1' });
+
+      // Assert
+      expect(ticketCommand()!.available!()).toBe(true);
+    });
+
+    it('opens the found ticket and starts the tour at the given step', async () => {
+      // Arrange
+      target.set({ url: '/tickets/WEB-1' });
+
+      // Act
+      const result = await tours.start('ticket.view', { step: 'links' });
+
+      // Assert
+      expect(result).toBe('completed');
+      expect(router.url).toBe('/tickets/WEB-1');
+      expect(targets.prepare).not.toHaveBeenCalled();
+      expect(launcher.start).toHaveBeenCalledWith(
+        TICKET_TOUR,
+        expect.objectContaining({ params: {}, startAt: 'links' }),
+      );
+    });
+
+    it('looks the target up on start when it was not prepared, and does nothing without one', async () => {
+      // Act
+      const result = await tours.start('ticket.view', { step: 'links' });
+
+      // Assert
+      expect(result).toBeNull();
+      expect(targets.prepare).toHaveBeenCalledWith('ticket');
+      expect(router.url).toBe('/other');
+      expect(launcher.start).not.toHaveBeenCalled();
+    });
+
+    it('starts on the view on screen without opening anything', async () => {
+      // Arrange
+      await router.navigateByUrl('/tickets/WEB-7');
+
+      // Act
+      await tours.start('ticket.view', { step: 'links' });
+
+      // Assert
+      expect(router.url).toBe('/tickets/WEB-7');
+      expect(targets.prepare).not.toHaveBeenCalled();
+      expect(launcher.start).toHaveBeenCalledWith(
+        TICKET_TOUR,
+        expect.objectContaining({ startAt: 'links' }),
+      );
     });
   });
 });

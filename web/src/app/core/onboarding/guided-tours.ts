@@ -19,6 +19,7 @@ import { storedTourState, tourAccess } from './guided-tours.logic';
 import { OnboardingStateService } from './onboarding-state.service';
 import { TourAvailability } from './tour-availability';
 import { pathNeedsProject } from './tours/tour-catalogue';
+import { TourTargets } from './tour-targets';
 import { ViewTourAccess } from './view-tour-access';
 
 const VIEW_TIMEOUT_MS = 8000;
@@ -30,6 +31,9 @@ export interface GuidedTourOptions {
   readonly returnFocusTo?: HTMLElement | null;
   /// Project to open when the tour starts away from its view (default: `pickTourProject`).
   readonly projectKey?: string;
+  /// Id of the step to start at (`links` on the ticket tour); the first step when the user may not
+  /// see it or its anchor is missing.
+  readonly step?: string;
 }
 
 /// Starts the tour of a view (spec 14.4): works out what the user may do there, opens the view
@@ -49,6 +53,7 @@ export class GuidedTours {
   private readonly anchors = inject(TourAnchorRegistry);
   private readonly availability = inject(TourAvailability);
   private readonly viewAccess = inject(ViewTourAccess);
+  private readonly targets = inject(TourTargets);
 
   /// Id of the running tour, or null.
   readonly running = this.launcher.running;
@@ -71,20 +76,29 @@ export class GuidedTours {
     const definition = entry.load();
     const params: Record<string, string> = {};
     if (this.navigation.currentViewId() !== viewId) {
-      if (!entry.path) return null;
-      if (pathNeedsProject(entry.path)) {
-        const projectKey = options.projectKey ?? this.availability.targetProject();
-        if (!projectKey) return null;
-        params['projectKey'] = projectKey;
+      if (entry.path) {
+        if (pathNeedsProject(entry.path)) {
+          const projectKey = options.projectKey ?? this.availability.targetProject();
+          if (!projectKey) return null;
+          params['projectKey'] = projectKey;
+        }
+        if (!(await this.open(fillRoute(entry.path, params), viewId, params['projectKey']))) {
+          return null;
+        }
+      } else if (entry.opens) {
+        const target = this.targets.get(entry.opens) ?? (await this.targets.prepare(entry.opens));
+        if (!target || !(await this.open(target.url, viewId, target.projectKey))) return null;
+      } else {
+        return null;
       }
-      if (!(await this.open(entry.path, params, viewId))) return null;
-      await this.anchorsReady(await definition);
+      await this.anchorsReady(await definition, options.step);
     }
     const tour = await definition;
     const result = await this.launcher.start(tour, {
       access: this.access(viewId),
       params,
       returnFocusTo: options.returnFocusTo,
+      startAt: options.step,
     });
     const state = storedTourState(result);
     if (state === 'Completed') await this.onboarding.complete(tour.id, tour.version);
@@ -99,13 +113,9 @@ export class GuidedTours {
     );
   }
 
-  private async open(
-    path: string,
-    params: Record<string, string>,
-    viewId: string,
-  ): Promise<boolean> {
-    if (!(await this.router.navigateByUrl(fillRoute(path, params)))) return false;
-    const key = params['projectKey']?.toUpperCase();
+  private async open(url: string, viewId: string, projectKey?: string): Promise<boolean> {
+    if (!(await this.router.navigateByUrl(url))) return false;
+    const key = projectKey?.toUpperCase();
     return this.until(
       () =>
         this.navigation.currentViewId() === viewId &&
@@ -115,12 +125,16 @@ export class GuidedTours {
   }
 
   /// After opening a view, waits until its first step the user may see has its anchor (the view
-  /// loads its data first) and one more render for the others.
-  private async anchorsReady(tour: TourDefinition): Promise<void> {
-    const access = this.access(tour.viewId);
-    const first = tour.steps.find((step) => isAllowed(step, access));
+  /// loads its data first) and one more render for the others. A tour that starts at a later step
+  /// also waits for that step's anchor, read with the access the loaded view reports.
+  private async anchorsReady(tour: TourDefinition, stepId?: string): Promise<void> {
+    const first = tour.steps.find((step) => isAllowed(step, this.access(tour.viewId)));
     if (!first) return;
     await this.anchors.whenAvailable(first.anchor, ANCHOR_TIMEOUT_MS);
+    const start = tour.steps.find((step) => step.id === stepId);
+    if (start && start !== first && isAllowed(start, this.access(tour.viewId))) {
+      await this.anchors.whenAvailable(start.anchor, ANCHOR_TIMEOUT_MS);
+    }
     await new Promise<void>((resolve) =>
       afterNextRender(() => resolve(), { injector: this.injector }),
     );

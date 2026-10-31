@@ -20,20 +20,36 @@ export function tourAccess(
 /// The project a tour started away from its view runs in: the one in context, else the most
 /// recently updated project the user can write to, else the most recently updated readable one.
 export function pickTourProject(
-  projects: readonly {
-    readonly key: string;
-    readonly myRole: ProjectRole | null;
-    readonly updatedAt?: string;
-    readonly archivedAt?: string | null;
-  }[],
+  projects: readonly TourProject[],
   currentKey: string | null,
 ): string | null {
-  if (currentKey) return currentKey;
+  return rankTourProjects(projects, currentKey)[0] ?? null;
+}
+
+export interface TourProject {
+  readonly key: string;
+  readonly myRole: ProjectRole | null;
+  readonly updatedAt?: string;
+  readonly archivedAt?: string | null;
+}
+
+/// The projects a tour looks in for something to open, best first: the one in context, then the
+/// active projects the user can write to, then the active readable ones, each most recently
+/// updated first.
+export function rankTourProjects(
+  projects: readonly TourProject[],
+  currentKey: string | null,
+): string[] {
   const active = projects
     .filter((p) => !p.archivedAt)
     .sort((a, b) => (b.updatedAt ?? '').localeCompare(a.updatedAt ?? ''));
-  const writable = active.find((p) => p.myRole === 'Owner' || p.myRole === 'Member');
-  return (writable ?? active[0])?.key ?? null;
+  const writable = (p: TourProject) => p.myRole === 'Owner' || p.myRole === 'Member';
+  const ranked = [...active.filter(writable), ...active.filter((p) => !writable(p))].map(
+    (p) => p.key,
+  );
+  if (!currentKey) return ranked;
+  const current = currentKey.toUpperCase();
+  return [currentKey, ...ranked.filter((k) => k.toUpperCase() !== current)];
 }
 
 /// What a finished tour stores: Done on the last step completes it, Esc or Skip dismisses it.

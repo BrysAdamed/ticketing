@@ -1325,6 +1325,13 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
   - Web: the doc comment composer and edit box get the `@` people picker (`GET /users?projectKey=&access=read`), and comments render chips.
 - Rationale: one set of mention rules for every comment thread; reading the new body from the tracker costs no query, because the handler has just loaded and changed the comment.
 
+### D-164 A plain click on a backlog row opens the peek and leaves the selection alone (TKT-104)
+
+- Question: a plain click on a backlog row replaced the selection with nothing before opening the peek, so a missed checkbox threw away a multi-row selection. Should opening a ticket change the selection at all?
+- Decision: no. A plain click only moves the keyboard focus to the row and opens the peek; the selection and its Shift anchor stay as they were. The checkbox, `X` and Ctrl/⌘+click toggle, Shift+click extends the range, `Esc` (after the peek) or the bulk bar's Clear empties it. The board already behaved this way (a plain card click only focuses and peeks). Because the focused row may now sit outside the selection, keyboard shortcuts keep the targets rule of D-78 / TKT-105: they act on the selection when the focused row is in it, otherwise on the focused row; the bulk bar always acts on the selection.
+- Checked elsewhere: the add-tickets dialog keeps its selection and opens no peek; test cases, search, My work and the dashboard have no row selection.
+- Rejected: a plain click selecting only that row (the file-manager convention, and what the backlog did): with checkboxes always visible, a stray click is far more likely than an intent to drop the selection, and `Esc` already clears it.
+
 ## Product owner answers (v1 review, 2026-10-27)
 
 These were open questions (Q-01..Q-05); the product owner resolved them as follows.

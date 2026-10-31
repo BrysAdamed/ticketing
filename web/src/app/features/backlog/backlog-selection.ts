@@ -1,5 +1,5 @@
-/// Multi-select over an ordered list of ids: plain click selects one, Ctrl/⌘ or the checkbox
-/// toggles, Shift selects the range from the anchor (layout-and-screens §3.2).
+/// Multi-select over an ordered list of ids: Ctrl/⌘ or the checkbox toggles, Shift selects the range
+/// from the anchor (layout-and-screens §3.2); a plain row click opens the peek without touching it (D-164).
 export interface SelectionState {
   readonly selected: ReadonlySet<string>;
   readonly anchor: string | null;

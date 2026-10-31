@@ -138,6 +138,7 @@ export const appConfig: ApplicationConfig = {
         ...new MatDialogConfig(),
         role: 'dialog',
         ariaModal: true,
+        delayFocusTrap: false,
         maxWidth: 'calc(100vw - 32px)',
       } satisfies MatDialogConfig,
     },

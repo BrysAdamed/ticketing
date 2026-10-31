@@ -202,6 +202,7 @@ A `[McpServerToolType]` class with static methods. Inject the same handler as a 
 - Read tools: `[McpServerTool(Name = "get_x", ReadOnly = true)]`.
 - Write tools: add `[Authorize(Policy = AuthPolicies.CanWrite)]` so read-only tokens don't see them.
 - Destructive tools set `Destructive = true`.
+- Update tools declare fields that null clears as `Optional<string?>` (or `Optional<Severity?>`, ...) with `= default`. `McpToolRegistration` gives those parameters the JSON schema of their inner type, with `"null"` allowed only when the inner type is nullable; without a type, clients send an explicit null as the string `"null"`.
 
 Tools throw like handlers. A filter turns `AppException` and `DomainException` into `isError: true` results with `{ code, message, hint }`. The write channel (`Mcp`) is derived automatically.
 

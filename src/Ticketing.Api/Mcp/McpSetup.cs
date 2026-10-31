@@ -25,7 +25,7 @@ internal static class McpSetup
             })
             .WithHttpTransport(o => o.Stateless = true)
             .AddAuthorizationFilters()
-            .WithToolsFromAssembly(typeof(McpSetup).Assembly, Json)
+            .WithTicketingTools(Json)
             .WithRequestFilters(filters => filters
                 .AddListToolsFilter(next => async (context, cancellationToken) =>
                     await FeatureGatedTools.FilterAsync(await next(context, cancellationToken), context.Services!, cancellationToken))

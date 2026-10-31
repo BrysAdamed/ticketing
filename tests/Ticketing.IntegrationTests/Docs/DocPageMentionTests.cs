@@ -54,7 +54,7 @@ public sealed class DocPageMentionTests(TicketingApiFactory api)
         // Assert
         await same.ShouldHaveStatusAsync(HttpStatusCode.OK);
         await edit.ShouldHaveStatusAsync(HttpStatusCode.OK);
-        Assert.Empty(await api.StoredNotificationsAsync(world.Member));
+        Assert.Equal([(NotificationKind.DocUpdated, "published version 2", 2)], (await api.StoredNotificationsAsync(world.Member)).Rows());
         Assert.Equal([(NotificationKind.Mentioned, "mentioned you on the page", 1)], (await api.StoredNotificationsAsync(world.Viewer)).Rows());
         Assert.Equal([world.Member.Id, world.Viewer.Id], (await world.OwnerClient.GetDocAsync(page.Key)).Mentions.Ids());
     }
@@ -106,7 +106,8 @@ public sealed class DocPageMentionTests(TicketingApiFactory api)
         await restore.ShouldHaveStatusAsync(HttpStatusCode.OK);
         await duplicate.ShouldHaveStatusAsync(HttpStatusCode.Created);
         Assert.Empty(diagram.Mentions);
-        Assert.Equal(0, await api.NotificationCountAsync());
+        Assert.Equal([(NotificationKind.DocUpdated, "restored version 1 as version 3", 1)], (await api.StoredNotificationsAsync(world.Member)).Rows());
+        Assert.Equal(1, await api.NotificationCountAsync());
         Assert.Equal([world.Member.Id], (await world.OwnerClient.GetDocAsync(page.Key)).Mentions.Ids());
     }
 

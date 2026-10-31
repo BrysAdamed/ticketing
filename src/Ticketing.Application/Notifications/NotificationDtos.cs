@@ -17,8 +17,8 @@ public sealed record NotificationDocDto(string Key, string Title, bool Deleted);
 /// <param name="Actor">Who acted; null for system changes.</param>
 /// <param name="Ticket">The ticket, for ticket notifications.</param>
 /// <param name="Regression">The session and test case, for regression item assignments.</param>
-/// <param name="Doc">The page or diagram, for doc comments.</param>
-/// <param name="Url">Where the web app opens it: the ticket, the regression item or the doc's comments.</param>
+/// <param name="Doc">The page or diagram, for doc comments, mentions on a page and new versions.</param>
+/// <param name="Url">Where the web app opens it: the ticket, the regression item, the doc's comments, or for new versions the doc's history of changes since.</param>
 public sealed record NotificationDto(
     Guid Id,
     NotificationKind Kind,

@@ -42,6 +42,7 @@ describe('notification preferences logic', () => {
     ]);
     expect(groups.following.map((k) => k.kind)).toEqual([
       'Commented',
+      'DocUpdated',
       'StatusChanged',
       'PriorityRaised',
       'Moved',

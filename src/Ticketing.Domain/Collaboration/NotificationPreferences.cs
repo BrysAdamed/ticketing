@@ -5,7 +5,7 @@ namespace Ticketing.Domain.Collaboration;
 /// <summary>
 /// The notification kinds and projects a user muted (TKT-36, D-160). Nothing is muted by default, and a user without a row
 /// gets every notification. A muted kind is silenced everywhere; a muted project silences the activity of others there
-/// (comments, status, priority, moves, deletion), while notifications addressed to the user personally (mentions and
+/// (comments, status, priority, moves, deletion, new doc versions), while notifications addressed to the user personally (mentions and
 /// assignments, see <see cref="IsDirect"/>) still come through unless their kind is muted itself.
 /// </summary>
 public sealed class NotificationPreferences

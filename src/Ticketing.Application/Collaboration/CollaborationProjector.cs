@@ -135,7 +135,7 @@ internal sealed class CollaborationProjector(ITicketingDbContext db) : IActivity
             var (ticketId, sessionId, docNodeId) = Subject(e);
             var summary = NotificationSummaries.For(candidate.Kind, e, names);
             var target = open
-                .Where(n => n.Absorbs(candidate.RecipientId, e.ActorId, ticketId, sessionId, docNodeId, e.OccurredAt))
+                .Where(n => n.Absorbs(candidate.RecipientId, e.ActorId, ticketId, sessionId, docNodeId, candidate.Kind, e.OccurredAt))
                 .MaxBy(n => n.CreatedAt);
             if (target is not null)
             {
@@ -147,7 +147,9 @@ internal sealed class CollaborationProjector(ITicketingDbContext db) : IActivity
             {
                 RegressionItemAssigned item => Notification.AboutRegressionItem(
                     candidate.RecipientId, e.ProjectId, item.SessionId, item.TestCaseKey, e.ActorId, candidate.Kind, summary, e.OccurredAt),
-                DocEvent doc => Notification.AboutDoc(candidate.RecipientId, e.ProjectId, doc.DocNodeId, e.ActorId, candidate.Kind, summary, e.OccurredAt),
+                DocEvent doc => Notification.AboutDoc(
+                    candidate.RecipientId, e.ProjectId, doc.DocNodeId, e.ActorId, candidate.Kind, summary, e.OccurredAt,
+                    candidate.Kind == NotificationKind.DocUpdated ? NotificationRules.PublishedVersion(e) : null),
                 _ => Notification.AboutTicket(candidate.RecipientId, e.ProjectId, ticketId!.Value, e.ActorId, candidate.Kind, summary, e.OccurredAt),
             };
             db.Notifications.Add(created);
@@ -183,7 +185,8 @@ internal sealed class CollaborationProjector(ITicketingDbContext db) : IActivity
         var ticketIds = subjects.Where(s => s.TicketId is not null).Select(s => s.TicketId!.Value).Distinct().ToArray();
         var sessionIds = subjects.Where(s => s.SessionId is not null).Select(s => s.SessionId!.Value).Distinct().ToArray();
         var docNodeIds = subjects.Where(s => s.DocNodeId is not null).Select(s => s.DocNodeId!.Value).Distinct().ToArray();
-        var since = candidates.Min(c => c.Event.OccurredAt) - Notification.CollapseWindow;
+        var window = candidates.Any(c => c.Kind == NotificationKind.DocUpdated) ? Notification.PublishCollapseWindow : Notification.CollapseWindow;
+        var since = candidates.Min(c => c.Event.OccurredAt) - window;
 
         await db.Notifications
             .FromSql($"""

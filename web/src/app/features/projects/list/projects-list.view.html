@@ -1,6 +1,8 @@
 <header class="tk-page-header">
   <h1>Projects</h1>
-  <span class="tk-page-count">{{ store.counts().all }}</span>
+  <span class="tk-page-count" data-testid="projects-count"
+    >{{ store.counts().all }}{{ store.capped() ? '+' : '' }}</span
+  >
   <div class="tk-page-actions">
     <button
       mat-stroked-button
@@ -57,6 +59,19 @@
     <button mat-stroked-button type="button" (click)="store.load()">Retry</button>
   </tk-empty-state>
 } @else if (store.hasData()) {
+  @if (store.truncated()) {
+    <div class="tk-callout capped" role="status" data-testid="projects-capped">
+      <tk-icon name="tablerInfoCircle" [size]="16" />
+      <span>
+        @if (store.isFiltered()) {
+          Showing the first {{ store.listedLimit }} matches by key. Narrow the filter to find more.
+        } @else {
+          Showing the first {{ store.listedLimit }} projects by key, type in the filter to search
+          all of them.
+        }
+      </span>
+    </div>
+  }
   @if (store.projects().length > 0) {
     <div class="table" role="table" aria-label="Projects">
       <div class="head" role="row">
@@ -130,6 +145,8 @@
         </div>
       }
     </div>
+  } @else if (store.searching()) {
+    <tk-skeleton-rows [count]="3" />
   } @else if (store.isFiltered()) {
     <tk-empty-state icon="tablerSearch" title="No projects match" description="Try another filter.">
       <button

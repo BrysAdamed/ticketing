@@ -28,10 +28,26 @@ export interface ProjectSummary {
 export type LoadStatus = 'idle' | 'loading' | 'loaded' | 'error';
 
 const PAGE_SIZE = 100;
-const MAX_PROJECTS = 1000;
+export const MAX_LISTED_PROJECTS = 1000;
+const SEARCH_LIMIT = 50;
+
+/// Filters of `GET /api/v1/projects` besides paging.
+export interface ProjectQuery {
+  query?: string;
+  includeArchived?: boolean;
+  visibility?: ProjectVisibility;
+  mine?: boolean;
+}
+
+/// Up to `MAX_LISTED_PROJECTS` projects in key order; `capped` when more match than were loaded.
+export interface ProjectList {
+  items: ProjectSummary[];
+  capped: boolean;
+}
 
 /// The readable projects of the signed-in user, shared by the sidebar, the command palette and
 /// any feature that needs a project list. Call `reload()` after creating or archiving a project.
+/// It holds the first `MAX_LISTED_PROJECTS` by key; when `capped()`, lists use `search()` (D-168).
 @Injectable({ providedIn: 'root' })
 export class ProjectDirectory {
   private readonly api = inject(ApiClient);
@@ -39,6 +55,7 @@ export class ProjectDirectory {
   private readonly items = signal<readonly ProjectSummary[]>([]);
   readonly status = signal<LoadStatus>('idle');
   readonly error = signal<ApiError | null>(null);
+  readonly capped = signal(false);
   readonly projects = this.items.asReadonly();
   readonly activeProjects = computed(() => this.items().filter((p) => !p.archivedAt));
 
@@ -50,22 +67,38 @@ export class ProjectDirectory {
   async reload(): Promise<void> {
     this.status.set('loading');
     try {
-      const items: ProjectSummary[] = [];
-      let cursor: string | null = null;
-      do {
-        const page: Page<ProjectSummary> = await firstValueFrom(
-          this.api.list<ProjectSummary>('/projects', { limit: PAGE_SIZE, cursor }),
-        );
-        items.push(...page.items);
-        cursor = page.nextCursor;
-      } while (cursor && items.length < MAX_PROJECTS);
+      const { items, capped } = await this.list();
       this.items.set(items);
+      this.capped.set(capped);
       this.error.set(null);
       this.status.set('loaded');
     } catch (error) {
       this.error.set(toApiError(error));
       this.status.set('error');
     }
+  }
+
+  /// Pages `GET /projects` with the given filters up to `MAX_LISTED_PROJECTS`.
+  async list(filters: ProjectQuery = {}): Promise<ProjectList> {
+    const items: ProjectSummary[] = [];
+    let cursor: string | null = null;
+    do {
+      const page: Page<ProjectSummary> = await firstValueFrom(
+        this.api.list<ProjectSummary>('/projects', { limit: PAGE_SIZE, cursor }, { ...filters }),
+      );
+      items.push(...page.items);
+      cursor = page.nextCursor;
+    } while (cursor && items.length < MAX_LISTED_PROJECTS);
+    return { items, capped: !!cursor };
+  }
+
+  /// Active readable projects whose key or name contains `query`, asked from the server: the
+  /// path for pickers and the palette once the directory is `capped()`.
+  async search(query: string, limit = SEARCH_LIMIT): Promise<ProjectSummary[]> {
+    const page = await firstValueFrom(
+      this.api.list<ProjectSummary>('/projects', { limit }, { query: query.trim() }),
+    );
+    return page.items;
   }
 
   byKey(key: string): ProjectSummary | undefined {
@@ -75,6 +108,7 @@ export class ProjectDirectory {
 
   clear(): void {
     this.items.set([]);
+    this.capped.set(false);
     this.status.set('idle');
     this.error.set(null);
   }

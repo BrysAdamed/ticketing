@@ -202,6 +202,31 @@ public sealed class ProjectEndpointTests(TicketingApiFactory api)
     }
 
     [Fact]
+    public async Task Query_finds_readable_projects_by_name_with_the_segment_filters_and_never_private_ones_of_others()
+    {
+        // Arrange
+        var owner = await api.LoginAsync(await api.CreateUserAsync());
+        var outsider = await api.LoginAsync(await api.CreateUserAsync());
+        await (await owner.PostAsJsonAsync("/api/v1/projects", new { key = "ZPUB", name = "Late Harbour", visibility = "Public" }, _ct)).ShouldHaveStatusAsync(HttpStatusCode.Created);
+        await (await owner.PostAsJsonAsync("/api/v1/projects", new { key = "ZPRIV", name = "Late Lighthouse", visibility = "Private" }, _ct)).ShouldHaveStatusAsync(HttpStatusCode.Created);
+        await (await outsider.PostAsJsonAsync("/api/v1/projects", new { key = "ZOWN", name = "Late Mine", visibility = "Private" }, _ct)).ShouldHaveStatusAsync(HttpStatusCode.Created);
+
+        // Act
+        var all = await (await outsider.GetAsync("/api/v1/projects?query=late", _ct)).ReadAsync<CursorPage<ProjectSummaryDto>>();
+        var byName = await (await outsider.GetAsync("/api/v1/projects?query=LIGHTHOUSE", _ct)).ReadAsync<CursorPage<ProjectSummaryDto>>();
+        var mine = await (await outsider.GetAsync("/api/v1/projects?query=late&mine=true", _ct)).ReadAsync<CursorPage<ProjectSummaryDto>>();
+        var publicOnly = await (await outsider.GetAsync("/api/v1/projects?query=late&visibility=Public", _ct)).ReadAsync<CursorPage<ProjectSummaryDto>>();
+        var ownerView = await (await owner.GetAsync("/api/v1/projects?query=lighthouse", _ct)).ReadAsync<CursorPage<ProjectSummaryDto>>();
+
+        // Assert
+        Assert.Equal(["ZOWN", "ZPUB"], all.Items.Select(p => p.Key));
+        Assert.Empty(byName.Items);
+        Assert.Equal("ZOWN", Assert.Single(mine.Items).Key);
+        Assert.Equal("ZPUB", Assert.Single(publicOnly.Items).Key);
+        Assert.Equal("ZPRIV", Assert.Single(ownerView.Items).Key);
+    }
+
+    [Fact]
     public async Task Patch_changes_only_supplied_fields_and_writes_one_activity_entry_per_field()
     {
         // Arrange

@@ -15,7 +15,7 @@ import { matchScore } from '../commands/command';
 import { FeatureFlagService } from '../flags/feature-flag.service';
 import { HELP_MENU_ORDER, SHORTCUTS_HELP_ID } from '../help/help-menu';
 import { HelpMenuRegistry } from '../help/help-menu.registry';
-import { ProjectDirectory } from '../projects/project-directory';
+import { ProjectDirectory, ProjectSummary } from '../projects/project-directory';
 import { ShortcutHelpDialog } from '../shortcuts/shortcut-help.dialog';
 import { ShortcutService } from '../shortcuts/shortcut.service';
 import { ThemeService } from '../theme/theme.service';
@@ -250,6 +250,15 @@ export class ShellActions {
       { id: 'core.projects', search: (query) => this.searchProjects(query) },
       destroyRef,
     );
+    this.commands.registerSearchProvider(
+      {
+        id: 'core.projects-remote',
+        remote: true,
+        minQueryLength: 1,
+        search: (query) => this.searchRemoteProjects(query),
+      },
+      destroyRef,
+    );
   }
 
   private keyJump(query: string): PaletteItem[] {
@@ -291,13 +300,23 @@ export class ShellActions {
       .filter((x) => x.score > 0)
       .sort((a, b) => b.score - a.score)
       .slice(0, q ? 5 : 3)
-      .map(({ project }) => ({
-        id: `project:${project.key}`,
-        label: project.name,
-        hint: project.key,
-        group: 'Projects',
-        icon: 'tablerFolders',
-        run: () => void this.router.navigate(['/projects', project.key]),
-      }));
+      .map(({ project }) => this.projectItem(project));
+  }
+
+  private async searchRemoteProjects(query: string): Promise<PaletteItem[]> {
+    if (this.directory.status() === 'loaded' && !this.directory.capped()) return [];
+    const found = await this.directory.search(query, 5);
+    return found.map((project) => this.projectItem(project));
+  }
+
+  private projectItem(project: ProjectSummary): PaletteItem {
+    return {
+      id: `project:${project.key}`,
+      label: project.name,
+      hint: project.key,
+      group: 'Projects',
+      icon: 'tablerFolders',
+      run: () => void this.router.navigate(['/projects', project.key]),
+    };
   }
 }

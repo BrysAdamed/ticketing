@@ -1356,6 +1356,18 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
 - Entry-state specs (empty projects and boards lists, the welcome tour for a user who cannot write anywhere) no longer skip when other specs left public projects or boards: they filter the list responses the browser sees to the test user's own data (explicit membership, own boards) with `page.route` around the real response.
 - Rejected: fewer sign-ins in the suite (seeding a user needs set-password and a login, and every role test needs its own user); an e2e-only API switch or an exempt address (a production code path that only tests use); a separate e2e compose file (one more file to remember, while the documented e2e stack is `docker compose up`).
 
+### D-168 Project lists hold the first 1000 by key and search the server beyond that (TKT-106)
+
+- Question: the shared `ProjectDirectory` and the projects page load at most 1000 readable projects (`GET /projects` pages by key), so every later project silently disappeared from the projects page, the sidebar, the palette and the New board dialog. How should the lists behave with more than 1000 projects?
+- Decision:
+  - The directory still loads the first 1000 active projects by key (one shared, cached list keeps the sidebar and the pickers instant) and now reports `capped` when the API has more. `ProjectDirectory.search` asks `GET /projects?query=` (key or name) for the rest.
+  - Projects page: below the cap nothing changes (local filtering, live segment counts). When capped, the page says "Showing the first 1000 projects by key, type in the filter to search all of them", the header count reads `1000+` and the segment counts are hidden (they would be lower bounds). Any text or segment filter then goes to the server (`query`, `visibility`, `mine`, `includeArchived`, debounced 250 ms, up to 1000 matches, with the same note if those are cut too).
+  - Pickers built on the directory use `injectProjectSearch`: local filtering below the cap, server search for the typed text once capped. The New board dialog uses it, notes "Showing the first 1000 projects, type to search", and keeps selected projects (including suggested ones beyond the cap) visible.
+  - Command palette: the local project provider stays; a remote provider adds server matches for the typed text only while the directory is capped.
+  - Sidebar: unchanged. It shows at most 8 projects (the first by key, plus the open project even when it is not in the directory), and "All projects…" leads to the searchable page; when capped that link always reads "All projects…". Ordering by favourites and recently viewed stays in ideas.md: it needs per-user state that no other v1 feature has, and at most 8 rows were never going to show 1000 projects anyway.
+  - Still on the directory alone (TKT-116): the Create ticket project select, the board settings project picker, the search filter bar's project facet and the notification project mutes.
+- Rejected: loading every project (unbounded memory and start-up requests on a large instance); infinite scroll on the projects page (scrolling past 1000 rows to find one project is worse than typing, and the segment counts would still be partial); a server-side count endpoint just for the header (the `1000+` is enough to say the list is cut).
+
 ## Product owner answers (v1 review, 2026-10-27)
 
 These were open questions (Q-01..Q-05); the product owner resolved them as follows.

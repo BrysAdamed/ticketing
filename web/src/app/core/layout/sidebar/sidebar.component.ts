@@ -120,7 +120,8 @@ export class SidebarComponent {
       : shown;
   });
   protected readonly hasMoreProjects = computed(
-    () => this.directory.activeProjects().length > this.projects().length,
+    () =>
+      this.directory.capped() || this.directory.activeProjects().length > this.projects().length,
   );
 
   constructor() {

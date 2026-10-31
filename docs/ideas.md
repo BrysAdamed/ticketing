@@ -39,7 +39,7 @@ This file is the pool of unscheduled ideas. Once an idea is scheduled it becomes
 | I-79 | Breached-password check (HIBP k-anonymity range API) | Catches leaked passwords beyond the bundled list (D-54). Needs outbound internet from the VM. | S |
 | – | "Leave project" for non-owners | Today only Owners remove members; a member who no longer needs a private project asks an Owner. | S |
 | – | Remember board links on project archive and offer to relink on unarchive | Unarchive restores the project but not its board links (D-52). | S |
-| – | Project favourites and recently viewed in the sidebar | The design's sidebar orders projects by favourites, then recent. v1 lists projects by key. | S |
+| – | Project favourites and recently viewed in the sidebar | The design's sidebar orders projects by favourites, then recent. v1 lists projects by key, and on instances with more than 1000 projects only the first 1000 are in the shared list (D-168). | S |
 
 ## Planning and boards
 

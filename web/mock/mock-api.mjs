@@ -268,7 +268,9 @@ createServer(async (req, res) => {
   }
   if (path === '/api/v1/me') return send(res, 200, ADMIN);
   if (path === '/api/v1/me/flags')
-    return send(res, 200, { flags: { 'board.swimlanes': 'off', achievements: 'on' } });
+    return send(res, 200, {
+      flags: { 'agent.delegate': 'off', achievements: 'on', 'ticket.subtickets-graph': 'on' },
+    });
   if (path.startsWith('/api/v1/me/achievements') && ADMIN.achievementsHidden)
     return problem(res, 404, 'achievements.disabled', 'You opted out of achievements.');
   if (path === '/api/v1/me/achievements')

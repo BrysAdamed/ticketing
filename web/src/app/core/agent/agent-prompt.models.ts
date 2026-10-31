@@ -133,9 +133,6 @@ export interface AgentPromptVersionChange {
   baseVersion: number;
 }
 
-/// Feature flag gating everything about agent delegation.
-export const AGENT_FLAG = 'agent.delegate';
-
 /// Template body limit, the same as the whole prompt's (`AgentPrompt.LengthLimit`).
 export const AGENT_PROMPT_LENGTH_LIMIT = 4500;
 export const AGENT_PROMPT_CHANGE_NOTE_MAX = 200;

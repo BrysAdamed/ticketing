@@ -3,8 +3,6 @@ import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angula
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
 import { MatSliderModule } from '@angular/material/slider';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { toApiError } from '@core/api/api-error';
@@ -13,11 +11,10 @@ import { AvatarComponent } from '@shared/ui/domain/avatar.component';
 import { IconComponent } from '@shared/ui/icon/icon.component';
 import { FeatureFlag, FlagInput, UserLookup } from '../admin.models';
 import { UserSearchComponent } from '../shared/user-search.component';
-import { FLAG_KEY_PATTERN } from './flag-summary';
 
 export interface FlagFormDialogData {
-  flag?: FeatureFlag;
-  submit: (key: string, input: FlagInput) => Promise<FeatureFlag>;
+  flag: FeatureFlag;
+  submit: (input: FlagInput) => Promise<FeatureFlag>;
 }
 
 const MAX_TARGET_USERS = 200;
@@ -29,8 +26,6 @@ const MAX_TARGET_USERS = 200;
     MatDialogModule,
     MatButtonModule,
     MatCheckboxModule,
-    MatFormFieldModule,
-    MatInputModule,
     MatSliderModule,
     MatSlideToggleModule,
     AvatarComponent,
@@ -39,7 +34,7 @@ const MAX_TARGET_USERS = 200;
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <h2 mat-dialog-title>{{ data.flag ? data.flag.key : 'New feature flag' }}</h2>
+    <h2 mat-dialog-title class="title">{{ data.flag.key }}</h2>
     <form novalidate [formGroup]="form" (ngSubmit)="submit()" data-testid="flag-form">
       <mat-dialog-content class="content">
         @if (error(); as message) {
@@ -48,47 +43,15 @@ const MAX_TARGET_USERS = 200;
             <span>{{ message }}</span>
           </div>
         }
-        @if (!data.flag) {
-          <div class="field">
-            <label class="tk-field-label" for="flag-key">Key</label>
-            <mat-form-field>
-              <input
-                matInput
-                id="flag-key"
-                class="mono"
-                formControlName="key"
-                placeholder="board.swimlanes"
-                autocomplete="off"
-                data-testid="flag-key"
-              />
-              @if (form.controls.key.hasError('required')) {
-                <mat-error>Enter a key.</mat-error>
-              } @else if (
-                form.controls.key.hasError('pattern') || form.controls.key.hasError('maxlength')
-              ) {
-                <mat-error
-                  >Lower-case words separated by "." or "-", for example ticket-view.v2.</mat-error
-                >
-              }
-            </mat-form-field>
-            @if (keyError(); as message) {
-              <div class="server-error">{{ message }}</div>
-            } @else {
-              <div class="hint">Code reads the flag by this key. It can't be changed later.</div>
-            }
-          </div>
-        }
-        <div class="field">
-          <label class="tk-field-label" for="flag-description">Description</label>
-          <mat-form-field>
-            <textarea
-              matInput
-              id="flag-description"
-              rows="2"
-              formControlName="description"
-              data-testid="flag-description"
-            ></textarea>
-          </mat-form-field>
+        <div class="about">
+          @if (data.flag.description) {
+            <p class="description" data-testid="flag-description">{{ data.flag.description }}</p>
+          }
+          <p class="hint">
+            Declared in code with default
+            <strong>{{ data.flag.defaultOn ? 'on' : 'off' }}</strong
+            >. Reset to default from the row menu.
+          </p>
         </div>
 
         <div class="switch-row">
@@ -187,7 +150,7 @@ const MAX_TARGET_USERS = 200;
           data-testid="flag-form-submit"
           [disabled]="submitting()"
         >
-          {{ submitting() ? 'Saving…' : data.flag ? 'Save' : 'Create flag' }}
+          {{ submitting() ? 'Saving…' : 'Save' }}
         </button>
       </mat-dialog-actions>
     </form>
@@ -198,21 +161,17 @@ const MAX_TARGET_USERS = 200;
       flex-direction: column;
       gap: 12px;
     }
-    .field mat-form-field {
-      width: 100%;
-    }
-    .mono {
+    .title {
       font-family: var(--tk-font-mono);
+    }
+    .description {
+      margin: 0;
+      color: var(--tk-text-muted);
     }
     .hint {
       margin: 4px 0 0;
       font-size: var(--tk-text-sm);
       color: var(--tk-text-subtle);
-    }
-    .server-error {
-      margin-top: 4px;
-      font-size: var(--tk-text-sm);
-      color: var(--tk-danger-fg);
     }
     .switch-row {
       display: flex;
@@ -295,21 +254,12 @@ export class FlagFormDialog {
   protected readonly maxUsers = MAX_TARGET_USERS;
   protected readonly submitting = signal(false);
   protected readonly error = signal<string | null>(null);
-  protected readonly keyError = signal<string | null>(null);
-  protected readonly targetUsers = signal<UserLookup[]>([...(this.data.flag?.targetUsers ?? [])]);
-  protected readonly targetRoles = signal<GlobalRole[]>([...(this.data.flag?.targetRoles ?? [])]);
+  protected readonly targetUsers = signal<UserLookup[]>([...this.data.flag.targetUsers]);
+  protected readonly targetRoles = signal<GlobalRole[]>([...this.data.flag.targetRoles]);
 
   protected readonly form = inject(NonNullableFormBuilder).group({
-    key: [
-      this.data.flag?.key ?? '',
-      [Validators.required, Validators.maxLength(64), Validators.pattern(FLAG_KEY_PATTERN)],
-    ],
-    description: [this.data.flag?.description ?? '', Validators.maxLength(500)],
-    enabled: [this.data.flag?.enabled ?? false],
-    rolloutPercentage: [
-      this.data.flag?.rolloutPercentage ?? 0,
-      [Validators.min(0), Validators.max(100)],
-    ],
+    enabled: [this.data.flag.enabled],
+    rolloutPercentage: [this.data.flag.rolloutPercentage, [Validators.min(0), Validators.max(100)]],
   });
 
   protected targetUserIds(): string[] {
@@ -337,7 +287,6 @@ export class FlagFormDialog {
     }
     const value = this.form.getRawValue();
     const input: FlagInput = {
-      description: value.description.trim() || null,
       enabled: value.enabled,
       rolloutPercentage: Math.round(Number(value.rolloutPercentage)),
       targetUserIds: this.targetUserIds(),
@@ -345,19 +294,15 @@ export class FlagFormDialog {
     };
     this.submitting.set(true);
     this.error.set(null);
-    this.keyError.set(null);
     try {
-      this.ref.close(await this.data.submit(value.key.trim(), input));
+      this.ref.close(await this.data.submit(input));
     } catch (error) {
       const apiError = toApiError(error);
-      const key = apiError.fieldError('key');
-      if (key) this.keyError.set(key);
-      else
-        this.error.set(
-          apiError.code === 'concurrency.conflict'
-            ? 'Someone else changed this flag. The list was reloaded; open it again.'
-            : apiError.title,
-        );
+      this.error.set(
+        apiError.code === 'concurrency.conflict'
+          ? 'Someone else changed this flag. The list was reloaded; open it again.'
+          : apiError.title,
+      );
     } finally {
       this.submitting.set(false);
     }

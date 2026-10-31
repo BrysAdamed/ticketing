@@ -11,7 +11,7 @@ const FIRST_PROJECT_COMMAND_ID = tourCommandId('first-project');
 /// What the learn actions of empty states start (spec 14.7, D-143): a per-view tour, loaded on the
 /// first start, or the "Your first project" walkthrough through its Help item, which is null while
 /// the walkthrough is not registered or not available, so the page hides the action. Also the front
-/// door of Show me on achievements (D-154, D-169), Help items and the regressions explainer included.
+/// door of Show me on achievements (D-154, D-170), Help items and the regressions explainer included.
 @Injectable({ providedIn: 'root' })
 export class LearnActions {
   private readonly injector = inject(Injector);
@@ -33,7 +33,7 @@ export class LearnActions {
     return this.tours.canStart(viewId);
   }
 
-  /// Looks up what the tour of `viewId` opens away from its view (D-169); call it when showing the
+  /// Looks up what the tour of `viewId` opens away from its view (D-170); call it when showing the
   /// action.
   prepareTour(viewId: string): void {
     this.tours.prepare(viewId);
@@ -45,7 +45,7 @@ export class LearnActions {
     await this.injector.get(GuidedTours).start(viewId, options);
   }
 
-  /// Opens "How regressions work", the explainer of the regressions list (D-169).
+  /// Opens "How regressions work", the explainer of the regressions list (D-170).
   async openRegressionsExplainer(): Promise<void> {
     const { RegressionsExplainerDialog } = await import('./dialogs/regressions-explainer.dialog');
     this.dialog.open(RegressionsExplainerDialog, {

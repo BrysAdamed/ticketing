@@ -108,8 +108,8 @@ internal sealed class DemoWorkspace(IServiceProvider services, DemoClock clock, 
         RunAsync<CompleteRegressionSession.Handler, CompleteRegressionSession.Command, RegressionSessionSummaryDto>(
             actor, at, new(SkipRemaining: true, sessionKey), ct);
 
-    public Task<FlagDto> CreateFlagAsync(DemoActor admin, DateTimeOffset at, CreateFlag.Command command, CancellationToken ct) =>
-        RunAsync<CreateFlag.Handler, CreateFlag.Command, FlagDto>(admin, at, command, ct);
+    public Task<FlagDto> UpdateFlagAsync(DemoActor admin, DateTimeOffset at, UpdateFlag.Command command, CancellationToken ct) =>
+        RunAsync<UpdateFlag.Handler, UpdateFlag.Command, FlagDto>(admin, at, command, ct);
 
     public Task<DocDto> CreateDocAsync(DemoActor actor, DateTimeOffset at, CreateDoc.Command command, CancellationToken ct) =>
         RunAsync<CreateDoc.Handler, CreateDoc.Command, DocDto>(actor, at, command, ct);

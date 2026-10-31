@@ -1,7 +1,7 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { AuthService } from '../auth/auth.service';
 import { FeatureFlagService } from '../flags/feature-flag.service';
-import { ACHIEVEMENTS_FLAG } from './achievement.models';
+import { ACHIEVEMENTS_FLAG } from '../flags/flag-keys';
 
 interface HiddenOverride {
   userId: string;

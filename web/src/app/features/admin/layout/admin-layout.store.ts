@@ -1,5 +1,5 @@
 import { computed, inject, Injectable } from '@angular/core';
-import { AGENT_FLAG } from '@core/agent/agent-prompt.models';
+import { AGENT_FLAG } from '@core/flags/flag-keys';
 import { FeatureFlagService } from '@core/flags/feature-flag.service';
 import { RouteTab } from '@shared/ui/route-tabs/route-tabs.component';
 

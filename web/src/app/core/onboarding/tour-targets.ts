@@ -9,7 +9,7 @@ export interface TourTarget {
 }
 
 /// What the tours that start on a ticket, a board or a regression session open when they start
-/// elsewhere (D-169). `prepare` looks one up (`findTourTarget`, a lazy chunk); callers do so when
+/// elsewhere (D-170). `prepare` looks one up (`findTourTarget`, a lazy chunk); callers do so when
 /// they show a learn action. `get` is reactive and null until something was found. Eager and tiny.
 @Injectable({ providedIn: 'root' })
 export class TourTargets {

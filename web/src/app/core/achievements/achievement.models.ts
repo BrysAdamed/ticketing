@@ -1,4 +1,3 @@
-export const ACHIEVEMENTS_FLAG = 'achievements';
 export const ACHIEVEMENTS_DISABLED = 'achievements.disabled';
 
 export interface AchievementTier {

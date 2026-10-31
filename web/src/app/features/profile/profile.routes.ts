@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { ACHIEVEMENTS_FLAG } from '@core/achievements/achievement.models';
+import { ACHIEVEMENTS_FLAG } from '@core/flags/flag-keys';
 import { featureGuard } from '@core/flags/feature.guard';
 import { viewRoute } from '@core/views/view-registry';
 import {

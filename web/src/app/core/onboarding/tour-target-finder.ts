@@ -11,7 +11,7 @@ import { TourTargetKind } from './tours/tour-catalogue';
 
 const SESSION_PROJECTS = 3;
 
-/// Finds something the user can read for a tour to open (D-169): the most recently updated ticket
+/// Finds something the user can read for a tour to open (D-170): the most recently updated ticket
 /// of the best project (`rankTourProjects`), else of any project; an active board the user owns,
 /// else any active board; a session in progress in one of the first three projects, else the
 /// latest session of the best one. Null when there is none.

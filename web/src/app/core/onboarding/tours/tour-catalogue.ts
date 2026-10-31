@@ -1,7 +1,7 @@
 import type { TourDefinition, TourRequirement } from '../engine/tour.model';
 
 /// What a tour without a `path` opens to start away from its view: a ticket, a board or a
-/// regression session the user can read (`TourTargets`, D-169).
+/// regression session the user can read (`TourTargets`, D-170).
 export type TourTargetKind = 'ticket' | 'board' | 'regression-session';
 
 /// A view that has a tour. The definition (its copy) is loaded on demand, so adding tours never

@@ -81,7 +81,7 @@ For development, screenshots and demos only, never on a real installation. The s
 - 180 tickets: 17 epics with stories, technical tasks, bugs and spikes (up to 3 levels), markdown descriptions, labels, versions 1.3.0 to 1.6.0, priorities, severities, points, assignees, comments and links (including cross-project ones). Every status is used; Done tickets carry resolutions.
 - Boards `Sprint 42` (PAY + WEB) and `Ops Kanban` (OPS).
 - 26 test cases (Manual, Automatic and New) and two PAY regression sessions: `Release 1.4.0` (completed, one failed item with its bug) and `Release 1.5.0` (in progress).
-- 3 feature flags.
+- The declared feature flags with their defaults, and `agent.delegate` turned on for Admins.
 - A docs tree per project (24 docs): two folders, four pages with callouts, tables, code, ticket mentions and doc links, a Mermaid and a Canvas diagram embedded in a page (the Canvas with its picture, so PDF export prints it), later versions with change notes and 8 page comments (D-128).
 
 Trigger it explicitly, in either way:
@@ -278,6 +278,17 @@ Achievements (spec 15, D-144, D-145) are a catalogue in code plus one criterion 
    - New activity payload fields are additive. Old entries simply lack them, which no-backfill makes harmless.
 4. **Tests** in `tests/Ticketing.IntegrationTests/Achievements/`, through REST and MCP (`AchievementTestData`): counting after S only, distinct or first time per entity, deleted entities, channel independence, and no other user's data. `AchievementEvaluatorTests` fails while an entry has no criterion or a criterion has no entry.
 5. **Docs**: a row in spec 15.2 and 15.4, and a `D-xx` when the definition needed a choice.
+
+## Adding a feature flag
+
+Flags are declared in code (spec 4.15, D-169); nobody creates them in the UI.
+
+1. **Declare it** in `Application/FeatureFlags/FeatureFlagCatalog.cs`: a `public static readonly FeatureFlagDefinition` and an entry in `All`. The key follows the spec 4.15 regex and is never renamed (a rename is a new flag plus a retired one). The description is what Admins read on the Feature flags page.
+2. **Choose the default** deliberately: on is enabled for everyone, off is disabled. It applies to instances that have no row for the key yet; an existing row keeps the Admin's targeting. Say in the ticket why you chose it.
+3. **Read it** by definition: `flags.IsOnAsync(FeatureFlagCatalog.MyFlag, ct)`, or a gate class like `AgentGate` / `AchievementsGate` when a whole feature hides behind it (`[FeatureGate]` for its MCP tools).
+4. **Mirror the key** in `web/src/app/core/flags/flag-keys.ts` when the SPA reads it (frontend.md). `FeatureFlagCatalogTests` fails while a key there is missing from the catalog.
+5. **Tests**: in integration tests a declared flag without a row is at its default after the per-test reset; set the row explicitly (like `AgentTestData.EnableAgentFlagAsync`) for the other state.
+6. **Removing a flag**: delete the definition and every reader. The row stays as a retired flag (off, hidden from `/me/flags`) until an Admin deletes it.
 
 ## Error codes
 

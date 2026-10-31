@@ -108,4 +108,26 @@ export class FeatureFlagsPage {
     usersOn(key: string): Locator {
         return this.page.getByTestId(`flag-users-on-${key}`);
     }
+
+    row(key: string): Locator {
+        return this.page.getByTestId(`flag-row-${key}`);
+    }
+
+    defaultChip(key: string): Locator {
+        return this.page.getByTestId(`flag-default-${key}`);
+    }
+
+    changed(key: string): Locator {
+        return this.page.getByTestId(`flag-changed-${key}`);
+    }
+
+    /// Row menu → Reset to default, then confirms.
+    async reset(key: string): Promise<void> {
+        await this.page.getByTestId(`flag-actions-${key}`).click();
+        await this.page.getByTestId('flag-reset').click();
+        await this.page
+            .getByRole('alertdialog')
+            .getByRole('button', { name: 'Reset to default' })
+            .click();
+    }
 }

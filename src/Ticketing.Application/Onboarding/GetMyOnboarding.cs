@@ -97,7 +97,7 @@ public static class GetMyOnboarding
             {
                 items.Add(new(OnboardingChecklistItems.AddTeammate, row.AddedTeammate, false));
                 items.Add(new(OnboardingChecklistItems.FirstProject, projects.Count > 0, false));
-                if (await flags.IsOnAsync(AgentFeature.FlagKey, cancellationToken))
+                if (await flags.IsOnAsync(FeatureFlagCatalog.AgentDelegate, cancellationToken))
                     items.Add(new(OnboardingChecklistItems.EnableDelegation, agentOptions.Value.InstanceUrl is not null, false));
             }
             items.Add(new(OnboardingChecklistItems.AgentToken, row.HasActiveToken, true));

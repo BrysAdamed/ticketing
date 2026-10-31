@@ -117,7 +117,7 @@ public sealed class AchievementProjection(
             .Select(u => new Candidate(u.Id, u.GlobalRole, u.AchievementsStartedAt))
             .ToListAsync(cancellationToken);
         var on = await flags.EvaluateForAsync(
-            AchievementsFeature.FlagKey, [.. candidates.Select(c => new FlagSubject(c.Id, c.Role))], cancellationToken);
+            FeatureFlagCatalog.Achievements, [.. candidates.Select(c => new FlagSubject(c.Id, c.Role))], cancellationToken);
         return [.. candidates.Where(c => on.Contains(c.Id))];
     }
 

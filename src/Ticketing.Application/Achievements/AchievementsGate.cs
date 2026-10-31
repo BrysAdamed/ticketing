@@ -6,19 +6,13 @@ using Ticketing.Domain.Achievements;
 
 namespace Ticketing.Application.Achievements;
 
-/// <summary>The feature flag of achievements (spec 15.1): a string-variant flag, <c>on</c> or <c>off</c>, evaluated per user.</summary>
-public static class AchievementsFeature
-{
-    public const string FlagKey = "achievements";
-}
-
 /// <summary>
-/// The single check every achievements entry point starts with: while <see cref="AchievementsFeature.FlagKey"/> is off for the
+/// The single check every achievements entry point starts with: while <see cref="FeatureFlagCatalog.Achievements"/> is off for the
 /// caller, everything about achievements is a 404 <c>achievements.disabled</c>, so the feature is neither visible nor callable.
 /// </summary>
 public sealed class AchievementsGate(IFeatureFlags flags, ITicketingDbContext db, ICurrentUser currentUser, IClock clock) : IFeatureGate
 {
-    public Task<bool> IsEnabledAsync(CancellationToken cancellationToken) => flags.IsOnAsync(AchievementsFeature.FlagKey, cancellationToken);
+    public Task<bool> IsEnabledAsync(CancellationToken cancellationToken) => flags.IsOnAsync(FeatureFlagCatalog.Achievements, cancellationToken);
 
     public async Task EnsureEnabledAsync(CancellationToken cancellationToken)
     {

@@ -1,7 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.EntityFrameworkCore;
 using Ticketing.Application.Audit;
 using Ticketing.Application.Common;
+using Ticketing.Application.FeatureFlags;
 using Ticketing.Domain.Activity;
 using Ticketing.Domain.Users;
 using Ticketing.IntegrationTests.Infrastructure;
@@ -19,19 +21,22 @@ public sealed class AuditTests(TicketingApiFactory api)
         // Arrange
         var adminUser = await api.CreateUserAsync(GlobalRole.Admin);
         var admin = await api.LoginAsync(adminUser);
+        await (await admin.GetAsync("/api/v1/admin/flags", _ct)).ShouldHaveStatusAsync(HttpStatusCode.OK);
         var created = await admin.CreateUserViaAdminAsync(email: "audited@ticketing.test");
-        await (await admin.PostAsJsonAsync("/api/v1/admin/flags", new { key = "audited.flag" }, _ct)).ShouldHaveStatusAsync(HttpStatusCode.Created);
+        await (await admin.PatchAsJsonAsync("/api/v1/admin/flags/agent.delegate", new { enabled = true }, _ct)).ShouldHaveStatusAsync(HttpStatusCode.OK);
         await (await admin.PostAsJsonAsync("/api/v1/projects", new { key = "AUD", name = "Audited" }, _ct)).ShouldHaveStatusAsync(HttpStatusCode.Created);
 
         // Act
         var page = await (await admin.GetAsync("/api/v1/admin/audit", _ct)).ReadAsync<CursorPage<AuditEntryDto>>();
 
         // Assert
-        Assert.Equal(["project.created", "flag.created"], page.Items.Take(2).Select(e => e.Action));
-        Assert.Equal(["user.created", "user.setPasswordLink.issued"], page.Items.Skip(2).Select(e => e.Action).Order());
-        Assert.All(page.Items, e => Assert.Equal(adminUser.Id, e.Actor!.Id));
-        Assert.All(page.Items, e => Assert.Equal(WriteChannel.Web, e.Channel));
-        Assert.Equal(["AUD", "audited.flag", "audited@ticketing.test", "audited@ticketing.test"], page.Items.Select(e => e.EntityLabel));
+        Assert.Equal(["project.created", "flag.updated"], page.Items.Take(2).Select(e => e.Action));
+        Assert.Equal(["user.created", "user.setPasswordLink.issued"], page.Items.Skip(2).Take(2).Select(e => e.Action).Order());
+        Assert.All(page.Items.Skip(4), e => Assert.Equal(FeatureFlagSync.RegisteredAction, e.Action));
+        Assert.All(page.Items.Skip(4), e => Assert.Null(e.Actor));
+        Assert.All(page.Items.Take(4), e => Assert.Equal(adminUser.Id, e.Actor!.Id));
+        Assert.All(page.Items.Take(4), e => Assert.Equal(WriteChannel.Web, e.Channel));
+        Assert.Equal(["AUD", "agent.delegate", "audited@ticketing.test", "audited@ticketing.test"], page.Items.Take(4).Select(e => e.EntityLabel));
         var userCreated = page.Items.Single(e => e.Action == "user.created");
         Assert.Equal(created.User.Id, userCreated.EntityId);
         Assert.Equal("audited@ticketing.test", userCreated.NewValue!.Value.GetProperty("email").GetString());
@@ -46,10 +51,11 @@ public sealed class AuditTests(TicketingApiFactory api)
         var admin = await api.LoginAsync(adminUser);
         var otherAdminUser = await api.CreateUserAsync(GlobalRole.Admin);
         var otherAdmin = await api.LoginAsync(otherAdminUser);
-        var start = DateTimeOffset.UtcNow.AddSeconds(-1);
+        await (await admin.GetAsync("/api/v1/admin/flags", _ct)).ShouldHaveStatusAsync(HttpStatusCode.OK);
+        var start = (await api.WithDbAsync(db => db.ActivityEntries.MaxAsync(a => a.OccurredAt, _ct))).AddMilliseconds(1);
         await admin.CreateUserViaAdminAsync();
         await admin.CreateUserViaAdminAsync();
-        await (await otherAdmin.PostAsJsonAsync("/api/v1/admin/flags", new { key = "by.other" }, _ct)).ShouldHaveStatusAsync(HttpStatusCode.Created);
+        await (await otherAdmin.PatchAsJsonAsync("/api/v1/admin/flags/agent.delegate", new { enabled = true }, _ct)).ShouldHaveStatusAsync(HttpStatusCode.OK);
 
         // Act
         var flags = await Get($"/api/v1/admin/audit?entityType=FeatureFlag");
@@ -62,10 +68,10 @@ public sealed class AuditTests(TicketingApiFactory api)
         var invalidType = await admin.GetAsync("/api/v1/admin/audit?entityType=Ticket", _ct);
 
         // Assert
-        Assert.Equal(["flag.created"], flags.Items.Select(e => e.Action));
+        Assert.Equal(["flag.updated", .. Enumerable.Repeat(FeatureFlagSync.RegisteredAction, FeatureFlagCatalog.All.Count)], flags.Items.Select(e => e.Action));
         Assert.Equal(4, userPrefix.Items.Count);
         Assert.Equal(2, exact.Items.Count);
-        Assert.Equal(["flag.created"], byOther.Items.Select(e => e.Action));
+        Assert.Equal(["flag.updated"], byOther.Items.Select(e => e.Action));
         Assert.Empty(future.Items);
         Assert.Equal(5, since.Items.Count + rest.Items.Count);
         Assert.Null(rest.NextCursor);

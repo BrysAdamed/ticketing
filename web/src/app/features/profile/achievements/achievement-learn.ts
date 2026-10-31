@@ -28,7 +28,7 @@ const sessionTour = (step: string): AchievementLearnTarget => ({
   step,
 });
 
-/// The learn action of each catalogue entry that has one (spec 15.9, D-154, D-169). Tours with a
+/// The learn action of each catalogue entry that has one (spec 15.9, D-154, D-170). Tours with a
 /// path start in a project; the ticket, board and regression-session tours first open one the user
 /// can read. Show me (attachments) and Epic finisher have no matching tour step. Secret entries
 /// never appear here.
@@ -152,7 +152,7 @@ export function learnActionFor(item: MyAchievement): AchievementLearnAction | nu
   return ACHIEVEMENT_LEARN_ACTIONS.get(item.id) ?? null;
 }
 
-/// Looks up what the target opens before it starts (a ticket, a board or a session, D-169); call it
+/// Looks up what the target opens before it starts (a ticket, a board or a session, D-170); call it
 /// when the action is shown, so `canStartLearn` can turn true.
 export function prepareLearn(learn: LearnActions, target: AchievementLearnTarget): void {
   if (target.kind === 'tour') learn.prepareTour(target.viewId);

@@ -18,5 +18,6 @@
   <ItemGroup>
     <Using Include="Xunit" />
     <Using Include="Microsoft.Extensions.DependencyInjection" />
+    <None Include="..\..\web\src\app\core\flags\flag-keys.ts" Link="TestData\flag-keys.ts" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

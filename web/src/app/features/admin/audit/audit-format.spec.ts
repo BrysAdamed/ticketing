@@ -74,6 +74,51 @@ describe('describeAuditEntry', () => {
     });
   });
 
+  it('describes a reset to the code default with the targeting before and after', () => {
+    // Act
+    const description = describeAuditEntry(
+      entry({
+        entityType: 'FeatureFlag',
+        entityLabel: 'agent.delegate',
+        action: 'flag.reset',
+        field: 'configuration',
+        oldValue: {
+          enabled: true,
+          rolloutPercentage: 0,
+          targetUserIds: ['u1'],
+          targetRoles: ['Admin'],
+        },
+        newValue: { enabled: false, rolloutPercentage: 0, targetUserIds: [], targetRoles: [] },
+      }),
+    );
+
+    // Assert
+    expect(description).toEqual({
+      verb: 'reset to its default',
+      target: 'agent.delegate',
+      detail: 'Roles: Admin · 1 user → Disabled',
+    });
+  });
+
+  it('describes a flag the startup sync registered from code', () => {
+    // Act
+    const description = describeAuditEntry(
+      entry({
+        entityType: 'FeatureFlag',
+        entityLabel: 'ticket.subtickets-graph',
+        action: 'flag.registered',
+        newValue: { key: 'ticket.subtickets-graph', enabled: true, rolloutPercentage: 100 },
+      }),
+    );
+
+    // Assert
+    expect(description).toEqual({
+      verb: 'registered flag',
+      target: 'ticket.subtickets-graph',
+      detail: 'Default on, declared in code',
+    });
+  });
+
   it('falls back to the name stored in the entry when the entity is gone', () => {
     // Act
     const description = describeAuditEntry(

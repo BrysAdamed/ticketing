@@ -236,6 +236,7 @@ public sealed class SharedAchievementsTests(TicketingApiFactory api)
     {
         // Arrange
         var user = await api.CreateUserAsync();
+        await api.SetAchievementsFlagAsync();
         await SeedAsync(user, (AchievementCatalog.Reporter, 1));
         await using var mcp = await api.CreateMcpClientAsync(await api.CreatePatAsync(user));
         await using var readOnlyMcp = await api.CreateMcpClientAsync(await api.CreatePatAsync(user, PatScope.ReadOnly));

@@ -319,13 +319,19 @@ One user operation that changes several fields writes one entry per field with t
 | --- | --- | --- |
 | Id | uuid | |
 | Key | text(64) | Regex `^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*$`, for example `board.swimlanes` or `ticket-view.v2`. Unique. Immutable. |
-| Description | text(500)? | |
-| Enabled | bool | Master switch. Default false. |
-| RolloutPercentage | int | 0..100. Default 0. |
+| Description | text(500)? | Taken from code at every start. |
+| Enabled | bool | Master switch. Starts from the declared default. |
+| RolloutPercentage | int | 0..100. Starts from the declared default. |
 | TargetUserIds | uuid[] | Up to 200. |
 | TargetRoles | GlobalRole[] | |
-| CreatedAt, UpdatedAt, UpdatedById | | |
+| CreatedAt, UpdatedAt, UpdatedById | | `UpdatedById` is null (shown as "System") until an Admin changes the flag. |
 | RowVersion | | |
+
+Flags are declared in code (D-169), not created in the UI or the API. Each feature declares its flag in one catalog with a key, a description and a default, on or off. At startup the API brings the rows in line with the catalog:
+
+- A declared key without a row gets one from its default, with a `flag.registered` ActivityEntry by System. Default **on** is `Enabled = true, RolloutPercentage = 100`; default **off** is `Enabled = false, RolloutPercentage = 0`; neither has targets.
+- An existing row keeps its targeting; a deploy never resets it. Only its description is refreshed from code.
+- A row whose key is no longer declared stays, as a **retired** flag: it evaluates `off`, is left out of `/me/flags`, and is the only kind an Admin can delete.
 
 Evaluation in 6.13.
 
@@ -603,18 +609,18 @@ Completion and cancellation:
 
 Evaluation for a signed-in user, first match wins:
 
-1. Flag does not exist: `off`.
+1. Flag not declared in code (unknown or retired): `off`. Declared but without a row yet: its declared default.
 2. `Enabled = false`: `off`.
 3. User id is in `TargetUserIds`: `on`.
 4. User's global role is in `TargetRoles`: `on`.
 5. `bucket(flagKey, userId) < RolloutPercentage`: `on`. `bucket` = first 4 bytes of SHA-256(UTF-8 `"{flagKey}:{userId}"`) as unsigned big-endian integer, mod 100. Stable across restarts and across C# and TypeScript.
 6. Otherwise `off`.
 
-Contract: `GET /api/v1/me/flags` returns `{ "flags": { "<key>": "<variant>" } }` where the variant is `on` or `off` in v1. The variant is a string, not a boolean, so multi-variant A/B tests can add variants later without changing clients. The Angular app loads flags once at startup and on window focus if older than 5 minutes.
+Contract: `GET /api/v1/me/flags` returns `{ "flags": { "<key>": "<variant>" } }` for every declared flag, where the variant is `on` or `off` in v1. The variant is a string, not a boolean, so multi-variant A/B tests can add variants later without changing clients. The Angular app loads flags once at startup and on window focus if older than 5 minutes.
 
 View variants (A/B readiness, D-14): every routed page is resolved through a view registry keyed by a view id (for example `ticket-detail`). In v1 each view has exactly one variant, `default`. A view may name a flag; the registry renders the component registered for that flag's variant and falls back to `default`. No page imports another page's component directly. This is the only A/B work in v1; no second variants are built.
 
-Flag changes write ActivityEntries. Admin UI: list, create, edit, delete; shows how many users currently evaluate `on` (computed from active users).
+Flag changes write ActivityEntries. Admin UI (4.15, D-169): lists every declared flag with a "Default: on/off" chip and a "Changed" marker when its configuration differs from the default, and shows how many users currently evaluate `on` (computed from active users). Admins change targeting only (master switch, rollout, users, roles); the description is read-only. **Reset to default** (`POST /api/v1/admin/flags/{key}/reset`) restores the declared default, clears all targeting and writes a `flag.reset` entry. Retired flags are listed last, dimmed, as "Not used by the code"; **Delete** is offered for them only (`DELETE` on a declared flag is 409 `flag.notRetired`, reset on a retired one 409 `flag.retired`). There is no create (`POST /api/v1/admin/flags` is 405).
 
 ### 6.14 User and authentication lifecycle (D-01)
 
@@ -1563,7 +1569,7 @@ The look is `docs/design/mockups/achievements.html`, layout-and-screens §3.9b a
 - While nothing is earned yet, an empty state says "Achievements start counting now" (no backfill, D-144), with Still to earn below.
 - Opening the tab marks every earned, unseen tier seen (`POST /me/achievements/seen` with the ids).
 
-**How to earn** (TKT-93, D-154, TKT-101, D-169). The detail of an achievement with no tier earned yet shows its `howToEarn` hint and, when a matching learn action exists, a footer with one sentence saying what it starts and a **Show me** button. The button closes the popover and starts the action through `LearnActions` (D-143): the backlog tour for Reporter, Bug hunter, Closer, Ready for review, Exterminator and Triage, the test cases tour for Test author, the "Your first project" walkthrough at Create a board for Board builder, Help → Connect an AI agent for Machine whisperer, the ticket tour on a readable ticket at Links (Connector), @mentions (Conversationalist, Shout-out) or Delegate to agent (Delegator), the regression-session tour on a readable session at Record a result (Regression runner) or Create a bug from a failure (Found it), "How regressions work" for Full sweep, and the board tour on a board (one the user owns first) for Spring cleaning. Show me (attachments) and Epic finisher have none. It is hidden while its target cannot start (for example no project to open a tour in, or no ticket, board or session the user can read). Secret entries never get a hint or an action. The nudge stays in the popover: no toasts, notifications or emails about unearned achievements, and nothing shows while the achievements UI is hidden.
+**How to earn** (TKT-93, D-154, TKT-101, D-170). The detail of an achievement with no tier earned yet shows its `howToEarn` hint and, when a matching learn action exists, a footer with one sentence saying what it starts and a **Show me** button. The button closes the popover and starts the action through `LearnActions` (D-143): the backlog tour for Reporter, Bug hunter, Closer, Ready for review, Exterminator and Triage, the test cases tour for Test author, the "Your first project" walkthrough at Create a board for Board builder, Help → Connect an AI agent for Machine whisperer, the ticket tour on a readable ticket at Links (Connector), @mentions (Conversationalist, Shout-out) or Delegate to agent (Delegator), the regression-session tour on a readable session at Record a result (Regression runner) or Create a bug from a failure (Found it), "How regressions work" for Full sweep, and the board tour on a board (one the user owns first) for Spring cleaning. Show me (attachments) and Epic finisher have none. It is hidden while its target cannot start (for example no project to open a tour in, or no ticket, board or session the user can read). Secret entries never get a hint or an action. The nudge stays in the popover: no toasts, notifications or emails about unearned achievements, and nothing shows while the achievements UI is hidden.
 
 ### 15.10 Unlock toast
 

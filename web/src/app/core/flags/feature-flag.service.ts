@@ -18,7 +18,7 @@ interface FlagsResponse {
 
 /// Feature flags evaluated by the server for the signed-in user (spec 6.13). Loaded at sign-in
 /// and refreshed on window focus when older than five minutes. Keys are declared in
-/// `flag-keys.ts` (D-168); a key the server did not send is `off`.
+/// `flag-keys.ts` (D-169); a key the server did not send is `off`.
 @Injectable({ providedIn: 'root' })
 export class FeatureFlagService {
   private readonly api = inject(ApiClient);

@@ -79,6 +79,7 @@ test.describe('signed in', () => {
         await shell.expectVisible();
         await expect(shell.navLink('nav-all-projects')).toBeVisible();
         await page.goto('/projects');
+        await page.getByTestId('projects-filter').fill(project.key);
         await expect(page.getByTestId(`project-row-${project.key}`)).toBeVisible();
     });
 

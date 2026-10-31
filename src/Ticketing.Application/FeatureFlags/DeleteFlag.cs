@@ -7,7 +7,7 @@ using Ticketing.Domain.FeatureFlags;
 namespace Ticketing.Application.FeatureFlags;
 
 /// <summary>
-/// Deletes a retired flag (one the code no longer declares, D-168); a declared flag is refused with <c>flag.notRetired</c>. The
+/// Deletes a retired flag (one the code no longer declares, D-169); a declared flag is refused with <c>flag.notRetired</c>. The
 /// audit entry keeps the last configuration.
 /// </summary>
 public static class DeleteFlag

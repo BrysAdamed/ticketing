@@ -64,7 +64,7 @@ export class FeatureFlagsStore {
     }
   }
 
-  /// Restores the code default and clears targeting (D-168); rolls back on failure.
+  /// Restores the code default and clears targeting (D-169); rolls back on failure.
   async reset(flag: FeatureFlag): Promise<void> {
     const on = flag.defaultOn === true;
     this.replace({

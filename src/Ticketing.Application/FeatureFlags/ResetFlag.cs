@@ -7,7 +7,7 @@ using Ticketing.Domain.FeatureFlags;
 namespace Ticketing.Application.FeatureFlags;
 
 /// <summary>
-/// Restores the default declared in code and clears all targeting (D-168), with a <c>flag.reset</c> entry holding the
+/// Restores the default declared in code and clears all targeting (D-169), with a <c>flag.reset</c> entry holding the
 /// configuration before and after. A retired flag has no default and is refused with <c>flag.retired</c>.
 /// </summary>
 public static class ResetFlag

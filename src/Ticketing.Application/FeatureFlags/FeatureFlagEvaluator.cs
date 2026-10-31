@@ -8,7 +8,7 @@ namespace Ticketing.Application.FeatureFlags;
 public sealed record FlagSubject(Guid UserId, GlobalRole Role);
 
 /// <summary>
-/// Evaluates the declared feature flags (spec 6.13, D-168). A flag that is not declared, or retired, is <c>off</c>; a declared
+/// Evaluates the declared feature flags (spec 6.13, D-169). A flag that is not declared, or retired, is <c>off</c>; a declared
 /// flag without a row yet evaluates to its default. Use <see cref="IsOnAsync"/> to gate server-side behaviour.
 /// </summary>
 public interface IFeatureFlags

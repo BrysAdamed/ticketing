@@ -71,11 +71,12 @@ export class ProjectsListView {
 
   protected readonly filterOptions = computed<SegmentOption<ProjectFilter>[]>(() => {
     const counts = this.store.counts();
+    const count = (value: number) => (this.store.capped() ? undefined : value);
     return [
-      { value: 'all', label: 'All', count: counts.all },
-      { value: 'mine', label: 'Mine', count: counts.mine },
-      { value: 'public', label: 'Public', count: counts.public },
-      { value: 'private', label: 'Private', count: counts.private },
+      { value: 'all', label: 'All', count: count(counts.all) },
+      { value: 'mine', label: 'Mine', count: count(counts.mine) },
+      { value: 'public', label: 'Public', count: count(counts.public) },
+      { value: 'private', label: 'Private', count: count(counts.private) },
     ];
   });
 

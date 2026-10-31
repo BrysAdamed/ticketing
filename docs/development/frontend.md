@@ -230,7 +230,7 @@ The pieces: `OnboardingDialogs` (`core/onboarding/onboarding-dialogs.ts`, eager 
 
 ## Adding a feature flag
 
-Flags are declared in the C# catalog first (backend.md "Adding a feature flag", D-168); the SPA only mirrors the keys.
+Flags are declared in the C# catalog first (backend.md "Adding a feature flag", D-169); the SPA only mirrors the keys.
 
 1. **Declare it in the backend** with a description and a deliberate default (on or off). The Admin page lists it from the first start; nothing is created in the UI.
 2. **Mirror the key** in `core/flags/flag-keys.ts`: one `export const MY_FLAG = 'my.flag';` and add it to the `FlagKey` union. `FeatureFlagService.isOn` / `variant`, `featureGuard`, `*tkFeature`, view definitions and What's new items accept only `FlagKey`, so a typo does not compile. `dotnet test` fails while the key is missing from the C# catalog.

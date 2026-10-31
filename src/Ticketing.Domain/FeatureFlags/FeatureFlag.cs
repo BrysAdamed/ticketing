@@ -42,7 +42,7 @@ public sealed partial class FeatureFlag
     public static bool IsValidKey(string key) => key.Length <= KeyMaxLength && KeyPattern().IsMatch(key);
 
     /// <summary>
-    /// The row of a flag declared in code, configured with its default (D-168): on is enabled for 100% of users, off is disabled
+    /// The row of a flag declared in code, configured with its default (D-169): on is enabled for 100% of users, off is disabled
     /// at 0%. Nobody changed it yet, so <see cref="UpdatedById"/> is null.
     /// </summary>
     public static FeatureFlag Register(string key, string? description, bool defaultOn, DateTimeOffset now)

@@ -8,7 +8,7 @@ using Ticketing.Domain.Users;
 namespace Ticketing.Application.FeatureFlags;
 
 /// <summary>
-/// PATCH of a flag's targeting; the key and the description come from code (D-168). Each changed field writes a
+/// PATCH of a flag's targeting; the key and the description come from code (D-169). Each changed field writes a
 /// <c>flag.updated</c> entry.
 /// </summary>
 public static class UpdateFlag

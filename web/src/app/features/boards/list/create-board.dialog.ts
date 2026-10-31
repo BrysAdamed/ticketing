@@ -5,7 +5,12 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { toApiError } from '@core/api/api-error';
 import { Board, NewBoard } from '@core/boards/board.models';
-import { ProjectDirectory } from '@core/projects/project-directory';
+import {
+  MAX_LISTED_PROJECTS,
+  ProjectDirectory,
+  ProjectSummary,
+} from '@core/projects/project-directory';
+import { injectProjectSearch } from '@core/projects/project-search';
 import { ProjectTileComponent } from '@shared/ui/domain/project-tile.component';
 import { IconComponent } from '@shared/ui/icon/icon.component';
 
@@ -17,6 +22,10 @@ export interface CreateBoardDialogData {
 }
 
 const MAX_PROJECTS = 20;
+
+function canWrite(project: ProjectSummary): boolean {
+  return !project.archivedAt && (project.myRole === 'Owner' || project.myRole === 'Member');
+}
 
 /// New board: a name, an optional description and 1..20 projects the user can write to.
 @Component({
@@ -75,6 +84,11 @@ const MAX_PROJECTS = 20;
         [value]="filter()"
         (input)="filter.set($any($event.target).value)"
       />
+      @if (capped() && !filter().trim()) {
+        <div class="muted capped" data-testid="create-board-projects-capped">
+          Showing the first {{ listedProjects }} projects, type to search
+        </div>
+      }
       <div class="projects" role="group" aria-label="Projects">
         @for (project of visibleProjects(); track project.id) {
           <button
@@ -84,7 +98,7 @@ const MAX_PROJECTS = 20;
             [attr.aria-pressed]="selected().has(project.key)"
             [attr.data-testid]="'create-board-project-' + project.key"
             [disabled]="!selected().has(project.key) && selected().size >= maxProjects"
-            (click)="toggle(project.key)"
+            (click)="toggle(project)"
           >
             <span class="box" [class.on]="selected().has(project.key)">
               @if (selected().has(project.key)) {
@@ -96,9 +110,15 @@ const MAX_PROJECTS = 20;
             <span class="muted">{{ project.key }}</span>
           </button>
         } @empty {
-          <div class="muted empty">
-            You need write access to at least one project to create a board.
-          </div>
+          @if (filter().trim()) {
+            <div class="muted empty">
+              {{ search.searching() ? 'Searching…' : 'No projects match.' }}
+            </div>
+          } @else {
+            <div class="muted empty">
+              You need write access to at least one project to create a board.
+            </div>
+          }
         }
       </div>
       @if (error(); as message) {
@@ -192,6 +212,10 @@ const MAX_PROJECTS = 20;
     .empty {
       padding: 12px;
     }
+    .capped {
+      margin-bottom: 6px;
+      font-size: var(--tk-text-sm);
+    }
   `,
 })
 export class CreateBoardDialog {
@@ -208,32 +232,68 @@ export class CreateBoardDialog {
   protected readonly error = signal<string | null>(null);
 
   protected readonly filter = signal('');
-  protected readonly projects = computed(() =>
-    this.directory.activeProjects().filter((p) => p.myRole === 'Owner' || p.myRole === 'Member'),
-  );
+  protected readonly search = injectProjectSearch(() => this.filter());
+  protected readonly capped = this.directory.capped;
+  protected readonly listedProjects = MAX_LISTED_PROJECTS;
+  private readonly picked = signal<ReadonlyMap<string, ProjectSummary>>(new Map());
+  protected readonly projects = computed(() => this.directory.activeProjects().filter(canWrite));
   protected readonly visibleProjects = computed(() => {
     const term = this.filter().trim().toLowerCase();
-    if (!term) return this.projects();
-    return this.projects().filter(
-      (p) =>
-        this.selected().has(p.key) ||
-        p.key.toLowerCase().includes(term) ||
-        p.name.toLowerCase().includes(term),
+    const selected = this.selected();
+    const source = term ? (this.search.results() ?? this.projects()) : this.projects();
+    const shown = term
+      ? source.filter(
+          (p) =>
+            canWrite(p) &&
+            (selected.has(p.key) ||
+              p.key.toLowerCase().includes(term) ||
+              p.name.toLowerCase().includes(term)),
+        )
+      : source;
+    const keys = new Set(shown.map((p) => p.key));
+    const extra = [...this.picked().values()].filter(
+      (p) => selected.has(p.key) && !keys.has(p.key),
     );
+    return [...extra, ...shown];
   });
   protected readonly valid = computed(
     () => this.name().trim().length > 0 && this.selected().size > 0,
   );
 
   constructor() {
-    void this.directory.load();
+    void this.directory.load().then(() => this.resolveSuggestedProjects());
   }
 
-  protected toggle(key: string): void {
+  protected toggle(project: ProjectSummary): void {
+    const on = !this.selected().has(project.key);
     this.selected.update((set) => {
       const next = new Set(set);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
+      if (on) next.add(project.key);
+      else next.delete(project.key);
+      return next;
+    });
+    this.picked.update((map) => {
+      const next = new Map(map);
+      if (on) next.set(project.key, project);
+      else next.delete(project.key);
+      return next;
+    });
+  }
+
+  private async resolveSuggestedProjects(): Promise<void> {
+    const missing = [...this.selected()].filter((key) => !this.directory.byKey(key));
+    if (!missing.length || !this.directory.capped()) return;
+    const found = await Promise.all(
+      missing.map((key) =>
+        this.directory
+          .search(key)
+          .then((items) => items.find((p) => p.key === key))
+          .catch(() => undefined),
+      ),
+    );
+    this.picked.update((map) => {
+      const next = new Map(map);
+      for (const project of found) if (project) next.set(project.key, project);
       return next;
     });
   }

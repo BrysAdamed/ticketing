@@ -9,7 +9,7 @@ using Ticketing.Domain.FeatureFlags;
 namespace Ticketing.Application.FeatureFlags;
 
 /// <summary>
-/// Brings the flag rows in line with the catalog (D-168): a declared flag without a row gets one with its default and a
+/// Brings the flag rows in line with the catalog (D-169): a declared flag without a row gets one with its default and a
 /// <c>flag.registered</c> entry by System; an existing row only takes the description from code, so an Admin's targeting
 /// survives every deploy. Rows no longer declared stay as they are (retired). Runs at startup and before every flag admin use
 /// case; a cheap read when nothing is due, idempotent, and safe when several instances or requests run it at once.

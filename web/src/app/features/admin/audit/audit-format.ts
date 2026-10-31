@@ -124,7 +124,7 @@ function describeAgentPrompt(entry: AuditEntry): AuditDescription {
   return { verb: 'changed agent prompt', target, detail: versions + modes };
 }
 
-/// "reset to its default agent.delegate · Roles: Admin → Disabled" (D-168).
+/// "reset to its default agent.delegate · Roles: Admin → Disabled" (D-169).
 function describeFlagReset(entry: AuditEntry): AuditDescription {
   const before = asRecord(entry.oldValue);
   const now = asRecord(entry.newValue);

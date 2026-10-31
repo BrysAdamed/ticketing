@@ -3,7 +3,7 @@ using Ticketing.Application.FeatureFlags;
 
 namespace Ticketing.Api.Endpoints;
 
-/// <summary>Feature flag administration (spec 6.13), Admins in the web app only. Flags are declared in code, so there is no create (D-168).</summary>
+/// <summary>Feature flag administration (spec 6.13), Admins in the web app only. Flags are declared in code, so there is no create (D-169).</summary>
 public sealed class FeatureFlagEndpoints : IEndpointModule
 {
     public void MapEndpoints(RouteGroupBuilder api)

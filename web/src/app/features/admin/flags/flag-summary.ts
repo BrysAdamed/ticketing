@@ -15,7 +15,7 @@ export function targetingSummary(flag: {
   return parts.length > 0 ? parts.join(' · ') : 'Nobody targeted';
 }
 
-/// Declared flags by key, then the retired ones (no longer read by the code) by key (D-168).
+/// Declared flags by key, then the retired ones (no longer read by the code) by key (D-169).
 export function groupFlags<T extends { key: string; retired: boolean }>(
   flags: readonly T[],
 ): { declared: T[]; retired: T[] } {

@@ -1,7 +1,7 @@
 import { FeatureFlagsPage } from '../../pages/identity.page';
 import { expect, test } from '../../support/fixtures';
 
-/// `agent.delegate` is declared in code with default off (D-168). It is instance-wide, so this
+/// `agent.delegate` is declared in code with default off (D-169). It is instance-wide, so this
 /// spec runs in the serial `agents` project with the other specs that switch it.
 const KEY = 'agent.delegate';
 

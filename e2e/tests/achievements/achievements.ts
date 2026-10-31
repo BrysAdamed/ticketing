@@ -18,7 +18,7 @@ interface MyAchievement {
 }
 
 /// Turns the flag on for these users, keeping any users other specs targeted. The flag is declared in code, so it always
-/// exists (D-168). Specs run in parallel and all edit it, so a patch on a stale row version (409) is retried until the
+/// exists (D-169). Specs run in parallel and all edit it, so a patch on a stale row version (409) is retried until the
 /// users stick.
 export async function enableAchievementsFor(api: Api, userIds: string[]): Promise<void> {
     for (let attempt = 0; attempt < 20; attempt++) {

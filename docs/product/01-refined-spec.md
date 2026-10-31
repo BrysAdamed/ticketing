@@ -327,7 +327,7 @@ One user operation that changes several fields writes one entry per field with t
 | CreatedAt, UpdatedAt, UpdatedById | | `UpdatedById` is null (shown as "System") until an Admin changes the flag. |
 | RowVersion | | |
 
-Flags are declared in code (D-168), not created in the UI or the API. Each feature declares its flag in one catalog with a key, a description and a default, on or off. At startup the API brings the rows in line with the catalog:
+Flags are declared in code (D-169), not created in the UI or the API. Each feature declares its flag in one catalog with a key, a description and a default, on or off. At startup the API brings the rows in line with the catalog:
 
 - A declared key without a row gets one from its default, with a `flag.registered` ActivityEntry by System. Default **on** is `Enabled = true, RolloutPercentage = 100`; default **off** is `Enabled = false, RolloutPercentage = 0`; neither has targets.
 - An existing row keeps its targeting; a deploy never resets it. Only its description is refreshed from code.
@@ -620,7 +620,7 @@ Contract: `GET /api/v1/me/flags` returns `{ "flags": { "<key>": "<variant>" } }`
 
 View variants (A/B readiness, D-14): every routed page is resolved through a view registry keyed by a view id (for example `ticket-detail`). In v1 each view has exactly one variant, `default`. A view may name a flag; the registry renders the component registered for that flag's variant and falls back to `default`. No page imports another page's component directly. This is the only A/B work in v1; no second variants are built.
 
-Flag changes write ActivityEntries. Admin UI (4.15, D-168): lists every declared flag with a "Default: on/off" chip and a "Changed" marker when its configuration differs from the default, and shows how many users currently evaluate `on` (computed from active users). Admins change targeting only (master switch, rollout, users, roles); the description is read-only. **Reset to default** (`POST /api/v1/admin/flags/{key}/reset`) restores the declared default, clears all targeting and writes a `flag.reset` entry. Retired flags are listed last, dimmed, as "Not used by the code"; **Delete** is offered for them only (`DELETE` on a declared flag is 409 `flag.notRetired`, reset on a retired one 409 `flag.retired`). There is no create (`POST /api/v1/admin/flags` is 405).
+Flag changes write ActivityEntries. Admin UI (4.15, D-169): lists every declared flag with a "Default: on/off" chip and a "Changed" marker when its configuration differs from the default, and shows how many users currently evaluate `on` (computed from active users). Admins change targeting only (master switch, rollout, users, roles); the description is read-only. **Reset to default** (`POST /api/v1/admin/flags/{key}/reset`) restores the declared default, clears all targeting and writes a `flag.reset` entry. Retired flags are listed last, dimmed, as "Not used by the code"; **Delete** is offered for them only (`DELETE` on a declared flag is 409 `flag.notRetired`, reset on a retired one 409 `flag.retired`). There is no create (`POST /api/v1/admin/flags` is 405).
 
 ### 6.14 User and authentication lifecycle (D-01)
 

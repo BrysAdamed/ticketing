@@ -10,7 +10,7 @@ namespace Ticketing.Application.FeatureFlags;
 /// <summary>
 /// A flag in the admin screens. <see cref="UsersOn"/> is how many of the <see cref="ActiveUsers"/> currently evaluate
 /// <c>on</c> (spec 6.13). <see cref="DefaultOn"/> is the default declared in code, null for a <see cref="Retired"/> flag (one
-/// the code no longer declares); <see cref="IsDefault"/> is whether the configuration equals that default (D-168).
+/// the code no longer declares); <see cref="IsDefault"/> is whether the configuration equals that default (D-169).
 /// </summary>
 public sealed record FlagDto(
     Guid Id,

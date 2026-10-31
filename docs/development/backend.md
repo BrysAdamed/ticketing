@@ -281,7 +281,7 @@ Achievements (spec 15, D-144, D-145) are a catalogue in code plus one criterion 
 
 ## Adding a feature flag
 
-Flags are declared in code (spec 4.15, D-168); nobody creates them in the UI.
+Flags are declared in code (spec 4.15, D-169); nobody creates them in the UI.
 
 1. **Declare it** in `Application/FeatureFlags/FeatureFlagCatalog.cs`: a `public static readonly FeatureFlagDefinition` and an entry in `All`. The key follows the spec 4.15 regex and is never renamed (a rename is a new flag plus a retired one). The description is what Admins read on the Feature flags page.
 2. **Choose the default** deliberately: on is enabled for everyone, off is disabled. It applies to instances that have no row for the key yet; an existing row keeps the Admin's targeting. Say in the ticket why you chose it.

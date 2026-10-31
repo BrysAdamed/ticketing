@@ -41,7 +41,7 @@ export interface AdminToken extends PatSummary {
   user: UserLookup;
 }
 
-/// A flag declared in code (D-168). `defaultOn` is null and `retired` true once the code no
+/// A flag declared in code (D-169). `defaultOn` is null and `retired` true once the code no
 /// longer declares it; `isDefault` says whether the targeting equals the code default.
 export interface FeatureFlag {
   id: string;
@@ -62,7 +62,7 @@ export interface FeatureFlag {
   rowVersion: number;
 }
 
-/// Targeting an Admin can change; key and description come from code (D-168).
+/// Targeting an Admin can change; key and description come from code (D-169).
 export interface FlagInput {
   enabled: boolean;
   rolloutPercentage: number;

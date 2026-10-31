@@ -1,7 +1,7 @@
 namespace Ticketing.Application.FeatureFlags;
 
 /// <summary>
-/// A feature flag declared in code (D-168): its key, the description Admins see, and the configuration a new instance starts
+/// A feature flag declared in code (D-169): its key, the description Admins see, and the configuration a new instance starts
 /// with. Default on means enabled for 100% of users, default off means disabled.
 /// </summary>
 public sealed record FeatureFlagDefinition(string Key, string Description, bool DefaultOn);

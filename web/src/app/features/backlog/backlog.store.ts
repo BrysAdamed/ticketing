@@ -438,9 +438,9 @@ export class BacklogStore {
     return this.rank(ids, { position }, { position });
   }
 
-  /// `M` / "Move to board": asks whether sub-tickets come along (TKT-71), then the tickets (and those
-  /// sub-tickets) leave the backlog at once; Undo brings them back to the same place (before the
-  /// ticket that followed them).
+  /// `M`, "Move to board" and a drop on the "On boards" panel: asks whether sub-tickets come along
+  /// (TKT-71), then the tickets (and those sub-tickets) leave the backlog at once and the selection
+  /// loses them; Undo brings them back to the same place (before the ticket that followed them).
   async moveToBoard(ids: readonly string[], boardId: string, boardName: string): Promise<void> {
     const order = this.order();
     const selected = order.filter((id) => ids.includes(id) && !isPending(id));
@@ -466,7 +466,12 @@ export class BacklogStore {
     const nextId = order.slice(last + 1).find((id) => !moving.includes(id) && !isPending(id));
     const anchorKey = nextId ? this.item(nextId)?.key : undefined;
     this.items.update((items) => items.filter((i) => !moving.includes(i.id)));
-    this.clearSelection();
+    this.selection.update((state) =>
+      prune(
+        state,
+        this.items().map((i) => i.id),
+      ),
+    );
     try {
       const moved = await firstValueFrom(
         this.api.move({

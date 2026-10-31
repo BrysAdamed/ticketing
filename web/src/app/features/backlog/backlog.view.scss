@@ -63,12 +63,92 @@
 .on-boards {
   display: flex;
   align-items: center;
-  gap: 6px;
-  height: 36px;
+  gap: 12px;
+  height: 40px;
   padding: 0 20px 0 24px;
   color: var(--tk-text-subtle);
   font-size: var(--tk-text-sm);
   border-top: 1px solid var(--tk-border-subtle);
+  transition: background-color 120ms ease;
+
+  .summary {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+
+  .targets {
+    display: flex;
+    gap: 6px;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .target {
+    height: 26px;
+    max-width: 200px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 10px;
+    border: 1px solid var(--tk-border);
+    border-radius: var(--tk-radius-md);
+    background: var(--tk-surface);
+    color: var(--tk-text);
+    font: inherit;
+    font-size: var(--tk-text-sm);
+    white-space: nowrap;
+    cursor: pointer;
+
+    .name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    &:hover:not([aria-disabled='true']) {
+      background: var(--tk-bg-hover);
+    }
+
+    &[aria-disabled='true'] {
+      color: var(--tk-text-muted);
+      cursor: default;
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--tk-focus);
+      outline-offset: 1px;
+    }
+  }
+
+  .drop-hint {
+    flex: none;
+    margin-left: auto;
+    white-space: nowrap;
+  }
+
+  &.dragging {
+    background: var(--tk-bg-subtle);
+    color: var(--tk-text-muted);
+
+    .target {
+      border-style: dashed;
+      border-color: var(--tk-border-strong);
+      color: var(--tk-text);
+    }
+
+    .target.over {
+      border-style: solid;
+      border-color: var(--tk-accent);
+      background: var(--tk-accent-subtle);
+      color: var(--tk-accent-fg);
+    }
+  }
 }
 
 .tbtn {
@@ -200,6 +280,10 @@
   background: var(--tk-surface-raised);
   box-shadow: var(--tk-shadow-lg);
   transform: scale(1.02);
+
+  &.above {
+    translate: 0 calc(-100% - 12px);
+  }
 
   .key {
     color: var(--tk-text-muted);

@@ -13,17 +13,20 @@ public enum NotificationKind
     Moved = 6,
     Deleted = 7,
     RegressionItemAssigned = 8,
+    DocUpdated = 9,
 }
 
 /// <summary>
 /// An in-app notification for one recipient (I-30, D-94) about a ticket, a regression item or a doc. Rapid changes by the same
 /// actor on the same ticket, regression session or doc are merged into one row; the headline (kind and summary) is the highest ranked event. The summary is a short
-/// server-rendered sentence without user content, so nothing a user removes later lingers here.
+/// server-rendered sentence without user content, so nothing a user removes later lingers here. New versions of a doc collapse
+/// over the longer <see cref="PublishCollapseWindow"/> (D-173).
 /// </summary>
 public sealed class Notification
 {
     public const int SummaryMaxLength = 300;
     public static readonly TimeSpan CollapseWindow = TimeSpan.FromMinutes(5);
+    public static readonly TimeSpan PublishCollapseWindow = TimeSpan.FromHours(1);
     public static readonly TimeSpan Retention = TimeSpan.FromDays(90);
 
     private Notification()
@@ -43,6 +46,9 @@ public sealed class Notification
     public string? TestCaseKey { get; private set; }
 
     public Guid? DocNodeId { get; private set; }
+
+    /// <summary>For <see cref="NotificationKind.DocUpdated"/>: the version the first merged publish created, so the link can show every change since.</summary>
+    public int? DocVersion { get; private set; }
 
     public Guid? ActorId { get; private set; }
 
@@ -78,39 +84,50 @@ public sealed class Notification
         });
     }
 
-    public static Notification AboutDoc(Guid recipientId, Guid projectId, Guid docNodeId, Guid? actorId, NotificationKind kind, string summary, DateTimeOffset now)
+    /// <param name="docVersion">The version a <see cref="NotificationKind.DocUpdated"/> event published; null for other kinds.</param>
+    public static Notification AboutDoc(
+        Guid recipientId, Guid projectId, Guid docNodeId, Guid? actorId, NotificationKind kind, string summary, DateTimeOffset now, int? docVersion = null)
     {
         if (docNodeId == Guid.Empty)
             throw new ArgumentException("A doc notification needs a doc.", nameof(docNodeId));
-        return Create(recipientId, projectId, actorId, kind, summary, now, n => n.DocNodeId = docNodeId);
+        if (docVersion is < 1)
+            throw new ArgumentOutOfRangeException(nameof(docVersion));
+        return Create(recipientId, projectId, actorId, kind, summary, now, n =>
+        {
+            n.DocNodeId = docNodeId;
+            n.DocVersion = docVersion;
+        });
     }
 
     /// <summary>Headline rank: the kind shown when several events are merged into one notification (higher wins).</summary>
     public static int Rank(NotificationKind kind) => kind switch
     {
-        NotificationKind.Mentioned => 8,
-        NotificationKind.Assigned => 7,
-        NotificationKind.RegressionItemAssigned => 6,
-        NotificationKind.Deleted => 5,
-        NotificationKind.StatusChanged => 4,
-        NotificationKind.PriorityRaised => 3,
-        NotificationKind.Commented => 2,
-        NotificationKind.Moved => 1,
+        NotificationKind.Mentioned => 9,
+        NotificationKind.Assigned => 8,
+        NotificationKind.RegressionItemAssigned => 7,
+        NotificationKind.Deleted => 6,
+        NotificationKind.StatusChanged => 5,
+        NotificationKind.PriorityRaised => 4,
+        NotificationKind.Commented => 3,
+        NotificationKind.Moved => 2,
+        NotificationKind.DocUpdated => 1,
         _ => 0,
     };
 
     /// <summary>
     /// Whether an event is merged into this notification: same recipient, actor and ticket (or regression session, or doc),
-    /// still unread, and within <see cref="CollapseWindow"/> of the first event, so the row keeps its place in the list.
+    /// still unread, and within <see cref="CollapseWindow"/> of the first event, so the row keeps its place in the list. A new
+    /// version merges into a notification headed by new versions for <see cref="PublishCollapseWindow"/> instead (D-173).
     /// </summary>
-    public bool Absorbs(Guid recipientId, Guid? actorId, Guid? ticketId, Guid? regressionSessionId, Guid? docNodeId, DateTimeOffset at) =>
+    public bool Absorbs(
+        Guid recipientId, Guid? actorId, Guid? ticketId, Guid? regressionSessionId, Guid? docNodeId, NotificationKind kind, DateTimeOffset at) =>
         ReadAt is null
         && RecipientId == recipientId
         && ActorId == actorId
         && TicketId == ticketId
         && RegressionSessionId == regressionSessionId
         && DocNodeId == docNodeId
-        && at - CreatedAt <= CollapseWindow;
+        && at - CreatedAt <= (Kind == NotificationKind.DocUpdated && kind == NotificationKind.DocUpdated ? PublishCollapseWindow : CollapseWindow);
 
     public void Merge(NotificationKind kind, string summary, DateTimeOffset at)
     {

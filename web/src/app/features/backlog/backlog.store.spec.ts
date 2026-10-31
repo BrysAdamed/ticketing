@@ -275,6 +275,33 @@ describe('BacklogStore', () => {
     expect(toast.success.mock.calls[0][1].action.label).toBe('Undo');
   });
 
+  it('keeps the rest of the selection when a ticket outside it moves to a board', async () => {
+    // Arrange
+    api.move.mockReturnValue(of([]));
+    store.click('id-1', 'toggle');
+    store.click('id-2', 'toggle');
+
+    // Act
+    await store.moveToBoard(['id-3'], 'board-1', 'Sprint 42');
+
+    // Assert
+    expect(store.items().map((i) => i.key)).toEqual(['WEB-1', 'WEB-2']);
+    expect(store.selectedIds()).toEqual(['id-1', 'id-2']);
+  });
+
+  it('drops the moved tickets from the selection', async () => {
+    // Arrange
+    api.move.mockReturnValue(of([]));
+    store.click('id-1', 'toggle');
+    store.click('id-2', 'toggle');
+
+    // Act
+    await store.moveToBoard(['id-1', 'id-2'], 'board-1', 'Sprint 42');
+
+    // Assert
+    expect(store.selectedIds()).toEqual([]);
+  });
+
   it('asks about sub-tickets with the loaded child counts and moves them along', async () => {
     // Arrange
     api.backlogResult = {

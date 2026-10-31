@@ -1307,6 +1307,8 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
 
 ### D-162 Doc watchers replace the participant rule for doc comments; the old participants are backfilled (TKT-107)
 
+> Since D-173 (TKT-113) watchers also hear about new published and restored versions.
+
 - Question: D-117 notified a doc's creator and the authors of its live comments about a new comment, because watching docs did not exist. TKT-47 adds watching (I-85). Who watches a doc, what happens to people the old rule notified, and what does watching a doc notify about?
 - Decision:
   - `doc_watchers (doc_node_id, user_id, created_at)`, primary key (doc, user), index (user, doc), cascade with the doc, restrict with the user, like `ticket_watchers` (D-93). Only pages and diagrams can be watched; a folder answers 409 `doc.kind.unsupported`. Rows stay when the user loses access; readers (watcher list, notifications) re-check it.
@@ -1367,7 +1369,7 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
   - Pickers built on the directory use `injectProjectSearch`: local filtering below the cap, server search for the typed text once capped. The New board dialog uses it, notes "Showing the first 1000 projects, type to search", and keeps selected projects (including suggested ones beyond the cap) visible.
   - Command palette: the local project provider stays; a remote provider adds server matches for the typed text only while the directory is capped.
   - Sidebar: unchanged. It shows at most 8 projects (the first by key, plus the open project even when it is not in the directory), and "All projects…" leads to the searchable page; when capped that link always reads "All projects…". Ordering by favourites and recently viewed stays in ideas.md: it needs per-user state that no other v1 feature has, and at most 8 rows were never going to show 1000 projects anyway.
-  - Still on the directory alone (TKT-116): the Create ticket project select, the board settings project picker, the search filter bar's project facet and the notification project mutes. Done in D-172.
+  - Still on the directory alone (TKT-116): the Create ticket project select, the board settings project picker, the search filter bar's project facet and the notification project mutes. Done in D-174.
 - Rejected: loading every project (unbounded memory and start-up requests on a large instance); infinite scroll on the projects page (scrolling past 1000 rows to find one project is worse than typing, and the segment counts would still be partial); a server-side count endpoint just for the header (the `1000+` is enough to say the list is cut).
 
 ### D-169 Feature flags are declared in code with a default; the admin page only changes targeting (TKT-81)
@@ -1407,7 +1409,30 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
 - Rejected: shifting the heading tags by depth (changes the printed page); dropping headings that would land beyond level 6 (they would vanish from the bookmarks).
 - Rationale: the bookmarks now mirror the folder tree like the contents page, at no cost to the printed layout.
 
-### D-172 Every project picker searches the server once the directory is capped (TKT-116)
+### D-172 The backlog's "On boards" footer becomes a panel of boards to drop tickets on; a drag carries the selection only when the dragged row is in it (TKT-73)
+
+- Question: TKT-71 named "drag from the backlog onto the 'on boards' panel" as an entry point of the move-with-sub-tickets prompt, but the footer only counted tickets on boards and could not tell which board you meant. What does the drop target look like, which tickets does a drag move, and what is the keyboard and screen-reader equivalent?
+- Decision:
+  - **A panel of board targets**: the 40px footer keeps the count ("3 more tickets on boards", or "On boards" when none) and lists the active boards linking the project (`MoveTargets`, the list the `M` picker uses) as buttons, for writers. It shows whenever there are tickets on boards or, for a writer, at least one board. While a row is dragged the panel tints, the boards get a dashed border, the board under the pointer turns accent, a hint reads "Drop on a board to move n tickets" (at the right, so the boards do not shift under the pointer) and the drag preview lifts above the pointer so the board stays visible. Dropping on a board calls `BacklogStore.moveToBoard`, the path of the bulk bar and `M`: the TKT-71 prompt, the optimistic move with sub-tickets, rollback on error and the Undo toast. Dropping on the panel but not on a board does nothing; dropping on the list reorders as before.
+  - **Which tickets a drag moves**: the targets rule of D-164 / TKT-105 with the dragged row as the focus. A selected row carries the whole selection; an unselected row moves alone and the selection stays. The board hit test uses the real pointer, because CDK reports a constrained x for the vertically locked preview.
+  - **The selection after a move**: `moveToBoard` now drops only the moved tickets from the selection instead of clearing it, so moving an unselected row (by drag or `M` on a focused row outside the selection) keeps the rest selected. A bulk-bar move still ends with nothing selected.
+  - **Keyboard and screen readers**: each board in the panel is a button ("Move 2 selected tickets to Sprint 1") that moves the selection, like the bulk bar's "Move to board". With nothing selected it is `aria-disabled` and named "Sprint 1: select tickets or drag them here to move them". `M` stays the shortcut for the focused row.
+  - Dragging stays limited to Rank sort (spec §3.2); the panel's buttons work in any sort. No per-board counts (the backlog response carries one total). No new achievement: the drop is another entry point of an existing move.
+- Rejected: a single drop zone that opens the board picker (one more step, and the board is chosen after the drop instead of by where you drop); enabling the panel buttons on the focused row when nothing is selected (a mouse click would move whichever row the peek last focused).
+
+### D-173 Doc watchers hear about new versions with `DocUpdated`, collapsed per actor for an hour (TKT-113)
+
+- Question: D-162 left published versions out of doc watching because a living page is republished often. Which writes notify, how is a burst of publishes kept from flooding the watchers, and where does the notification lead?
+- Decision:
+  - **Triggers**: `doc.updated` (PATCH with content, find/replace edits, over REST or MCP) and `doc.version.restored` of a page or diagram notify the doc's watchers with the new kind `DocUpdated` (stored as 9), never the actor and only while they can read the project. Creating or duplicating a doc, renames, drafts (autosave) and moves notify nobody. A watcher whom a published page newly mentions gets `Mentioned` instead, like a comment (D-163). Diagrams now produce `DocPublished` too, with no content, so they never carry mentions; restores are their own `DocRestored` event, which does not read mentions (D-166).
+  - **Summaries**: "published version 7" and "restored version 3 as version 8". The headline rank of `DocUpdated` is the lowest, so a comment or a mention by the same actor in the window takes the headline.
+  - **Burst rule**: the D-94 window is 5 minutes, which still let one author publishing every few minutes send a dozen notifications an hour. A new version merges into an unread notification of the same recipient, actor and doc that is headed by `DocUpdated` for `Notification.PublishCollapseWindow` (1 hour) from its first event; other kinds and other headlines keep the 5-minute window. A read notification is never reopened. The row keeps its place (sorted by its first event), shows "+n more", and the projector's locked lookup of open rows reaches back an hour when the save holds a `DocUpdated` candidate (D-159).
+  - **Link**: `notifications.doc_version` (nullable, additive migration) stores the version of the first merged publish; `url` opens the doc's history at `?history=<that version - 1>`, the diff from the version before it to the current one, so a collapsed burst shows every change since. Other doc notifications keep their links (comments, or the page for a page mention).
+  - **Preferences**: `DocUpdated` is listed by D-160 (web: "Doc updates" under "On things you follow"), can be muted, and is silenced by a muted project because it is not direct.
+- Rejected: relying on the 5-minute window alone (too many rows for a page edited all afternoon); collapsing until read with no time limit (an unread row would keep a day-old place in the list while the doc changes underneath); notifying the publisher's co-authors by making every publisher watch (a change to D-162's audience, left to TKT-119); parsing the version back out of the summary for the link (summaries are display text).
+- Achievements: none; reading about a new version is not an action worth one.
+
+### D-174 Every project picker searches the server once the directory is capped (TKT-116)
 
 - Question: D-168 left four pickers on the directory's first 1000 projects: the Create ticket project select, the board settings "Link a project" select, the project facet of the ticket and doc search, and "Mute a project". How should they reach the rest?
 - Decision:
@@ -1419,6 +1444,7 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
   - `ProjectDirectory.load()` returns the load already on its way instead of resolving at once, so a picker opened during the first load sees the list. The picker helpers live in `project-search.ts`, outside the directory class, which is in the initial bundle.
 - Rejected: an input inside the `mat-select` panel (fights the select's own keyboard handling and typeahead); keeping the selects below the cap and switching controls only when capped (two code paths for one field).
 - Rationale: one way to find a project in every picker, no matter how many there are, with the selection never blank.
+- Achievements: none; finding a project in a picker is not an action worth one.
 
 ## Product owner answers (v1 review, 2026-10-27)
 

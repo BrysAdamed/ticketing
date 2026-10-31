@@ -57,8 +57,15 @@ public abstract record DocEvent(Guid DocNodeId, Guid ProjectId, Guid? ActorId, D
 public sealed record DocCreated(Guid DocNodeId, Guid ProjectId, Guid? ActorId, DateTimeOffset OccurredAt, string? Content)
     : DocEvent(DocNodeId, ProjectId, ActorId, OccurredAt);
 
-/// <summary>A new version of a page was published (not restored): users it newly mentions are notified (D-166).</summary>
-public sealed record DocPublished(Guid DocNodeId, Guid ProjectId, Guid? ActorId, DateTimeOffset OccurredAt, string? From, string? To)
+/// <summary>
+/// A new version of a page or diagram was published (not restored): its watchers are notified (D-173), users a page newly
+/// mentions too (D-166). <see cref="From"/> and <see cref="To"/> are the page content before and after; null for diagrams.
+/// </summary>
+public sealed record DocPublished(Guid DocNodeId, Guid ProjectId, Guid? ActorId, DateTimeOffset OccurredAt, int Version, string? From, string? To)
+    : DocEvent(DocNodeId, ProjectId, ActorId, OccurredAt);
+
+/// <summary>An older version of a page or diagram was restored as <see cref="Version"/>: its watchers are notified (D-173), mentions are not (D-166).</summary>
+public sealed record DocRestored(Guid DocNodeId, Guid ProjectId, Guid? ActorId, DateTimeOffset OccurredAt, int Version, int RestoredFrom)
     : DocEvent(DocNodeId, ProjectId, ActorId, OccurredAt);
 
 /// <summary>A comment added to a page or diagram (docs refinement D12): the doc's watchers are notified (D-162), mentioned users too (D-163).</summary>
@@ -116,8 +123,10 @@ public static class CollaborationEvents
             {
                 CreateDoc.Action when Parse<CreatedDoc>(entry.NewValue) is { Kind: not DocKind.Folder } doc =>
                     new DocCreated(id, projectId, actor, at, doc.DuplicatedFrom is null ? pages.GetValueOrDefault(id)?.To : null),
-                DocPublisher.UpdatedAction when pages.TryGetValue(id, out var page) =>
-                    new DocPublished(id, projectId, actor, at, page.From, page.To),
+                DocPublisher.UpdatedAction when Parse<int?>(entry.NewValue) is { } version =>
+                    new DocPublished(id, projectId, actor, at, version, pages.GetValueOrDefault(id)?.From, pages.GetValueOrDefault(id)?.To),
+                DocPublisher.VersionRestoredAction when Parse<RestoredVersion>(entry.NewValue) is { } restored =>
+                    new DocRestored(id, projectId, actor, at, restored.Version, restored.RestoredFrom),
                 AddDocComment.Action when Parse<CommentBody>(entry.NewValue) is { } docComment =>
                     new DocCommentAdded(id, projectId, actor, at, docComment.CommentId, comments.GetValueOrDefault(docComment.CommentId)),
                 UpdateDocComment.Action when Parse<CommentBody>(entry.NewValue) is { } edited =>
@@ -240,6 +249,8 @@ public static class CollaborationEvents
     private sealed record CreatedDoc(DocKind Kind, string? DuplicatedFrom);
 
     private sealed record PageContent(string? From, string? To);
+
+    private sealed record RestoredVersion(int Version, int RestoredFrom);
 
     private sealed record ItemAssignment(string TestCaseKey, Guid? From, Guid? To);
 }

@@ -205,7 +205,12 @@
               (cdkDragMoved)="dragMoved($event)"
               (cdkDragEnded)="dragEnded($event)"
             >
-              <div *cdkDragPreview class="drag-preview" data-testid="drag-preview">
+              <div
+                *cdkDragPreview
+                class="drag-preview"
+                data-testid="drag-preview"
+                [class.above]="overPanel()"
+              >
                 <tk-type-icon [type]="$any(row).item.type" [size]="14" />
                 <span class="tnum key">{{ $any(row).item.key }}</span>
                 <span class="title">{{ $any(row).item.title }}</span>
@@ -235,12 +240,53 @@
   </div>
 }
 
-@if (store.hasData() && store.onBoardsCount() > 0) {
-  <div class="on-boards" data-testid="backlog-on-boards" tkTourAnchor="backlog.on-boards">
-    <tk-icon name="tablerLayoutKanban" [size]="14" />
-    {{ store.onBoardsCount() }} more {{ store.onBoardsCount() === 1 ? 'ticket' : 'tickets' }} on
-    boards
-  </div>
+@if (showOnBoards()) {
+  <section
+    #onBoardsPanel
+    class="on-boards"
+    aria-label="On boards"
+    data-testid="backlog-on-boards"
+    tkTourAnchor="backlog.on-boards"
+    [class.dragging]="dragging()"
+  >
+    <span class="summary" data-testid="on-boards-count">
+      <tk-icon name="tablerLayoutKanban" [size]="14" />
+      @if (store.onBoardsCount() > 0) {
+        {{ store.onBoardsCount() }} more {{ store.onBoardsCount() === 1 ? 'ticket' : 'tickets' }}
+        on boards
+      } @else {
+        On boards
+      }
+    </span>
+    @if (store.canWrite() && boards().length > 0) {
+      <ul class="targets" aria-label="Move to board">
+        @for (board of boards(); track board.value) {
+          <li>
+            <button
+              #boardDrop
+              type="button"
+              class="target"
+              data-testid="board-drop"
+              [attr.data-board-id]="board.value"
+              [class.over]="dropBoard() === board.value"
+              [attr.aria-disabled]="selectionCount() === 0"
+              [attr.aria-label]="boardDropLabel(board)"
+              [matTooltip]="selectionCount() === 0 ? 'Select tickets or drag them here' : ''"
+              (click)="moveSelectionTo(board)"
+            >
+              <tk-icon name="tablerLayoutKanban" [size]="14" />
+              <span class="name">{{ board.label }}</span>
+            </button>
+          </li>
+        }
+      </ul>
+      @if (dragging()) {
+        <span class="drop-hint" data-testid="on-boards-hint">
+          Drop on a board to move {{ dragCount() }} {{ dragCount() === 1 ? 'ticket' : 'tickets' }}
+        </span>
+      }
+    }
+  </section>
 }
 
 @if (selectionCount() > 0) {

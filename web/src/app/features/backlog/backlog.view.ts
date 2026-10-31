@@ -47,7 +47,7 @@ import { FieldHints } from '@core/tickets/field-hints';
 import { MoveTarget, MoveTargets } from '@core/tickets/move-targets';
 import { ProjectPeople } from '@core/tickets/project-people';
 import { TicketCache } from '@core/tickets/ticket-cache';
-import { UserRef } from '@core/tickets/ticket.models';
+import { TicketLocation, UserRef } from '@core/tickets/ticket.models';
 import {
   Priority,
   PRIORITIES,
@@ -77,6 +77,8 @@ import { BacklogFiltersComponent } from './backlog-filters.component';
 import { BACKLOG_ICONS } from './backlog-icons';
 import {
   BacklogFilters,
+  dragTargetAt,
+  DragTarget,
   EMPTY_FILTERS,
   GROUP_BY_OPTIONS,
   GroupBy,
@@ -90,8 +92,9 @@ import { QuickCreate, QuickCreateRowComponent } from './quick-create-row.compone
 
 const PREFETCH_DELAY_MS = 150;
 const PEEK_FOLLOW_MS = 120;
-const ON_BOARDS_FOOTER_PX = 36;
+const ON_BOARDS_PANEL_PX = 40;
 const BULK_BAR_CLEARANCE_PX = 72;
+const BACKLOG_LOCATION: TicketLocation = { kind: 'Backlog', boardId: null, boardName: null };
 
 @Component({
   selector: 'tk-backlog-view',
@@ -188,14 +191,26 @@ export class BacklogView {
   private moveOptions: readonly PickerOption<MoveTarget>[] = [];
   private moveIds: string[] = [];
   private readonly listWrap = viewChild<ElementRef<HTMLElement>>('listWrap');
+  private readonly onBoardsPanel = viewChild<ElementRef<HTMLElement>>('onBoardsPanel');
+  private readonly boardDrops = viewChildren<ElementRef<HTMLElement>>('boardDrop');
+  /// Active boards linking this project, the drop targets of the "On boards" panel (writers only).
+  protected readonly boards = signal<readonly PickerOption<MoveTarget>[]>([]);
+  protected readonly dragging = signal(false);
+  protected readonly dropBoard = signal<string | null>(null);
+  protected readonly overPanel = signal(false);
+  protected readonly showOnBoards = computed(
+    () =>
+      this.store.hasData() &&
+      (this.store.onBoardsCount() > 0 || (this.store.canWrite() && this.boards().length > 0)),
+  );
   protected readonly listHeight = signal(480);
-  /// The list fills the window below the toolbar, minus the "on boards" footer and, while tickets
+  /// The list fills the window below the toolbar, minus the "On boards" panel and, while tickets
   /// are selected, the floating bulk bar, so the last rows can scroll above it.
   protected readonly viewportHeight = computed(() =>
     Math.max(
       160,
       this.listHeight() -
-        (this.store.onBoardsCount() > 0 ? ON_BOARDS_FOOTER_PX : 0) -
+        (this.showOnBoards() ? ON_BOARDS_PANEL_PX : 0) -
         (this.selectionCount() > 0 ? BULK_BAR_CLEARANCE_PX : 0),
     ),
   );
@@ -218,6 +233,12 @@ export class BacklogView {
         this.readUrl(this.queryParams());
         void this.store.load(key);
       });
+    });
+
+    effect(() => {
+      const key = this.store.projectKey();
+      const canWrite = this.store.canWrite();
+      untracked(() => void this.loadBoards(canWrite ? key : null));
     });
 
     effect(() => {
@@ -528,11 +549,7 @@ export class BacklogView {
     if (!ids.length || !this.store.canWrite()) return;
     this.moveIds = ids;
     const anchor = origin ?? this.focusedRowElement();
-    const options = await this.moveTargets.options(this.store.projectKey(), {
-      kind: 'Backlog',
-      boardId: null,
-      boardName: null,
-    });
+    const options = await this.moveTargets.options(this.store.projectKey(), BACKLOG_LOCATION);
     this.moveOptions = options;
     this.movePicker()?.open(anchor ?? undefined, options);
   }
@@ -543,6 +560,48 @@ export class BacklogView {
     this.moveIds = [];
     if (!board || target === 'backlog' || !ids.length) return;
     void this.store.moveToBoard(ids, target, board.label);
+  }
+
+  // "On boards" panel: each board is a drop target and, for the keyboard and screen readers, a
+  // button that moves the selection there (like the bulk bar's "Move to board").
+
+  protected moveSelectionTo(board: PickerOption<MoveTarget>): void {
+    const ids = this.store.selectedIds();
+    if (ids.length && this.store.canWrite())
+      void this.store.moveToBoard(ids, board.value, board.label);
+  }
+
+  protected boardDropLabel(board: PickerOption<MoveTarget>): string {
+    const n = this.selectionCount();
+    return n > 0
+      ? `Move ${n} selected ${n === 1 ? 'ticket' : 'tickets'} to ${board.label}`
+      : `${board.label}: select tickets or drag them here to move them`;
+  }
+
+  private async loadBoards(projectKey: string | null): Promise<void> {
+    if (!projectKey) {
+      this.boards.set([]);
+      return;
+    }
+    const options = await this.moveTargets
+      .options(projectKey, BACKLOG_LOCATION)
+      .catch((): PickerOption<MoveTarget>[] => []);
+    if (this.store.projectKey() === projectKey)
+      this.boards.set(options.filter((o) => o.value !== 'backlog'));
+  }
+
+  private dragTarget(x: number, y: number): DragTarget {
+    const box = (element: HTMLElement) => element.getBoundingClientRect();
+    const panel = this.onBoardsPanel()?.nativeElement;
+    return dragTargetAt(
+      x,
+      y,
+      panel ? box(panel) : null,
+      this.boardDrops().map((ref) => ({
+        id: ref.nativeElement.dataset['boardId'] ?? '',
+        box: box(ref.nativeElement),
+      })),
+    );
   }
 
   // Quick create
@@ -560,24 +619,42 @@ export class BacklogView {
   // Drag and drop (CDK drag with our own drop index: rows have a fixed height, so the target row
   // is computed from the pointer; this works with virtual scrolling).
 
+  /// A drag carries the selection when the dragged row is in it, otherwise only that row (the
+  /// targets rule of the keyboard shortcuts, D-172).
   protected dragStarted(event: CdkDragStart, id: string): void {
-    const selected = this.store.selection().selected;
-    this.movingIds = selected.has(id) ? this.store.selectedIds() : [id];
+    this.movingIds = this.store.targets(id);
     this.dragCount.set(this.movingIds.length);
+    this.dragging.set(true);
     event.source.element.nativeElement.blur();
   }
 
+  /// The row preview is locked to the vertical axis, so CDK reports a constrained x; the board
+  /// under the pointer is found with the real pointer position.
   protected dragMoved(event: CdkDragMove): void {
-    this.dropIndex.set(this.indexAt(event.pointerPosition.y));
+    const point = 'touches' in event.event ? event.event.touches[0] : event.event;
+    const y = event.pointerPosition.y;
+    const target = this.dragTarget(point?.clientX ?? event.pointerPosition.x, y);
+    this.dropBoard.set(target.kind === 'board' ? target.boardId : null);
+    this.overPanel.set(target.kind !== 'list');
+    this.dropIndex.set(target.kind === 'list' ? this.indexAt(y) : null);
   }
 
   protected dragEnded(event: CdkDragEnd): void {
-    const index = this.indexAt(event.dropPoint.y);
+    const { x, y } = event.dropPoint;
+    const target = this.dragTarget(x, y);
+    const index = target.kind === 'list' ? this.indexAt(y) : null;
     event.source.reset();
     this.dropIndex.set(null);
+    this.dropBoard.set(null);
+    this.overPanel.set(false);
+    this.dragging.set(false);
     const ids = this.movingIds;
     this.movingIds = [];
-    if (index !== null && ids.length) void this.store.drop(ids, index);
+    if (!ids.length) return;
+    if (target.kind === 'board') {
+      const board = this.boards().find((b) => b.value === target.boardId);
+      if (board) void this.store.moveToBoard(ids, board.value, board.label);
+    } else if (index !== null) void this.store.drop(ids, index);
   }
 
   protected dropLineTop(): number {

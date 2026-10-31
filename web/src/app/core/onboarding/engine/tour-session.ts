@@ -32,6 +32,7 @@ import {
 import { debounceTime, filter, merge, Subject, Subscription } from 'rxjs';
 import { PeekService } from '../../layout/peek/peek';
 import { openBackdrops } from '../hints/hint-logic';
+import { returnFocus } from './return-focus';
 import { TourAnchorRegistry } from './tour-anchor.registry';
 import type { TourConditions } from './tour-conditions';
 import type { TourResult } from './tour-launcher';
@@ -285,7 +286,7 @@ export class TourSession {
       this.paused.set(false);
       this.options.onPausedChange?.(false);
     }
-    if (result !== 'interrupted' && this.returnFocusTo?.isConnected) this.returnFocusTo.focus();
+    if (result !== 'interrupted') returnFocus(this.document, this.returnFocusTo);
     this.finish(result);
   }
 

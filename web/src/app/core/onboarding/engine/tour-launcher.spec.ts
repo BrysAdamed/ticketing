@@ -151,6 +151,24 @@ describe('TourLauncher', () => {
     expect(document.activeElement?.id).toBe('trigger');
   });
 
+  it('falls back to the Help trigger when its trigger left the page during the tour', async () => {
+    // Arrange
+    const help = document.createElement('button');
+    help.setAttribute('data-tour-return', '');
+    help.id = 'help';
+    document.body.appendChild(help);
+    const { result } = await startTour();
+    document.querySelector('#trigger')!.remove();
+
+    // Act
+    press('Escape');
+
+    // Assert
+    expect(await result).toBe('dismissed');
+    expect(document.activeElement?.id).toBe('help');
+    help.remove();
+  });
+
   it('gives way to another modal overlay without taking focus back', async () => {
     // Arrange
     const { result } = await startTour();

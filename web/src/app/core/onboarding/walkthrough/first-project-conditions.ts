@@ -9,7 +9,7 @@ import { ProjectCreator } from '../../projects/create-project';
 import { ProjectSummary } from '../../projects/project-directory';
 import { Ticket, TicketSummary } from '../../tickets/ticket.models';
 import { TourConditionResult, TourConditions } from '../engine/tour-conditions';
-import { ownedProjects } from './first-project.logic';
+import { ownedProjects, pickWalkthroughBoard } from './first-project.logic';
 import {
   FIRST_PROJECT_ACTIONS,
   FIRST_PROJECT_CONDITIONS,
@@ -20,6 +20,7 @@ type Params = Readonly<Record<string, string>>;
 
 const NO: TourConditionResult = { holds: false };
 const OWNED_LIMIT = 100;
+const BOARD_PAGES = 10;
 const REMEMBERED_KEY = 'tk-first-project';
 
 /// The walkthrough's conditions over real data (D-142). Every check is a fresh GET, so an action
@@ -134,13 +135,24 @@ export class FirstProjectConditions implements TourConditions {
       return { holds: true, params: { boardId: ticket.location.boardId } };
     const projectKey = params['projectKey'];
     if (!projectKey) return NO;
-    const page = await firstValueFrom(
-      this.api.list<BoardSummary>('/boards', { limit: OWNED_LIMIT }, { projectKey }),
-    );
-    const board = page.items
-      .filter((b) => !b.archivedAt)
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+    const board = pickWalkthroughBoard(await this.boardsLinking(projectKey), params['boardId']);
     return board ? { holds: true, params: { boardId: board.id } } : NO;
+  }
+
+  /// Every live board linking the project. The list is ordered by name, so the board just created
+  /// can be on any page.
+  private async boardsLinking(projectKey: string): Promise<BoardSummary[]> {
+    const boards: BoardSummary[] = [];
+    let cursor: string | null = null;
+    for (let page = 0; page < BOARD_PAGES; page++) {
+      const result: Page<BoardSummary> = await firstValueFrom(
+        this.api.list<BoardSummary>('/boards', { limit: OWNED_LIMIT, cursor }, { projectKey }),
+      );
+      boards.push(...result.items);
+      cursor = result.nextCursor;
+      if (!cursor) break;
+    }
+    return boards;
   }
 
   private async ticketOnBoard(params: Params): Promise<TourConditionResult> {

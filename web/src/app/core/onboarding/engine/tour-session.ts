@@ -578,7 +578,7 @@ export class TourSession {
     const view = this.document.defaultView;
     if (!element || !view || this.paused() || this.navigating()) return;
     if (!element.isConnected) {
-      void this.goTo(this.index(), 1);
+      if (!this.pending()) void this.goTo(this.index(), 1);
       return;
     }
     const rect = element.getBoundingClientRect();

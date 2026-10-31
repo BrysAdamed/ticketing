@@ -143,7 +143,7 @@ public static class DocQueries
         };
     }
 
-    /// <summary>The mentioned users of a page's content that the reader may see as chips (D-96, D-164); other kinds have none.</summary>
+    /// <summary>The mentioned users of a page's content that the reader may see as chips (D-96, D-166); other kinds have none.</summary>
     public static async Task<IReadOnlyList<UserRefDto>> MentionsOfAsync(
         ITicketingDbContext db, Guid projectId, DocKind kind, string? content, CancellationToken cancellationToken)
     {

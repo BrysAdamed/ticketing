@@ -12,7 +12,7 @@ using Ticketing.IntegrationTests.Watchers;
 
 namespace Ticketing.IntegrationTests.Docs;
 
-/// <summary>@mentions in page content (I-86, D-96, D-164): checked and notified when a page is published, never for drafts, restores or duplicates.</summary>
+/// <summary>@mentions in page content (I-86, D-96, D-166): checked and notified when a page is published, never for drafts, restores or duplicates.</summary>
 [Collection(nameof(DocsCollection))]
 public sealed class DocPageMentionTests(TicketingApiFactory api)
 {

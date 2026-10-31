@@ -109,7 +109,7 @@ internal sealed class ShoutOutCriterion : ComputedAchievementCriterion
     }
 
     /// <summary>
-    /// Ticket and doc texts as the events the projector reads (D-96, D-164). A doc comment's current body stands for an edit's
+    /// Ticket and doc texts as the events the projector reads (D-96, D-166). A doc comment's current body stands for an edit's
     /// new text, because <c>doc.comment.edited</c> keeps only the previous one (D-117); the reporter plays no part in mentions.
     /// </summary>
     private static CollaborationEvent ToEvent(MentionText t) => t.Action switch

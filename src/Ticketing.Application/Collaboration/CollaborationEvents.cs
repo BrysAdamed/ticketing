@@ -52,12 +52,12 @@ public abstract record DocEvent(Guid DocNodeId, Guid ProjectId, Guid? ActorId, D
 
 /// <summary>
 /// A page or diagram was created (folders are skipped): its creator starts watching it (D-162). <see cref="Content"/> is the
-/// content of a new page, whose mentions notify (D-164); null for diagrams and duplicates.
+/// content of a new page, whose mentions notify (D-166); null for diagrams and duplicates.
 /// </summary>
 public sealed record DocCreated(Guid DocNodeId, Guid ProjectId, Guid? ActorId, DateTimeOffset OccurredAt, string? Content)
     : DocEvent(DocNodeId, ProjectId, ActorId, OccurredAt);
 
-/// <summary>A new version of a page was published (not restored): users it newly mentions are notified (D-164).</summary>
+/// <summary>A new version of a page was published (not restored): users it newly mentions are notified (D-166).</summary>
 public sealed record DocPublished(Guid DocNodeId, Guid ProjectId, Guid? ActorId, DateTimeOffset OccurredAt, string? From, string? To)
     : DocEvent(DocNodeId, ProjectId, ActorId, OccurredAt);
 

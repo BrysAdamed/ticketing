@@ -22,7 +22,7 @@ export interface DocMentionCompletionDeps {
   picked(user: MentionCandidate): void;
 }
 
-/// The `@` people picker of the page editor (D-164): `@` + name or email text, outside code, offers
+/// The `@` people picker of the page editor (D-166): `@` + name or email text, outside code, offers
 /// the project's readers and inserts `@[Name](user:<id>)` plus a space, like the ticket editors (D-96).
 export function docMentionCompletions(deps: DocMentionCompletionDeps): Extension[] {
   return [

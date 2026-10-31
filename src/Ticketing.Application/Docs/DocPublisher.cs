@@ -45,7 +45,7 @@ public sealed class DocPublisher(ITicketingDbContext db, ICurrentUser currentUse
     }
 
     /// <summary>
-    /// Prepares the content of a page for publishing (D-164): <c>@email</c> of a reader becomes a stored mention and newly added
+    /// Prepares the content of a page for publishing (D-166): <c>@email</c> of a reader becomes a stored mention and newly added
     /// mentions (compared with <paramref name="previous"/>, the published content) are validated, failing with
     /// <c>mention.invalid</c> on <c>content</c>. Diagrams take no mentions; their content is returned as it is.
     /// </summary>

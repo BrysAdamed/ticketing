@@ -1325,7 +1325,21 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
   - Web: the doc comment composer and edit box get the `@` people picker (`GET /users?projectKey=&access=read`), and comments render chips.
 - Rationale: one set of mention rules for every comment thread; reading the new body from the tracker costs no query, because the handler has just loaded and changed the comment.
 
-### D-164 Page content takes @mentions, checked and notified on publish only; shout-out counts doc mentions (TKT-109, TKT-110)
+### D-164 A plain click on a backlog row opens the peek and leaves the selection alone (TKT-104)
+
+- Question: a plain click on a backlog row replaced the selection with nothing before opening the peek, so a missed checkbox threw away a multi-row selection. Should opening a ticket change the selection at all?
+- Decision: no. A plain click only moves the keyboard focus to the row and opens the peek; the selection and its Shift anchor stay as they were. The checkbox, `X` and Ctrl/⌘+click toggle, Shift+click extends the range, `Esc` (after the peek) or the bulk bar's Clear empties it. The board already behaved this way (a plain card click only focuses and peeks). Because the focused row may now sit outside the selection, keyboard shortcuts keep the targets rule of D-78 / TKT-105: they act on the selection when the focused row is in it, otherwise on the focused row; the bulk bar always acts on the selection.
+- Checked elsewhere: the add-tickets dialog keeps its selection and opens no peek; test cases, search, My work and the dashboard have no row selection.
+- Rejected: a plain click selecting only that row (the file-manager convention, and what the backlog did): with checkboxes always visible, a stray click is far more likely than an intent to drop the selection, and `Esc` already clears it.
+
+### D-165 Side-writes touch their ticket without the row-version check; ticket views take newer copies from other views (TKT-111)
+
+- Question: adding, editing or deleting a comment, and adding or removing a link, loaded the ticket tracked and called `Touch`, so the save carried the ticket's `xmin` check. An edit of the same ticket committed in between (the user's own rename still in flight) failed the comment with 409 `concurrency.conflict`, though nothing the user did conflicted. Separately, a peek opened while a backlog inline edit was in flight kept the older row version and the next rename opened the "Someone else changed this ticket" dialog.
+- Decision: those side-writes bump `updated_at` with `TicketTouch.TouchTicketAsync`: an `ExecuteUpdate` `SET updated_at = now WHERE id = … AND updated_at < now`, run after the side-write's `SaveChangesAsync` in the same transaction (`InTransactionAsync`), so the activity observers (D-159) run first and take their locks in the same order as a plain ticket edit. The touch waits for a concurrent ticket edit instead of failing, never moves `updated_at` back, and still changes the row version, so clients keep refetching it after a comment (`refreshMeta`). Deleting a ticket attachment uses it too. Uploading an attachment keeps its `FOR UPDATE` lock (the row is current, so it cannot conflict); real ticket edits (`UpdateTicket`, moves, restore, archive, agent delegation) keep the check.
+- Frontend: a ticket view takes an `updated` event for its own ticket when it carries another row version and an `updatedAt` no older than its own, keeping its loaded collections; older copies and its own echoes are ignored as before.
+- Rejected: retrying the tracked save on conflict (a reload-and-retry loop for a write that never needed the check).
+
+### D-166 Page content takes @mentions, checked and notified on publish only; shout-out counts doc mentions (TKT-109, TKT-110)
 
 - Question: pages address people too (section owners, reviewers; I-86). A page is edited as drafts and published as versions, restored and duplicated. When are mentions in a page checked and notified, and what about diagrams and achievements?
 - Decision:
@@ -1334,8 +1348,6 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
   - Reading: `DocDto.mentions` and `DocVersionDto.mentions` (and `get_doc` with `version`) are the mentioned active readers of that content; the reader, the history view and the editor preview render chips. The page editor gets an `@` people picker as a doc editor plugin (`provideDocMentions`, CodeMirror completion, toolbar button and slash command); users picked in the editor show as chips in the preview at once.
   - Achievements: `shout-out` now also counts U's new or edited doc comment and U's new page or published version (version n against n-1) on a doc that is not deleted, through the same `MentionRules` (one query per batch: a `UNION ALL` of the ticket and doc texts). For a doc comment edit the comment's current body stands for the new text, since `doc.comment.edited` keeps only the old one. Its hint names pages. Watching a doc earns nothing (D-162).
 - Rejected: checking mentions in drafts (every autosave would fail on a half-typed mention and the check would run twice); a per-node mention table (comparing with the published content is enough, as D-96 argued for tickets); copying page content into the activity payload (pages are up to 100,000 characters).
-
-## Product owner answers
 
 ## Product owner answers (v1 review, 2026-10-27)
 

@@ -99,6 +99,41 @@ describe('TicketDetailStore', () => {
     expect(api.get).toHaveBeenCalledOnce();
   });
 
+  it('takes a newer copy of the ticket saved by another view, keeping the loaded comments', () => {
+    // Arrange
+    const newer = ticket({
+      status: 'InProgress',
+      updatedAt: '2026-10-01T10:00:05Z',
+      rowVersion: 4,
+      comments: null,
+    } as Partial<Ticket>);
+
+    // Act
+    TestBed.inject(TicketEvents).emit({ kind: 'updated', ticket: newer });
+
+    // Assert
+    expect(store.ticket()?.status).toBe('InProgress');
+    expect(store.ticket()?.rowVersion).toBe(4);
+    expect(store.ticket()?.comments?.map((c) => c.id)).toEqual(['c1']);
+    expect(store.comments().map((c) => c.id)).toEqual(['c1']);
+  });
+
+  it('keeps its ticket when another view reports an older copy', () => {
+    // Arrange
+    const older = ticket({
+      status: 'Done',
+      updatedAt: '2026-10-01T09:59:00Z',
+      rowVersion: 0,
+    } as Partial<Ticket>);
+
+    // Act
+    TestBed.inject(TicketEvents).emit({ kind: 'updated', ticket: older });
+
+    // Assert
+    expect(store.ticket()?.rowVersion).toBe(1);
+    expect(store.ticket()?.status).toBeUndefined();
+  });
+
   describe('watching', () => {
     it('shows the user as a watcher at once, then takes the server list into the cache and other views', async () => {
       // Arrange

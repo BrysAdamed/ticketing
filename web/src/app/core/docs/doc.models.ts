@@ -100,7 +100,7 @@ export interface Doc {
   snapshotUrl?: string | null;
   /// Pages and diagrams: who watches the doc (D-162); null for folders.
   watchers?: Watchers | null;
-  /// Pages: users the content mentions who are active and can read the project, shown as chips (D-164).
+  /// Pages: users the content mentions who are active and can read the project, shown as chips (D-166).
   mentions?: UserRef[];
 }
 
@@ -261,7 +261,7 @@ export interface DocVersion {
   /// What this version's content mentions and embeds, as the reader may see them.
   references: DocReferences;
   embeds: DocEmbed[];
-  /// Pages: users this version mentions who are active and can read the project (D-164).
+  /// Pages: users this version mentions who are active and can read the project (D-166).
   mentions?: UserRef[];
 }
 

@@ -19,7 +19,7 @@ export class DocMentionPicks {
   }
 }
 
-/// @mentions in pages (TKT-109, D-164): the editor's `@` people picker with a toolbar button and
+/// @mentions in pages (TKT-109, D-166): the editor's `@` people picker with a toolbar button and
 /// a slash command. The server checks and notifies mentions when the page is published.
 export function provideDocMentions(): (Provider | EnvironmentProviders)[] {
   return [

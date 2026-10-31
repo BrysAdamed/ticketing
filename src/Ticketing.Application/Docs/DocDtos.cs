@@ -74,7 +74,7 @@ public sealed record DocDto(
     /// <summary>Pages and diagrams: the visible watchers and whether the caller watches (D-162); null for folders.</summary>
     public WatchersDto? Watchers { get; init; }
 
-    /// <summary>Pages: the users <see cref="Content"/> mentions who are active and can read the project, in order of first mention (D-164).</summary>
+    /// <summary>Pages: the users <see cref="Content"/> mentions who are active and can read the project, in order of first mention (D-166).</summary>
     public IReadOnlyList<UserRefDto> Mentions { get; init; } = [];
 }
 
@@ -162,7 +162,7 @@ public sealed record DocVersionDto(
     /// <summary>The diagrams this version's content embeds that the reader can read.</summary>
     public IReadOnlyList<DocEmbedDto> Embeds { get; init; } = [];
 
-    /// <summary>Pages: the users this version's content mentions who are active and can read the project (D-164).</summary>
+    /// <summary>Pages: the users this version's content mentions who are active and can read the project (D-166).</summary>
     public IReadOnlyList<UserRefDto> Mentions { get; init; } = [];
 }
 

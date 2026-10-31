@@ -8,6 +8,10 @@ services:
 
   # For `ng serve` (proxy.conf.json targets localhost:5080). Requests through this port arrive from Docker's gateway,
   # which is inside the trusted proxy ranges, so X-Forwarded-For is believed here: a development-only shortcut.
+  # The e2e suite signs in hundreds of users from one address, so development and test stacks raise the per-IP
+  # sign-in limit (D-167); a server keeps the default of 20 per minute.
   api:
     ports:
       - "${API_HOST_PORT:-5080}:8080"
+    environment:
+      RateLimiting__LoginPermitsPerMinute: ${TICKETING_LOGIN_PERMITS_PER_MINUTE:-2000}

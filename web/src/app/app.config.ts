@@ -11,7 +11,7 @@ import {
   provideBrowserGlobalErrorListeners,
 } from '@angular/core';
 import { MAT_RIPPLE_GLOBAL_OPTIONS } from '@angular/material/core';
-import { MAT_DIALOG_DEFAULT_OPTIONS } from '@angular/material/dialog';
+import { MAT_DIALOG_DEFAULT_OPTIONS, MatDialogConfig } from '@angular/material/dialog';
 import { MAT_FORM_FIELD_DEFAULT_OPTIONS } from '@angular/material/form-field';
 import { MAT_SNACK_BAR_DEFAULT_OPTIONS } from '@angular/material/snack-bar';
 import { MAT_TOOLTIP_DEFAULT_OPTIONS } from '@angular/material/tooltip';
@@ -135,11 +135,12 @@ export const appConfig: ApplicationConfig = {
     {
       provide: MAT_DIALOG_DEFAULT_OPTIONS,
       useValue: {
-        autoFocus: 'first-tabbable',
-        restoreFocus: true,
-        hasBackdrop: true,
+        ...new MatDialogConfig(),
+        role: 'dialog',
+        ariaModal: true,
+        delayFocusTrap: false,
         maxWidth: 'calc(100vw - 32px)',
-      },
+      } satisfies MatDialogConfig,
     },
   ],
 };

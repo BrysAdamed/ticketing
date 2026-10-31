@@ -66,6 +66,10 @@ test.describe('Help menu', () => {
 
         // Assert
         await expect(page.getByTestId('shortcut-help-search')).toBeVisible();
+        await expect(page.getByRole('dialog', { name: 'Keyboard shortcuts' })).toHaveAttribute(
+            'aria-modal',
+            'true',
+        );
     });
 
     test('the palette has a Help group with Keyboard shortcuts and Restart all guides', async ({
@@ -110,7 +114,9 @@ test.describe('Help menu', () => {
         // Act
         await shell.openHelp();
         await shell.helpItem('help-restart-guides').click();
-        await expect(page.getByRole('heading', { name: 'Restart all guides?' })).toBeVisible();
+        await expect(
+            page.getByRole('alertdialog', { name: 'Restart all guides?' }),
+        ).toHaveAttribute('aria-modal', 'true');
         await page.getByTestId('confirm-ok').click();
 
         // Assert

@@ -1249,6 +1249,13 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
 - Rejected: a profile page for other users (the owner asked for name, tier and medal only, and a page invites comparison); opening the card on every avatar click (row and card avatars already edit the assignee); hover everywhere (not reachable by keyboard or touch where a click is free); showing the email (more personal data than the card needs); fetching shares with every list or caching them per page (a share should show on the next open, and lists would pay for a rarely opened card); adding `tierCount` to the shared read (TKT-97's response was deliberately minimal and is already merged into the epic); a Share button per tile in the tab order (one tab stop per tile pair would double the Tab presses).
 - Rationale: one directive gives every person reference the same card with the right trigger for its context, the card exposes nothing beyond what the owner chose to share, and the tab's sharing feels instant without hiding failures.
 
+### D-156 MatDialog defaults: Material's own config plus `ariaModal: true`; confirmations are `alertdialog` (TKT-85)
+
+- Question: `MAT_DIALOG_DEFAULT_OPTIONS` replaces Material's defaults instead of merging with them, so dialogs opened without explicit options lost `role="dialog"`, `closeOnNavigation` and `delayFocusTrap`. What should every MatDialog get?
+- Decision: the app's defaults start from `new MatDialogConfig()` and override only `role: 'dialog'`, `ariaModal: true`, `delayFocusTrap: false` and `maxWidth`, so every other Material default stays in force (browser Back closes an open dialog again). `delayFocusTrap` stays off as before: Material's default moves focus into the dialog only after the open animation, so an Enter pressed right after opening still hits the button that opened it and opens a second dialog. `ConfirmService` opens its dialog as `role="alertdialog"`: it interrupts an action and needs an answer. Call sites no longer pass `role` or `ariaModal`. Non-Material popovers (tour cards, user card, watchers, notifications panel) keep their own roles.
+- Rejected: adding `role`/`ariaModal` at each `dialog.open` (the next new dialog forgets it); Material's `ariaModal: false` default (it relies on `aria-hidden` siblings only, and the welcome and What's new dialogs already shipped with `aria-modal="true"`).
+- Rationale: one place sets the accessible defaults, and a Material upgrade that adds a default reaches the app without a change here.
+
 ## Product owner answers (v1 review, 2026-10-27)
 
 These were open questions (Q-01..Q-05); the product owner resolved them as follows.

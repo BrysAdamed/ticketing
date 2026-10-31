@@ -47,6 +47,55 @@ public sealed class TicketMcpTests(TicketingApiFactory api)
     }
 
     [Fact]
+    public async Task Update_ticket_with_null_parent_key_makes_the_ticket_top_level()
+    {
+        // Arrange
+        var (mcp, _) = await SetUpAsync();
+        await using var session = mcp;
+        await CallAsync(mcp, "create_ticket", new() { ["projectKey"] = "WEB", ["title"] = "Epic", ["type"] = "Epic" });
+        await CallAsync(mcp, "create_ticket", new() { ["projectKey"] = "WEB", ["title"] = "Story", ["type"] = "UserStory", ["parentKey"] = "WEB-1" });
+
+        // Act
+        var updated = await CallAsync(mcp, "update_ticket", new() { ["key"] = "WEB-2", ["parentKey"] = null });
+
+        // Assert
+        Assert.False(updated.TryGetProperty("parentKey", out _));
+        Assert.Null(await api.WithDbAsync(db => db.Tickets.Where(t => t.Number == 2).Select(t => t.ParentId).SingleAsync(_ct)));
+    }
+
+    [Theory]
+    [InlineData("update_ticket", "parentKey", "string", true)]
+    [InlineData("update_ticket", "assignee", "string", true)]
+    [InlineData("update_ticket", "description", "string", true)]
+    [InlineData("update_ticket", "version", "string", true)]
+    [InlineData("update_ticket", "storyPoints", "integer", true)]
+    [InlineData("update_ticket", "severity", "string", true)]
+    [InlineData("update_ticket", "resolution", "string", true)]
+    [InlineData("update_test_case", "title", "string", false)]
+    [InlineData("update_test_case", "steps", "array", false)]
+    [InlineData("update_test_case", "archived", "boolean", false)]
+    [InlineData("update_test_case", "ticketKey", "string", true)]
+    [InlineData("update_board", "description", "string", true)]
+    public async Task Optional_parameters_declare_their_json_type_and_whether_null_clears(string tool, string parameter, string type, bool nullable)
+    {
+        // Arrange
+        var user = await api.CreateUserAsync();
+        await using var mcp = await api.CreateMcpClientAsync(await api.CreatePatAsync(user));
+
+        // Act
+        var tools = (await mcp.ListToolsAsync(cancellationToken: _ct)).ToDictionary(t => t.Name);
+
+        // Assert
+        var property = tools[tool].ProtocolTool.InputSchema.GetProperty("properties").GetProperty(parameter);
+        var types = property.GetProperty("type") is { ValueKind: JsonValueKind.Array } array
+            ? array.EnumerateArray().Select(t => t.GetString()).ToList()
+            : [property.GetProperty("type").GetString()];
+        Assert.Contains(type, types);
+        Assert.Equal(nullable, types.Contains("null"));
+        Assert.True(property.TryGetProperty("description", out _));
+    }
+
+    [Fact]
     public async Task Create_tickets_resolves_batch_parents_and_is_all_or_nothing()
     {
         // Arrange

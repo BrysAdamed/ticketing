@@ -31,7 +31,7 @@
         <span class="right">
           <tk-ticket-header-actions-host [ticket]="t" [presentation]="presentation()" />
           @if (t.watchers; as watchers) {
-            <tk-ticket-watch
+            <tk-watch-control
               tkTourAnchor="ticket.watch"
               [watchers]="watchers"
               [meId]="store.me()?.id ?? null"

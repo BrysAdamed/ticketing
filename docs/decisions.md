@@ -760,6 +760,8 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
 
 ### D-117 Doc comments share the comments table, notify the doc's participants and live in a footer section (TKT-21)
 
+> Since D-161 (TKT-107) a new doc comment notifies the doc's watchers instead of its participants.
+
 - Question: page comments (docs refinement D12) need storage, rules, notifications and a place in the reader. A separate `doc_comments` table, or the ticket comments generalized? Whom does a new doc comment notify while watching docs is out of scope?
 - Decision:
   - `comments.ticket_id` becomes nullable and `comments.doc_node_id` is added with `ck_comments_owner` (`num_nonnulls(ticket_id, doc_node_id) = 1`), like attachments (D-108). The `Comment` entity and its rules (edit own, delete own or as Owner, placeholder, previous body to activity) are shared; `Comment.CreateForDoc` makes a doc comment. Ticket lookups and lists filter on `ticket_id`, doc ones on `doc_node_id`, so `/comments/{id}` never reaches a doc comment and `/docs/comments/{id}` never a ticket comment (404 `comment.notFound`). Doc comments get their own `DocCommentDto` (`docKey`, no `mentions`) and use cases (`AddDocComment`, `ListDocComments`, `UpdateDocComment`, `DeleteDocComment`).
@@ -1293,6 +1295,19 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
   - Web: Profile → Notifications, one switch per kind ("About you", "On things you follow") and a muted projects list with a project picker; every change saves at once, optimistically, rolling back only the failed change.
 - Rejected: replacing the whole preference set with `PUT` (two tabs or an agent would overwrite each other, and muted projects the user can no longer see would be dropped); join tables per kind and project (two tables and more queries per save for a handful of values per user); hiding existing notifications when a kind or project is muted (read-time filtering costs every list and count query and surprises users who mute to stop new noise); letting a project mute silence mentions and assignments (hides work assigned to you).
 - Consequence: each save that produces notification candidates runs one more indexed lookup (`notification_preferences` by primary key). Achievements: none fits; muting is housekeeping, not something to encourage.
+### D-161 Doc watchers replace the participant rule for doc comments; the old participants are backfilled (TKT-107)
+
+- Question: D-117 notified a doc's creator and the authors of its live comments about a new comment, because watching docs did not exist. TKT-47 adds watching (I-85). Who watches a doc, what happens to people the old rule notified, and what does watching a doc notify about?
+- Decision:
+  - `doc_watchers (doc_node_id, user_id, created_at)`, primary key (doc, user), index (user, doc), cascade with the doc, restrict with the user, like `ticket_watchers` (D-93). Only pages and diagrams can be watched; a folder answers 409 `doc.kind.unsupported`. Rows stay when the user loses access; readers (watcher list, notifications) re-check it.
+  - Automatic watchers, written by the collaboration projector from activity: the creator on `doc.created` (duplicates included) and the author on `doc.comment.added`; newly mentioned users follow with the mention slices (TKT-108, TKT-109). Docs created in the same save get tracked rows; existing docs get one `INSERT … ON CONFLICT DO NOTHING` (D-159), so a concurrent explicit watch never fails the write.
+  - `DocCommentAdded` notifies the doc's watchers (not the actor, only readers) with `Commented`; D-160 preferences apply unchanged (a muted project silences it, `Commented` can be muted). Deleting your comment no longer takes you out; unwatching does.
+  - The migration backfills the old participants (every page and diagram creator, every author of a comment that is not deleted), so nobody stops hearing about a thread when it ships.
+  - API: `GET /docs/{key}/watchers`, `PUT` / `DELETE /docs/{key}/watchers/me`, MCP `watch_doc` / `unwatch_doc`, and `DocDto.watchers { count, watching, users }` (null for folders). Read access and write-scoped credentials, like ticket watching.
+  - Web: the Watch control of the ticket view moved to `core/watchers` (`tk-watch-control`, test ids by prefix) and sits in the doc page bar; `W` toggles it, optimistically with rollback, and a background refresh during a toggle keeps the optimistic list.
+- Rejected: notifying watchers about every published version in this slice (a new notification kind, noisy for living pages; tracked as a follow-up ticket); keeping the participant rule next to watchers (two overlapping audiences, and no way out of a thread but deleting your comment); watching folders (a folder has no thread, and following a subtree is a different feature).
+- Achievements: none for watching (housekeeping, like D-160).
+
 ## Product owner answers (v1 review, 2026-10-27)
 
 These were open questions (Q-01..Q-05); the product owner resolved them as follows.

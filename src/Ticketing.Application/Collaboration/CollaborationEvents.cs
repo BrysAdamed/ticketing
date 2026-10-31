@@ -4,10 +4,12 @@ using Microsoft.EntityFrameworkCore;
 using Ticketing.Application.Abstractions;
 using Ticketing.Application.Boards;
 using Ticketing.Application.Comments;
+using Ticketing.Application.Docs;
 using Ticketing.Application.Regressions;
 using Ticketing.Application.Tickets;
 using Ticketing.Domain.Activity;
 using Ticketing.Domain.Comments;
+using Ticketing.Domain.Docs;
 using Ticketing.Domain.Tickets;
 
 namespace Ticketing.Application.Collaboration;
@@ -45,9 +47,16 @@ public sealed record TicketMoved(Guid TicketId, Guid ProjectId, Guid? ActorId, D
 public sealed record TicketDeleted(Guid TicketId, Guid ProjectId, Guid? ActorId, DateTimeOffset OccurredAt)
     : TicketEvent(TicketId, ProjectId, ActorId, OccurredAt);
 
-/// <summary>A comment added to a page or diagram (docs refinement D12): its author and earlier commenters are notified.</summary>
-public sealed record DocCommentAdded(Guid DocNodeId, Guid ProjectId, Guid? ActorId, DateTimeOffset OccurredAt, Guid CommentId)
+public abstract record DocEvent(Guid DocNodeId, Guid ProjectId, Guid? ActorId, DateTimeOffset OccurredAt)
     : CollaborationEvent(ProjectId, ActorId, OccurredAt);
+
+/// <summary>A page or diagram was created (folders are skipped): its creator starts watching it (D-161).</summary>
+public sealed record DocCreated(Guid DocNodeId, Guid ProjectId, Guid? ActorId, DateTimeOffset OccurredAt)
+    : DocEvent(DocNodeId, ProjectId, ActorId, OccurredAt);
+
+/// <summary>A comment added to a page or diagram (docs refinement D12): the doc's watchers are notified (D-161).</summary>
+public sealed record DocCommentAdded(Guid DocNodeId, Guid ProjectId, Guid? ActorId, DateTimeOffset OccurredAt, Guid CommentId)
+    : DocEvent(DocNodeId, ProjectId, ActorId, OccurredAt);
 
 public sealed record RegressionItemAssigned(Guid SessionId, Guid ProjectId, Guid? ActorId, DateTimeOffset OccurredAt, string TestCaseKey, Guid? From, Guid? To)
     : CollaborationEvent(ProjectId, ActorId, OccurredAt);
@@ -90,9 +99,14 @@ public static class CollaborationEvents
         }
         if (entry.EntityType == ActivityEntityType.Doc)
         {
-            if (entry.Action != AddDocComment.Action || Parse<CommentBody>(entry.NewValue) is not { } docComment)
-                return null;
-            return new DocCommentAdded(id, projectId, actor, at, docComment.CommentId);
+            return entry.Action switch
+            {
+                CreateDoc.Action when Parse<CreatedDoc>(entry.NewValue) is { Kind: not DocKind.Folder } =>
+                    new DocCreated(id, projectId, actor, at),
+                AddDocComment.Action when Parse<CommentBody>(entry.NewValue) is { } docComment =>
+                    new DocCommentAdded(id, projectId, actor, at, docComment.CommentId),
+                _ => null,
+            };
         }
         if (entry.EntityType != ActivityEntityType.Ticket)
             return null;
@@ -179,6 +193,8 @@ public static class CollaborationEvents
     private sealed record CreatedTicket(Guid ReporterId, Guid? AssigneeId, string? Description);
 
     private sealed record CommentBody(Guid CommentId, string? Body);
+
+    private sealed record CreatedDoc(DocKind Kind);
 
     private sealed record ItemAssignment(string TestCaseKey, Guid? From, Guid? To);
 }

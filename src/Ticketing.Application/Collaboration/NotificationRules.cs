@@ -10,8 +10,8 @@ public sealed record NotificationCandidate(Guid RecipientId, CollaborationEvent 
 /// Who is notified about what (I-30, D-94, D-96): the new assignee of a ticket or regression item, newly mentioned users,
 /// and the watchers of a ticket when it is commented, changes status, has its priority raised to High or Highest, moves
 /// between backlog and boards or is deleted. A watcher mentioned in a new comment gets <c>Mentioned</c> instead of
-/// <c>Commented</c> for it. A comment on a page or diagram notifies the doc's participants (its author and earlier commenters)
-/// with <c>Commented</c>. The actor is never notified about their own action, and <see cref="Unmuted"/> applies each
+/// <c>Commented</c> for it. A comment on a page or diagram notifies the doc's watchers with <c>Commented</c>
+/// (D-161). The actor is never notified about their own action, and <see cref="Unmuted"/> applies each
 /// recipient's muted kinds and projects.
 /// </summary>
 public static class NotificationRules
@@ -20,15 +20,15 @@ public static class NotificationRules
     public static IReadOnlyCollection<Guid> WatchedTickets(IEnumerable<CollaborationEvent> events) =>
         [.. events.Where(e => WatcherKind(e) is not null).Select(e => ((TicketEvent)e).TicketId).Distinct()];
 
-    /// <summary>Docs whose participants <see cref="Candidates"/> needs.</summary>
-    public static IReadOnlyCollection<Guid> CommentedDocs(IEnumerable<CollaborationEvent> events) =>
+    /// <summary>Docs whose watchers <see cref="Candidates"/> needs.</summary>
+    public static IReadOnlyCollection<Guid> WatchedDocs(IEnumerable<CollaborationEvent> events) =>
         [.. events.OfType<DocCommentAdded>().Select(e => e.DocNodeId).Distinct()];
 
     public static IReadOnlyList<NotificationCandidate> Candidates(
         IEnumerable<CollaborationEvent> events,
         ILookup<Guid, Guid> watchersByTicket,
         IReadOnlyList<MentionCandidate> mentions,
-        ILookup<Guid, Guid> participantsByDoc)
+        ILookup<Guid, Guid> watchersByDoc)
     {
         var mentioned = mentions.ToLookup(m => (CollaborationEvent)m.Event, m => m.UserId);
         var candidates = new List<NotificationCandidate>();
@@ -46,8 +46,8 @@ public static class NotificationRules
                     Add(candidates, e, assignee, NotificationKind.RegressionItemAssigned);
                     break;
                 case DocCommentAdded commented:
-                    foreach (var participant in participantsByDoc[commented.DocNodeId].Distinct())
-                        Add(candidates, e, participant, NotificationKind.Commented);
+                    foreach (var watcher in watchersByDoc[commented.DocNodeId].Distinct())
+                        Add(candidates, e, watcher, NotificationKind.Commented);
                     break;
             }
 

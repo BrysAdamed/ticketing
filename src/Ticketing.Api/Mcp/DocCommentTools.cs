@@ -28,7 +28,7 @@ public sealed class DocCommentTools
     [Authorize(Policy = AuthPolicies.CanWrite)]
     [McpServerTool(Name = "add_doc_comment", Destructive = false, Title = "Add doc comment")]
     [Description("Adds a markdown comment (1..20000 characters) below a page or diagram. Ticket keys such as WEB-42 render as links. "
-        + "The doc's author and earlier commenters are notified.")]
+        + "The doc's watchers are notified, and you start watching it.")]
     public static Task<DocCommentDto> AddDocComment(
         AddDocComment.Handler handler,
         [Description(DocKey)] string docKey,

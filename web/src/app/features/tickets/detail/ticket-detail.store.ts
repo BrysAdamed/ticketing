@@ -25,7 +25,7 @@ import {
 import { TicketsApi } from '@core/tickets/tickets.api';
 import { Page } from '@core/api/page';
 import { TicketLinkType } from '@shared/domain/enums';
-import { NO_WATCHERS, withoutWatcher, withWatcher } from './watchers';
+import { NO_WATCHERS, withoutWatcher, withWatcher } from '@core/watchers/watchers';
 
 export type SaveResult = 'saved' | 'conflict' | 'failed';
 

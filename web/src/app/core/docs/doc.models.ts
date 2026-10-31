@@ -1,5 +1,5 @@
 import { ProjectRole, TicketStatus, TicketType } from '@shared/domain/enums';
-import { UserRef } from '../tickets/ticket.models';
+import { UserRef, Watchers } from '../tickets/ticket.models';
 
 export const DOC_KINDS = ['Folder', 'Page', 'Diagram'] as const;
 export type DocKind = (typeof DOC_KINDS)[number];
@@ -98,6 +98,8 @@ export interface Doc {
   outline?: string | null;
   /// Canvas only: the SVG picture of the shown version; null while it has none (written over MCP).
   snapshotUrl?: string | null;
+  /// Pages and diagrams: who watches the doc (D-161); null for folders.
+  watchers?: Watchers | null;
 }
 
 /// A mentioned ticket the reader may see (what a ticket chip shows).

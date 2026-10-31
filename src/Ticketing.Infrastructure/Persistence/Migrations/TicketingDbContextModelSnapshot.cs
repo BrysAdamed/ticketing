@@ -456,6 +456,29 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                     b.ToTable("board_projects", (string)null);
                 });
 
+            modelBuilder.Entity("Ticketing.Domain.Collaboration.DocWatcher", b =>
+                {
+                    b.Property<Guid>("DocNodeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("doc_node_id");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.HasKey("DocNodeId", "UserId")
+                        .HasName("pk_doc_watchers");
+
+                    b.HasIndex("UserId", "DocNodeId")
+                        .HasDatabaseName("ix_doc_watchers_user_id_doc_node_id");
+
+                    b.ToTable("doc_watchers", (string)null);
+                });
+
             modelBuilder.Entity("Ticketing.Domain.Collaboration.Notification", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2132,6 +2155,23 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_board_projects_projects_project_id");
+                });
+
+            modelBuilder.Entity("Ticketing.Domain.Collaboration.DocWatcher", b =>
+                {
+                    b.HasOne("Ticketing.Domain.Docs.DocNode", null)
+                        .WithMany()
+                        .HasForeignKey("DocNodeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_doc_watchers_doc_nodes_doc_node_id");
+
+                    b.HasOne("Ticketing.Domain.Users.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_doc_watchers_users_user_id");
                 });
 
             modelBuilder.Entity("Ticketing.Domain.Collaboration.Notification", b =>

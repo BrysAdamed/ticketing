@@ -6,7 +6,7 @@ using Ticketing.IntegrationTests.Tickets;
 
 namespace Ticketing.IntegrationTests.Docs;
 
-/// <summary>A new doc comment notifies the doc's author and earlier commenters, never the actor (docs refinement D12, D-94).</summary>
+/// <summary>A new doc comment notifies the doc's watchers (its creator and commenters by default), never the actor (docs refinement D12, D-94, D-162).</summary>
 [Collection(nameof(DocsCollection))]
 public sealed class DocCommentNotificationTests(TicketingApiFactory api)
 {
@@ -63,7 +63,7 @@ public sealed class DocCommentNotificationTests(TicketingApiFactory api)
     }
 
     [Fact]
-    public async Task Participants_who_cannot_read_the_project_any_more_are_not_notified()
+    public async Task Watchers_who_cannot_read_the_project_any_more_are_not_notified()
     {
         // Arrange
         var world = await SeedAsync("LEFT");
@@ -80,7 +80,7 @@ public sealed class DocCommentNotificationTests(TicketingApiFactory api)
     }
 
     [Fact]
-    public async Task Authors_of_only_deleted_comments_drop_out_and_edits_and_deletes_notify_nobody()
+    public async Task Deleting_a_comment_keeps_its_author_watching_and_edits_and_deletes_notify_nobody()
     {
         // Arrange
         var world = await SeedAsync("QUIT");
@@ -97,7 +97,7 @@ public sealed class DocCommentNotificationTests(TicketingApiFactory api)
 
         // Assert
         Assert.Equal(before, afterEdit);
-        Assert.Empty(await api.StoredNotificationsAsync(world.First));
+        Assert.Equal([world.Second.Id, world.Author.Id], (await api.StoredNotificationsAsync(world.First)).Select(n => n.ActorId!.Value));
         Assert.Single(await api.StoredNotificationsAsync(world.Second));
     }
 

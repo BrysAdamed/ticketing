@@ -18,6 +18,7 @@ import { tablerMessageCircle, tablerPencil, tablerTrash } from '@ng-icons/tabler
 import { Doc } from '@core/docs/doc.models';
 import { ConfirmService } from '@core/notify/confirm.service';
 import { ShortcutService } from '@core/shortcuts/shortcut.service';
+import { ProjectPeople } from '@core/tickets/project-people';
 import { MarkdownEditorComponent } from '@shared/markdown/markdown-editor.component';
 import { MarkdownViewerComponent } from '@shared/markdown/markdown-viewer.component';
 import { AbsoluteTimePipe, RelativeTimePipe } from '@shared/pipes/relative-time.pipe';
@@ -28,7 +29,7 @@ import { DocStore } from '../../doc/doc.store';
 import { DocCommentsStore, DocThreadComment } from './doc-comments.store';
 
 /// The comment thread below a page or diagram (docs refinement D12, spec 6.9 rules): oldest first,
-/// markdown with the shared renderer, edit and delete your own (Owners delete any), "edited"
+/// markdown with the shared renderer and @mentions (people picker, chips; D-163), edit and delete your own (Owners delete any), "edited"
 /// marker, deleted placeholders and a composer for writers (`Shift+C` focuses it). A page section
 /// (`provideDocPageSection`, footer); `#comments` scrolls to it.
 @Component({
@@ -122,6 +123,8 @@ import { DocCommentsStore, DocThreadComment } from './doc-comments.store';
                 ariaLabel="Edit comment"
                 submitHint="to save"
                 [maxLength]="maxLength"
+                [mentionSearch]="mentionSearch"
+                [mentions]="c.mentions"
                 [(value)]="editDraft"
                 (submitted)="saveEdit(c)"
                 (cancelled)="editingId.set(null)"
@@ -138,7 +141,7 @@ import { DocCommentsStore, DocThreadComment } from './doc-comments.store';
                 </button>
               </tk-markdown-editor>
             } @else {
-              <tk-markdown class="cmt-b" [source]="c.body" />
+              <tk-markdown class="cmt-b" [source]="c.body" [mentions]="c.mentions" />
             }
           </article>
         } @empty {
@@ -170,10 +173,11 @@ import { DocCommentsStore, DocThreadComment } from './doc-comments.store';
         class="composer"
         data-testid="doc-comment-composer"
         ariaLabel="New comment"
-        placeholder="Leave a comment… Markdown supported, ticket keys link automatically"
+        placeholder="Leave a comment… Markdown supported, @ to mention, ticket keys link automatically"
         submitHint="to comment"
         [minRows]="2"
         [maxLength]="maxLength"
+        [mentionSearch]="mentionSearch"
         [(value)]="draft"
         (submitted)="submit()"
       >
@@ -207,6 +211,9 @@ export class DocCommentsSectionComponent {
 
   readonly doc = input.required<Doc>();
   private readonly key = computed(() => this.doc().key);
+  protected readonly mentionSearch = inject(ProjectPeople).mentionSearch(
+    () => this.doc().projectKey,
+  );
 
   constructor() {
     effect(() => {

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Ticketing.Application.Tickets;
+using Ticketing.Application.Watchers;
 using Ticketing.Domain.Activity;
 using Ticketing.Domain.Docs;
 using Ticketing.Domain.Projects;
@@ -69,6 +70,9 @@ public sealed record DocDto(
 
     /// <summary>Canvas only: where the SVG picture of the shown version is served; null while that version has none.</summary>
     public string? SnapshotUrl { get; init; }
+
+    /// <summary>Pages and diagrams: the visible watchers and whether the caller watches (D-162); null for folders.</summary>
+    public WatchersDto? Watchers { get; init; }
 }
 
 /// <summary>What the latest content mentions, resolved for the reader: tickets and docs the reader cannot read are left out.</summary>

@@ -1,6 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiClient } from '../api/api-client';
+import { Watchers } from '../tickets/ticket.models';
 import { Page, PageRequest } from '../api/page';
 import {
   DeletedDoc,
@@ -37,6 +38,15 @@ export class DocsApi {
 
   get(key: string): Observable<Doc> {
     return this.api.get<Doc>(`/docs/${encodeURIComponent(key)}`);
+  }
+
+  /// Idempotent; read access is enough (viewers can watch). Pages and diagrams only.
+  watch(key: string): Observable<Watchers> {
+    return this.api.put<Watchers>(`/docs/${encodeURIComponent(key)}/watchers/me`, null);
+  }
+
+  unwatch(key: string): Observable<Watchers> {
+    return this.api.delete<Watchers>(`/docs/${encodeURIComponent(key)}/watchers/me`);
   }
 
   create(projectKey: string, doc: NewDoc, idempotencyKey?: string): Observable<Doc> {

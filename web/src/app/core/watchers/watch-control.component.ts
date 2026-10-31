@@ -1,17 +1,20 @@
 import { CdkConnectedOverlay, CdkOverlayOrigin, ConnectedPosition } from '@angular/cdk/overlay';
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import { MatTooltip } from '@angular/material/tooltip';
-import { Watchers } from '@core/tickets/ticket.models';
-import { UserCardDirective } from '@core/users/user-card/user-card.directive';
+import { provideIcons } from '@ng-icons/core';
+import { tablerEye, tablerEyeOff } from '@ng-icons/tabler-icons';
+import { Watchers } from '../tickets/ticket.models';
+import { UserCardDirective } from '../users/user-card/user-card.directive';
 import { AvatarComponent } from '@shared/ui/domain/avatar.component';
 import { IconComponent } from '@shared/ui/icon/icon.component';
 
 const PREVIEW = 3;
 
-/// Header action of the ticket view: the Watch / Watching toggle (`W`) and the watcher count with a
-/// few avatars, which opens the list of watchers.
+/// Header action of the ticket and doc views: the Watch / Watching toggle (`W`) and the watcher count
+/// with a few avatars, which opens the list of watchers. `testIdPrefix` names the test ids (`ticket`,
+/// `doc`) and `noun` the thing watched in the empty list.
 @Component({
-  selector: 'tk-ticket-watch',
+  selector: 'tk-watch-control',
   imports: [
     CdkConnectedOverlay,
     CdkOverlayOrigin,
@@ -20,12 +23,13 @@ const PREVIEW = 3;
     IconComponent,
     UserCardDirective,
   ],
+  viewProviders: [provideIcons({ tablerEye, tablerEyeOff })],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <button
       type="button"
       class="toggle"
-      data-testid="ticket-watch-toggle"
+      [attr.data-testid]="testIdPrefix() + '-watch-toggle'"
       [class.on]="watchers().watching"
       [attr.aria-pressed]="watchers().watching"
       [matTooltip]="(watchers().watching ? 'Stop watching' : 'Watch for changes') + '  W'"
@@ -40,7 +44,7 @@ const PREVIEW = 3;
       cdkOverlayOrigin
       type="button"
       class="count"
-      data-testid="ticket-watchers-count"
+      [attr.data-testid]="testIdPrefix() + '-watchers-count'"
       aria-haspopup="dialog"
       [attr.aria-expanded]="open()"
       [attr.aria-label]="countLabel()"
@@ -67,7 +71,7 @@ const PREVIEW = 3;
         class="tk-popover panel"
         role="dialog"
         aria-label="Watchers"
-        data-testid="ticket-watchers"
+        [attr.data-testid]="testIdPrefix() + '-watchers'"
       >
         <div class="head">
           Watchers <span class="n tnum">{{ watchers().count }}</span>
@@ -75,7 +79,7 @@ const PREVIEW = 3;
         @for (user of watchers().users; track user.id) {
           <div
             class="row"
-            [attr.data-testid]="'ticket-watcher-row-' + user.email"
+            [attr.data-testid]="testIdPrefix() + '-watcher-row-' + user.email"
             [tkUserCard]="user"
           >
             <tk-avatar [userId]="user.id" [name]="user.displayName" [showTitle]="false" />
@@ -85,7 +89,7 @@ const PREVIEW = 3;
             }
           </div>
         } @empty {
-          <div class="empty">Nobody is watching this ticket.</div>
+          <div class="empty">Nobody is watching this {{ noun() }}.</div>
         }
       </div>
     </ng-template>
@@ -176,8 +180,10 @@ const PREVIEW = 3;
     }
   `,
 })
-export class TicketWatchComponent {
+export class WatchControlComponent {
   readonly watchers = input.required<Watchers>();
+  readonly noun = input('ticket');
+  readonly testIdPrefix = input('ticket');
   readonly meId = input<string | null>(null);
   readonly toggled = output<void>();
 

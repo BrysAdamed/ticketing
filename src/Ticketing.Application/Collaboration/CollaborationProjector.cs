@@ -4,6 +4,7 @@ using Ticketing.Application.Access;
 using Ticketing.Domain.Activity;
 using Ticketing.Domain.Collaboration;
 using Ticketing.Domain.Common;
+using Ticketing.Domain.Docs;
 using Ticketing.Domain.Tickets;
 
 namespace Ticketing.Application.Collaboration;
@@ -29,10 +30,13 @@ internal sealed class CollaborationProjector(ITicketingDbContext db) : IActivity
         var candidates = WatchingRules.Candidates(events, mentions);
         if (candidates.Count > 0)
             await AddWatchersAsync(candidates, cancellationToken);
+        var docCandidates = WatchingRules.DocCandidates(events, mentions);
+        if (docCandidates.Count > 0)
+            await AddDocWatchersAsync(docCandidates, cancellationToken);
 
         var watchers = await WatchersAsync(NotificationRules.WatchedTickets(events), cancellationToken);
-        var participants = await DocParticipantsAsync(NotificationRules.CommentedDocs(events), cancellationToken);
-        var notifications = NotificationRules.Candidates(events, watchers, mentions, participants);
+        var docWatchers = await DocWatchersAsync(NotificationRules.WatchedDocs(events), cancellationToken);
+        var notifications = NotificationRules.Candidates(events, watchers, mentions, docWatchers);
         if (notifications.Count > 0)
             await NotifyAsync(notifications, cancellationToken);
     }
@@ -73,6 +77,42 @@ internal sealed class CollaborationProjector(ITicketingDbContext db) : IActivity
             cancellationToken);
     }
 
+    /// <summary>
+    /// Adds doc watchers like ticket watchers (D-159, D-162): tracked rows for docs created in this save, otherwise one insert that
+    /// tolerates a concurrent explicit watch. Whoever is watching already stays as they are.
+    /// </summary>
+    private async Task AddDocWatchersAsync(IReadOnlyList<DocWatchCandidate> candidates, CancellationToken cancellationToken)
+    {
+        await LoadReadersAsync(candidates.Select(c => (c.ProjectId, c.UserId)), cancellationToken);
+        var allowed = candidates.Where(c => _canRead[(c.ProjectId, c.UserId)]).ToList();
+        if (allowed.Count == 0)
+            return;
+
+        var newDocs = db.ChangeTracker.Entries<DocNode>().Where(e => e.State == EntityState.Added).Select(e => e.Entity.Id).ToHashSet();
+        var tracked = db.ChangeTracker.Entries<DocWatcher>()
+            .Where(e => e.State != EntityState.Deleted)
+            .Select(e => (e.Entity.DocNodeId, e.Entity.UserId))
+            .ToHashSet();
+        var stored = new List<DocWatcher>();
+        foreach (var candidate in allowed.Where(c => !tracked.Contains((c.DocNodeId, c.UserId))))
+        {
+            var watcher = DocWatcher.Create(candidate.DocNodeId, candidate.UserId, candidate.At);
+            if (newDocs.Contains(candidate.DocNodeId))
+                db.DocWatchers.Add(watcher);
+            else
+                stored.Add(watcher);
+        }
+        if (stored.Count == 0)
+            return;
+
+        var docIds = stored.Select(w => w.DocNodeId).ToArray();
+        var userIds = stored.Select(w => w.UserId).ToArray();
+        var createdAt = stored.Select(w => w.CreatedAt).ToArray();
+        await db.Database.ExecuteSqlAsync(
+            $"INSERT INTO doc_watchers (doc_node_id, user_id, created_at) SELECT * FROM unnest({docIds}, {userIds}, {createdAt}) ON CONFLICT DO NOTHING",
+            cancellationToken);
+    }
+
     private HashSet<Guid> NewTicketIds() =>
         db.ChangeTracker.Entries<Ticket>().Where(e => e.State == EntityState.Added).Select(e => e.Entity.Id).ToHashSet();
 
@@ -107,7 +147,7 @@ internal sealed class CollaborationProjector(ITicketingDbContext db) : IActivity
             {
                 RegressionItemAssigned item => Notification.AboutRegressionItem(
                     candidate.RecipientId, e.ProjectId, item.SessionId, item.TestCaseKey, e.ActorId, candidate.Kind, summary, e.OccurredAt),
-                DocCommentAdded doc => Notification.AboutDoc(candidate.RecipientId, e.ProjectId, doc.DocNodeId, e.ActorId, candidate.Kind, summary, e.OccurredAt),
+                DocEvent doc => Notification.AboutDoc(candidate.RecipientId, e.ProjectId, doc.DocNodeId, e.ActorId, candidate.Kind, summary, e.OccurredAt),
                 _ => Notification.AboutTicket(candidate.RecipientId, e.ProjectId, ticketId!.Value, e.ActorId, candidate.Kind, summary, e.OccurredAt),
             };
             db.Notifications.Add(created);
@@ -127,7 +167,7 @@ internal sealed class CollaborationProjector(ITicketingDbContext db) : IActivity
     {
         TicketEvent t => (t.TicketId, null, null),
         RegressionItemAssigned item => (null, item.SessionId, null),
-        DocCommentAdded doc => (null, null, doc.DocNodeId),
+        DocEvent doc => (null, null, doc.DocNodeId),
         _ => throw new InvalidOperationException($"Notifications about {e.GetType().Name} are not supported."),
     };
 
@@ -198,22 +238,20 @@ internal sealed class CollaborationProjector(ITicketingDbContext db) : IActivity
         return stored.Select(w => (w.TicketId, w.UserId)).Concat(tracked).Distinct().ToLookup(w => w.TicketId, w => w.UserId);
     }
 
-    /// <summary>The author of each doc and the authors of its stored, not deleted comments (comments added by this save are not stored yet).</summary>
-    private async Task<ILookup<Guid, Guid>> DocParticipantsAsync(IReadOnlyCollection<Guid> docNodeIds, CancellationToken cancellationToken)
+    /// <summary>Stored and tracked watchers of <paramref name="docNodeIds"/>, before read access is checked.</summary>
+    private async Task<ILookup<Guid, Guid>> DocWatchersAsync(IReadOnlyCollection<Guid> docNodeIds, CancellationToken cancellationToken)
     {
         if (docNodeIds.Count == 0)
-            return Array.Empty<(Guid DocNodeId, Guid UserId)>().ToLookup(p => p.DocNodeId, p => p.UserId);
+            return Array.Empty<(Guid DocNodeId, Guid UserId)>().ToLookup(w => w.DocNodeId, w => w.UserId);
 
-        var authors = await db.DocNodes.AsNoTracking()
-            .Where(n => docNodeIds.Contains(n.Id))
-            .Select(n => new { DocNodeId = n.Id, UserId = n.CreatedById })
+        var tracked = db.ChangeTracker.Entries<DocWatcher>()
+            .Where(e => e.State != EntityState.Deleted && docNodeIds.Contains(e.Entity.DocNodeId))
+            .Select(e => (e.Entity.DocNodeId, e.Entity.UserId));
+        var stored = await db.DocWatchers.AsNoTracking()
+            .Where(w => docNodeIds.Contains(w.DocNodeId))
+            .Select(w => new { w.DocNodeId, w.UserId })
             .ToListAsync(cancellationToken);
-        var commenters = await db.Comments.AsNoTracking()
-            .Where(c => c.DocNodeId != null && docNodeIds.Contains(c.DocNodeId.Value) && c.DeletedAt == null)
-            .Select(c => new { DocNodeId = c.DocNodeId!.Value, UserId = c.AuthorId })
-            .Distinct()
-            .ToListAsync(cancellationToken);
-        return authors.Concat(commenters).ToLookup(p => p.DocNodeId, p => p.UserId);
+        return stored.Select(w => (w.DocNodeId, w.UserId)).Concat(tracked).Distinct().ToLookup(w => w.DocNodeId, w => w.UserId);
     }
 
     private async Task LoadReadersAsync(IEnumerable<(Guid ProjectId, Guid UserId)> pairs, CancellationToken cancellationToken)

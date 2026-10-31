@@ -20,6 +20,7 @@ function comment(id: string, overrides: Partial<DocComment> = {}): DocComment {
     deletedAt: null,
     canEdit: true,
     canDelete: true,
+    mentions: [],
     ...overrides,
   };
 }

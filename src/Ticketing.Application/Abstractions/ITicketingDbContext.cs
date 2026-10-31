@@ -55,6 +55,8 @@ public interface ITicketingDbContext
 
     DbSet<TicketWatcher> TicketWatchers { get; }
 
+    DbSet<DocWatcher> DocWatchers { get; }
+
     DbSet<Notification> Notifications { get; }
 
     DbSet<NotificationPreferences> NotificationPreferences { get; }

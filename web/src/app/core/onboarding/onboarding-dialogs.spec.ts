@@ -16,7 +16,11 @@ import { WELCOME_GUIDE } from './guides/welcome';
 import { WhatsNewEntry } from './guides/whats-new';
 import { GuideProgress } from './onboarding.models';
 import { OnboardingStateService } from './onboarding-state.service';
-import { WELCOME_DIALOG_ID, WHATS_NEW_DIALOG_ID } from './dialogs/onboarding-dialog-runner';
+import {
+  OnboardingDialogRunner,
+  WELCOME_DIALOG_ID,
+  WHATS_NEW_DIALOG_ID,
+} from './dialogs/onboarding-dialog-runner';
 import { OnboardingDialogs, WHATS_NEW } from './onboarding-dialogs';
 
 const NOVEMBER: WhatsNewEntry = {
@@ -48,6 +52,7 @@ describe('OnboardingDialogs', () => {
   let checklist: { restore: ReturnType<typeof vi.fn> };
   let router: { navigateByUrl: ReturnType<typeof vi.fn> };
   let helpItems: HelpMenuItem[];
+  let runs: Promise<void>[];
 
   function store(id: string, version = 1): void {
     guides.update((map) =>
@@ -77,19 +82,44 @@ describe('OnboardingDialogs', () => {
     return service;
   }
 
+  async function opensDialog(id: string): Promise<void> {
+    await vi.waitFor(() => expect(opened.map((d) => d.id)).toEqual([id]));
+  }
+
   async function close(result?: unknown): Promise<void> {
+    await vi.waitFor(() => expect(opened).not.toHaveLength(0));
     const dialog = opened.at(-1)!;
+    const run = runs.at(-1);
     openDialogs = [];
     dialog.closed.next(result);
     dialog.closed.complete();
+    await run;
     await settle();
   }
 
-  beforeAll(async () => {
-    await import('./dialogs/onboarding-dialog-runner');
+  function track(run: Promise<void>): Promise<void> {
+    runs.push(run);
+    return run;
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   beforeEach(() => {
+    runs = [];
+    const { openWelcome, openWhatsNew } = OnboardingDialogRunner.prototype;
+    vi.spyOn(OnboardingDialogRunner.prototype, 'openWelcome').mockImplementation(function (
+      this: OnboardingDialogRunner,
+    ) {
+      return track(openWelcome.call(this));
+    });
+    vi.spyOn(OnboardingDialogRunner.prototype, 'openWhatsNew').mockImplementation(function (
+      this: OnboardingDialogRunner,
+      entries,
+    ) {
+      return track(openWhatsNew.call(this, entries));
+    });
     sessionStorage.clear();
     user.set(null);
     loaded.set(false);
@@ -178,7 +208,7 @@ describe('OnboardingDialogs', () => {
     await settle();
 
     // Assert
-    expect(opened.map((d) => d.id)).toEqual([WELCOME_DIALOG_ID]);
+    await opensDialog(WELCOME_DIALOG_ID);
     expect(sessionStorage.getItem(sessionKey('u1'))).toBe('1');
   });
 
@@ -214,7 +244,7 @@ describe('OnboardingDialogs', () => {
     await start();
 
     // Assert
-    expect(opened.map((d) => d.id)).toEqual([WHATS_NEW_DIALOG_ID]);
+    await opensDialog(WHATS_NEW_DIALOG_ID);
 
     // Act
     await close(true);
@@ -251,7 +281,7 @@ describe('OnboardingDialogs', () => {
     await settle();
 
     // Assert
-    expect(opened.map((d) => d.id)).toEqual([WELCOME_DIALOG_ID]);
+    await opensDialog(WELCOME_DIALOG_ID);
   });
 
   it('waits until another open dialog has closed', async () => {
@@ -268,7 +298,7 @@ describe('OnboardingDialogs', () => {
     await settle();
 
     // Assert
-    expect(opened.map((d) => d.id)).toEqual([WELCOME_DIALOG_ID]);
+    await opensDialog(WELCOME_DIALOG_ID);
   });
 
   it('Take the tour starts the backlog tour of the most recent writable project', async () => {

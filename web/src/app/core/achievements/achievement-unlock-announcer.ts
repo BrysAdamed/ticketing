@@ -54,7 +54,7 @@ export class AchievementUnlockAnnouncer {
       description: catalogue.get(item.id)?.description ?? null,
     }));
     this.queue.push(...planUnlockToasts(items));
-    this.showNext();
+    void this.showNext();
   }
 
   /// Signed out or achievements turned off: drop what is queued and what this session knows.
@@ -64,11 +64,15 @@ export class AchievementUnlockAnnouncer {
     this.catalogue = null;
   }
 
-  private showNext(): void {
-    if (this.showing) return;
-    const next = this.queue.shift();
-    if (!next) return;
+  private async showNext(): Promise<void> {
+    if (this.showing || this.queue.length === 0) return;
     this.showing = true;
+    await this.toast.whenIdle();
+    const next = this.queue.shift();
+    if (!next) {
+      this.showing = false;
+      return;
+    }
     const data: AchievementToastData = {
       toast: next,
       durationMs: UNLOCK_TOAST_MS,
@@ -79,7 +83,7 @@ export class AchievementUnlockAnnouncer {
       .afterDismissed()
       .subscribe(() => {
         this.showing = false;
-        this.showNext();
+        void this.showNext();
       });
   }
 

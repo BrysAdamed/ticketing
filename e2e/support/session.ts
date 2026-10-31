@@ -1,6 +1,14 @@
-import { Browser, BrowserContext, BrowserContextOptions, expect, Page } from '@playwright/test';
+import {
+    Browser,
+    BrowserContext,
+    BrowserContextOptions,
+    expect,
+    Page,
+    request,
+} from '@playwright/test';
 import { AUTO_SHOWN_GUIDES } from '@onboarding/auto-guides';
 import { GuideRef } from '@onboarding/onboarding.models';
+import { BASE_URL } from './env';
 import { markGuidesSeen } from './guides';
 
 export interface SignInOptions {
@@ -16,26 +24,35 @@ export interface SignedInUser {
     page: Page;
 }
 
-/// Signs a user in through `POST /auth/login` in a browser context of their own (no page is
-/// opened yet, so callers can stub routes or add init scripts first) and, unless `keepGuides`,
-/// marks every auto-shown guide seen before the SPA loads. The login page itself is covered by
-/// the smoke and identity specs.
+/// Signs a user in through `POST /auth/login` and opens a browser context of their own with that
+/// session (no page is opened yet, so callers can stub routes or add init scripts first). Unless
+/// `keepGuides`, every auto-shown guide is marked seen before the SPA loads. Login and guides go
+/// through a Node-side request context, so the browser only receives the finished cookies. The
+/// login page itself is covered by the smoke and identity specs.
 export async function signInAs(
     browser: Browser,
     credentials: { email: string; password: string },
     options: SignInOptions = {},
 ): Promise<SignedInUser> {
-    const context = await browser.newContext({
-        ...options.contextOptions,
+    const session = await request.newContext({
+        baseURL: BASE_URL,
         storageState: { cookies: [], origins: [] },
     });
-    const response = await context.request.post('/api/v1/auth/login', { data: credentials });
-    expect(response.ok(), `login ${credentials.email} → ${response.status()}`).toBe(true);
-    const keep = options.keepGuides;
-    if (keep !== true)
-        await markGuidesSeen(
-            context.request,
-            typeof keep === 'function' ? AUTO_SHOWN_GUIDES.filter((g) => !keep(g)) : undefined,
-        );
-    return { context, page: await context.newPage() };
+    try {
+        const response = await session.post('/api/v1/auth/login', { data: credentials });
+        expect(response.ok(), `login ${credentials.email} → ${response.status()}`).toBe(true);
+        const keep = options.keepGuides;
+        if (keep !== true)
+            await markGuidesSeen(
+                session,
+                typeof keep === 'function' ? AUTO_SHOWN_GUIDES.filter((g) => !keep(g)) : undefined,
+            );
+        const context = await browser.newContext({
+            ...options.contextOptions,
+            storageState: await session.storageState(),
+        });
+        return { context, page: await context.newPage() };
+    } finally {
+        await session.dispose();
+    }
 }

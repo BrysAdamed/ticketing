@@ -11,7 +11,7 @@ using Ticketing.Domain.Docs;
 namespace Ticketing.Application.Comments;
 
 /// <summary>A comment in the footer thread of a page or diagram (docs refinement D12). Deleted comments have an empty body;
-/// <see cref="Mentions"/> are the mentioned users who are active and can read the project (D-96, D-162).</summary>
+/// <see cref="Mentions"/> are the mentioned users who are active and can read the project (D-96, D-163).</summary>
 public sealed record DocCommentDto(
     Guid Id,
     string DocKey,

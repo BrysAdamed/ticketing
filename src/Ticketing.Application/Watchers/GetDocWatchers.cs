@@ -8,7 +8,7 @@ using Ticketing.Domain.Docs;
 
 namespace Ticketing.Application.Watchers;
 
-/// <summary>Who watches a page or diagram (I-85, D-161): only active users who can read its project are listed.</summary>
+/// <summary>Who watches a page or diagram (I-85, D-162): only active users who can read its project are listed.</summary>
 public static class GetDocWatchers
 {
     public sealed record Query(string DocKeyOrId);

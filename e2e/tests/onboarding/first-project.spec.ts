@@ -60,9 +60,11 @@ class Walkthrough {
         await this.page.getByTestId('command-palette-input').fill('Your first project');
         const item = this.page.getByTestId('palette-item-command:help.tour.first-project');
         await expect(item).toBeVisible();
-        for (let i = 0; i < 10 && (await item.getAttribute('aria-selected')) !== 'true'; i++)
-            await this.page.keyboard.press('ArrowDown');
-        await expect(item).toHaveAttribute('aria-selected', 'true');
+        await expect(async () => {
+            if ((await item.getAttribute('aria-selected')) !== 'true')
+                await this.page.keyboard.press('ArrowDown');
+            await expect(item).toHaveAttribute('aria-selected', 'true', { timeout: 500 });
+        }).toPass();
         await this.page.keyboard.press('Enter');
     }
 

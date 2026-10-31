@@ -2,7 +2,7 @@ using Ticketing.Application.Watchers;
 
 namespace Ticketing.Api.Endpoints;
 
-/// <summary>Doc watchers (I-85, D-161): who follows a page or diagram, and watching or unwatching it yourself.</summary>
+/// <summary>Doc watchers (I-85, D-162): who follows a page or diagram, and watching or unwatching it yourself.</summary>
 public sealed class DocWatcherEndpoints : IEndpointModule
 {
     public void MapEndpoints(RouteGroupBuilder api)

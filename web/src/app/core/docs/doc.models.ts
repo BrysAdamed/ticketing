@@ -98,7 +98,7 @@ export interface Doc {
   outline?: string | null;
   /// Canvas only: the SVG picture of the shown version; null while it has none (written over MCP).
   snapshotUrl?: string | null;
-  /// Pages and diagrams: who watches the doc (D-161); null for folders.
+  /// Pages and diagrams: who watches the doc (D-162); null for folders.
   watchers?: Watchers | null;
 }
 

@@ -195,7 +195,7 @@ test.describe('admin agent prompts', () => {
         await delegate.menuItem('delegate-copy').click();
 
         // Assert
-        await expect(page.getByTestId('toast')).toContainText('Prompt copied');
+        await expect(page.getByTestId('toast').filter({ hasText: 'Prompt copied' })).toBeVisible();
         const copied = await page.evaluate(() => window.__tkCopied ?? []);
         expect(copied).toHaveLength(1);
         expect(copied[0].trimEnd().endsWith(marker)).toBe(true);

@@ -71,7 +71,7 @@ public sealed record DocDto(
     /// <summary>Canvas only: where the SVG picture of the shown version is served; null while that version has none.</summary>
     public string? SnapshotUrl { get; init; }
 
-    /// <summary>Pages and diagrams: the visible watchers and whether the caller watches (D-161); null for folders.</summary>
+    /// <summary>Pages and diagrams: the visible watchers and whether the caller watches (D-162); null for folders.</summary>
     public WatchersDto? Watchers { get; init; }
 }
 

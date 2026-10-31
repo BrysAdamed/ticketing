@@ -29,7 +29,7 @@ import { DocStore } from '../../doc/doc.store';
 import { DocCommentsStore, DocThreadComment } from './doc-comments.store';
 
 /// The comment thread below a page or diagram (docs refinement D12, spec 6.9 rules): oldest first,
-/// markdown with the shared renderer and @mentions (people picker, chips; D-162), edit and delete your own (Owners delete any), "edited"
+/// markdown with the shared renderer and @mentions (people picker, chips; D-163), edit and delete your own (Owners delete any), "edited"
 /// marker, deleted placeholders and a composer for writers (`Shift+C` focuses it). A page section
 /// (`provideDocPageSection`, footer); `#comments` scrolls to it.
 @Component({

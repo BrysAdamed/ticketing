@@ -8,7 +8,7 @@ using Ticketing.Domain.Comments;
 
 namespace Ticketing.Application.Comments;
 
-/// <summary>The author edits their doc comment; the previous body is kept in the doc's activity (spec 6.9). Newly added mentions notify (D-162).</summary>
+/// <summary>The author edits their doc comment; the previous body is kept in the doc's activity (spec 6.9). Newly added mentions notify (D-163).</summary>
 public static class UpdateDocComment
 {
     public const string Action = "doc.comment.edited";

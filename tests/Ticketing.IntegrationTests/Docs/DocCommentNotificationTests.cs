@@ -6,7 +6,7 @@ using Ticketing.IntegrationTests.Tickets;
 
 namespace Ticketing.IntegrationTests.Docs;
 
-/// <summary>A new doc comment notifies the doc's watchers (its creator and commenters by default), never the actor (docs refinement D12, D-94, D-161).</summary>
+/// <summary>A new doc comment notifies the doc's watchers (its creator and commenters by default), never the actor (docs refinement D12, D-94, D-162).</summary>
 [Collection(nameof(DocsCollection))]
 public sealed class DocCommentNotificationTests(TicketingApiFactory api)
 {

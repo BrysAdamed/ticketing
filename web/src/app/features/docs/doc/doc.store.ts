@@ -87,7 +87,7 @@ export class DocStore {
   }
 
   /// `W`: watches or unwatches the open page or diagram at once and rolls back with an error toast
-  /// if the server refuses (D-161). Only the latest of several quick toggles applies its response.
+  /// if the server refuses (D-162). Only the latest of several quick toggles applies its response.
   async toggleWatch(): Promise<void> {
     const doc = this.doc();
     const me = this.auth.currentUser();

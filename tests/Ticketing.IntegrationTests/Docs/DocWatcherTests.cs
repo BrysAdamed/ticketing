@@ -14,7 +14,7 @@ using Ticketing.IntegrationTests.Watchers;
 
 namespace Ticketing.IntegrationTests.Docs;
 
-/// <summary>Watching pages and diagrams (I-85, D-161): explicit and automatic watchers, and who a doc comment notifies.</summary>
+/// <summary>Watching pages and diagrams (I-85, D-162): explicit and automatic watchers, and who a doc comment notifies.</summary>
 [Collection(nameof(DocsCollection))]
 public sealed class DocWatcherTests(TicketingApiFactory api)
 {

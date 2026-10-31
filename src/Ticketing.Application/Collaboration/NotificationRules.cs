@@ -11,7 +11,7 @@ public sealed record NotificationCandidate(Guid RecipientId, CollaborationEvent 
 /// and the watchers of a ticket when it is commented, changes status, has its priority raised to High or Highest, moves
 /// between backlog and boards or is deleted. A watcher mentioned in a new comment gets <c>Mentioned</c> instead of
 /// <c>Commented</c> for it. A comment on a page or diagram notifies the doc's watchers with <c>Commented</c>
-/// (D-161), or <c>Mentioned</c> those it newly mentions (D-162). The actor is never notified about their own action, and <see cref="Unmuted"/> applies each
+/// (D-162), or <c>Mentioned</c> those it newly mentions (D-163). The actor is never notified about their own action, and <see cref="Unmuted"/> applies each
 /// recipient's muted kinds and projects.
 /// </summary>
 public static class NotificationRules

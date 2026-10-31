@@ -1,7 +1,7 @@
 namespace Ticketing.Domain.Collaboration;
 
 /// <summary>
-/// A user following a page or diagram (I-85, D-161). Rows are added explicitly (watch) or by the collaboration rules (creator,
+/// A user following a page or diagram (I-85, D-162). Rows are added explicitly (watch) or by the collaboration rules (creator,
 /// commenter, newly mentioned user) and kept when the user loses access; readers decide who is shown and notified.
 /// </summary>
 public sealed class DocWatcher

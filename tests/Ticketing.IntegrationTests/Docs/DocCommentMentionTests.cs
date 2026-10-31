@@ -12,7 +12,7 @@ using Ticketing.IntegrationTests.Watchers;
 
 namespace Ticketing.IntegrationTests.Docs;
 
-/// <summary>@mentions in doc comments (I-86, D-96, D-162): normalized and validated like ticket comments, notify and make watchers.</summary>
+/// <summary>@mentions in doc comments (I-86, D-96, D-163): normalized and validated like ticket comments, notify and make watchers.</summary>
 [Collection(nameof(DocsCollection))]
 public sealed class DocCommentMentionTests(TicketingApiFactory api)
 {

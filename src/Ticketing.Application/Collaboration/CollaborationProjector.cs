@@ -78,7 +78,7 @@ internal sealed class CollaborationProjector(ITicketingDbContext db) : IActivity
     }
 
     /// <summary>
-    /// Adds doc watchers like ticket watchers (D-159, D-161): tracked rows for docs created in this save, otherwise one insert that
+    /// Adds doc watchers like ticket watchers (D-159, D-162): tracked rows for docs created in this save, otherwise one insert that
     /// tolerates a concurrent explicit watch. Whoever is watching already stays as they are.
     /// </summary>
     private async Task AddDocWatchersAsync(IReadOnlyList<DocWatchCandidate> candidates, CancellationToken cancellationToken)

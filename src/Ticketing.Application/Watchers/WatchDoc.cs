@@ -9,7 +9,7 @@ using Ticketing.Domain.Docs;
 namespace Ticketing.Application.Watchers;
 
 /// <summary>
-/// The caller starts watching a page or diagram (I-85, D-161). Reading the doc is enough (viewers, archived projects); it changes
+/// The caller starts watching a page or diagram (I-85, D-162). Reading the doc is enough (viewers, archived projects); it changes
 /// only the caller's own state, so it needs write-scoped credentials. Watching twice is a no-op.
 /// </summary>
 public static class WatchDoc

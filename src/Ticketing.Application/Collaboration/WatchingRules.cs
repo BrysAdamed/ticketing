@@ -7,9 +7,9 @@ public sealed record WatchCandidate(Guid TicketId, Guid ProjectId, Guid UserId, 
 public sealed record DocWatchCandidate(Guid DocNodeId, Guid ProjectId, Guid UserId, DateTimeOffset At);
 
 /// <summary>
-/// Who starts watching automatically (I-32, D-161): the reporter and the assignee of a new ticket, each new assignee, whoever
+/// Who starts watching automatically (I-32, D-162): the reporter and the assignee of a new ticket, each new assignee, whoever
 /// comments and whoever is newly mentioned (D-96); the creator of a page or diagram, whoever comments on it and whoever a
-/// doc comment newly mentions (D-161, D-162). Someone who
+/// doc comment newly mentions (D-162, D-163). Someone who
 /// unwatched is added again only by a new trigger.
 /// </summary>
 public static class WatchingRules

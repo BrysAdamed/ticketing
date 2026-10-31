@@ -53,6 +53,7 @@ describe('AchievementUnlocks', () => {
   };
   let shown: { data: AchievementToastData; dismissed: Subject<void> }[];
   let flags: Record<string, string>;
+  let idle: Promise<void>;
 
   function create(): AchievementUnlocks {
     const unlocks = TestBed.inject(AchievementUnlocks);
@@ -73,6 +74,7 @@ describe('AchievementUnlocks', () => {
         {
           provide: ToastService,
           useValue: {
+            whenIdle: () => idle,
             showComponent: vi.fn((_: unknown, data: AchievementToastData) => {
               const dismissed = new Subject<void>();
               shown.push({ data, dismissed });
@@ -105,6 +107,7 @@ describe('AchievementUnlocks', () => {
     };
     shown = [];
     flags = { achievements: 'on' };
+    idle = Promise.resolve();
     configure();
   });
 
@@ -160,6 +163,23 @@ describe('AchievementUnlocks', () => {
     shown[0].dismissed.next();
     await flush();
     expect(titles()).toEqual(['reporter', 'board']);
+  });
+
+  it('waits for an open toast, such as an Undo, before toasting an unlock', async () => {
+    // Arrange
+    let close!: () => void;
+    idle = new Promise<void>((resolve) => (close = resolve));
+    response = { count: 1, items: [unseen('reporter')] };
+
+    // Act
+    create();
+    await flush();
+
+    // Assert
+    expect(titles()).toEqual([]);
+    close();
+    await flush();
+    expect(titles()).toEqual(['reporter']);
   });
 
   it('collapses more than three new tiers into one summary toast', async () => {

@@ -9,7 +9,7 @@ using Ticketing.Domain.Docs;
 namespace Ticketing.Application.Watchers;
 
 /// <summary>
-/// The caller stops watching a page or diagram (I-85, D-161). It holds until the next automatic trigger (a comment, a mention).
+/// The caller stops watching a page or diagram (I-85, D-162). It holds until the next automatic trigger (a comment, a mention).
 /// Unwatching a doc one does not watch is a no-op.
 /// </summary>
 public static class UnwatchDoc

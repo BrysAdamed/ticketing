@@ -6,7 +6,7 @@ import { UserRef } from '../tickets/ticket.models';
 
 /// A comment below a page or diagram (`/docs/{key}/comments`). Deleted comments keep their place
 /// with an empty body. `mentions` are the mentioned users who are active and can read the project,
-/// rendered as chips (D-96, D-162).
+/// rendered as chips (D-96, D-163).
 export interface DocComment {
   id: string;
   docKey: string;

@@ -50,15 +50,15 @@ public sealed record TicketDeleted(Guid TicketId, Guid ProjectId, Guid? ActorId,
 public abstract record DocEvent(Guid DocNodeId, Guid ProjectId, Guid? ActorId, DateTimeOffset OccurredAt)
     : CollaborationEvent(ProjectId, ActorId, OccurredAt);
 
-/// <summary>A page or diagram was created (folders are skipped): its creator starts watching it (D-161).</summary>
+/// <summary>A page or diagram was created (folders are skipped): its creator starts watching it (D-162).</summary>
 public sealed record DocCreated(Guid DocNodeId, Guid ProjectId, Guid? ActorId, DateTimeOffset OccurredAt)
     : DocEvent(DocNodeId, ProjectId, ActorId, OccurredAt);
 
-/// <summary>A comment added to a page or diagram (docs refinement D12): the doc's watchers are notified (D-161), mentioned users too (D-162).</summary>
+/// <summary>A comment added to a page or diagram (docs refinement D12): the doc's watchers are notified (D-162), mentioned users too (D-163).</summary>
 public sealed record DocCommentAdded(Guid DocNodeId, Guid ProjectId, Guid? ActorId, DateTimeOffset OccurredAt, Guid CommentId, string? Body)
     : DocEvent(DocNodeId, ProjectId, ActorId, OccurredAt);
 
-/// <summary>A doc comment edited by its author: users the edit newly mentions are notified (D-162). <see cref="To"/> is read from the comment.</summary>
+/// <summary>A doc comment edited by its author: users the edit newly mentions are notified (D-163). <see cref="To"/> is read from the comment.</summary>
 public sealed record DocCommentEdited(Guid DocNodeId, Guid ProjectId, Guid? ActorId, DateTimeOffset OccurredAt, Guid CommentId, string? From, string? To)
     : DocEvent(DocNodeId, ProjectId, ActorId, OccurredAt);
 

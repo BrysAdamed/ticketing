@@ -12,7 +12,7 @@ namespace Ticketing.Application.Comments;
 /// <summary>
 /// Adds a comment to the footer thread of a page or diagram (docs refinement D12). Writers comment; the doc itself is left
 /// untouched (no version, same <c>updatedAt</c>). The doc's watchers are notified and the author starts watching; newly mentioned users are notified with <c>Mentioned</c> instead
-/// and start watching too (D-94, D-96, D-161, D-162, through activity).
+/// and start watching too (D-94, D-96, D-162, D-163, through activity).
 /// </summary>
 public static class AddDocComment
 {

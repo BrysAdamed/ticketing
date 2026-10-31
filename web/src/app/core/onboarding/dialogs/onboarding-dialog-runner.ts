@@ -39,8 +39,6 @@ export class OnboardingDialogRunner {
       id: WELCOME_DIALOG_ID,
       width: '540px',
       autoFocus: 'first-tabbable',
-      role: 'dialog',
-      ariaModal: true,
     });
     const choice = await firstValueFrom(ref.afterClosed());
     const { id, version } = WELCOME_GUIDE;
@@ -56,8 +54,6 @@ export class OnboardingDialogRunner {
       id: WHATS_NEW_DIALOG_ID,
       width: '560px',
       autoFocus: 'first-tabbable',
-      role: 'dialog',
-      ariaModal: true,
       data: { entries },
     });
     const done = await firstValueFrom(ref.afterClosed());

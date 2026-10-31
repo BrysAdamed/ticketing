@@ -20,6 +20,7 @@ export class ConfirmService {
       data: options,
       width: options.alternativeLabel ? '520px' : '440px',
       autoFocus: 'first-tabbable',
+      role: 'alertdialog',
     });
     return (await firstValueFrom(ref.afterClosed())) ?? 'cancel';
   }

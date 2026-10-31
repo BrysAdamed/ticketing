@@ -236,8 +236,6 @@ export class RegressionsView {
     this.dialog.open(RegressionsExplainerDialog, {
       width: '480px',
       autoFocus: 'first-tabbable',
-      role: 'dialog',
-      ariaModal: true,
       ariaLabelledBy: 'regressions-explainer-title',
     });
   }

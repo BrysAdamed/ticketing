@@ -1,6 +1,7 @@
 import { BacklogItem } from '@core/tickets/ticket.models';
 import {
   buildRows,
+  dragTargetAt,
   EMPTY_FILTERS,
   matchesFilters,
   moveBlock,
@@ -240,5 +241,31 @@ describe('stickyGroupAt', () => {
   it('returns null for an ungrouped list', () => {
     // Act / Assert
     expect(stickyGroupAt([ticket, ticket, ticket], 50, 32)).toBeNull();
+  });
+});
+
+describe('dragTargetAt', () => {
+  const panel = { left: 0, top: 500, right: 400, bottom: 540 };
+  const boards = [
+    { id: 'b1', box: { left: 100, top: 508, right: 180, bottom: 532 } },
+    { id: 'b2', box: { left: 380, top: 508, right: 460, bottom: 532 } },
+  ];
+
+  it('finds the board under the pointer inside the panel', () => {
+    // Act / Assert
+    expect(dragTargetAt(120, 520, panel, boards)).toEqual({ kind: 'board', boardId: 'b1' });
+    expect(dragTargetAt(390, 520, panel, boards)).toEqual({ kind: 'board', boardId: 'b2' });
+  });
+
+  it('ignores a board scrolled out of the panel and drops nowhere on the bare panel', () => {
+    // Act / Assert
+    expect(dragTargetAt(440, 520, panel, boards)).toEqual({ kind: 'list' });
+    expect(dragTargetAt(20, 520, panel, boards)).toEqual({ kind: 'panel' });
+  });
+
+  it('reorders in the list above the panel or without one', () => {
+    // Act / Assert
+    expect(dragTargetAt(120, 300, panel, boards)).toEqual({ kind: 'list' });
+    expect(dragTargetAt(120, 520, null, boards)).toEqual({ kind: 'list' });
   });
 });

@@ -49,7 +49,7 @@ export const BACKLOG_TOUR: TourDefinition = {
       anchor: 'backlog.on-boards',
       placement: 'above',
       title: 'Tickets on boards',
-      body: 'A ticket lives in one place: its backlog or one board. Tickets placed on boards leave this list; this line counts them.',
+      body: 'A ticket lives in one place: its backlog or one board. Tickets placed on boards leave this list; this panel counts them. Drag tickets onto a board here to move them.',
     },
   ],
 };

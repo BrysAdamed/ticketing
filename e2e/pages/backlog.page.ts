@@ -64,4 +64,29 @@ export class BacklogPage {
         await expect(this.page.getByTestId('drop-indicator')).toBeVisible();
         await this.page.mouse.up();
     }
+
+    /// A board in the "On boards" panel: a drop target and a button that moves the selection there.
+    boardTarget(boardName: string): Locator {
+        return this.page
+            .getByTestId('backlog-on-boards')
+            .getByTestId('board-drop')
+            .filter({ hasText: boardName });
+    }
+
+    /// Drags a row onto a board of the "On boards" panel.
+    async dragToBoard(key: string, boardName: string): Promise<void> {
+        const source = await this.row(key).boundingBox();
+        if (!source) throw new Error('Row is not visible.');
+        await this.page.mouse.move(source.x + 300, source.y + source.height / 2);
+        await this.page.mouse.down();
+        await this.page.mouse.move(source.x + 300, source.y + source.height / 2 + 8, { steps: 4 });
+        await expect(this.page.getByTestId('backlog-on-boards')).toHaveClass(/\bdragging\b/);
+        const target = await this.boardTarget(boardName).boundingBox();
+        if (!target) throw new Error('Board is not visible.');
+        await this.page.mouse.move(target.x + target.width / 2, target.y + target.height / 2, {
+            steps: 16,
+        });
+        await expect(this.boardTarget(boardName)).toHaveClass(/\bover\b/);
+        await this.page.mouse.up();
+    }
 }

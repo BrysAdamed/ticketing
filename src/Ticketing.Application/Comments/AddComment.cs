@@ -28,12 +28,16 @@ public static class AddComment
             command.EnsureValid();
             var target = await TicketLookup.WriteAsync(db, access, command.TicketKeyOrId, cancellationToken);
             var body = await mentions.NormalizeAsync(target.Grant, null, command.Body, "body", cancellationToken);
-            var ticket = await db.Tickets.SingleAsync(t => t.Id == target.Id, cancellationToken);
-            var comment = Comment.Create(target.Id, currentUser.Id, body!, clock.Now);
-            db.Comments.Add(comment);
-            ticket.Touch(clock.Now);
-            activity.Record(ActivityEntityType.Ticket, target.Id, target.ProjectId, Action, new { commentId = comment.Id });
-            await db.SaveChangesAsync(cancellationToken);
+            var now = clock.Now;
+            var comment = Comment.Create(target.Id, currentUser.Id, body!, now);
+            await db.InTransactionAsync(async ct =>
+            {
+                db.Comments.Add(comment);
+                activity.Record(ActivityEntityType.Ticket, target.Id, target.ProjectId, Action, new { commentId = comment.Id });
+                await db.SaveChangesAsync(ct);
+                await db.TouchTicketAsync(target.Id, now, ct);
+                return true;
+            }, cancellationToken);
             return await CommentQueries.OneAsync(db, currentUser, target.Grant, comment.Id, cancellationToken);
         }
     }

@@ -37,12 +37,16 @@ public static class LinkTickets
                 throw Exists(source, target, type);
 
             db.TicketLinks.Add(link);
-            (await db.Tickets.SingleAsync(t => t.Id == source.Id, cancellationToken)).Touch(clock.Now);
             var direction = type == TicketLinkType.RelatesTo || link.SourceTicketId == source.Id ? LinkDirection.Outward : LinkDirection.Inward;
             activity.Record(ActivityEntityType.Ticket, source.Id, source.ProjectId, "ticket.link.added", new { type, direction, ticketId = target.Id, key = target.Key });
             try
             {
-                await db.SaveChangesAsync(cancellationToken);
+                await db.InTransactionAsync(async ct =>
+                {
+                    await db.SaveChangesAsync(ct);
+                    await db.TouchTicketAsync(source.Id, link.CreatedAt, ct);
+                    return true;
+                }, cancellationToken);
             }
             catch (DbUpdateException ex) when (ex.IsUniqueViolation())
             {

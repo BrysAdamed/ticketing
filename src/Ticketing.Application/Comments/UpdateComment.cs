@@ -31,12 +31,17 @@ public static class UpdateComment
             var (comment, target) = await CommentLookup.WriteAsync(db, access, command.CommentId, cancellationToken);
             comment.EnsureEditableBy(currentUser.Id);
             var body = await mentions.NormalizeAsync(target.Grant, comment.Body, command.Body, "body", cancellationToken);
-            var previous = comment.EditBy(currentUser.Id, body!, clock.Now);
+            var now = clock.Now;
+            var previous = comment.EditBy(currentUser.Id, body!, now);
             activity.RecordChange(
                 ActivityEntityType.Ticket, target.Id, target.ProjectId, Action, Field,
                 new { commentId = comment.Id, body = previous }, new { commentId = comment.Id, body = comment.Body });
-            (await db.Tickets.SingleAsync(t => t.Id == target.Id, cancellationToken)).Touch(clock.Now);
-            await db.SaveChangesAsync(cancellationToken);
+            await db.InTransactionAsync(async ct =>
+            {
+                await db.SaveChangesAsync(ct);
+                await db.TouchTicketAsync(target.Id, now, ct);
+                return true;
+            }, cancellationToken);
             return await CommentQueries.OneAsync(db, currentUser, target.Grant, comment.Id, cancellationToken);
         }
     }

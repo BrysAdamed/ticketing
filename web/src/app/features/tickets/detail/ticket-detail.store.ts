@@ -31,6 +31,12 @@ export type SaveResult = 'saved' | 'conflict' | 'failed';
 
 const HISTORY_PAGE = 50;
 
+/// A server copy of the same ticket saved after the one shown (D-165): another view's edit that
+/// this view must take, or its next If-Match save fails with a stale row version.
+const isNewer = (candidate: Ticket, current: Ticket): boolean =>
+  candidate.rowVersion !== current.rowVersion &&
+  Date.parse(candidate.updatedAt) >= Date.parse(current.updatedAt);
+
 /// State of one open ticket (page or peek): cached data first, then fresh data; every edit is
 /// optimistic with rollback. Title and description saves send If-Match (D-43) and report conflicts.
 @Injectable()
@@ -70,6 +76,8 @@ export class TicketDetailStore {
       const current = this.ticket();
       if (!current || event.kind !== 'updated') return;
       if (event.ticket.id !== current.id) this.refreshRelated(event.ticket);
+      else if (isNewer(event.ticket, current))
+        this.ticket.set(this.mergeKeepingCollections(event.ticket));
       else if (event.ticket.watchers && event.ticket.watchers !== current.watchers)
         this.ticket.set({ ...current, watchers: event.ticket.watchers });
     });

@@ -1339,6 +1339,13 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
 - Frontend: a ticket view takes an `updated` event for its own ticket when it carries another row version and an `updatedAt` no older than its own, keeping its loaded collections; older copies and its own echoes are ignored as before.
 - Rejected: retrying the tracked save on conflict (a reload-and-retry loop for a write that never needed the check).
 
+### D-166 Development and e2e stacks raise the sign-in rate limit through the compose override (TKT-83)
+
+- Question: the per-IP limit of 20 requests a minute on `/auth/login` and `/auth/set-password` (on top of the D-74 lockout) made full parallel Playwright runs fail with 429, because the suite seeds and signs in hundreds of users from one address.
+- Decision: `docker-compose.override.yml`, which only development and test stacks load (a server runs `-f docker-compose.yml`), sets `RateLimiting__LoginPermitsPerMinute` to `TICKETING_LOGIN_PERMITS_PER_MINUTE`, default 2000. The production default (appsettings, 20) and the base compose file are unchanged; integration tests already raise it in `TicketingApiFactory` and test the 429 with a low limit.
+- Entry-state specs (empty projects and boards lists, the welcome tour for a user who cannot write anywhere) no longer skip when other specs left public projects or boards: they filter the list responses the browser sees to the test user's own data (explicit membership, own boards) with `page.route` around the real response.
+- Rejected: fewer sign-ins in the suite (seeding a user needs set-password and a login, and every role test needs its own user); an e2e-only API switch or an exempt address (a production code path that only tests use); a separate e2e compose file (one more file to remember, while the documented e2e stack is `docker compose up`).
+
 ## Product owner answers (v1 review, 2026-10-27)
 
 These were open questions (Q-01..Q-05); the product owner resolved them as follows.

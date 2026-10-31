@@ -186,6 +186,7 @@ export class BacklogView {
   private readonly bulkLabelsPicker = viewChild<LabelsPickerDirective>('bulkLabelsPicker');
   private readonly movePicker = viewChild<InlinePickerDirective<MoveTarget>>('movePicker');
   private moveOptions: readonly PickerOption<MoveTarget>[] = [];
+  private moveIds: string[] = [];
   private readonly listWrap = viewChild<ElementRef<HTMLElement>>('listWrap');
   protected readonly listHeight = signal(480);
   /// The list fills the window below the toolbar, minus the "on boards" footer and, while tickets
@@ -522,10 +523,11 @@ export class BacklogView {
   }
 
   /// "Move to board" (bulk bar) and `M`: boards that link this project, under the bulk button or
-  /// the focused row.
+  /// the focused row. The bulk bar moves the selection; `M` moves the keyboard targets.
   protected async openMove(origin?: Element): Promise<void> {
-    const ids = this.store.targets();
+    const ids = origin ? this.store.selectedIds() : this.store.targets();
     if (!ids.length || !this.store.canWrite()) return;
+    this.moveIds = ids;
     const anchor = origin ?? this.focusedRowElement();
     const options = await this.moveTargets.options(this.store.projectKey(), {
       kind: 'Backlog',
@@ -538,8 +540,10 @@ export class BacklogView {
 
   protected moveTo(target: MoveTarget): void {
     const board = this.moveOptions.find((o) => o.value === target);
-    if (!board || target === 'backlog') return;
-    void this.store.moveToBoard(this.store.targets(), target, board.label);
+    const ids = this.moveIds;
+    this.moveIds = [];
+    if (!board || target === 'backlog' || !ids.length) return;
+    void this.store.moveToBoard(ids, target, board.label);
   }
 
   // Quick create

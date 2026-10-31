@@ -26,8 +26,10 @@ export class BoardPage {
         await this.page.getByTestId('boards-new').click();
         const dialog = this.page.getByTestId('create-board-dialog');
         await dialog.getByTestId('create-board-name').fill(name);
-        for (const key of projectKeys)
+        for (const key of projectKeys) {
+            await dialog.getByTestId('create-board-project-filter').fill(key);
             await dialog.getByTestId(`create-board-project-${key}`).click();
+        }
         await dialog.getByTestId('create-board-submit').click();
         await expect(this.name).toHaveText(name);
     }

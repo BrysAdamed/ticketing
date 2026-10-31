@@ -22,7 +22,7 @@ test('a user creates a token, calls the API with it and revokes it', async ({ br
     const write = await client.post('/api/v1/projects', { data: { key: 'NOPE', name: 'Nope' } });
     await page.getByTestId('token-revoke-E2E script').click();
     await page.getByTestId('confirm-ok').click();
-    await expect(page.getByTestId('toast')).toContainText('revoked');
+    await expect(page.getByTestId('toast').filter({ hasText: 'revoked' })).toBeVisible();
 
     // Assert
     expect(secret).toMatch(/^tkt_[0-9A-Za-z]{40}$/);

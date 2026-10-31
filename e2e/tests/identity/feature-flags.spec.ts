@@ -20,7 +20,7 @@ test('admin toggles a flag and it applies to /me/flags at once', async ({ page, 
 
     // Assert
     await expect(flags.toggle(key)).toBeChecked();
-    await expect(page.getByTestId('toast')).toContainText(`${key} turned on`);
+    await expect(page.getByTestId('toast').filter({ hasText: `${key} turned on` })).toBeVisible();
     await expect.poll(async () => (await api.get<Flag>(`/admin/flags/${key}`)).enabled).toBe(true);
     const mine = await api.get<{ flags: Record<string, string> }>('/me/flags');
     expect(mine.flags[key]).toBe('on');

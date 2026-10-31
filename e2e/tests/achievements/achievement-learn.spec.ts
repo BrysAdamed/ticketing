@@ -1,6 +1,5 @@
 import { CONNECT_AGENT_URL } from '@onboarding/agent/connect-agent';
 import { AchievementsPage } from '../../pages/achievements.page';
-import { Api } from '../../support/api';
 import { expect, test } from '../../support/fixtures';
 import { signInAs } from '../../support/session';
 import { PASSWORD, seedUser } from '../identity/identity';
@@ -19,13 +18,13 @@ test.describe('@achievements how to earn', () => {
         // Arrange
         const user = await seedUser(api, 'learner');
         await enableFor(api, [user.id]);
-        const asUser = await Api.signIn(user.email, PASSWORD);
-        const { items } = await asUser.get<{ items: MyAchievement[] }>('/me/achievements');
-        await asUser.dispose();
         const { context, page } = await signInAs(browser, {
             email: user.email,
             password: PASSWORD,
         });
+        const response = await context.request.get('/api/v1/me/achievements');
+        expect(response.ok()).toBe(true);
+        const { items } = (await response.json()) as { items: MyAchievement[] };
         const achievements = new AchievementsPage(page);
         await achievements.goto();
 

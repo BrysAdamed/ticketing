@@ -62,6 +62,13 @@ test.describe('doc comments', () => {
         // Assert
         await expect(card).toContainText('Comment deleted');
         await expect(view.metaComments).toHaveCount(0);
+        await expect
+            .poll(
+                async () =>
+                    (await api.get<{ items: { deleted: boolean }[] }>(`/docs/${doc.key}/comments`))
+                        .items[0].deleted,
+            )
+            .toBe(true);
         await page.reload();
         await expect(view.commentCards().first()).toContainText('Comment deleted');
     });

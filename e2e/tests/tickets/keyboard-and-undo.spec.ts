@@ -136,7 +136,7 @@ test.describe('keyboard, optimistic edits and undo', () => {
         const backlog = new BacklogPage(page);
         await backlog.goto(projectKey);
         await backlog.row(keys[1]).getByTestId('row-title').click();
-        await expect(page.getByTestId('peek-panel')).toBeVisible();
+        await expect(new TicketPage(page, 'peek').title).toHaveText('Remove me');
 
         // Act
         await page.keyboard.press('Delete');

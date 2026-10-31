@@ -181,7 +181,7 @@ test.describe('delegate to agent', () => {
         expect(url.startsWith('claude-cli://open?cwd=C%3A%5Csrc%5Cdelegate%20e2e&q=')).toBe(true);
         const q = decodeURIComponent(url.slice(url.indexOf('&q=') + 3));
         expect(q).toBe(resolved.prompt.replace(/\r\n/g, '\n').trimEnd());
-        await expect(page.getByTestId('toast')).toContainText("Didn't open?");
+        await expect(page.getByTestId('toast').filter({ hasText: "Didn't open?" })).toBeVisible();
 
         // Assert: the history entry and the on-delegate settings
         await expect(ticket.field('status')).toContainText('In Progress');
@@ -286,8 +286,8 @@ test.describe('delegate to agent', () => {
         await preview.getByTestId('agent-prompt-copy').click();
 
         // Assert
-        await expect(page.getByTestId('toast')).toContainText(`Prompt copied`);
-        await expect(page.getByTestId('toast')).toContainText(REPOSITORY);
+        const copied = page.getByTestId('toast').filter({ hasText: 'Prompt copied' });
+        await expect(copied).toContainText(REPOSITORY);
 
         // Act: the … menu offers both items, Delegate disabled
         await page.keyboard.press('Escape');

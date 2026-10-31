@@ -132,7 +132,9 @@ test.describe('agent settings tab', () => {
         await agent.saveSetup.click();
 
         // Assert
-        await expect(page.getByTestId('toast')).toContainText('Delegation settings saved.');
+        await expect(
+            page.getByTestId('toast').filter({ hasText: 'Delegation settings saved.' }),
+        ).toBeVisible();
         const settings = await api.get<{ enabled: boolean; repositoryUrl: string }>(
             `/projects/${projectKey}/agent`,
         );

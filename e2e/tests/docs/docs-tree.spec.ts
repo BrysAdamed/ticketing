@@ -66,13 +66,14 @@ test.describe('docs tree', () => {
         await page.locator('body').press('Delete');
         await expect(docs.row(pageKey)).toBeHidden();
         await expect(page).toHaveURL(new RegExp(`/docs/${folderKey}/architecture$`));
-        const toast = page.getByTestId('toast');
-        await expect(toast).toContainText('Deleted "Payment flows"');
+        const toast = page.getByTestId('toast').filter({ hasText: 'Deleted "Payment flows"' });
         await toast.getByRole('button', { name: 'Undo' }).click();
 
         // Assert
         await expect(docs.row(pageKey)).toBeVisible();
-        await expect(page.getByTestId('toast')).toContainText('Restored "Payment flows"');
+        await expect(
+            page.getByTestId('toast').filter({ hasText: 'Restored "Payment flows"' }),
+        ).toBeVisible();
         expect((await api.get<Doc>(`/docs/${pageKey}`)).parentKey).toBe(folderKey);
     });
 

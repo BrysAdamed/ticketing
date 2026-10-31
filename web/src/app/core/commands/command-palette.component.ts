@@ -51,7 +51,7 @@ interface Group {
         placeholder="Search or jump to…"
         data-testid="command-palette-input"
         [attr.aria-activedescendant]="activeId()"
-        (input)="query.set(input.value)"
+        (input)="onInput(input.value)"
         (keydown)="onKeydown($event)"
       />
       @if (loading()) {
@@ -72,7 +72,7 @@ interface Group {
               [class.two]="!!entry.item.snippet"
               [attr.aria-selected]="entry.index === active()"
               [attr.data-testid]="'palette-item-' + entry.item.id"
-              (mouseenter)="active.set(entry.index)"
+              (mouseenter)="select(entry.index)"
               (mousedown)="$event.preventDefault()"
               tabindex="-1"
               (click)="choose(entry.item)"
@@ -284,7 +284,7 @@ export class CommandPaletteComponent {
   readonly closed = output<void>();
 
   protected readonly query = signal('');
-  protected readonly active = signal(0);
+  private readonly chosenId = signal<string | null>(null);
   private readonly asyncResults = signal<ReadonlyMap<string, readonly PaletteItem[]>>(new Map());
   private readonly pending = signal(0);
   protected readonly loading = computed(() => this.pending() > 0);
@@ -342,6 +342,13 @@ export class CommandPaletteComponent {
   });
 
   private readonly flat = computed(() => this.groups().flatMap((g) => g.items.map((e) => e.item)));
+  /// The item the user moved to stays active when results arriving later shift its position.
+  protected readonly active = computed(() =>
+    Math.max(
+      0,
+      this.flat().findIndex((item) => item.id === this.chosenId()),
+    ),
+  );
   protected readonly activeId = computed(() =>
     this.flat().length ? `tk-palette-${this.active()}` : null,
   );
@@ -368,7 +375,6 @@ export class CommandPaletteComponent {
         if (timer) clearTimeout(timer);
         const current = new AbortController();
         controller = current;
-        this.active.set(0);
         this.syncResults.set(new Map());
         this.asyncResults.set(new Map());
 
@@ -404,11 +410,11 @@ export class CommandPaletteComponent {
     switch (event.key) {
       case 'ArrowDown':
         event.preventDefault();
-        if (count) this.active.set((this.active() + 1) % count);
+        if (count) this.select((this.active() + 1) % count);
         break;
       case 'ArrowUp':
         event.preventDefault();
-        if (count) this.active.set((this.active() - 1 + count) % count);
+        if (count) this.select((this.active() - 1 + count) % count);
         break;
       case 'Enter': {
         event.preventDefault();
@@ -421,6 +427,15 @@ export class CommandPaletteComponent {
         this.closed.emit();
         break;
     }
+  }
+
+  protected onInput(value: string): void {
+    this.query.set(value);
+    this.chosenId.set(null);
+  }
+
+  protected select(index: number): void {
+    this.chosenId.set(this.flat()[index]?.id ?? null);
   }
 
   protected choose(item: PaletteItem): void {

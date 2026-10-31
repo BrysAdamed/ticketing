@@ -2,6 +2,8 @@ import { computed, provideZonelessChangeDetection, signal } from '@angular/core'
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideIcons } from '@ng-icons/core';
+import { Subject } from 'rxjs';
+import { ApiClient } from '@core/api/api-client';
 import { HelpMenuItem } from '@core/help/help-menu';
 import { HelpMenuRegistry } from '@core/help/help-menu.registry';
 import { GuideProgress, OnboardingChecklistItem } from '@core/onboarding/onboarding.models';
@@ -12,7 +14,7 @@ import {
 import { ProjectDirectory } from '@core/projects/project-directory';
 import { TicketCreator } from '@core/tickets/create-ticket';
 import { APP_ICONS } from '@shared/ui/icon/app-icons';
-import { ChecklistCardComponent } from './checklist-card.component';
+import { ChecklistCardComponent, WRITE_REFRESH_DEBOUNCE_MS } from './checklist-card.component';
 
 function item(id: string, done = false, optional = false): OnboardingChecklistItem {
   return { id, done, optional };
@@ -27,6 +29,9 @@ describe('ChecklistCardComponent', () => {
   const helpItems = signal<HelpMenuItem[]>([]);
   let onboarding: Record<'complete' | 'dismiss' | 'forget' | 'load', ReturnType<typeof vi.fn>>;
   let creator: { open: ReturnType<typeof vi.fn> };
+  let writes: Subject<void>;
+
+  afterEach(() => vi.useRealTimers());
 
   async function render(): Promise<HTMLElement> {
     const fixture = TestBed.createComponent(ChecklistCardComponent);
@@ -59,6 +64,7 @@ describe('ChecklistCardComponent', () => {
       load: vi.fn().mockResolvedValue(undefined),
     };
     creator = { open: vi.fn().mockResolvedValue(null) };
+    writes = new Subject<void>();
     TestBed.configureTestingModule({
       providers: [
         provideZonelessChangeDetection(),
@@ -83,6 +89,7 @@ describe('ChecklistCardComponent', () => {
           },
         },
         { provide: TicketCreator, useValue: creator },
+        { provide: ApiClient, useValue: { writes } },
         { provide: HelpMenuRegistry, useValue: { items: helpItems } },
       ],
     });
@@ -181,6 +188,62 @@ describe('ChecklistCardComponent', () => {
     // Assert
     expect(testId(hidden, 'checklist-card')).toBeNull();
     expect(testId(hidden, 'checklist-skeleton')).toBeNull();
+  });
+
+  it('refreshes once after a burst of app writes settles while the card is visible', async () => {
+    // Arrange
+    await render();
+    onboarding.load.mockClear();
+    vi.useFakeTimers();
+
+    // Act
+    writes.next();
+    vi.advanceTimersByTime(WRITE_REFRESH_DEBOUNCE_MS - 1);
+    writes.next();
+    vi.advanceTimersByTime(WRITE_REFRESH_DEBOUNCE_MS - 1);
+    const beforeSettled = onboarding.load.mock.calls.length;
+    vi.advanceTimersByTime(1);
+
+    // Assert
+    expect(beforeSettled).toBe(0);
+    expect(onboarding.load).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not refresh after writes while the card is hidden, and never without a write', async () => {
+    // Arrange
+    guides.set(
+      new Map([
+        ['checklist', { guideId: 'checklist', version: 1, state: 'Dismissed', updatedAt: '' }],
+      ]),
+    );
+    await render();
+    onboarding.load.mockClear();
+    vi.useFakeTimers();
+
+    // Act
+    vi.advanceTimersByTime(WRITE_REFRESH_DEBOUNCE_MS * 10);
+    writes.next();
+    vi.advanceTimersByTime(WRITE_REFRESH_DEBOUNCE_MS);
+
+    // Assert
+    expect(onboarding.load).not.toHaveBeenCalled();
+  });
+
+  it('stops listening for writes once destroyed', async () => {
+    // Arrange
+    const fixture = TestBed.createComponent(ChecklistCardComponent);
+    fixture.detectChanges();
+    await flush();
+    onboarding.load.mockClear();
+    vi.useFakeTimers();
+
+    // Act
+    writes.next();
+    fixture.destroy();
+    vi.advanceTimersByTime(WRITE_REFRESH_DEBOUNCE_MS);
+
+    // Assert
+    expect(onboarding.load).not.toHaveBeenCalled();
   });
 
   it('offers the first-project walkthrough only when it is registered', async () => {

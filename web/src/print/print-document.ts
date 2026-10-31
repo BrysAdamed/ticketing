@@ -8,10 +8,11 @@ export const PREVIEW_NOT_RENDERED = 'Preview not rendered yet';
 export const EMPTY_DIAGRAM = 'This diagram is empty.';
 export const EMPTY_FOLDER = 'This folder has no pages or diagrams.';
 const IMAGE_FILE = /^[a-z0-9][a-z0-9._-]*$/i;
+const OUTLINE_LEVELS = 6;
 
 /// Builds the printable document from the export data (D-111): for a folder a cover and a linked
 /// contents page, then every entry in tree order, each document on a new page with its title block.
-/// Diagrams are drawn afterwards by `drawDiagrams`.
+/// Headings carry `aria-level` by folder depth, which nests the PDF bookmarks (D-171). Diagrams are drawn afterwards by `drawDiagrams`.
 export function buildPrint(doc: Document, data: PrintData): HTMLElement[] {
   const documents = data.entries.filter((e) => e.kind !== 'Folder');
   const nodes: HTMLElement[] = [];
@@ -99,8 +100,9 @@ function article(doc: Document, entry: PrintEntry, data: PrintData): HTMLElement
   el.className = `doc doc-${entry.kind.toLowerCase()}`;
   const head = doc.createElement('header');
   head.className = 'doc-head';
+  const level = titleLevel(entry);
   head.append(
-    element(doc, 'h1', 'doc-title', entry.title),
+    outlined(element(doc, 'h1', 'doc-title', entry.title), level),
     element(
       doc,
       'p',
@@ -119,6 +121,7 @@ function article(doc: Document, entry: PrintEntry, data: PrintData): HTMLElement
       references: { ...entry.references, unresolved: 'text' },
     });
     preparePrintFragment(template.content, entry, data);
+    nestHeadings(template.content, level);
     body.append(template.content);
     el.append(body);
   } else {
@@ -173,10 +176,27 @@ function folderHead(doc: Document, entry: PrintEntry): HTMLElement {
   el.id = entry.key;
   el.className = 'folder-head';
   el.append(
-    element(doc, 'h1', 'folder-title', entry.title),
+    outlined(element(doc, 'h1', 'folder-title', entry.title), titleLevel(entry)),
     element(doc, 'p', 'folder-path', entry.path),
   );
   return el;
+}
+
+function titleLevel(entry: PrintEntry): number {
+  return Math.max(entry.depth, 1);
+}
+
+/// Chromium builds the PDF bookmarks from heading levels and leaves out levels beyond six.
+function outlined(heading: HTMLElement, level: number): HTMLElement {
+  heading.setAttribute('aria-level', String(Math.min(level, OUTLINE_LEVELS)));
+  return heading;
+}
+
+function nestHeadings(fragment: DocumentFragment, titleLevel: number): void {
+  for (const heading of Array.from(
+    fragment.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6'),
+  ))
+    outlined(heading, titleLevel + Number(heading.tagName.slice(1)));
 }
 
 async function drawInto(

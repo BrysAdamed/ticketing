@@ -620,7 +620,7 @@ export class BacklogView {
   // is computed from the pointer; this works with virtual scrolling).
 
   /// A drag carries the selection when the dragged row is in it, otherwise only that row (the
-  /// targets rule of the keyboard shortcuts, D-171).
+  /// targets rule of the keyboard shortcuts, D-172).
   protected dragStarted(event: CdkDragStart, id: string): void {
     this.movingIds = this.store.targets(id);
     this.dragCount.set(this.movingIds.length);

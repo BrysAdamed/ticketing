@@ -53,19 +53,29 @@ public sealed class DocExportGotenbergTests(TicketingApiFactory api)
         var flow = await client.CreateDiagramAsync("GOT", "Flow", "Mermaid", "flowchart LR\n  SPA --> API --> DB", folder.Key);
         var page = await client.CreatePageAsync("GOT", "Overview", folder.Key,
             $"## Zażółć gęślą jaźń\n\n> [!NOTE]\n> Rendered offline.\n\n![Flow]({flow.Key})\n\n| A | B |\n| - | - |\n| 1 | 2 |\n\n```csharp\nvar x = 1;\n```");
+        var decisions = await client.CreateFolderAsync("GOT", "Decisions", folder.Key);
+        var storage = await client.CreateFolderAsync("GOT", "Storage", decisions.Key);
+        await client.CreatePageAsync("GOT", "Use Postgres", storage.Key, "# Why\n\nOne database.\n\n## Trade-offs\n\nNone.");
 
         // Act
         var single = await client.GetAsync($"/api/v1/docs/{page.Key}/export.pdf?tz=Europe/Warsaw", _ct);
         var whole = await client.GetAsync($"/api/v1/docs/{folder.Key}/export.pdf", _ct);
 
         // Assert
+        var pdfs = new List<byte[]>();
         foreach (var response in new[] { single, whole })
         {
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             var pdf = await response.Content.ReadAsByteArrayAsync(_ct);
             Assert.Equal("%PDF"u8.ToArray(), pdf[..4]);
             Assert.True(pdf.Length > 10_000, $"Suspiciously small PDF: {pdf.Length} bytes.");
+            pdfs.Add(pdf);
         }
+        Assert.Equal(["Overview", "Overview / Zażółć gęślą jaźń"], PdfOutline.Paths(pdfs[0]));
+        var bookmarks = PdfOutline.Paths(pdfs[1]);
+        Assert.Contains("Overview / Zażółć gęślą jaźń", bookmarks);
+        Assert.Contains("Flow", bookmarks);
+        Assert.Contains("Decisions / Storage / Use Postgres / Why / Trade-offs", bookmarks);
     }
 
     private static string? PrintBundlePath()

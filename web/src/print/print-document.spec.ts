@@ -78,6 +78,43 @@ describe('buildPrint', () => {
     );
   });
 
+  it('levels headings by folder depth so the PDF bookmarks nest, at most six deep', () => {
+    // Arrange
+    const print = data([
+      entry({ key: 'PAY-D-4', kind: 'Folder', title: 'Decisions', depth: 1 }),
+      entry({ key: 'PAY-D-6', kind: 'Folder', title: 'Storage', depth: 2 }),
+      entry({ key: 'PAY-D-5', title: 'Use Postgres', depth: 3, content: '# Why\n\n### Detail' }),
+      entry({ key: 'PAY-D-7', title: 'Diagram', kind: 'Diagram', depth: 1 }),
+    ]);
+
+    // Act
+    const main = render(print);
+
+    // Assert
+    const levels = Array.from(main.querySelectorAll('main > :not(nav) h1, .tk-md :is(h1, h3)')).map(
+      (h) => [h.textContent, h.getAttribute('aria-level')],
+    );
+    expect(levels).toEqual([
+      ['Architecture', null],
+      ['Decisions', '1'],
+      ['Storage', '2'],
+      ['Use Postgres', '3'],
+      ['Why', '4'],
+      ['Detail', '6'],
+      ['Diagram', '1'],
+    ]);
+  });
+
+  it('nests the headings of a single document under its title', () => {
+    // Act
+    const main = render(data([entry({ depth: 0, content: '# Intro\n\n###### Deep' })], 'single'));
+
+    // Assert
+    expect(main.querySelector('.doc-title')?.getAttribute('aria-level')).toBe('1');
+    expect(main.querySelector('.tk-md h1')?.getAttribute('aria-level')).toBe('2');
+    expect(main.querySelector('.tk-md h6')?.getAttribute('aria-level')).toBe('6');
+  });
+
   it('says so when a folder has no documents', () => {
     // Act
     const main = render(data([]));

@@ -1,3 +1,4 @@
+using System.Globalization;
 using Ticketing.Domain.Collaboration;
 using Ticketing.Domain.Tickets;
 
@@ -26,6 +27,10 @@ public static class NotificationSummaries
         (NotificationKind.Mentioned, TicketCreated or DescriptionChanged) => "mentioned you in the description",
         (NotificationKind.Mentioned, _) => "mentioned you",
         (NotificationKind.Commented, _) => "commented",
+        (NotificationKind.DocUpdated, DocRestored restored) =>
+            string.Create(CultureInfo.InvariantCulture, $"restored version {restored.RestoredFrom} as version {restored.Version}"),
+        (NotificationKind.DocUpdated, DocPublished published) => string.Create(CultureInfo.InvariantCulture, $"published version {published.Version}"),
+        (NotificationKind.DocUpdated, _) => "published a new version",
         (NotificationKind.StatusChanged, StatusChanged { From: { } from, To: { } to }) => $"changed the status from {Label(from)} to {Label(to)}",
         (NotificationKind.StatusChanged, StatusChanged { To: { } to }) => $"changed the status to {Label(to)}",
         (NotificationKind.StatusChanged, _) => "changed the status",

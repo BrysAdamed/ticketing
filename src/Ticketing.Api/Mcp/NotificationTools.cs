@@ -14,9 +14,9 @@ public sealed class NotificationTools
 {
     [McpServerTool(Name = "list_notifications", ReadOnly = true, Idempotent = true, Title = "List notifications")]
     [Description("Lists your notifications, newest first: { items, nextCursor }. Each item has id, kind (Assigned, Mentioned, Commented, "
-        + "StatusChanged, PriorityRaised, Moved, Deleted, RegressionItemAssigned), summary (what the actor did), eventCount (changes merged "
+        + "StatusChanged, PriorityRaised, Moved, Deleted, RegressionItemAssigned, DocUpdated), summary (what the actor did), eventCount (changes merged "
         + "into it), actor, projectKey, ticket { key, title, deleted }, regression { sessionKey, sessionName, testCaseKey } "
-        + "or doc { key, title, deleted } (comments on a page or diagram), url, "
+        + "or doc { key, title, deleted } (comments on or new versions of a page or diagram), url, "
         + "createdAt, updatedAt and readAt (null while unread).")]
     public static Task<CursorPage<NotificationDto>> ListNotifications(
         ListNotifications.Handler handler,
@@ -50,7 +50,7 @@ public sealed class NotificationTools
     [Authorize(Policy = AuthPolicies.CanWrite)]
     [McpServerTool(Name = "update_notification_preferences", Destructive = false, Idempotent = true, Title = "Update notification preferences")]
     [Description("Mutes or unmutes notification kinds and projects for you. Kinds: Assigned, Mentioned, Commented, StatusChanged, "
-        + "PriorityRaised, Moved, Deleted, RegressionItemAssigned. A muted kind never notifies; a muted project stops the other kinds "
+        + "PriorityRaised, Moved, Deleted, RegressionItemAssigned, DocUpdated. A muted kind never notifies; a muted project stops the other kinds "
         + "there. Omitted lists change nothing. " + PreferencesShape)]
     public static Task<NotificationPreferencesDto> UpdateNotificationPreferences(
         UpdateNotificationPreferences.Handler handler,

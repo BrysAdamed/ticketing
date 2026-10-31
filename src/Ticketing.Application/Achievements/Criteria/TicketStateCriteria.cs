@@ -119,7 +119,7 @@ internal sealed class ShoutOutCriterion : ComputedAchievementCriterion
         UpdateComment.Action => new CommentEdited(t.EntityId, t.ProjectId, t.UserId, t.OccurredAt, t.CommentId ?? Guid.Empty, t.OldText, t.NewText),
         UpdateTicket.FieldChanged => new DescriptionChanged(t.EntityId, t.ProjectId, t.UserId, t.OccurredAt, t.OldText, t.NewText),
         CreateDoc.Action => new DocCreated(t.EntityId, t.ProjectId, t.UserId, t.OccurredAt, t.NewText),
-        DocPublisher.UpdatedAction => new DocPublished(t.EntityId, t.ProjectId, t.UserId, t.OccurredAt, t.OldText, t.NewText),
+        DocPublisher.UpdatedAction => new DocPublished(t.EntityId, t.ProjectId, t.UserId, t.OccurredAt, 0, t.OldText, t.NewText),
         AddDocComment.Action => new DocCommentAdded(t.EntityId, t.ProjectId, t.UserId, t.OccurredAt, t.CommentId ?? Guid.Empty, t.NewText),
         _ => new DocCommentEdited(t.EntityId, t.ProjectId, t.UserId, t.OccurredAt, t.CommentId ?? Guid.Empty, t.OldText, t.NewText),
     };

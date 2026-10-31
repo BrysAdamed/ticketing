@@ -11,7 +11,8 @@ public sealed record NotificationCandidate(Guid RecipientId, CollaborationEvent 
 /// and the watchers of a ticket when it is commented, changes status, has its priority raised to High or Highest, moves
 /// between backlog and boards or is deleted. A watcher mentioned in a new comment gets <c>Mentioned</c> instead of
 /// <c>Commented</c> for it. A comment on a page or diagram notifies the doc's watchers with <c>Commented</c>
-/// (D-162), or <c>Mentioned</c> those it newly mentions (D-163). The actor is never notified about their own action, and <see cref="Unmuted"/> applies each
+/// (D-162), or <c>Mentioned</c> those it newly mentions (D-163); a new published or restored version notifies them with
+/// <c>DocUpdated</c> (D-173), or <c>Mentioned</c> those a published page newly mentions. The actor is never notified about their own action, and <see cref="Unmuted"/> applies each
 /// recipient's muted kinds and projects.
 /// </summary>
 public static class NotificationRules
@@ -22,7 +23,7 @@ public static class NotificationRules
 
     /// <summary>Docs whose watchers <see cref="Candidates"/> needs.</summary>
     public static IReadOnlyCollection<Guid> WatchedDocs(IEnumerable<CollaborationEvent> events) =>
-        [.. events.OfType<DocCommentAdded>().Select(e => e.DocNodeId).Distinct()];
+        [.. events.OfType<DocEvent>().Where(e => DocWatcherKind(e) is not null).Select(e => e.DocNodeId).Distinct()];
 
     public static IReadOnlyList<NotificationCandidate> Candidates(
         IEnumerable<CollaborationEvent> events,
@@ -51,10 +52,10 @@ public static class NotificationRules
             foreach (var userId in mentionedHere)
                 Add(candidates, e, userId, NotificationKind.Mentioned);
 
-            if (e is DocCommentAdded commented)
+            if (e is DocEvent doc && DocWatcherKind(doc) is { } docKind)
             {
-                foreach (var watcher in watchersByDoc[commented.DocNodeId].Distinct().Where(w => !mentionedHere.Contains(w)))
-                    Add(candidates, e, watcher, NotificationKind.Commented);
+                foreach (var watcher in watchersByDoc[doc.DocNodeId].Distinct().Where(w => !mentionedHere.Contains(w)))
+                    Add(candidates, e, watcher, docKind);
             }
 
             if (WatcherKind(e) is { } kind)
@@ -77,6 +78,14 @@ public static class NotificationRules
     public static bool IsRaise(Priority? from, Priority? to) =>
         to is Priority.High or Priority.Highest && (from is null || to < from);
 
+    /// <summary>The version a published or restored doc event created; null for other events.</summary>
+    public static int? PublishedVersion(CollaborationEvent e) => e switch
+    {
+        DocPublished published => published.Version,
+        DocRestored restored => restored.Version,
+        _ => null,
+    };
+
     private static NotificationKind? WatcherKind(CollaborationEvent e) => e switch
     {
         CommentAdded => NotificationKind.Commented,
@@ -84,6 +93,13 @@ public static class NotificationRules
         PriorityChanged p when IsRaise(p.From, p.To) => NotificationKind.PriorityRaised,
         TicketMoved => NotificationKind.Moved,
         TicketDeleted => NotificationKind.Deleted,
+        _ => null,
+    };
+
+    private static NotificationKind? DocWatcherKind(CollaborationEvent e) => e switch
+    {
+        DocCommentAdded => NotificationKind.Commented,
+        DocPublished or DocRestored => NotificationKind.DocUpdated,
         _ => null,
     };
 

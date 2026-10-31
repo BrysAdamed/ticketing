@@ -1307,6 +1307,8 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
 
 ### D-162 Doc watchers replace the participant rule for doc comments; the old participants are backfilled (TKT-107)
 
+> Since D-173 (TKT-113) watchers also hear about new published and restored versions.
+
 - Question: D-117 notified a doc's creator and the authors of its live comments about a new comment, because watching docs did not exist. TKT-47 adds watching (I-85). Who watches a doc, what happens to people the old rule notified, and what does watching a doc notify about?
 - Decision:
   - `doc_watchers (doc_node_id, user_id, created_at)`, primary key (doc, user), index (user, doc), cascade with the doc, restrict with the user, like `ticket_watchers` (D-93). Only pages and diagrams can be watched; a folder answers 409 `doc.kind.unsupported`. Rows stay when the user loses access; readers (watcher list, notifications) re-check it.
@@ -1417,6 +1419,18 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
   - **Keyboard and screen readers**: each board in the panel is a button ("Move 2 selected tickets to Sprint 1") that moves the selection, like the bulk bar's "Move to board". With nothing selected it is `aria-disabled` and named "Sprint 1: select tickets or drag them here to move them". `M` stays the shortcut for the focused row.
   - Dragging stays limited to Rank sort (spec §3.2); the panel's buttons work in any sort. No per-board counts (the backlog response carries one total). No new achievement: the drop is another entry point of an existing move.
 - Rejected: a single drop zone that opens the board picker (one more step, and the board is chosen after the drop instead of by where you drop); enabling the panel buttons on the focused row when nothing is selected (a mouse click would move whichever row the peek last focused).
+
+### D-173 Doc watchers hear about new versions with `DocUpdated`, collapsed per actor for an hour (TKT-113)
+
+- Question: D-162 left published versions out of doc watching because a living page is republished often. Which writes notify, how is a burst of publishes kept from flooding the watchers, and where does the notification lead?
+- Decision:
+  - **Triggers**: `doc.updated` (PATCH with content, find/replace edits, over REST or MCP) and `doc.version.restored` of a page or diagram notify the doc's watchers with the new kind `DocUpdated` (stored as 9), never the actor and only while they can read the project. Creating or duplicating a doc, renames, drafts (autosave) and moves notify nobody. A watcher whom a published page newly mentions gets `Mentioned` instead, like a comment (D-163). Diagrams now produce `DocPublished` too, with no content, so they never carry mentions; restores are their own `DocRestored` event, which does not read mentions (D-166).
+  - **Summaries**: "published version 7" and "restored version 3 as version 8". The headline rank of `DocUpdated` is the lowest, so a comment or a mention by the same actor in the window takes the headline.
+  - **Burst rule**: the D-94 window is 5 minutes, which still let one author publishing every few minutes send a dozen notifications an hour. A new version merges into an unread notification of the same recipient, actor and doc that is headed by `DocUpdated` for `Notification.PublishCollapseWindow` (1 hour) from its first event; other kinds and other headlines keep the 5-minute window. A read notification is never reopened. The row keeps its place (sorted by its first event), shows "+n more", and the projector's locked lookup of open rows reaches back an hour when the save holds a `DocUpdated` candidate (D-159).
+  - **Link**: `notifications.doc_version` (nullable, additive migration) stores the version of the first merged publish; `url` opens the doc's history at `?history=<that version - 1>`, the diff from the version before it to the current one, so a collapsed burst shows every change since. Other doc notifications keep their links (comments, or the page for a page mention).
+  - **Preferences**: `DocUpdated` is listed by D-160 (web: "Doc updates" under "On things you follow"), can be muted, and is silenced by a muted project because it is not direct.
+- Rejected: relying on the 5-minute window alone (too many rows for a page edited all afternoon); collapsing until read with no time limit (an unread row would keep a day-old place in the list while the doc changes underneath); notifying the publisher's co-authors by making every publisher watch (a change to D-162's audience, left to TKT-119); parsing the version back out of the summary for the link (summaries are display text).
+- Achievements: none; reading about a new version is not an action worth one.
 
 ## Product owner answers (v1 review, 2026-10-27)
 

@@ -497,6 +497,10 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("doc_node_id");
 
+                    b.Property<int?>("DocVersion")
+                        .HasColumnType("integer")
+                        .HasColumnName("doc_version");
+
                     b.Property<int>("EventCount")
                         .HasColumnType("integer")
                         .HasColumnName("event_count");

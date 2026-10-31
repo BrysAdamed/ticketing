@@ -9,6 +9,7 @@ export const NOTIFICATION_KINDS = [
   'Moved',
   'Deleted',
   'RegressionItemAssigned',
+  'DocUpdated',
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -41,7 +42,8 @@ export interface UserNotification {
   projectKey: string;
   ticket: NotificationTicketRef | null;
   regression: NotificationRegressionRef | null;
-  /// The page or diagram, for doc comments (`url` opens its comments).
+  /// The page or diagram, for doc comments (`url` opens its comments) and new versions (`url`
+  /// opens its history with the changes since the first version notified).
   doc: NotificationDocRef | null;
   url: string;
   createdAt: string;

@@ -46,6 +46,7 @@ public sealed class NotificationTests
         [
             NotificationKind.Mentioned, NotificationKind.Assigned, NotificationKind.RegressionItemAssigned, NotificationKind.Deleted,
             NotificationKind.StatusChanged, NotificationKind.PriorityRaised, NotificationKind.Commented, NotificationKind.Moved,
+            NotificationKind.DocUpdated,
         ];
 
         // Act
@@ -79,13 +80,13 @@ public sealed class NotificationTests
         // Act
         var results = new[]
         {
-            notification.Absorbs(Recipient, Actor, Ticket, null, null, Now.AddMinutes(5)),
-            notification.Absorbs(Recipient, Actor, Ticket, null, null, Now.AddMinutes(5).AddTicks(1)),
-            notification.Absorbs(Recipient, Guid.CreateVersion7(), Ticket, null, null, Now.AddMinutes(1)),
-            notification.Absorbs(Recipient, null, Ticket, null, null, Now.AddMinutes(1)),
-            notification.Absorbs(Guid.CreateVersion7(), Actor, Ticket, null, null, Now.AddMinutes(1)),
-            notification.Absorbs(Recipient, Actor, Guid.CreateVersion7(), null, null, Now.AddMinutes(1)),
-            read.Absorbs(Recipient, Actor, Ticket, null, null, Now.AddMinutes(1)),
+            notification.Absorbs(Recipient, Actor, Ticket, null, null, NotificationKind.Commented, Now.AddMinutes(5)),
+            notification.Absorbs(Recipient, Actor, Ticket, null, null, NotificationKind.Commented, Now.AddMinutes(5).AddTicks(1)),
+            notification.Absorbs(Recipient, Guid.CreateVersion7(), Ticket, null, null, NotificationKind.Commented, Now.AddMinutes(1)),
+            notification.Absorbs(Recipient, null, Ticket, null, null, NotificationKind.Commented, Now.AddMinutes(1)),
+            notification.Absorbs(Guid.CreateVersion7(), Actor, Ticket, null, null, NotificationKind.Commented, Now.AddMinutes(1)),
+            notification.Absorbs(Recipient, Actor, Guid.CreateVersion7(), null, null, NotificationKind.Commented, Now.AddMinutes(1)),
+            read.Absorbs(Recipient, Actor, Ticket, null, null, NotificationKind.Commented, Now.AddMinutes(1)),
         };
 
         // Assert
@@ -100,13 +101,38 @@ public sealed class NotificationTests
         var notification = Notification.AboutDoc(Recipient, Project, doc, Actor, NotificationKind.Commented, "commented", Now);
 
         // Act
-        var sameDoc = notification.Absorbs(Recipient, Actor, null, null, doc, Now.AddMinutes(1));
-        var otherDoc = notification.Absorbs(Recipient, Actor, null, null, Guid.CreateVersion7(), Now.AddMinutes(1));
-        var ticket = notification.Absorbs(Recipient, Actor, Ticket, null, null, Now.AddMinutes(1));
+        var sameDoc = notification.Absorbs(Recipient, Actor, null, null, doc, NotificationKind.Commented, Now.AddMinutes(1));
+        var otherDoc = notification.Absorbs(Recipient, Actor, null, null, Guid.CreateVersion7(), NotificationKind.Commented, Now.AddMinutes(1));
+        var ticket = notification.Absorbs(Recipient, Actor, Ticket, null, null, NotificationKind.Commented, Now.AddMinutes(1));
 
         // Assert
         Assert.Equal((doc, null, null), (notification.DocNodeId, notification.TicketId, notification.RegressionSessionId));
         Assert.Equal([true, false, false], new[] { sameDoc, otherDoc, ticket });
+    }
+
+    [Fact]
+    public void New_versions_merge_into_a_notification_headed_by_new_versions_for_an_hour()
+    {
+        // Arrange
+        var doc = Guid.CreateVersion7();
+        var published = Notification.AboutDoc(Recipient, Project, doc, Actor, NotificationKind.DocUpdated, "published version 2", Now, docVersion: 2);
+        var commented = Notification.AboutDoc(Recipient, Project, doc, Actor, NotificationKind.Commented, "commented", Now);
+
+        // Act
+        var results = new[]
+        {
+            published.Absorbs(Recipient, Actor, null, null, doc, NotificationKind.DocUpdated, Now.AddHours(1)),
+            published.Absorbs(Recipient, Actor, null, null, doc, NotificationKind.DocUpdated, Now.AddHours(1).AddTicks(1)),
+            published.Absorbs(Recipient, Actor, null, null, doc, NotificationKind.Commented, Now.AddMinutes(6)),
+            commented.Absorbs(Recipient, Actor, null, null, doc, NotificationKind.DocUpdated, Now.AddMinutes(6)),
+        };
+
+        // Assert
+        Assert.Equal([true, false, false, false], results);
+        Assert.Equal(2, published.DocVersion);
+        Assert.Null(commented.DocVersion);
+        Assert.IsType<ArgumentOutOfRangeException>(Record.Exception(
+            () => Notification.AboutDoc(Recipient, Project, doc, Actor, NotificationKind.DocUpdated, "published", Now, docVersion: 0)));
     }
 
     [Fact]

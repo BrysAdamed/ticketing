@@ -733,12 +733,12 @@ sequenceDiagram
     participant DB as PostgreSQL
     H->>P: activity entries of this save (SaveChangesAsync)
     P->>P: MentionRules, WatchingRules, then NotificationRules
-    Note over P: newly mentioned users: Mentioned (instead of Commented for that comment)<br/>assignee of a new or reassigned ticket: Assigned<br/>assignee of a regression item: RegressionItemAssigned<br/>watchers on comment, status, priority raised to High/Highest,<br/>move (incl. board archive/delete), delete
+    Note over P: newly mentioned users: Mentioned (instead of Commented for that comment)<br/>assignee of a new or reassigned ticket: Assigned<br/>assignee of a regression item: RegressionItemAssigned<br/>watchers on comment, status, priority raised to High/Highest,<br/>move (incl. board archive/delete), delete<br/>doc watchers on doc comment (Commented) and new or restored version (DocUpdated)
     P->>DB: watchers of the tickets (stored + added in this save)
     P->>DB: notification preferences of the recipients (muted kinds and projects)
     P->>DB: who of the recipients can read the project (active; Admin, public or member)
     P->>DB: board and session names for summaries
-    P->>DB: unread notifications of these recipients and subjects created in the last 5 minutes
+    P->>DB: unread notifications of these recipients and subjects created in the last 5 minutes (1 hour for DocUpdated, D-173)
     P->>P: skip the actor; merge into an open notification (same recipient, actor, ticket or session) or add a new one
     P->>H: notifications join the same transaction as the change
 ```

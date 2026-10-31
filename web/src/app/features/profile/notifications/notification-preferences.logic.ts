@@ -30,6 +30,10 @@ export const KIND_COPY: Readonly<Record<NotificationKind, KindCopy>> = {
     label: 'Comments',
     description: 'New comments on tickets you watch and on docs you wrote or commented on.',
   },
+  DocUpdated: {
+    label: 'Doc updates',
+    description: 'A page or diagram you watch gets a new published version.',
+  },
   StatusChanged: { label: 'Status changes', description: 'A ticket you watch changes status.' },
   PriorityRaised: {
     label: 'Priority raised',
@@ -47,6 +51,7 @@ const ORDER: readonly NotificationKind[] = [
   'Assigned',
   'RegressionItemAssigned',
   'Commented',
+  'DocUpdated',
   'StatusChanged',
   'PriorityRaised',
   'Moved',

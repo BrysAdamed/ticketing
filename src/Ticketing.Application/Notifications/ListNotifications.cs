@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Ticketing.Application.Abstractions;
 using Ticketing.Application.Access;
@@ -58,6 +59,7 @@ public static class ListNotifications
                         d == null ? null : (int?)d.Number,
                         d == null ? null : d.Title,
                         d != null && d.DeletedAt != null,
+                        n.DocVersion,
                         n.CreatedAt,
                         n.UpdatedAt,
                         n.ReadAt))
@@ -88,12 +90,24 @@ public static class ListNotifications
             {
                 var key = HumanKeys.Doc(r.ProjectKey, docNumber);
                 doc = new NotificationDocDto(key, r.DocTitle!, r.DocDeleted);
-                url = DocQueries.Url(r.ProjectKey, key, r.DocTitle!)
-                    + (r.Kind == NotificationKind.Mentioned && r.Summary == Collaboration.NotificationSummaries.MentionedOnPage ? string.Empty : "#comments");
+                url = DocQueries.Url(r.ProjectKey, key, r.DocTitle!) + DocAnchor(r);
             }
             return new NotificationDto(
                 r.Id, r.Kind, r.Summary, r.EventCount, r.Actor, r.ProjectKey, ticket, regression, doc, url, r.CreatedAt, r.UpdatedAt, r.ReadAt);
         }
+
+        /// <summary>
+        /// New versions open the history with every change since the version before the first one notified (D-173), a mention
+        /// on the page opens the page, anything else the comments.
+        /// </summary>
+        private static string DocAnchor(Row r) => r switch
+        {
+            { Kind: NotificationKind.DocUpdated, DocVersion: > 1 and var version } =>
+                string.Create(CultureInfo.InvariantCulture, $"?history={version - 1}"),
+            { Kind: NotificationKind.DocUpdated } => string.Empty,
+            { Kind: NotificationKind.Mentioned, Summary: Collaboration.NotificationSummaries.MentionedOnPage } => string.Empty,
+            _ => "#comments",
+        };
 
         private sealed record Row(
             Guid Id,
@@ -111,6 +125,7 @@ public static class ListNotifications
             int? DocNumber,
             string? DocTitle,
             bool DocDeleted,
+            int? DocVersion,
             DateTimeOffset CreatedAt,
             DateTimeOffset UpdatedAt,
             DateTimeOffset? ReadAt);

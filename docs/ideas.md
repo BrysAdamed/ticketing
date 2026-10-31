@@ -24,7 +24,7 @@ This file is the pool of unscheduled ideas. Once an idea is scheduled it becomes
 | I-37 | Real-time board and ticket updates | Boards in standups stay current without refresh. | M |
 | I-67 | Teams or Slack integration | Link unfurling and channel posts. Pick after confirming the company chat tool. | M |
 | I-68 | Comment reactions | Lightweight acknowledgement. Low value. | S |
-| – | Notification preferences: mute a kind or a project (TKT-7 notifies on every trigger in D-94) | Busy watchers may want only assignments and mentions. | S |
+| – | Notification preferences: mute a kind or a project (TKT-36, D-160) | Busy watchers may want only assignments and mentions. Shipped: Profile → Notifications, REST and MCP. | S |
 
 ## Identity and access
 

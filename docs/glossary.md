@@ -160,7 +160,9 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **Normalized repository URL**: The form two git remotes of one repository share: host and path in lower case without scheme, user, port or `.git` (`git.example.com/team/repo` for both `https://git.example.com/team/repo.git` and `git@git.example.com:team/repo`). Agents compare their clone's remote with it. [§13.3](product/01-refined-spec.md#133-domain-model), [D-99](decisions.md)
 
-**Notification**: An in-app message to one user about a change someone else made: assigned to them (ticket or regression item), mentioned, or a comment, status change, priority raised to High/Highest, move or deletion on a ticket they watch, or a new comment on a doc they wrote or commented on. Created in the same transaction as the change, shown under the bell, listed only while the user can read the project, purged after 90 days (D-94). See Collapsing. [§6.16](product/01-refined-spec.md#616-in-app-notifications-i-30-d-94)
+**Notification**: An in-app message to one user about a change someone else made: assigned to them (ticket or regression item), mentioned, or a comment, status change, priority raised to High/Highest, move or deletion on a ticket they watch, or a new comment on a doc they wrote or commented on. Created in the same transaction as the change, shown under the bell, listed only while the user can read the project, purged after 90 days (D-94). See Collapsing and Notification preferences. [§6.16](product/01-refined-spec.md#616-in-app-notifications-i-30-d-94)
+
+**Notification preferences**: The notification kinds and projects a user muted (Profile → Notifications, D-160). A muted kind never notifies; a muted project silences activity there, while the direct kinds (mentions and assignments) still come through. Applied when a notification would be created. [§6.16](product/01-refined-spec.md#616-in-app-notifications-i-30-d-94)
 
 **Open**: A ticket whose status category is not `Done`. Used in dashboards and filters. [§3](product/01-refined-spec.md#3-enumerations)
 

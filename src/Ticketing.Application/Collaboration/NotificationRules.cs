@@ -11,7 +11,8 @@ public sealed record NotificationCandidate(Guid RecipientId, CollaborationEvent 
 /// and the watchers of a ticket when it is commented, changes status, has its priority raised to High or Highest, moves
 /// between backlog and boards or is deleted. A watcher mentioned in a new comment gets <c>Mentioned</c> instead of
 /// <c>Commented</c> for it. A comment on a page or diagram notifies the doc's participants (its author and earlier commenters)
-/// with <c>Commented</c>. The actor is never notified about their own action.
+/// with <c>Commented</c>. The actor is never notified about their own action, and <see cref="Unmuted"/> applies each
+/// recipient's muted kinds and projects.
 /// </summary>
 public static class NotificationRules
 {
@@ -62,6 +63,13 @@ public static class NotificationRules
         }
         return candidates;
     }
+
+    /// <summary>Drops the candidates their recipient's preferences silence (D-160); recipients without preferences keep all of theirs.</summary>
+    public static IReadOnlyList<NotificationCandidate> Unmuted(
+        IReadOnlyList<NotificationCandidate> candidates,
+        IReadOnlyDictionary<Guid, NotificationPreferences> preferencesByUser) =>
+        [.. candidates.Where(c => !preferencesByUser.TryGetValue(c.RecipientId, out var preferences)
+            || !preferences.Silences(c.Kind, c.Event.ProjectId))];
 
     /// <summary>A raise counts only when it lands on High or Highest, coming from a lower priority (or none).</summary>
     public static bool IsRaise(Priority? from, Priority? to) =>

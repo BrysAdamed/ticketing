@@ -56,6 +56,8 @@ public sealed class TicketingDbContext(DbContextOptions<TicketingDbContext> opti
 
     public DbSet<Notification> Notifications => Set<Notification>();
 
+    public DbSet<NotificationPreferences> NotificationPreferences => Set<NotificationPreferences>();
+
     public DbSet<Attachment> Attachments => Set<Attachment>();
 
     public DbSet<TestCase> TestCases => Set<TestCase>();

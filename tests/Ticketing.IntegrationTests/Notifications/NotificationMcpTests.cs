@@ -63,6 +63,40 @@ public sealed class NotificationMcpTests(TicketingApiFactory api)
         Assert.Single(listed.GetProperty("items").EnumerateArray());
     }
 
+    [Fact]
+    public async Task Read_and_change_notification_preferences_over_mcp()
+    {
+        // Arrange
+        var world = await api.SeedWorldAsync();
+        await world.OwnerClient.CreateTicketAsync("WEB", "Watched");
+        await world.MemberClient.WatchAsync("WEB-1");
+        await using var mcp = await api.CreateMcpClientAsync(await api.CreatePatAsync(world.Member));
+        await using var readOnly = await api.CreateMcpClientAsync(await api.CreatePatAsync(world.Member, PatScope.ReadOnly));
+
+        // Act
+        var before = await CallAsync(mcp, "get_notification_preferences", []);
+        var updated = await CallAsync(mcp, "update_notification_preferences", new()
+        {
+            ["muteKinds"] = new[] { "Moved" },
+            ["muteProjects"] = new[] { "WEB" },
+        });
+        await world.OwnerClient.CommentAsync("WEB-1");
+        var hidden = await mcp.CallToolAsync("update_notification_preferences",
+            new Dictionary<string, object?> { ["muteProjects"] = new[] { "NOPE" } }, cancellationToken: _ct);
+        var readOnlyTools = (await readOnly.ListToolsAsync(cancellationToken: _ct)).Select(t => t.Name).ToList();
+
+        // Assert
+        Assert.All(before.GetProperty("kinds").EnumerateArray(), k => Assert.False(k.GetProperty("muted").GetBoolean()));
+        Assert.Equal(["Moved"], updated.GetProperty("kinds").EnumerateArray()
+            .Where(k => k.GetProperty("muted").GetBoolean()).Select(k => k.GetProperty("kind").GetString()));
+        Assert.Equal("WEB", Assert.Single(updated.GetProperty("mutedProjects").EnumerateArray()).GetProperty("key").GetString());
+        Assert.Empty(await api.StoredNotificationsAsync(world.Member));
+        Assert.True(hidden.IsError);
+        Assert.Contains("project.notFound", Assert.IsType<TextContentBlock>(hidden.Content[0]).Text, StringComparison.Ordinal);
+        Assert.Contains("get_notification_preferences", readOnlyTools);
+        Assert.DoesNotContain("update_notification_preferences", readOnlyTools);
+    }
+
     private async Task<JsonElement> CallAsync(McpClient mcp, string tool, Dictionary<string, object?> arguments)
     {
         var result = await mcp.CallToolAsync(tool, arguments, cancellationToken: _ct);

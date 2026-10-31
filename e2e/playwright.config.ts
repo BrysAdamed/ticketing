@@ -9,7 +9,7 @@ const AGENT_SPECS = /agents[\\/].*\.spec\.ts/;
 const PERF_SPECS = /\.perf\.spec\.ts$/;
 
 /// The network service runs inside the browser process: as a separate process it was sometimes
-/// killed at startup and every later context or cookie call hung (D-160). Chromium keeps only the
+/// killed at startup and every later context or cookie call hung (D-161). Chromium keeps only the
 /// last `--enable-features`, so Playwright's own `CDPScreenshotNewSurface` is repeated here.
 const CHROMIUM = {
     ...devices['Desktop Chrome'],
@@ -24,7 +24,7 @@ const CHROMIUM = {
 /// E2E_BASE_URL to target another environment, e.g. http://localhost:4200 for `ng serve`.
 export default defineConfig({
     testDir: './tests',
-    /// A full parallel run against a docker stack on a shared machine sees stalls of several seconds (D-160).
+    /// A full parallel run against a docker stack on a shared machine sees stalls of several seconds (D-161).
     timeout: 60_000,
     expect: { timeout: 10_000 },
     fullyParallel: true,

@@ -648,6 +648,8 @@ Flag changes write ActivityEntries. Admin UI: list, create, edit, delete; shows 
 - Mark read: some (1 to 100 ids) or all of the caller's notifications; ids of other users' notifications are ignored. Read time is kept on repeat. Needs write-scoped credentials.
 - Retention: notifications older than 90 days are deleted by the hourly retention job.
 - REST (`/api/v1/me/notifications`): `GET ?unread=true&cursor=&limit=` returns `{ items, nextCursor }`, newest first by `createdAt`; `GET /unread-count` returns `{ count }`; `POST /read` with `{ "ids": [...] }` or `{ "all": true }` returns `{ unreadCount }`. An item is `{ id, kind, summary, eventCount, actor, projectKey, ticket: { key, title, deleted } | null, regression: { sessionKey, sessionName, testCaseKey } | null, doc: { key, title, deleted } | null, url, createdAt, updatedAt, readAt }`; `url` is the SPA path of the ticket, the regression item or the doc's comments (`/p/{PK}/docs/{KEY}/{slug}#comments`).
+- Preferences (TKT-36, D-160): nothing is muted by default. A user can mute any kind, which silences it everywhere, and mute projects (at most 200), which silences the other kinds there while mentions and assignments (`Mentioned`, `Assigned`, `RegressionItemAssigned`, called direct) still come through. Preferences apply when the notification would be created; muting does not hide or delete notifications that already exist, and unmuting does not bring back what was skipped. Muted projects the user can no longer read are left out of the preferences and apply again when access returns.
+- Preferences REST (`/api/v1/me/notification-preferences`): `GET` returns `{ kinds: [{ kind, muted, direct }], mutedProjects: [{ id, key, name }], updatedAt }`; `PATCH` with any of `muteKinds`, `unmuteKinds`, `muteProjects`, `unmuteProjects` (project keys or ids, 1..50 per list, readable or 404) applies the changes as sets and returns the preferences. Needs write-scoped credentials. Web: Profile → Notifications.
 - Performance: list (all or unread, first page) and unread count p95 under 50 ms with 100 000 notifications for one user.
 
 ## 7. Project dashboard
@@ -807,6 +809,8 @@ Notifications (6.16)
 | --- | --- | --- |
 | `list_notifications` | optional `unreadOnly`, `cursor`, `limit` | `{ items, nextCursor }` of notifications, newest first, in the REST shape (6.16). |
 | `mark_notifications_read` | `ids` (1..100) or `all` (true) | `{ unreadCount }`. Write-scoped tokens only. |
+| `get_notification_preferences` | none | The caller's preferences in the REST shape (6.16). |
+| `update_notification_preferences` | any of `muteKinds`, `unmuteKinds`, `muteProjects`, `unmuteProjects` (keys or ids, 1..50 each) | Preferences afterwards. Write-scoped tokens only. |
 
 Achievements (15.6, 15.7)
 
@@ -1565,7 +1569,7 @@ The look is `docs/design/mockups/achievements.html`, layout-and-screens §3.9b a
 The look is section 5 of `docs/design/mockups/achievements.html` and layout-and-screens §2 (avatar menu). Decision D-152 (TKT-67).
 
 - **Polling:** `GET /me/achievements/unseen` rides on the notification poll (6.16: every minute while the tab is visible, on window focus and at sign-in) and runs only while achievements are on for the user (`AchievementsAccess`). A 404 `achievements.disabled` turns achievements off for the session, as on the tab. There is no other loop.
-- **Toast:** one two-line toast per newly unseen tier, bottom-right for 5 s (paused while hovered or focused): the 32px medal, "Name · Tier" (a one-time achievement shows its name alone), the achievement's description as the second line, **View** (opens `/profile/achievements`) and Dismiss. Several toasts show one after another, and an unlock waits while another toast is open (for example one with Undo), so it never replaces it (D-160). More than 3 new tiers at once collapse into one summary toast: up to three stacked medals, "5 new achievements" and "Reporter, Connector, Machine whisperer and 2 more."
+- **Toast:** one two-line toast per newly unseen tier, bottom-right for 5 s (paused while hovered or focused): the 32px medal, "Name · Tier" (a one-time achievement shows its name alone), the achievement's description as the second line, **View** (opens `/profile/achievements`) and Dismiss. Several toasts show one after another, and an unlock waits while another toast is open (for example one with Undo), so it never replaces it (D-161). More than 3 new tiers at once collapse into one summary toast: up to three stacked medals, "5 new achievements" and "Reporter, Connector, Machine whisperer and 2 more."
 - **Once per tier:** a tier is toasted at most once per browser, even across reloads and tabs, as long as it stays unseen; the remembered tiers are kept per user in `localStorage` and pruned to the tiers still unseen. Toasting doesn't mark anything seen; only opening the tab does (15.9).
 - **Dot:** while any tier is unseen, the avatar carries an 8px accent dot with no number, its label reads "Account: name, new achievements", and the account menu's Achievements item shows a "New" badge. The tab's `POST /seen` answer clears them at once.
 - No confetti and no animation of its own; the snack bar's entry animation is off under reduced motion. The copy names what the user did, never a comparison.

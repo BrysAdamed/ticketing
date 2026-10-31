@@ -3,6 +3,7 @@ import { AchievementsAccess } from '@core/achievements/achievements-access';
 import { RouteTab } from '@shared/ui/route-tabs/route-tabs.component';
 
 const GENERAL: RouteTab = { path: '', label: 'Profile', exact: true };
+const NOTIFICATIONS: RouteTab = { path: 'notifications', label: 'Notifications' };
 const TOKENS: RouteTab = { path: 'tokens', label: 'Access tokens' };
 const ACHIEVEMENTS: RouteTab = { path: 'achievements', label: 'Achievements' };
 
@@ -12,6 +13,8 @@ export class ProfileLayoutStore {
 
   readonly title = 'Profile';
   readonly tabs = computed<readonly RouteTab[]>(() =>
-    this.achievements.enabled() ? [GENERAL, TOKENS, ACHIEVEMENTS] : [GENERAL, TOKENS],
+    this.achievements.enabled()
+      ? [GENERAL, NOTIFICATIONS, TOKENS, ACHIEVEMENTS]
+      : [GENERAL, NOTIFICATIONS, TOKENS],
   );
 }

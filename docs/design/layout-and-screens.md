@@ -172,6 +172,13 @@ A popover about a person (`tk-user-card`, CDK overlay, `role="dialog"` labelled 
 - Loading: tile skeletons with a hexagon block. Empty (nothing earned yet): "Achievements start counting now", explaining that earlier work isn't included, with the Still to earn grid below.
 - Unlocks show a toast each (medal, "Closer · Silver", what you did, `View`); more than 3 at once collapse into "5 new achievements" (TKT-67).
 
+### 3.9c Profile → notifications [`profile.notifications`] (TKT-36, D-160)
+- A Profile tab between Profile and Access tokens: `Profile · Notifications · Access tokens · Achievements`. The bell panel header has a 24px settings icon button ("Notification settings") that opens it.
+- Cards, max 640px, same card style as 3.9a (32px round icon tile, `lg` title, `sm` muted subtitle).
+- **Notify me about** (bell icon): two groups with an `xs` uppercase muted heading: **About you** (Mentions, Assignments, Regression items) and **On things you follow** (Comments, Status changes, Priority raised, Moves, Deletions). Each row: label (500) over a one-line `sm` muted description, and a Material slide toggle on the right (on = notify), labelled by the label and described by the description; rows are separated by a `--tk-border-subtle` hairline.
+- **Muted projects** (bell-off icon): subtitle "Activity in these projects stays quiet. Mentions and assignments still reach you."; `Mute a project` (stroked, plus icon) opens the inline picker (filter, arrows, digits) over readable projects not yet muted, archived ones last; disabled with a tooltip when every project is muted. Rows: key (mono, muted, `sm`), name (ellipsis), `Unmute` (text button). Empty: a muted line "No muted projects. You hear about everything you follow."
+- Every change saves at once and optimistically; a failure rolls back that change only and shows an error toast with `Retry`. Muting a project confirms with a toast "Activity in WEB is muted." with `Undo`. Loading: skeleton rows in each card. Load failure: danger empty state with `Retry`.
+
 ### 3.10 Profile → access tokens [`profile.tokens`]
 - Profile page has tabs `General · Access tokens · Preferences` (Preferences: theme, density, keyboard shortcut hints on/off).
 - Tokens table: Name, Token prefix (`tkt_pat_3fA9…` in mono, muted), Scopes (chips such as `api:read`, `api:write`, `mcp`), Created, Last used (relative, or "Never" in subtle), Expires (in warning-fg when under 7 days, "Expired" danger badge), and `Revoke` (ghost danger, with a confirm popover).

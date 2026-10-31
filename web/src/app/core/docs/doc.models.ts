@@ -100,6 +100,8 @@ export interface Doc {
   snapshotUrl?: string | null;
   /// Pages and diagrams: who watches the doc (D-162); null for folders.
   watchers?: Watchers | null;
+  /// Pages: users the content mentions who are active and can read the project, shown as chips (D-166).
+  mentions?: UserRef[];
 }
 
 /// A mentioned ticket the reader may see (what a ticket chip shows).
@@ -259,6 +261,8 @@ export interface DocVersion {
   /// What this version's content mentions and embeds, as the reader may see them.
   references: DocReferences;
   embeds: DocEmbed[];
+  /// Pages: users this version mentions who are active and can read the project (D-166).
+  mentions?: UserRef[];
 }
 
 /// `PUT /docs/{key}/versions/{n}/snapshot`: `stored` is false when the version already had one.

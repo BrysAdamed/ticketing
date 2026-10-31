@@ -84,7 +84,8 @@ public static class UpdateDoc
 
             if (command.Content is not null)
             {
-                var content = DocContent.Normalize(command.Content, node.Kind, node.DiagramFormat);
+                var prepared = await publisher.PrepareContentAsync(target.Grant, node.Kind, node.Content, command.Content, cancellationToken);
+                var content = DocContent.Normalize(prepared, node.Kind, node.DiagramFormat);
                 if (string.Equals(content, node.Content, StringComparison.Ordinal))
                 {
                     await publisher.DiscardMyDraftAsync(node.Id, cancellationToken);

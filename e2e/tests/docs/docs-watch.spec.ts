@@ -94,4 +94,48 @@ test.describe('watch docs', () => {
             )
             .toContain(reader.id);
     });
+
+    test('@ in the page editor picks a reader; the preview and the published page show a chip', async ({
+        page,
+        api,
+    }) => {
+        // Arrange
+        const projectKey = (await api.createProject({ visibility: 'Public' })).key;
+        const doc = await api.post<Doc>(`/projects/${projectKey}/docs`, {
+            kind: 'Page',
+            title: 'Owners',
+            content: '',
+        });
+        const reader = await seedUser(api, 'pagemention');
+        const view = new DocPagePage(page);
+        await view.goto(projectKey, doc.key, true);
+
+        // Act
+        await view.source.click();
+        await page.keyboard.type(`Owner: @${reader.email.split('@')[0]}`);
+        const option = page.locator('.cm-tooltip-autocomplete li', { hasText: reader.displayName });
+        await option.click();
+
+        // Assert
+        await expect(view.source).toContainText(
+            `Owner: @[${reader.displayName}](user:${reader.id})`,
+        );
+        await expect(view.preview.getByTestId(`mention-${reader.id}`)).toBeVisible();
+
+        // Act
+        await view.publish();
+
+        // Assert
+        await expect
+            .poll(async () =>
+                (await api.get<{ mentions: { id: string }[] }>(`/docs/${doc.key}`)).mentions.map(
+                    (m) => m.id,
+                ),
+            )
+            .toEqual([reader.id]);
+        await page.goto(`/projects/${projectKey}/docs/${doc.key}`);
+        await expect(
+            page.getByTestId('doc-content').getByTestId(`mention-${reader.id}`),
+        ).toBeVisible();
+    });
 });

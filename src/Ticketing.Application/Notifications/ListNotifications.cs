@@ -88,7 +88,8 @@ public static class ListNotifications
             {
                 var key = HumanKeys.Doc(r.ProjectKey, docNumber);
                 doc = new NotificationDocDto(key, r.DocTitle!, r.DocDeleted);
-                url = DocQueries.Url(r.ProjectKey, key, r.DocTitle!) + "#comments";
+                url = DocQueries.Url(r.ProjectKey, key, r.DocTitle!)
+                    + (r.Kind == NotificationKind.Mentioned && r.Summary == Collaboration.NotificationSummaries.MentionedOnPage ? string.Empty : "#comments");
             }
             return new NotificationDto(
                 r.Id, r.Kind, r.Summary, r.EventCount, r.Actor, r.ProjectKey, ticket, regression, doc, url, r.CreatedAt, r.UpdatedAt, r.ReadAt);

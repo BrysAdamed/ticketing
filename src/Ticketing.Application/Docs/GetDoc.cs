@@ -38,6 +38,7 @@ public static class GetDoc
             return doc with
             {
                 Content = version.Content,
+                Mentions = await DocQueries.MentionsOfAsync(db, target.ProjectId, doc.Kind, version.Content, cancellationToken),
                 References = references,
                 Embeds = embeds,
                 Outline = doc.Outline is null ? null : OutlineOf(version.Content),

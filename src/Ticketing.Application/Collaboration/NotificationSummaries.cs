@@ -15,9 +15,13 @@ public sealed record SummaryNames(IReadOnlyDictionary<Guid, string> Boards, IRea
 /// </summary>
 public static class NotificationSummaries
 {
+    /// <summary>The summary of a mention in a page's content; its notification links to the page, not to the comments.</summary>
+    public const string MentionedOnPage = "mentioned you on the page";
+
     public static string For(NotificationKind kind, CollaborationEvent e, SummaryNames names) => (kind, e) switch
     {
         (NotificationKind.Assigned, _) => "assigned the ticket to you",
+        (NotificationKind.Mentioned, _) when MentionRules.OnPage(e) => MentionedOnPage,
         (NotificationKind.Mentioned, _) when MentionRules.InComment(e) => "mentioned you in a comment",
         (NotificationKind.Mentioned, TicketCreated or DescriptionChanged) => "mentioned you in the description",
         (NotificationKind.Mentioned, _) => "mentioned you",

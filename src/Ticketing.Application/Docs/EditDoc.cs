@@ -41,7 +41,8 @@ public static class EditDoc
                     if (node.DiagramFormat == DiagramFormat.Canvas)
                         throw AppException.Conflict(
                             DocErrors.KindUnsupported, "Canvas diagrams cannot be edited with find/replace.", "Replace the whole source with update_doc.");
-                    var content = DocEdits.Apply(node.Content ?? string.Empty, command.Edits!);
+                    var edited = DocEdits.Apply(node.Content ?? string.Empty, command.Edits!);
+                    var content = await publisher.PrepareContentAsync(target.Grant, node.Kind, node.Content, edited, ct);
                     if (!string.Equals(content, node.Content, StringComparison.Ordinal))
                         await publisher.PublishAsync(node, content, command.ChangeNote, null, null, ct);
                     await DocTree.SaveAsync(db, node.Title, ct);

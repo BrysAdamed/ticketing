@@ -136,11 +136,13 @@ async function ticketSource(
   };
 }
 
-function noMatch(label: string): Completion {
+/// A completion row that only says why there is nothing to pick; choosing it inserts nothing.
+export function noMatch(label: string): Completion {
   return { label, type: 'text', apply: (view) => view.focus(), boost: -99 };
 }
 
-async function debounced<T>(
+/// Runs `load` after a short pause unless the completion was aborted meanwhile; null when aborted or failed.
+export async function debounced<T>(
   context: CompletionContext,
   load: (signal: AbortSignal) => Promise<T>,
 ): Promise<T | null> {

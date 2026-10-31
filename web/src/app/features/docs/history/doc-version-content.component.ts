@@ -32,6 +32,7 @@ import { DocMarkdownComponent } from '../page/doc-markdown.component';
           [docKey]="doc().key"
           [references]="version().references"
           [embeds]="version().embeds"
+          [mentions]="version().mentions"
         />
       } @else {
         <p class="empty">This version is empty.</p>

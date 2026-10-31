@@ -195,7 +195,8 @@ A popover about a person (`tk-user-card`, CDK overlay, `role="dialog"` labelled 
 - Table rows (40px): flag key (mono, e.g. `board.swimlanes`), description (muted), state toggle (`mat-slide-toggle`), rollout summary ("100%", "25% of users", "Roles: Admin", "Variant B 50/50"), last changed by + when.
 - Toggling applies optimistically and shows a toast "`board.swimlanes` turned on · Undo".
 - Clicking a row opens the peek panel with: description, a kill-switch toggle, targeting (everyone / percentage slider / roles / specific users) and **variants** for A/B (name + weight list summing to 100%, a `control` variant required, and the view id it targets, e.g. `backlog.list`). The panel also shows an audit log of changes.
-- New flag dialog: key (lower.dot.case, validated), description, default off.
+- Flags are declared in code (D-169): there is no New flag button or dialog and no empty state. Each row shows a "Default: on/off" badge after the key and an amber "Changed" badge while the targeting differs from that default. The edit dialog shows the description read-only and edits the master switch, rollout, roles and users.
+- Row menu: Edit targeting, Reset to default (with a confirm; disabled while the flag is at its default). Retired flags (no longer declared) are listed last under "Not used by the code", dimmed, with Delete as their only action (type-the-key confirm).
 
 ## 4. Keyboard shortcuts
 

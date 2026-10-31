@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Ticketing.Application.Abstractions;
 using Ticketing.Application.Agents;
 using Ticketing.Domain.Agents;
+using Ticketing.Application.FeatureFlags;
 using Ticketing.Domain.FeatureFlags;
 using Ticketing.Domain.Projects;
 using Ticketing.Domain.Tickets;
@@ -24,13 +25,13 @@ internal static class AgentTestData
         api.WithDbAsync(async db =>
         {
             var now = DateTimeOffset.UtcNow;
-            var flag = await db.FeatureFlags.SingleOrDefaultAsync(f => f.Key == AgentFeature.FlagKey);
+            var flag = await db.FeatureFlags.SingleOrDefaultAsync(f => f.Key == FeatureFlagCatalog.AgentDelegate.Key);
             if (flag is null)
             {
-                flag = FeatureFlag.Create(AgentFeature.FlagKey, "Delegate to agent", null, now);
+                flag = FeatureFlag.Register(FeatureFlagCatalog.AgentDelegate.Key, FeatureFlagCatalog.AgentDelegate.Description, false, now);
                 db.FeatureFlags.Add(flag);
             }
-            flag.Configure(flag.Description, true, 0, users.Select(u => u.Id), roles, null, now);
+            flag.Configure(true, 0, users.Select(u => u.Id), roles, null, now);
             await db.SaveChangesAsync();
             api.Services.GetRequiredService<IFeatureFlagStore>().Invalidate();
             return true;

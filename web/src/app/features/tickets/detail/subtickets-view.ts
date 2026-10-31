@@ -2,8 +2,7 @@ import { DOCUMENT } from '@angular/common';
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { AuthService } from '@core/auth/auth.service';
 import { FeatureFlagService } from '@core/flags/feature-flag.service';
-
-export const SUBTICKETS_GRAPH_FLAG = 'ticket.subtickets-graph';
+import { SUBTICKETS_GRAPH_FLAG } from '@core/flags/flag-keys';
 
 export type SubticketsView = 'list' | 'graph';
 

@@ -23,7 +23,7 @@ The brief: "when developing views, make sure that they will in a future support 
 
 ## Consequences
 
-- Adding an A/B test later is: create a flag, write one view component, register it. No route or store changes.
+- Adding an A/B test later is: declare a flag in the catalog (D-169), write one view component, register it. No route or store changes.
 - Every page costs one extra file (the store) and a registry entry. The split also makes stores easy to unit test without rendering ([ADR 0011](0011-testing-strategy.md)).
 - Variants of one page must share the store's state shape. A variant that needs different data extends the store rather than forking it.
 - Route-level code splitting still works because each variant is a lazy import.

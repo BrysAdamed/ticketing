@@ -10,6 +10,7 @@ using Npgsql;
 using Ticketing.Application.Abstractions;
 using Ticketing.Application.Achievements;
 using Ticketing.Domain.Achievements;
+using Ticketing.Application.FeatureFlags;
 using Ticketing.Domain.FeatureFlags;
 using Ticketing.Domain.Projects;
 using Ticketing.Infrastructure.Persistence;
@@ -114,8 +115,8 @@ public sealed class AchievementProjectorPerformanceTests(TicketingApiFactory api
         api.WithDbAsync(async db =>
         {
             var now = DateTimeOffset.UtcNow;
-            var flag = FeatureFlag.Create(AchievementsFeature.FlagKey, "Achievements", null, now);
-            flag.Configure(flag.Description, true, 100, [], [], null, now);
+            var flag = FeatureFlag.Register(FeatureFlagCatalog.Achievements.Key, FeatureFlagCatalog.Achievements.Description, true, now);
+            flag.Configure(true, 100, [], [], null, now);
             db.FeatureFlags.Add(flag);
             await db.SaveChangesAsync(_ct);
             api.Services.GetRequiredService<IFeatureFlagStore>().Invalidate();

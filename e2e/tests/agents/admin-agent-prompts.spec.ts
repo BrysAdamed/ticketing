@@ -16,10 +16,6 @@ declare global {
     }
 }
 
-interface Flag {
-    key: string;
-}
-
 interface TicketSummary {
     key: string;
 }
@@ -30,15 +26,7 @@ interface InstancePrompt {
 }
 
 async function setFlag(api: Api, enabled: boolean): Promise<void> {
-    const flags = await api.get<Flag[]>('/admin/flags');
-    if (!flags.some((f) => f.key === FLAG))
-        await api.post('/admin/flags', {
-            key: FLAG,
-            description: 'Delegate to agent (TKT-25)',
-            enabled,
-            targetRoles: ['Admin'],
-        });
-    else await api.patch(`/admin/flags/${FLAG}`, { enabled, targetRoles: ['Admin'] });
+    await api.patch(`/admin/flags/${FLAG}`, { enabled, targetRoles: ['Admin'] });
 }
 
 /// Puts the guardrails back on the shipped built-in so other agent specs see the default text.

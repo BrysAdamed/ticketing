@@ -3,7 +3,7 @@ import { MatTooltip } from '@angular/material/tooltip';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { IconComponent } from '@shared/ui/icon/icon.component';
 import { ProjectTileComponent } from '@shared/ui/domain/project-tile.component';
-import { AGENT_FLAG } from '../../agent/agent-prompt.models';
+import { AGENT_FLAG, FlagKey } from '../../flags/flag-keys';
 import { AuthService } from '../../auth/auth.service';
 import { BoardDirectory } from '../../boards/board-directory';
 import { FeatureFlagService } from '../../flags/feature-flag.service';
@@ -19,7 +19,7 @@ interface NavLink {
   icon: string;
   testId: string;
   /// Shown only while this feature flag is on for the user.
-  flag?: string;
+  flag?: FlagKey;
 }
 
 export const PROJECT_NAV: readonly NavLink[] = [

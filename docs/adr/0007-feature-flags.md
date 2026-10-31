@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-10-26
+- Note (2026-10-31): flags are now declared in code with a default and synced into this table at startup; Admins no longer create flags, they only change targeting, reset to the default, and delete retired flags. Unknown flags still evaluate off; a declared flag without a row evaluates to its default. See [D-169](../decisions.md).
 
 ## Context
 

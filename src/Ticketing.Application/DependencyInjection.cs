@@ -15,7 +15,9 @@ public static class DependencyInjection
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
         services.AddScoped<IProjectAccess, ProjectAccess>();
+        services.AddSingleton<IFeatureFlagCatalog>(new FeatureFlagCatalogSource(FeatureFlagCatalog.All));
         services.AddScoped<IFeatureFlags, FeatureFlagEvaluator>();
+        services.AddScoped<FeatureFlagSync>();
         services.AddScoped<IActivityObserver, CollaborationProjector>();
         services.AddScoped<MentionNormalizer>();
         services.AddSingleton<IBuiltInAgentPrompts, EmbeddedAgentPrompts>();

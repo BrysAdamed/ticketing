@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltip } from '@angular/material/tooltip';
-import { AGENT_FLAG } from '@core/agent/agent-prompt.models';
+import { AGENT_FLAG } from '@core/flags/flag-keys';
 import { FeatureFlagService } from '@core/flags/feature-flag.service';
 import {
   ACTIVITY_ENTITY_TYPE_LABELS,

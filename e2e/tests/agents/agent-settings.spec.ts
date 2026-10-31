@@ -7,24 +7,12 @@ import { PASSWORD, seedUser } from '../identity/identity';
 
 const FLAG = 'agent.delegate';
 
-interface Flag {
-    key: string;
-}
-
 interface TicketSummary {
     key: string;
 }
 
 async function setFlag(api: Api, enabled: boolean, targetRoles = ['Admin']): Promise<void> {
-    const flags = await api.get<Flag[]>('/admin/flags');
-    if (!flags.some((f) => f.key === FLAG))
-        await api.post('/admin/flags', {
-            key: FLAG,
-            description: 'Delegate to agent (TKT-25)',
-            enabled,
-            targetRoles,
-        });
-    else await api.patch(`/admin/flags/${FLAG}`, { enabled, targetRoles });
+    await api.patch(`/admin/flags/${FLAG}`, { enabled, targetRoles });
 }
 
 async function seedProject(api: Api): Promise<{ projectKey: string; bug: string }> {

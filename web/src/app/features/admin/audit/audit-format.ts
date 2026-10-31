@@ -1,4 +1,6 @@
+import { GlobalRole } from '@shared/domain/enums';
 import { AuditEntry } from '../admin.models';
+import { targetingSummary } from '../flags/flag-summary';
 
 /// Sentence pieces for one audit row: "<actor> <verb> <target>" plus an optional detail line.
 export interface AuditDescription {
@@ -20,6 +22,7 @@ const VERBS: Record<string, string> = {
   'pat.created': 'created access token',
   'pat.revoked': 'revoked access token',
   'flag.created': 'created flag',
+  'flag.registered': 'registered flag',
   'flag.updated': 'changed',
   'flag.deleted': 'deleted flag',
   'project.created': 'created project',
@@ -45,6 +48,7 @@ const MEMBER_VERBS: Record<string, string> = {
 };
 
 const AGENT_PROMPT_UPDATED = 'agent.prompt.updated';
+const FLAG_RESET = 'flag.reset';
 
 const AGENT_PROMPT_MODES: Record<string, string> = {
   Inherit: 'Use default',
@@ -56,6 +60,7 @@ export function describeAuditEntry(entry: AuditEntry): AuditDescription {
   const memberVerb = MEMBER_VERBS[entry.action];
   if (memberVerb) return describeMember(entry, memberVerb);
   if (entry.action === AGENT_PROMPT_UPDATED) return describeAgentPrompt(entry);
+  if (entry.action === FLAG_RESET) return describeFlagReset(entry);
   const self = entry.actor?.id === entry.entityId && entry.action.startsWith('user.password.');
   const target = self
     ? ''
@@ -119,10 +124,35 @@ function describeAgentPrompt(entry: AuditEntry): AuditDescription {
   return { verb: 'changed agent prompt', target, detail: versions + modes };
 }
 
+/// "reset to its default agent.delegate · Roles: Admin → Disabled" (D-169).
+function describeFlagReset(entry: AuditEntry): AuditDescription {
+  const before = asRecord(entry.oldValue);
+  const now = asRecord(entry.newValue);
+  const target = entry.entityLabel ?? labelFromValues(entry) ?? '(removed FeatureFlag)';
+  return {
+    verb: 'reset to its default',
+    target,
+    detail: `${flagState(before)} → ${flagState(now)}`,
+  };
+}
+
+function flagState(value: Record<string, unknown> | null): string {
+  if (!value) return '—';
+  if (value['enabled'] !== true) return 'Disabled';
+  const list = (key: string) => (Array.isArray(value[key]) ? (value[key] as unknown[]) : []);
+  return targetingSummary({
+    rolloutPercentage: Number(value['rolloutPercentage'] ?? 0),
+    targetRoles: list('targetRoles') as GlobalRole[],
+    targetUsers: list('targetUserIds'),
+  });
+}
+
 function detailOf(entry: AuditEntry): string | null {
   const value = asRecord(entry.newValue);
   if (!value) return null;
   switch (entry.action) {
+    case 'flag.registered':
+      return `Default ${value['enabled'] === true ? 'on' : 'off'}, declared in code`;
     case 'user.created':
       return `Role ${String(value['globalRole'] ?? 'User')}`;
     case 'pat.created':

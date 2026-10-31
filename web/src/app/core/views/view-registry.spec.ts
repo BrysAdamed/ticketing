@@ -2,6 +2,7 @@ import { Component, provideZonelessChangeDetection, Type } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { FeatureFlagService } from '../flags/feature-flag.service';
+import { ACHIEVEMENTS_FLAG, AGENT_FLAG, SUBTICKETS_GRAPH_FLAG } from '../flags/flag-keys';
 import { defineView, ViewExposure } from './view-definition';
 import { provideViewExposure, VIEW_ID_DATA_KEY, viewRoute, ViewRegistry } from './view-registry';
 
@@ -53,10 +54,10 @@ describe('ViewRegistry', () => {
 
   it('resolves the variant matching the flag value', async () => {
     // Arrange
-    flags.values['ticket-view.v2'] = 'on';
+    flags.values[SUBTICKETS_GRAPH_FLAG] = 'on';
     const view = defineView({
       viewId: 'test.flagged',
-      flag: 'ticket-view.v2',
+      flag: SUBTICKETS_GRAPH_FLAG,
       variants: {
         default: () => Promise.resolve(DefaultVariantComponent),
         on: () => Promise.resolve({ default: OnVariantComponent }),
@@ -72,10 +73,10 @@ describe('ViewRegistry', () => {
 
   it('falls back to default when the flag variant has no registered component', async () => {
     // Arrange
-    flags.values['ticket-view.v2'] = 'b';
+    flags.values[SUBTICKETS_GRAPH_FLAG] = 'b';
     const view = defineView({
       viewId: 'test.fallback',
-      flag: 'ticket-view.v2',
+      flag: SUBTICKETS_GRAPH_FLAG,
       variants: { default: () => Promise.resolve(DefaultVariantComponent) },
     });
 
@@ -88,11 +89,11 @@ describe('ViewRegistry', () => {
 
   it('falls back to default when the variant fails to load', async () => {
     // Arrange
-    flags.values['broken'] = 'on';
+    flags.values[AGENT_FLAG] = 'on';
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const view = defineView({
       viewId: 'test.broken',
-      flag: 'broken',
+      flag: AGENT_FLAG,
       variants: {
         default: () => Promise.resolve(DefaultVariantComponent),
         on: () => Promise.reject(new Error('chunk failed')),
@@ -110,10 +111,10 @@ describe('ViewRegistry', () => {
 
   it('reports exposure with the rendered variant when a view route activates', async () => {
     // Arrange
-    flags.values['exp.flag'] = 'on';
+    flags.values[ACHIEVEMENTS_FLAG] = 'on';
     const view = defineView({
       viewId: 'test.exposed',
-      flag: 'exp.flag',
+      flag: ACHIEVEMENTS_FLAG,
       variants: {
         default: () => Promise.resolve(DefaultVariantComponent),
         on: () => Promise.resolve(OnVariantComponent),
@@ -126,7 +127,7 @@ describe('ViewRegistry', () => {
     await router.navigateByUrl('/exposed');
 
     // Assert
-    expect(exposures).toEqual([{ viewId: 'test.exposed', variant: 'on', flag: 'exp.flag' }]);
+    expect(exposures).toEqual([{ viewId: 'test.exposed', variant: 'on', flag: ACHIEVEMENTS_FLAG }]);
   });
 
   it('builds routes that carry the view id and resolve lazily', () => {

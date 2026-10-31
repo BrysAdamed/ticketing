@@ -6,6 +6,7 @@ using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 using Ticketing.Application.Abstractions;
 using Ticketing.Application.Achievements;
+using Ticketing.Application.FeatureFlags;
 using Ticketing.Domain.FeatureFlags;
 using Ticketing.Domain.Users;
 using Ticketing.IntegrationTests.Infrastructure;
@@ -48,13 +49,13 @@ internal static class AchievementTestData
         api.WithDbAsync(async db =>
         {
             var now = DateTimeOffset.UtcNow;
-            var flag = await db.FeatureFlags.SingleOrDefaultAsync(f => f.Key == AchievementsFeature.FlagKey);
+            var flag = await db.FeatureFlags.SingleOrDefaultAsync(f => f.Key == FeatureFlagCatalog.Achievements.Key);
             if (flag is null)
             {
-                flag = FeatureFlag.Create(AchievementsFeature.FlagKey, "Achievements", null, now);
+                flag = FeatureFlag.Register(FeatureFlagCatalog.Achievements.Key, FeatureFlagCatalog.Achievements.Description, true, now);
                 db.FeatureFlags.Add(flag);
             }
-            flag.Configure(flag.Description, users.Length > 0, 0, users.Select(u => u.Id), [], null, now);
+            flag.Configure(users.Length > 0, 0, users.Select(u => u.Id), [], null, now);
             await db.SaveChangesAsync();
             api.Services.GetRequiredService<IFeatureFlagStore>().Invalidate();
             return true;

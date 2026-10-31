@@ -7,6 +7,7 @@ using Ticketing.Domain.Common;
 using Ticketing.Domain.Projects;
 using Ticketing.Domain.Regressions;
 using Ticketing.Domain.Tickets;
+using Ticketing.Domain.Users;
 
 namespace Ticketing.Api.DemoData;
 
@@ -519,13 +520,8 @@ internal sealed partial class DemoScript(DemoWorkspace workspace, DemoActor admi
 
     private void PlanFlags()
     {
-        Schedule(Day(60), ct => workspace.CreateFlagAsync(admin, Clock(),
-            new CreateFlag.Command("checkout.new-layout", "Single-page checkout from the WEB checkout redesign.", Enabled: true, RolloutPercentage: 25), ct));
-        Schedule(Day(35), ct => workspace.CreateFlagAsync(admin, Clock(),
-            new CreateFlag.Command("payments.blik", "BLIK and Przelewy24 at checkout for the Polish market; internal testers only.", Enabled: true,
-                TargetUserIds: [User("maya").Id, User("tomasz").Id]), ct));
-        Schedule(Day(12), ct => workspace.CreateFlagAsync(admin, Clock(),
-            new CreateFlag.Command("web.dark-mode", "Dark theme toggle in the user menu."), ct));
+        Schedule(Day(12), ct => workspace.UpdateFlagAsync(admin, Clock(),
+            new UpdateFlag.Command { Key = FeatureFlagCatalog.AgentDelegate.Key, Enabled = true, TargetRoles = new([GlobalRole.Admin]) }, ct));
     }
 
     private void ScheduleTickets()

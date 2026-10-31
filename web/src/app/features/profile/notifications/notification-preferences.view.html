@@ -1,0 +1,116 @@
+@if (store.status() === 'error' && !store.preferences()) {
+  <tk-empty-state
+    icon="tablerAlertCircle"
+    tone="danger"
+    title="Couldn't load your notification settings"
+    [description]="store.error()?.title ?? null"
+  >
+    <button mat-stroked-button type="button" (click)="store.load()">Retry</button>
+  </tk-empty-state>
+} @else {
+  <div class="tk-page-body">
+    <section class="card" aria-labelledby="notification-kinds-heading">
+      <header>
+        <span class="icon-tile" aria-hidden="true"><tk-icon name="tablerBell" [size]="16" /></span>
+        <div>
+          <h2 id="notification-kinds-heading">Notify me about</h2>
+          <p class="tk-muted">
+            What shows up in your notification bell. Turned-off kinds stay quiet.
+          </p>
+        </div>
+      </header>
+
+      @if (store.preferences()) {
+        @for (section of sections(); track section.id) {
+          <h3 class="group-title" [id]="'kinds-' + section.id + '-heading'">{{ section.title }}</h3>
+          <ul
+            class="kinds"
+            [attr.aria-labelledby]="'kinds-' + section.id + '-heading'"
+            [attr.data-testid]="'notification-kinds-' + section.id"
+          >
+            @for (k of section.kinds; track k.kind) {
+              <li class="kind">
+                <div class="text">
+                  <span class="label" [id]="'notification-kind-label-' + k.kind">{{
+                    copy[k.kind].label
+                  }}</span>
+                  <span class="tk-muted description" [id]="'notification-kind-desc-' + k.kind">
+                    {{ copy[k.kind].description }}
+                  </span>
+                </div>
+                <mat-slide-toggle
+                  [checked]="!k.muted"
+                  [attr.data-testid]="'notification-kind-' + k.kind"
+                  [aria-labelledby]="'notification-kind-label-' + k.kind"
+                  [aria-describedby]="'notification-kind-desc-' + k.kind"
+                  (change)="toggle(k, $event.checked)"
+                />
+              </li>
+            }
+          </ul>
+        }
+      } @else {
+        <tk-skeleton-rows [count]="8" />
+      }
+    </section>
+
+    <section class="card" aria-labelledby="muted-projects-heading">
+      <header>
+        <span class="icon-tile" aria-hidden="true"
+          ><tk-icon name="tablerBellOff" [size]="16"
+        /></span>
+        <div class="fill">
+          <h2 id="muted-projects-heading">Muted projects</h2>
+          <p class="tk-muted">
+            Activity in these projects stays quiet. Mentions and assignments still reach you.
+          </p>
+        </div>
+        <button
+          mat-stroked-button
+          type="button"
+          data-testid="notification-mute-project"
+          [tkInlinePicker]="store.projectOptions()"
+          pickerPlaceholder="Find a project…"
+          [pickerDisabled]="!store.preferences() || store.projectOptions().length === 0"
+          [matTooltip]="
+            store.preferences() && store.projectOptions().length === 0
+              ? 'Every project you can see is muted.'
+              : ''
+          "
+          (picked)="store.muteProject($event)"
+        >
+          <tk-icon name="tablerPlus" [size]="14" />
+          Mute a project
+        </button>
+      </header>
+
+      @if (store.preferences()) {
+        @if (store.mutedProjects().length === 0) {
+          <p class="tk-muted none" data-testid="notification-muted-none">
+            No muted projects. You hear about everything you follow.
+          </p>
+        } @else {
+          <ul class="projects" data-testid="notification-muted-projects">
+            @for (p of store.mutedProjects(); track p.id) {
+              <li [attr.data-testid]="'notification-muted-' + p.key">
+                <span class="key">{{ p.key }}</span>
+                <span class="name">{{ p.name }}</span>
+                <button
+                  mat-button
+                  type="button"
+                  [attr.data-testid]="'notification-unmute-' + p.key"
+                  [attr.aria-label]="'Unmute ' + p.key"
+                  (click)="store.unmuteProject(p)"
+                >
+                  Unmute
+                </button>
+              </li>
+            }
+          </ul>
+        }
+      } @else {
+        <tk-skeleton-rows [count]="2" />
+      }
+    </section>
+  </div>
+}

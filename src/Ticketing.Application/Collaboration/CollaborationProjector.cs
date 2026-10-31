@@ -76,8 +76,12 @@ internal sealed class CollaborationProjector(ITicketingDbContext db) : IActivity
     private HashSet<Guid> NewTicketIds() =>
         db.ChangeTracker.Entries<Ticket>().Where(e => e.State == EntityState.Added).Select(e => e.Entity.Id).ToHashSet();
 
-    private async Task NotifyAsync(IReadOnlyList<NotificationCandidate> candidates, CancellationToken cancellationToken)
+    private async Task NotifyAsync(IReadOnlyList<NotificationCandidate> all, CancellationToken cancellationToken)
     {
+        var candidates = NotificationRules.Unmuted(all, await PreferencesAsync(all, cancellationToken));
+        if (candidates.Count == 0)
+            return;
+
         await LoadReadersAsync(candidates.Select(c => (c.Event.ProjectId, c.RecipientId)), cancellationToken);
         var allowed = candidates.Where(c => _canRead[(c.Event.ProjectId, c.RecipientId)]).ToList();
         if (allowed.Count == 0)
@@ -109,6 +113,14 @@ internal sealed class CollaborationProjector(ITicketingDbContext db) : IActivity
             db.Notifications.Add(created);
             open.Add(created);
         }
+    }
+
+    private async Task<Dictionary<Guid, NotificationPreferences>> PreferencesAsync(IReadOnlyList<NotificationCandidate> candidates, CancellationToken cancellationToken)
+    {
+        var recipientIds = candidates.Select(c => c.RecipientId).Distinct().ToList();
+        return await db.NotificationPreferences.AsNoTracking()
+            .Where(p => recipientIds.Contains(p.UserId))
+            .ToDictionaryAsync(p => p.UserId, cancellationToken);
     }
 
     private static (Guid? TicketId, Guid? SessionId, Guid? DocNodeId) Subject(CollaborationEvent e) => e switch

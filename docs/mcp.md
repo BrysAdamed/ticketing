@@ -63,7 +63,7 @@ Ticketing is the team's issue tracker. Every call runs as the user who owns your
 | Tickets | `search_tickets`, `get_ticket`, `get_children_graph` (children, the links among them and to outside tickets, with `blocked`; D-95), `create_ticket`, `create_tickets` (batch, all-or-nothing), `update_ticket`, `move_ticket` (`includeChildren` also moves the sub-tickets still in the place each ticket is leaving and not Done; D-107), `get_move_children` (preview of that), `delete_ticket`, `get_ticket_history`, `link_tickets`, `unlink_tickets` |
 | Comments | `list_comments`, `add_comment`, `update_comment`, `delete_comment` |
 | Watchers | `watch_ticket`, `unwatch_ticket` (the watcher list comes with `get_ticket`; `search_tickets` takes `watching: true`) |
-| Notifications | `list_notifications` (`unreadOnly`, `cursor`, `limit`), `mark_notifications_read` (`ids` or `all: true`; write-scoped tokens only) |
+| Notifications | `list_notifications` (`unreadOnly`, `cursor`, `limit`), `mark_notifications_read` (`ids` or `all: true`; write-scoped tokens only), `get_notification_preferences`, `update_notification_preferences` (`muteKinds`, `unmuteKinds`, `muteProjects`, `unmuteProjects`; write-scoped tokens only) |
 | Attachments | `list_attachments`, `get_attachment_text` (ticket and page attachments) |
 | Test cases | `list_test_cases`, `get_test_case`, `create_test_case`, `update_test_case` |
 | Regressions | `list_regression_sessions`, `get_regression_session`, `start_regression_session`, `take_regression_item`, `assign_regression_item`, `record_regression_result` (optionally creates the bug), `complete_regression_session`, `cancel_regression_session` |

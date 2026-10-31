@@ -548,6 +548,32 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                     b.ToTable("notifications", (string)null);
                 });
 
+            modelBuilder.Entity("Ticketing.Domain.Collaboration.NotificationPreferences", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.PrimitiveCollection<int[]>("MutedKinds")
+                        .IsRequired()
+                        .HasColumnType("integer[]")
+                        .HasColumnName("muted_kinds");
+
+                    b.PrimitiveCollection<List<Guid>>("MutedProjectIds")
+                        .IsRequired()
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("muted_project_ids");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("UserId")
+                        .HasName("pk_notification_preferences");
+
+                    b.ToTable("notification_preferences", (string)null);
+                });
+
             modelBuilder.Entity("Ticketing.Domain.Collaboration.TicketWatcher", b =>
                 {
                     b.Property<Guid>("TicketId")
@@ -2147,6 +2173,16 @@ namespace Ticketing.Infrastructure.Persistence.Migrations
                         .HasForeignKey("TicketId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .HasConstraintName("fk_notifications_tickets_ticket_id");
+                });
+
+            modelBuilder.Entity("Ticketing.Domain.Collaboration.NotificationPreferences", b =>
+                {
+                    b.HasOne("Ticketing.Domain.Users.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_notification_preferences_users_user_id");
                 });
 
             modelBuilder.Entity("Ticketing.Domain.Collaboration.TicketWatcher", b =>

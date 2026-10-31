@@ -648,6 +648,8 @@ Flag changes write ActivityEntries. Admin UI: list, create, edit, delete; shows 
 - Mark read: some (1 to 100 ids) or all of the caller's notifications; ids of other users' notifications are ignored. Read time is kept on repeat. Needs write-scoped credentials.
 - Retention: notifications older than 90 days are deleted by the hourly retention job.
 - REST (`/api/v1/me/notifications`): `GET ?unread=true&cursor=&limit=` returns `{ items, nextCursor }`, newest first by `createdAt`; `GET /unread-count` returns `{ count }`; `POST /read` with `{ "ids": [...] }` or `{ "all": true }` returns `{ unreadCount }`. An item is `{ id, kind, summary, eventCount, actor, projectKey, ticket: { key, title, deleted } | null, regression: { sessionKey, sessionName, testCaseKey } | null, doc: { key, title, deleted } | null, url, createdAt, updatedAt, readAt }`; `url` is the SPA path of the ticket, the regression item or the doc's comments (`/p/{PK}/docs/{KEY}/{slug}#comments`).
+- Preferences (TKT-36, D-160): nothing is muted by default. A user can mute any kind, which silences it everywhere, and mute projects (at most 200), which silences the other kinds there while mentions and assignments (`Mentioned`, `Assigned`, `RegressionItemAssigned`, called direct) still come through. Preferences apply when the notification would be created; muting does not hide or delete notifications that already exist, and unmuting does not bring back what was skipped. Muted projects the user can no longer read are left out of the preferences and apply again when access returns.
+- Preferences REST (`/api/v1/me/notification-preferences`): `GET` returns `{ kinds: [{ kind, muted, direct }], mutedProjects: [{ id, key, name }], updatedAt }`; `PATCH` with any of `muteKinds`, `unmuteKinds`, `muteProjects`, `unmuteProjects` (project keys or ids, 1..50 per list, readable or 404) applies the changes as sets and returns the preferences. Needs write-scoped credentials. Web: Profile → Notifications.
 - Performance: list (all or unread, first page) and unread count p95 under 50 ms with 100 000 notifications for one user.
 
 ## 7. Project dashboard
@@ -807,6 +809,8 @@ Notifications (6.16)
 | --- | --- | --- |
 | `list_notifications` | optional `unreadOnly`, `cursor`, `limit` | `{ items, nextCursor }` of notifications, newest first, in the REST shape (6.16). |
 | `mark_notifications_read` | `ids` (1..100) or `all` (true) | `{ unreadCount }`. Write-scoped tokens only. |
+| `get_notification_preferences` | none | The caller's preferences in the REST shape (6.16). |
+| `update_notification_preferences` | any of `muteKinds`, `unmuteKinds`, `muteProjects`, `unmuteProjects` (keys or ids, 1..50 each) | Preferences afterwards. Write-scoped tokens only. |
 
 Achievements (15.6, 15.7)
 

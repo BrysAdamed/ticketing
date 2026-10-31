@@ -20,6 +20,9 @@ export interface TourStartOptions {
   /// Starts at the first step whose condition does not hold (spec 14.4 resume); `skipOptional`
   /// also passes over optional steps.
   readonly resume?: { readonly skipOptional?: boolean };
+  /// Id of the step to open first; the first step when it is not in the plan (not allowed, or its
+  /// anchor is missing). Back still reaches the earlier steps.
+  readonly startAt?: string;
 }
 
 /// How a tour ended: `completed` (Done on the last step), `dismissed` (Esc or Skip), `aborted`
@@ -59,6 +62,7 @@ export class TourLauncher {
     const session = new TourSession(this.injector, tour, plan, params, returnFocusTo, {
       conditions: options.conditions,
       resume: options.resume,
+      startAt: options.startAt,
       onPausedChange: (paused) => {
         if (this.session === session) this.paused.set(paused);
       },

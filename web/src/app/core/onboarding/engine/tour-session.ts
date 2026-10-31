@@ -108,6 +108,7 @@ export function positionsFor(placement: TourPlacement = 'below'): ConnectedPosit
 export interface TourSessionOptions {
   readonly conditions?: TourConditions;
   readonly resume?: { readonly skipOptional?: boolean };
+  readonly startAt?: string;
   readonly onPausedChange?: (paused: boolean) => void;
 }
 
@@ -221,9 +222,13 @@ export class TourSession {
       this.watchInterruptions();
       void this.resumeFrom(0, this.options.resume.skipOptional ?? false);
     } else {
-      this.openSpotlight(!isActionStep(this.steps[0]));
+      const first = Math.max(
+        0,
+        this.steps.findIndex((step) => step.id === this.options.startAt),
+      );
+      this.openSpotlight(!isActionStep(this.steps[first]));
       this.watchInterruptions();
-      void this.goTo(0, 1);
+      void this.goTo(first, 1);
     }
     return done;
   }

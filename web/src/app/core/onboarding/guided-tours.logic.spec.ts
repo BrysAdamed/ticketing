@@ -1,4 +1,9 @@
-import { pickTourProject, storedTourState, tourAccess } from './guided-tours.logic';
+import {
+  pickTourProject,
+  rankTourProjects,
+  storedTourState,
+  tourAccess,
+} from './guided-tours.logic';
 
 describe('guided tours logic', () => {
   describe('tourAccess', () => {
@@ -64,6 +69,12 @@ describe('guided tours logic', () => {
         ),
       ).toBe('READ');
       expect(pickTourProject([], null)).toBeNull();
+    });
+
+    it('ranks the project in context, then writable, then readable projects, newest first', () => {
+      // Act / Assert
+      expect(rankTourProjects(projects, null)).toEqual(['NEW', 'OLD', 'READ']);
+      expect(rankTourProjects(projects, 'old')).toEqual(['old', 'NEW', 'READ']);
     });
   });
 

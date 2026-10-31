@@ -5,7 +5,12 @@ import { Api, uniqueProjectKey } from '../../support/api';
 import { expect, test } from '../../support/fixtures';
 import { signInAs } from '../../support/session';
 import { PASSWORD, seedUser } from '../identity/identity';
-import { enableAchievementsFor, PROJECTOR_TIMEOUT_MS, tierOf, unseenCount } from './achievements';
+import {
+    enableAchievementsFor,
+    PROJECTOR_TIMEOUT_MS,
+    tierOf,
+    unseenCount,
+} from '../../support/achievements';
 
 const UNSEEN_PATH = '/api/v1/me/achievements/unseen';
 

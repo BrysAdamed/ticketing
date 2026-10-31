@@ -127,6 +127,26 @@ describe('TourLauncher', () => {
     expect(shortcutCalls).toBe(1);
   });
 
+  it('starts at the given step and still goes back to the earlier ones', async () => {
+    // Act
+    void launcher.start(TOUR, { access: member, startAt: 'two' });
+    await settle(() => announced.length === 1);
+    press('ArrowLeft');
+    await settle(() => announced.length === 2);
+
+    // Assert
+    expect(announced).toEqual(['Step 2 of 2: Second title', 'Step 1 of 2: First title']);
+  });
+
+  it('starts at the first step when the given step is not in the plan', async () => {
+    // Act
+    void launcher.start(TOUR, { access: member, startAt: 'gone' });
+    await settle(() => announced.length === 1);
+
+    // Assert
+    expect(announced).toEqual(['Step 1 of 2: First title']);
+  });
+
   it('moves with the arrow keys and completes on the last available step', async () => {
     // Arrange
     const { result } = await startTour();

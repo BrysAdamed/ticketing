@@ -3,7 +3,7 @@ import { AchievementsPage } from '../../pages/achievements.page';
 import { expect, test } from '../../support/fixtures';
 import { signInAs } from '../../support/session';
 import { PASSWORD, seedUser } from '../identity/identity';
-import { enableAchievementsFor as enableFor } from './achievements';
+import { enableAchievementsFor as enableFor } from '../../support/achievements';
 
 interface MyAchievement {
     id: string | null;
@@ -58,6 +58,46 @@ test.describe('@achievements how to earn', () => {
         await expect(achievements.detail).toContainText('there is no hint');
         await expect(achievements.detail.getByTestId('achievement-how-to-earn')).toHaveCount(0);
         await expect(achievements.detail.getByTestId('achievement-show-me')).toHaveCount(0);
+
+        await context.close();
+    });
+
+    test('Show me on Connector opens a readable ticket and starts its tour at Links', async ({
+        browser,
+        api,
+    }) => {
+        // Arrange
+        const project = (await api.createProject()).key;
+        await api.post(`/projects/${project}/tickets`, {
+            title: 'Checkout total is wrong',
+            type: 'UserStory',
+        });
+        const user = await seedUser(api, 'connector');
+        await api.post(`/projects/${project}/members`, { user: user.id, role: 'Member' });
+        await enableFor(api, [user.id]);
+        const { context, page } = await signInAs(browser, {
+            email: user.email,
+            password: PASSWORD,
+        });
+        const achievements = new AchievementsPage(page);
+        await achievements.goto();
+
+        // Act
+        await achievements.openButton('connector').click();
+
+        // Assert
+        await expect(achievements.detail.getByTestId('achievement-learn')).toContainText(
+            'Opens a ticket and starts its tour at Links.',
+        );
+
+        // Act
+        await achievements.detail.getByTestId('achievement-show-me').click();
+
+        // Assert
+        const tour = page.getByTestId('tour-popover');
+        await expect(page).toHaveURL(/\/tickets\/[A-Z0-9]+-\d+$/);
+        await expect(tour.getByRole('heading')).toHaveText('Links');
+        await expect(tour.getByTestId('tour-back')).toBeVisible();
 
         await context.close();
     });

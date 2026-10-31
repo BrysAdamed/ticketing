@@ -12,7 +12,8 @@ namespace Ticketing.Application.Collaboration;
 /// The collaboration side effects of every write (D-93, D-94, D-96): reads the pending activity into events, applies the rules
 /// (mentions feed both others) and adds what they derive (watchers, then notifications, so watchers added by this save are
 /// notified too) to the same unit of work. Each save costs a fixed number of queries however many entries it holds, and read
-/// access is cached for the scope, so creating a batch of tickets does not query per ticket.
+/// access is cached for the scope, so creating a batch of tickets does not query per ticket. Concurrent writes neither fail on a
+/// watcher someone added meanwhile nor lose a notification count (D-159).
 /// </summary>
 internal sealed class CollaborationProjector(ITicketingDbContext db) : IActivityObserver
 {
@@ -44,9 +45,36 @@ internal sealed class CollaborationProjector(ITicketingDbContext db) : IActivity
             return;
 
         var watching = await WatchingAsync(allowed, cancellationToken);
+        var newTickets = NewTicketIds();
+        var stored = new List<TicketWatcher>();
         foreach (var candidate in allowed.Where(c => !watching.Contains((c.TicketId, c.UserId))))
-            db.TicketWatchers.Add(TicketWatcher.Create(candidate.TicketId, candidate.UserId, candidate.At));
+        {
+            var watcher = TicketWatcher.Create(candidate.TicketId, candidate.UserId, candidate.At);
+            if (newTickets.Contains(candidate.TicketId))
+                db.TicketWatchers.Add(watcher);
+            else
+                stored.Add(watcher);
+        }
+        if (stored.Count > 0)
+            await InsertWatchersAsync(stored, cancellationToken);
     }
+
+    /// <summary>
+    /// Adds watchers of existing tickets in the save's transaction, tolerating a concurrent explicit watch of the same user (D-159):
+    /// a tracked insert would fail the whole write on the primary key.
+    /// </summary>
+    private async Task InsertWatchersAsync(IReadOnlyList<TicketWatcher> watchers, CancellationToken cancellationToken)
+    {
+        var ticketIds = watchers.Select(w => w.TicketId).ToArray();
+        var userIds = watchers.Select(w => w.UserId).ToArray();
+        var createdAt = watchers.Select(w => w.CreatedAt).ToArray();
+        await db.Database.ExecuteSqlAsync(
+            $"INSERT INTO ticket_watchers (ticket_id, user_id, created_at) SELECT * FROM unnest({ticketIds}, {userIds}, {createdAt}) ON CONFLICT DO NOTHING",
+            cancellationToken);
+    }
+
+    private HashSet<Guid> NewTicketIds() =>
+        db.ChangeTracker.Entries<Ticket>().Where(e => e.State == EntityState.Added).Select(e => e.Entity.Id).ToHashSet();
 
     private async Task NotifyAsync(IReadOnlyList<NotificationCandidate> candidates, CancellationToken cancellationToken)
     {
@@ -91,21 +119,28 @@ internal sealed class CollaborationProjector(ITicketingDbContext db) : IActivity
         _ => throw new InvalidOperationException($"Notifications about {e.GetType().Name} are not supported."),
     };
 
-    /// <summary>Unread notifications of the same recipients and subjects young enough to absorb these events (tracked or stored).</summary>
+    /// <summary>
+    /// Unread notifications of the same recipients and subjects young enough to absorb these events (tracked or stored). Stored
+    /// rows are locked until the save commits, so a concurrent merge into the same row waits and then reads its latest count
+    /// (D-159).
+    /// </summary>
     private async Task<List<Notification>> OpenNotificationsAsync(IReadOnlyList<NotificationCandidate> candidates, CancellationToken cancellationToken)
     {
-        var recipientIds = candidates.Select(c => c.RecipientId).Distinct().ToList();
+        var recipientIds = candidates.Select(c => c.RecipientId).Distinct().ToArray();
         var subjects = candidates.Select(c => Subject(c.Event)).ToList();
-        var ticketIds = subjects.Where(s => s.TicketId is not null).Select(s => s.TicketId!.Value).Distinct().ToList();
-        var sessionIds = subjects.Where(s => s.SessionId is not null).Select(s => s.SessionId!.Value).Distinct().ToList();
-        var docNodeIds = subjects.Where(s => s.DocNodeId is not null).Select(s => s.DocNodeId!.Value).Distinct().ToList();
+        var ticketIds = subjects.Where(s => s.TicketId is not null).Select(s => s.TicketId!.Value).Distinct().ToArray();
+        var sessionIds = subjects.Where(s => s.SessionId is not null).Select(s => s.SessionId!.Value).Distinct().ToArray();
+        var docNodeIds = subjects.Where(s => s.DocNodeId is not null).Select(s => s.DocNodeId!.Value).Distinct().ToArray();
         var since = candidates.Min(c => c.Event.OccurredAt) - Notification.CollapseWindow;
 
         await db.Notifications
-            .Where(n => recipientIds.Contains(n.RecipientId) && n.ReadAt == null && n.CreatedAt >= since
-                && ((n.TicketId != null && ticketIds.Contains(n.TicketId.Value))
-                    || (n.RegressionSessionId != null && sessionIds.Contains(n.RegressionSessionId.Value))
-                    || (n.DocNodeId != null && docNodeIds.Contains(n.DocNodeId.Value))))
+            .FromSql($"""
+                SELECT * FROM notifications
+                WHERE recipient_id = ANY({recipientIds}) AND read_at IS NULL AND created_at >= {since}
+                  AND (ticket_id = ANY({ticketIds}) OR regression_session_id = ANY({sessionIds}) OR doc_node_id = ANY({docNodeIds}))
+                ORDER BY id
+                FOR UPDATE
+                """)
             .LoadAsync(cancellationToken);
         return [.. db.ChangeTracker.Entries<Notification>().Where(e => e.State != EntityState.Deleted).Select(e => e.Entity)];
     }
@@ -194,7 +229,7 @@ internal sealed class CollaborationProjector(ITicketingDbContext db) : IActivity
             .Select(e => (e.Entity.TicketId, e.Entity.UserId))
             .ToHashSet();
 
-        var newTickets = db.ChangeTracker.Entries<Ticket>().Where(e => e.State == EntityState.Added).Select(e => e.Entity.Id).ToHashSet();
+        var newTickets = NewTicketIds();
         var ticketIds = candidates.Select(c => c.TicketId).Where(id => !newTickets.Contains(id)).Distinct().ToList();
         if (ticketIds.Count == 0)
             return watching;

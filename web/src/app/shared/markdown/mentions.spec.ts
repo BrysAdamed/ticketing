@@ -99,6 +99,28 @@ describe('parseMentions', () => {
     expect(ids(`    \`\`\`\n${ann}`)).toEqual([ANN]);
   });
 
+  it('skips indented code blocks after a blank line, the start or a closing fence', () => {
+    expect(ids(`    ${ann}`)).toEqual([]);
+    expect(ids(`\t${ann}`)).toEqual([]);
+    expect(ids(`Intro\n\n    ${ann}\n\n    ${bob}\nafter ${bob}`)).toEqual([BOB]);
+    expect(ids(`\`\`\`\nx\n\`\`\`\n    ${ann}`)).toEqual([]);
+    expect(ids(`- item\n\npara\n\n    ${ann}`)).toEqual([]);
+    expect(ids(`    code\r\n\r\n    ${ann}\r\n${bob}`)).toEqual([BOB]);
+  });
+
+  it('does not take indented lines for code after a paragraph, inside a list or with three spaces', () => {
+    expect(ids(`   ${ann}`)).toEqual([ANN]);
+    expect(ids(`Paragraph\n    ${ann}`)).toEqual([ANN]);
+    expect(ids(`- item\n\n    ${ann}`)).toEqual([ANN]);
+    expect(ids(`1. item\n    nested\n\n    ${ann}`)).toEqual([ANN]);
+    expect(ids(`* item\nlazy\n\n    ${ann}`)).toEqual([ANN]);
+  });
+
+  it('does not let an inline span reach into an indented block', () => {
+    expect(ids(`    a \` b\nc\` ${ann}`)).toEqual([ANN]);
+    expect(ids(`    a \` b\n\n${ann}\` c`)).toEqual([ANN]);
+  });
+
   it('does not let an inline span reach into a fence', () => {
     expect(ids(`a \` b\n\`\`\`\n${ann}\n\`\`\`\n${bob} \``)).toEqual([BOB]);
     expect(ids(`a \` b\n\`\`\`\nx\n\`\`\`\n${bob}`)).toEqual([BOB]);

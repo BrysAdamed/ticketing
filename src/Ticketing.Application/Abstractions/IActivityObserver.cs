@@ -9,8 +9,9 @@ namespace Ticketing.Application.Abstractions;
 public interface IActivityObserver
 {
     /// <summary>
-    /// Runs inside SaveChanges, before the write, for activity entries added since the last save. Entities the observer adds
-    /// to the context are saved in the same transaction; it must not call SaveChanges itself.
+    /// Runs inside SaveChanges, before the write, for activity entries added since the last save, always inside a database
+    /// transaction (D-159). Entities the observer adds to the context and statements it executes commit or roll back with the
+    /// write; it must not call SaveChanges itself.
     /// </summary>
     Task OnRecordingAsync(IReadOnlyList<ActivityEntry> entries, CancellationToken cancellationToken);
 }

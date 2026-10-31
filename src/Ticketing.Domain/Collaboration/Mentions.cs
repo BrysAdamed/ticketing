@@ -11,7 +11,7 @@ public readonly record struct EmailMention(string Email, int Start, int Length);
 /// <summary>
 /// The mention syntax of ticket descriptions and comments (D-96). The id is authoritative and the name only a fallback, so a
 /// stored mention survives renames. A mention whose <c>@</c> lies inside an inline code span or a fenced code block is not a
-/// mention (indented code blocks are not treated as code); the web client applies the same rules.
+/// mention, nor is one in an indented code block outside lists (D-159); the web client applies the same rules.
 /// </summary>
 public static partial class Mentions
 {
@@ -59,7 +59,10 @@ public static partial class Mentions
     private static bool Overlaps(List<(int Start, int End)> ranges, int start, int length) =>
         ranges.Exists(r => start < r.End && r.Start < start + length);
 
-    /// <summary>Fenced code blocks (found line by line), then inline code spans in the text between them.</summary>
+    /// <summary>
+    /// Fenced and indented code blocks (found line by line), then inline code spans in the text between them. An indented block
+    /// starts after a blank line, the start of the text or a closing fence, and never inside a list (D-159).
+    /// </summary>
     private static List<(int Start, int End)> CodeRanges(string text)
     {
         var ranges = new List<(int Start, int End)>();
@@ -67,6 +70,11 @@ public static partial class Mentions
         var fenceStart = -1;
         var fenceMarker = '\0';
         var fenceLength = 0;
+        var indentedStart = -1;
+        var indentedEnd = -1;
+        var afterBlank = true;
+        var afterFence = false;
+        var inList = false;
         var position = 0;
         while (position < text.Length)
         {
@@ -74,28 +82,102 @@ public static partial class Mentions
             var lineEnd = newline < 0 ? text.Length : newline;
             var next = newline < 0 ? text.Length : newline + 1;
             var line = text.AsSpan(position, lineEnd - position);
-            if (fenceStart < 0)
+            var blank = line.IsWhiteSpace();
+            if (fenceStart >= 0)
             {
-                if (Fence(line, out var marker, out var length, out _))
+                if (Fence(line, out var marker, out var length, out var bare) && bare && marker == fenceMarker && length >= fenceLength)
                 {
-                    InlineCode(text, segmentStart, position, ranges);
-                    (fenceStart, fenceMarker, fenceLength) = (position, marker, length);
+                    ranges.Add((fenceStart, next));
+                    fenceStart = -1;
+                    segmentStart = next;
+                    afterFence = true;
                 }
+                position = next;
+                continue;
             }
-            else if (Fence(line, out var marker, out var length, out var bare) && bare && marker == fenceMarker && length >= fenceLength)
+
+            if (indentedStart >= 0)
             {
-                ranges.Add((fenceStart, next));
-                fenceStart = -1;
-                segmentStart = next;
+                if (blank || Indent(line) >= 4)
+                {
+                    if (!blank)
+                        indentedEnd = next;
+                    afterBlank = blank;
+                    position = next;
+                    continue;
+                }
+                ranges.Add((indentedStart, indentedEnd));
+                segmentStart = indentedEnd;
+                indentedStart = -1;
             }
+
+            if (Fence(line, out var opening, out var openingLength, out _))
+            {
+                InlineCode(text, segmentStart, position, ranges);
+                (fenceStart, fenceMarker, fenceLength) = (position, opening, openingLength);
+                inList = inList && !afterBlank;
+            }
+            else if (!blank && Indent(line) >= 4 && (afterBlank || afterFence) && !inList)
+            {
+                InlineCode(text, segmentStart, position, ranges);
+                (indentedStart, indentedEnd) = (position, next);
+            }
+            else if (!blank && Indent(line) < 4)
+            {
+                inList = ListItem(line) || (inList && !afterBlank);
+            }
+            afterBlank = blank;
+            afterFence = false;
             position = next;
         }
 
         if (fenceStart >= 0)
+        {
             ranges.Add((fenceStart, text.Length));
-        else
-            InlineCode(text, segmentStart, text.Length, ranges);
+            return ranges;
+        }
+        if (indentedStart >= 0)
+        {
+            ranges.Add((indentedStart, indentedEnd));
+            segmentStart = indentedEnd;
+        }
+        InlineCode(text, segmentStart, text.Length, ranges);
         return ranges;
+    }
+
+    /// <summary>Columns of leading whitespace, a tab advancing to the next multiple of four.</summary>
+    private static int Indent(ReadOnlySpan<char> line)
+    {
+        var columns = 0;
+        foreach (var c in line)
+        {
+            if (c == ' ')
+                columns++;
+            else if (c == '\t')
+                columns += 4 - (columns % 4);
+            else
+                break;
+        }
+        return columns;
+    }
+
+    private static bool ListItem(ReadOnlySpan<char> line)
+    {
+        var rest = line.TrimStart(' ');
+        var marker = 0;
+        if (rest.Length > 0 && rest[0] is '-' or '+' or '*')
+        {
+            marker = 1;
+        }
+        else
+        {
+            while (marker < rest.Length && marker < 9 && char.IsAsciiDigit(rest[marker]))
+                marker++;
+            if (marker == 0 || marker >= rest.Length || rest[marker] is not ('.' or ')'))
+                return false;
+            marker++;
+        }
+        return marker == rest.Length || char.IsWhiteSpace(rest[marker]);
     }
 
     private static bool Fence(ReadOnlySpan<char> line, out char marker, out int length, out bool bare)

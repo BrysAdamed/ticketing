@@ -76,6 +76,12 @@ public sealed class MentionsTests
     [InlineData("   ```\n{0}\n```")]
     [InlineData("````\n```\n{0}\n````")]
     [InlineData("```\nnever closed\n{0}")]
+    [InlineData("    {0}")]
+    [InlineData("\t{0}")]
+    [InlineData("Intro\n\n    {0}")]
+    [InlineData("    code\n\n    {0}\n")]
+    [InlineData("```\nx\n```\n    {0}")]
+    [InlineData("- item\n\npara\n\n    {0}")]
     public void Mentions_in_code_are_ignored(string template)
     {
         // Act
@@ -88,7 +94,15 @@ public sealed class MentionsTests
     [Theory]
     [InlineData("`unclosed {0}")]
     [InlineData("``mismatched` {0}")]
-    [InlineData("    {0}")]
+    [InlineData("   {0}")]
+    [InlineData("Paragraph\n    {0}")]
+    [InlineData("- item\n\n    {0}")]
+    [InlineData("1. item\n    nested\n\n    {0}")]
+    [InlineData("* item\nlazy\n\n    {0}")]
+    [InlineData("    code\n{0}")]
+    [InlineData("    code\n\n{0}")]
+    [InlineData("    a `b\n\n{0}` c")]
+    [InlineData("    a `b\nc` {0}\n")]
     [InlineData("```\ncode\n```\n{0}")]
     [InlineData("```\n``` not a close\n```\n{0}")]
     [InlineData("`a` {0} `b`")]
@@ -174,6 +188,7 @@ public sealed class MentionsTests
     [InlineData("@maya@localhost")]
     [InlineData("`@maya@example.com`")]
     [InlineData("```\n@maya@example.com\n```")]
+    [InlineData("    @maya@example.com")]
     [InlineData("@[Ann @maya@example.com](user:0199f0a1-1111-7000-8000-000000000001)")]
     public void ParseEmails_skips_plain_addresses_code_and_tokens(string text)
     {

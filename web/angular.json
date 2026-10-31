@@ -118,7 +118,16 @@
           "defaultConfiguration": "development"
         },
         "test": {
-          "builder": "@angular/build:unit-test"
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "exclude": ["**/*.perf.spec.ts"]
+          },
+          "configurations": {
+            "perf": {
+              "include": ["**/*.perf.spec.ts"],
+              "exclude": []
+            }
+          }
         },
         "lint": {
           "builder": "@angular-eslint/builder:lint",

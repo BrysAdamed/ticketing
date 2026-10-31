@@ -1332,6 +1332,13 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
 - Checked elsewhere: the add-tickets dialog keeps its selection and opens no peek; test cases, search, My work and the dashboard have no row selection.
 - Rejected: a plain click selecting only that row (the file-manager convention, and what the backlog did): with checkboxes always visible, a stray click is far more likely than an intent to drop the selection, and `Esc` already clears it.
 
+### D-165 Side-writes touch their ticket without the row-version check; ticket views take newer copies from other views (TKT-111)
+
+- Question: adding, editing or deleting a comment, and adding or removing a link, loaded the ticket tracked and called `Touch`, so the save carried the ticket's `xmin` check. An edit of the same ticket committed in between (the user's own rename still in flight) failed the comment with 409 `concurrency.conflict`, though nothing the user did conflicted. Separately, a peek opened while a backlog inline edit was in flight kept the older row version and the next rename opened the "Someone else changed this ticket" dialog.
+- Decision: those side-writes bump `updated_at` with `TicketTouch.TouchTicketAsync`: an `ExecuteUpdate` `SET updated_at = now WHERE id = … AND updated_at < now`, run after the side-write's `SaveChangesAsync` in the same transaction (`InTransactionAsync`), so the activity observers (D-159) run first and take their locks in the same order as a plain ticket edit. The touch waits for a concurrent ticket edit instead of failing, never moves `updated_at` back, and still changes the row version, so clients keep refetching it after a comment (`refreshMeta`). Deleting a ticket attachment uses it too. Uploading an attachment keeps its `FOR UPDATE` lock (the row is current, so it cannot conflict); real ticket edits (`UpdateTicket`, moves, restore, archive, agent delegation) keep the check.
+- Frontend: a ticket view takes an `updated` event for its own ticket when it carries another row version and an `updatedAt` no older than its own, keeping its loaded collections; older copies and its own echoes are ignored as before.
+- Rejected: retrying the tracked save on conflict (a reload-and-retry loop for a write that never needed the check).
+
 ## Product owner answers (v1 review, 2026-10-27)
 
 These were open questions (Q-01..Q-05); the product owner resolved them as follows.

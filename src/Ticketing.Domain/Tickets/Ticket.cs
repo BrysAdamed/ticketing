@@ -180,7 +180,7 @@ public sealed class Ticket
 
     public void Rerank(string rank) => Rank = Ranks.Validate(rank);
 
-    /// <summary>Bumps UpdatedAt; call once per user operation that changed the ticket, its comments, links or attachments.</summary>
+    /// <summary>Bumps UpdatedAt; call once per user operation that changed the ticket. Side-writes (comments, links, attachments) that do not lock the ticket row use <c>TicketTouch</c> (D-165).</summary>
     public void Touch(DateTimeOffset now) => UpdatedAt = now;
 
     public void Delete(Guid actorId, DateTimeOffset now)

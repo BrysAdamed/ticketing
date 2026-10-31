@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Ticketing.Application.Abstractions;
 using Ticketing.Application.Access;
 using Ticketing.Application.Common;
+using Ticketing.Application.Tickets;
 using Ticketing.Domain.Activity;
 using Ticketing.Domain.Attachments;
 
@@ -35,15 +36,15 @@ public static class DeleteAttachment
                 var details = new { attachmentId = target.Id, fileName = target.FileName };
                 if (target.TicketId is { } ticketId)
                 {
-                    var ticket = await db.Tickets.SingleAsync(t => t.Id == ticketId, ct);
-                    ticket.Touch(clock.Now);
                     activity.Record(ActivityEntityType.Ticket, ticketId, target.ProjectId, "attachment.removed", details);
+                    await db.SaveChangesAsync(ct);
+                    await db.TouchTicketAsync(ticketId, clock.Now, ct);
                 }
                 else
                 {
                     activity.Record(ActivityEntityType.Doc, target.DocNodeId!.Value, target.ProjectId, DocAction, details);
+                    await db.SaveChangesAsync(ct);
                 }
-                await db.SaveChangesAsync(ct);
                 return true;
             }, cancellationToken);
         }

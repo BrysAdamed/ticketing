@@ -46,11 +46,16 @@ public static class UnlinkTickets
             }
 
             db.TicketLinks.Remove(link);
-            (await db.Tickets.SingleAsync(t => t.Id == ticket.Id, cancellationToken)).Touch(clock.Now);
             var direction = link.Type == TicketLinkType.RelatesTo || link.SourceTicketId == ticket.Id ? LinkDirection.Outward : LinkDirection.Inward;
             activity.Record(
                 ActivityEntityType.Ticket, ticket.Id, ticket.ProjectId, "ticket.link.removed", new { type = link.Type, direction, ticketId = other.Id, key = other.Key });
-            await db.SaveChangesAsync(cancellationToken);
+            var now = clock.Now;
+            await db.InTransactionAsync(async ct =>
+            {
+                await db.SaveChangesAsync(ct);
+                await db.TouchTicketAsync(ticket.Id, now, ct);
+                return true;
+            }, cancellationToken);
             return new Result(link.Id, true);
         }
 

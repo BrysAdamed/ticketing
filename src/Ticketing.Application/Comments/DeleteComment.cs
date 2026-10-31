@@ -19,10 +19,15 @@ public static class DeleteComment
             var (comment, target) = await CommentLookup.WriteAsync(db, access, command.CommentId, cancellationToken);
             if (!comment.IsDeleted)
             {
-                comment.DeleteBy(currentUser.Id, target.Grant.IsOwner, clock.Now);
+                var now = clock.Now;
+                comment.DeleteBy(currentUser.Id, target.Grant.IsOwner, now);
                 activity.Record(ActivityEntityType.Ticket, target.Id, target.ProjectId, "comment.deleted", new { commentId = comment.Id });
-                (await db.Tickets.SingleAsync(t => t.Id == target.Id, cancellationToken)).Touch(clock.Now);
-                await db.SaveChangesAsync(cancellationToken);
+                await db.InTransactionAsync(async ct =>
+                {
+                    await db.SaveChangesAsync(ct);
+                    await db.TouchTicketAsync(target.Id, now, ct);
+                    return true;
+                }, cancellationToken);
             }
             return await CommentQueries.OneAsync(db, currentUser, target.Grant, comment.Id, cancellationToken);
         }

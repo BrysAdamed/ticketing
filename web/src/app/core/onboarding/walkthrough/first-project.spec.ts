@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { MatDialog } from '@angular/material/dialog';
 import { of, Subject, throwError } from 'rxjs';
 import { ApiClient, Query } from '../../api/api-client';
+import { PageRequest } from '../../api/page';
 import { AuthService } from '../../auth/auth.service';
 import { BoardCreator } from '../../boards/create-board';
 import { ProjectCreator } from '../../projects/create-project';
@@ -105,9 +106,9 @@ describe('first-project walkthrough', () => {
       calls = [];
       const get = (path: string, query?: Query) => {
         calls.push({ path, query });
-        return responses.has(path)
-          ? of(responses.get(path))
-          : throwError(() => new Error(`404 ${path}`));
+        if (!responses.has(path)) return throwError(() => new Error(`404 ${path}`));
+        const body = responses.get(path);
+        return of(typeof body === 'function' ? body(query) : body);
       };
       TestBed.configureTestingModule({
         providers: [
@@ -117,7 +118,8 @@ describe('first-project walkthrough', () => {
             useValue: {
               writes: new Subject<void>(),
               get,
-              list: (path: string, page: unknown, query?: Query) => get(path, query),
+              list: (path: string, page: PageRequest | undefined, query?: Query) =>
+                get(path, { ...query, cursor: page?.cursor }),
             },
           },
           { provide: ProjectCreator, useValue: { open: vi.fn() } },
@@ -125,6 +127,43 @@ describe('first-project walkthrough', () => {
         ],
       });
       conditions = TestBed.inject(FirstProjectConditions);
+    });
+
+    it('finds the new board on a later page of the boards linking the project', async () => {
+      // Arrange
+      const board = (id: string, createdAt: string) => ({ id, createdAt, archivedAt: null });
+      const pages: Record<string, unknown> = {
+        first: {
+          items: Array.from({ length: 100 }, (_, i) => board(`b-${i}`, '2026-10-01T00:00:00Z')),
+          nextCursor: 'second',
+        },
+        second: {
+          items: [board('b-mine', '2026-10-30T00:00:00Z'), board('b-z', '2026-10-02T00:00:00Z')],
+          nextCursor: null,
+        },
+      };
+      respond('/boards', (query: Query) => pages[(query['cursor'] as string) ?? 'first']);
+      respond('/tickets/KS-1', { key: 'KS-1', location: { kind: 'Backlog', boardId: null } });
+      const params = { projectKey: 'KS', ticketKey: 'KS-1' };
+
+      // Act
+      const newest = await conditions.check(FIRST_PROJECT_CONDITIONS.boardLinksProject, params);
+      const created = await conditions.check(FIRST_PROJECT_CONDITIONS.boardLinksProject, {
+        ...params,
+        boardId: 'b-z',
+      });
+
+      // Assert
+      expect(newest).toEqual({ holds: true, params: { boardId: 'b-mine' } });
+      expect(created).toEqual({ holds: true, params: { boardId: 'b-z' } });
+      const boardCalls = calls.filter((c) => c.path === '/boards');
+      expect(boardCalls.every((c) => c.query?.['projectKey'] === 'KS')).toBe(true);
+      expect(boardCalls.map((c) => c.query?.['cursor'] ?? null)).toEqual([
+        null,
+        'second',
+        null,
+        'second',
+      ]);
     });
 
     it('sees a project created any other way and learns its key', async () => {

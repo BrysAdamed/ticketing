@@ -17,6 +17,7 @@ namespace Ticketing.Api.Mcp;
 public sealed class DocTools
 {
     private const string DocKey = "Doc key (for example WEB-D-12) or id.";
+    private const string PageMentions = McpDescriptions.Mentions + " Mentions are checked against the published content when the page is published.";
     private const string Kinds = "Folder, Page or Diagram";
     private const string Path = @"Titles joined by '/', case-insensitive, for example 'Architecture/ADRs/0001 Use Postgres'; a '/' inside a title is written '\/'.";
     private const string Parent = "Folder key (for example WEB-D-3), folder path, or 'root'.";
@@ -118,7 +119,7 @@ public sealed class DocTools
         CreateDoc.Handler handler,
         [Description("Project key, for example WEB.")] string projectKey,
         [Description("Single-line title, at most 200 characters, unique within the folder (ignoring case).")] string title,
-        [Description("Markdown, at most 100000 characters.")] string? content = null,
+        [Description("Markdown, at most 100000 characters. " + PageMentions)] string? content = null,
         [Description("Parent: " + Parent + " Default: root.")] string? parent = null,
         [Description(Position)] DocPosition? position = null,
         [Description("Place right before this sibling (key or path).")] string? beforeKey = null,
@@ -169,7 +170,7 @@ public sealed class DocTools
         UpdateDoc.Handler handler,
         [Description(DocKey)] string docKey,
         [Description("New single-line title.")] string? title = null,
-        [Description("The full new content. Omit to keep it.")] string? content = null,
+        [Description("The full new content. Omit to keep it. On a page: " + PageMentions)] string? content = null,
         [Description("Required with content: the version your edit started from.")] int? baseVersion = null,
         [Description("Optional 'what changed' note, at most 200 characters.")] string? changeNote = null,
         CancellationToken cancellationToken = default) =>
@@ -186,7 +187,7 @@ public sealed class DocTools
     public static Task<DocDto> EditDoc(
         EditDoc.Handler handler,
         [Description(DocKey)] string docKey,
-        [Description("The edits: objects { oldText, newText, replaceAll? }.")] DocEdit[] edits,
+        [Description("The edits: objects { oldText, newText, replaceAll? }. On a page: " + PageMentions)] DocEdit[] edits,
         [Description("Optional 'what changed' note, at most 200 characters.")] string? changeNote = null,
         CancellationToken cancellationToken = default) =>
         handler.HandleAsync(new EditDoc.Command(edits, changeNote, docKey), cancellationToken);

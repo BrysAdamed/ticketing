@@ -2,6 +2,7 @@ using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Ticketing.Application.Abstractions;
 using Ticketing.Application.Access;
+using Ticketing.Application.Collaboration;
 using Ticketing.Application.Tickets;
 using Ticketing.Application.Watchers;
 using Ticketing.Domain.Common;
@@ -138,7 +139,18 @@ public static class DocQueries
             Outline = row.DiagramFormat == DiagramFormat.Canvas ? row.Outline ?? string.Empty : null,
             SnapshotUrl = row.HasSnapshot ? SnapshotUrl(key, row.CurrentVersion) : null,
             Watchers = row.Kind == DocKind.Folder ? null : await DocWatcherQueries.LoadAsync(db, currentUser, target, cancellationToken),
+            Mentions = await MentionsOfAsync(db, row.ProjectId, row.Kind, row.Content, cancellationToken),
         };
+    }
+
+    /// <summary>The mentioned users of a page's content that the reader may see as chips (D-96, D-166); other kinds have none.</summary>
+    public static async Task<IReadOnlyList<UserRefDto>> MentionsOfAsync(
+        ITicketingDbContext db, Guid projectId, DocKind kind, string? content, CancellationToken cancellationToken)
+    {
+        if (kind != DocKind.Page)
+            return [];
+        var users = await MentionedUsers.LoadAsync(db, projectId, [content], cancellationToken);
+        return MentionedUsers.In(content, users);
     }
 
     /// <summary>The non-deleted children of a folder in their manual order.</summary>

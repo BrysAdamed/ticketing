@@ -89,7 +89,9 @@ public static class CreateDoc
             var kind = command.Kind!.Value;
             var node = kind == DocKind.Folder
                 ? DocNode.CreateFolder(grant.ProjectId, number, parentId, rank, title, currentUser.Id, now)
-                : DocNode.CreateDocument(grant.ProjectId, number, kind, command.DiagramFormat, parentId, rank, title, command.Content, currentUser.Id, now);
+                : DocNode.CreateDocument(
+                    grant.ProjectId, number, kind, command.DiagramFormat, parentId, rank, title,
+                    await publisher.PrepareContentAsync(grant, kind, null, command.Content, cancellationToken), currentUser.Id, now);
             db.DocNodes.Add(node);
             if (!node.IsFolder)
                 await publisher.AddInitialVersionAsync(node, command.ChangeNote, command.Snapshot, cancellationToken);

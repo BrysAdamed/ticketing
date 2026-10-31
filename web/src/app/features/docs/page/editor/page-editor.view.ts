@@ -63,6 +63,7 @@ import { replaceDocument } from '../../editing/codemirror-shared';
 import { DocEditSession } from '../../editing/doc-edit-session';
 import { DocEditStatusComponent } from '../../editing/doc-edit-status.component';
 import { DocMarkdownComponent } from '../doc-markdown.component';
+import { DocMentionPicks } from '../mentions/doc-mentions.providers';
 import { headingLines, syncedScrollTop } from '../page-outline';
 import { DocConflictComponent } from './doc-conflict.component';
 import { EDITOR_ACTIONS } from './editor-actions';
@@ -150,6 +151,12 @@ export class PageEditorView {
   protected readonly changeNote = signal('');
   protected readonly uploading = signal(0);
   protected readonly previewSource = signal('');
+  private readonly mentionPicks = inject(DocMentionPicks, { optional: true });
+  /// The doc's resolved mentions plus the users picked with `@` in this editor, so their chips show at once.
+  protected readonly previewMentions = computed(() => [
+    ...(this.doc().mentions ?? []),
+    ...(this.mentionPicks?.users() ?? []),
+  ]);
   protected readonly maxLength = PAGE_CONTENT_MAX_LENGTH;
   protected readonly tooLong = computed(
     () => this.session.content().length > PAGE_CONTENT_MAX_LENGTH,

@@ -26,7 +26,8 @@ public static class GetDocVersion
             var format = await db.DocNodes.AsNoTracking().Where(n => n.Id == nodeId).Select(n => n.DiagramFormat).SingleAsync(cancellationToken);
             var (references, embeds) = await DocReferenceQueries.ReferencesOfContentAsync(
                 db, access, nodeId, version.Content, target.Kind, format, cancellationToken);
-            return version with { References = references, Embeds = embeds };
+            var mentions = await DocQueries.MentionsOfAsync(db, target.ProjectId, target.Kind, version.Content, cancellationToken);
+            return version with { References = references, Embeds = embeds, Mentions = mentions };
         }
     }
 

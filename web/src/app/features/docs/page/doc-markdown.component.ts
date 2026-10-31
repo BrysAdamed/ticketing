@@ -16,6 +16,7 @@ import { DocEmbed, DocReferences } from '@core/docs/doc.models';
 import { ToastService } from '@core/notify/toast.service';
 import { ThemeService } from '@core/theme/theme.service';
 import { codeLanguage, highlightCodeBlocks } from '@shared/markdown/highlight-code';
+import { MentionUser } from '@shared/markdown/mentions';
 import { INTERNAL_LINK_ATTR, renderMarkdown } from '@shared/markdown/render-markdown';
 
 /// Performance entry measured for every render (markdown to DOM), read by the e2e budget check.
@@ -48,9 +49,11 @@ export class DocMarkdownComponent {
   /// every key as a plain link.
   readonly references = input<DocReferences | null>(null);
   readonly embeds = input<readonly DocEmbed[]>([]);
+  /// Users the source mentions that the reader may see; their tokens render as chips, others as text.
+  readonly mentions = input<readonly MentionUser[] | null | undefined>(null);
 
   private readonly links = computed(
-    () => ({ references: this.references(), embeds: this.embeds() }),
+    () => ({ references: this.references(), embeds: this.embeds(), mentions: this.mentions() }),
     { equal: (a, b) => JSON.stringify(a) === JSON.stringify(b) },
   );
 
@@ -71,10 +74,11 @@ export class DocMarkdownComponent {
     const controller = new AbortController();
     this.controller = controller;
     const started = performance.now();
-    const { references, embeds } = this.links();
+    const { references, embeds, mentions } = this.links();
     const mode = this.mode();
     this.host.innerHTML = renderMarkdown(source, {
       headingAnchors: true,
+      mentions,
       references: references && {
         tickets: references.tickets,
         docs: references.docs,

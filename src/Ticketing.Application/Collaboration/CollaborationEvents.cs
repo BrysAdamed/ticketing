@@ -50,8 +50,15 @@ public sealed record TicketDeleted(Guid TicketId, Guid ProjectId, Guid? ActorId,
 public abstract record DocEvent(Guid DocNodeId, Guid ProjectId, Guid? ActorId, DateTimeOffset OccurredAt)
     : CollaborationEvent(ProjectId, ActorId, OccurredAt);
 
-/// <summary>A page or diagram was created (folders are skipped): its creator starts watching it (D-162).</summary>
-public sealed record DocCreated(Guid DocNodeId, Guid ProjectId, Guid? ActorId, DateTimeOffset OccurredAt)
+/// <summary>
+/// A page or diagram was created (folders are skipped): its creator starts watching it (D-162). <see cref="Content"/> is the
+/// content of a new page, whose mentions notify (D-164); null for diagrams and duplicates.
+/// </summary>
+public sealed record DocCreated(Guid DocNodeId, Guid ProjectId, Guid? ActorId, DateTimeOffset OccurredAt, string? Content)
+    : DocEvent(DocNodeId, ProjectId, ActorId, OccurredAt);
+
+/// <summary>A new version of a page was published (not restored): users it newly mentions are notified (D-164).</summary>
+public sealed record DocPublished(Guid DocNodeId, Guid ProjectId, Guid? ActorId, DateTimeOffset OccurredAt, string? From, string? To)
     : DocEvent(DocNodeId, ProjectId, ActorId, OccurredAt);
 
 /// <summary>A comment added to a page or diagram (docs refinement D12): the doc's watchers are notified (D-162), mentioned users too (D-163).</summary>
@@ -79,12 +86,13 @@ public static class CollaborationEvents
     {
         var created = await CreatedTicketsAsync(db, entries, cancellationToken);
         var comments = await CommentBodiesAsync(db, entries, cancellationToken);
+        var pages = PublishedPages(db, entries);
         var events = new List<CollaborationEvent>(entries.Count);
         foreach (var entry in entries)
         {
             if (entry.ProjectId is not { } projectId)
                 continue;
-            var e = Read(entry, projectId, created, comments);
+            var e = Read(entry, projectId, created, comments, pages);
             if (e is not null)
                 events.Add(e);
         }
@@ -92,7 +100,8 @@ public static class CollaborationEvents
     }
 
     private static CollaborationEvent? Read(
-        ActivityEntry entry, Guid projectId, IReadOnlyDictionary<Guid, CreatedTicket> created, IReadOnlyDictionary<Guid, string> comments)
+        ActivityEntry entry, Guid projectId, IReadOnlyDictionary<Guid, CreatedTicket> created, IReadOnlyDictionary<Guid, string> comments,
+        IReadOnlyDictionary<Guid, PageContent> pages)
     {
         var (id, actor, at) = (entry.EntityId, entry.ActorId, entry.OccurredAt);
         if (entry.EntityType == ActivityEntityType.RegressionSession)
@@ -105,8 +114,10 @@ public static class CollaborationEvents
         {
             return entry.Action switch
             {
-                CreateDoc.Action when Parse<CreatedDoc>(entry.NewValue) is { Kind: not DocKind.Folder } =>
-                    new DocCreated(id, projectId, actor, at),
+                CreateDoc.Action when Parse<CreatedDoc>(entry.NewValue) is { Kind: not DocKind.Folder } doc =>
+                    new DocCreated(id, projectId, actor, at, doc.DuplicatedFrom is null ? pages.GetValueOrDefault(id)?.To : null),
+                DocPublisher.UpdatedAction when pages.TryGetValue(id, out var page) =>
+                    new DocPublished(id, projectId, actor, at, page.From, page.To),
                 AddDocComment.Action when Parse<CommentBody>(entry.NewValue) is { } docComment =>
                     new DocCommentAdded(id, projectId, actor, at, docComment.CommentId, comments.GetValueOrDefault(docComment.CommentId)),
                 UpdateDocComment.Action when Parse<CommentBody>(entry.NewValue) is { } edited =>
@@ -198,13 +209,37 @@ public static class CollaborationEvents
         return result;
     }
 
+    /// <summary>
+    /// The published and the new content of the pages that <paramref name="entries"/> create or publish, from the change tracker:
+    /// the publishing handlers hold the node tracked (and row-locked), so the original value is the content published before.
+    /// </summary>
+    private static IReadOnlyDictionary<Guid, PageContent> PublishedPages(ITicketingDbContext db, IReadOnlyList<ActivityEntry> entries)
+    {
+        var ids = entries
+            .Where(e => e.EntityType == ActivityEntityType.Doc && e.Action is CreateDoc.Action or DocPublisher.UpdatedAction)
+            .Select(e => e.EntityId)
+            .ToHashSet();
+        if (ids.Count == 0)
+            return new Dictionary<Guid, PageContent>();
+
+        return db.ChangeTracker.Entries<DocNode>()
+            .Where(e => e.Entity.Kind == DocKind.Page && ids.Contains(e.Entity.Id))
+            .ToDictionary(
+                e => e.Entity.Id,
+                e => new PageContent(
+                    e.State == EntityState.Added ? null : e.Property(n => n.Content).OriginalValue,
+                    e.Entity.Content));
+    }
+
     private static T? Parse<T>(string? json) => json is null ? default : JsonSerializer.Deserialize<T>(json, Json);
 
     private sealed record CreatedTicket(Guid ReporterId, Guid? AssigneeId, string? Description);
 
     private sealed record CommentBody(Guid CommentId, string? Body);
 
-    private sealed record CreatedDoc(DocKind Kind);
+    private sealed record CreatedDoc(DocKind Kind, string? DuplicatedFrom);
+
+    private sealed record PageContent(string? From, string? To);
 
     private sealed record ItemAssignment(string TestCaseKey, Guid? From, Guid? To);
 }

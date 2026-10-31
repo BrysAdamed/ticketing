@@ -1,8 +1,10 @@
 using System.Net;
+using System.Net.Http.Json;
 using ModelContextProtocol.Client;
 using Ticketing.Application.Achievements;
 using Ticketing.Domain.Achievements;
 using Ticketing.Domain.Projects;
+using Ticketing.IntegrationTests.Docs;
 using Ticketing.IntegrationTests.Infrastructure;
 using Ticketing.IntegrationTests.Mentions;
 using Ticketing.IntegrationTests.Tickets;
@@ -198,6 +200,39 @@ public sealed class TicketStateCriteriaTests(TicketingApiFactory api)
 
         // Assert
         Assert.All(progress, p => Assert.Equal((0, 0), (p.Count, p.Tier)));
+    }
+
+    [Fact]
+    public async Task Shout_out_counts_new_mentions_in_doc_comments_and_pages_but_not_restores_duplicates_or_self_mentions()
+    {
+        // Arrange
+        var world = await WorldAsync();
+        var docComment = await world.MemberAsync();
+        var docCommentEdit = await world.MemberAsync();
+        var newPage = await world.MemberAsync();
+        var published = await world.MemberAsync();
+        var restorer = await world.MemberAsync();
+        var self = await world.MemberAsync();
+        var mention = world.OwnerAccount.Mention();
+        var page = await world.Owner.CreatePageAsync("WEB", "Plan", content: $"Owner {mention}");
+        (await world.Owner.PatchDocAsync(page.Key, new { content = "Nobody", baseVersion = 1 })).EnsureSuccessStatusCode();
+        var start = DateTimeOffset.UtcNow;
+        await docComment.Client.AddDocCommentAsync(page.Key, $"Ping {mention}");
+        var edited = await docCommentEdit.Client.AddDocCommentAsync(page.Key, "Nothing yet");
+        (await docCommentEdit.Client.PatchDocCommentAsync(edited.Id, $"Now {mention}")).EnsureSuccessStatusCode();
+        await newPage.Client.CreatePageAsync("WEB", "Fresh", content: $"For {mention}");
+        var other = await published.Client.CreatePageAsync("WEB", "Other", content: "Draft");
+        (await published.Client.PatchDocAsync(other.Key, new { content = $"Draft for {mention}", baseVersion = 1 })).EnsureSuccessStatusCode();
+        (await restorer.Client.PostAsJsonAsync($"/api/v1/docs/{page.Key}/versions/1/restore", new { }, HttpAssertions.Json, TestContext.Current.CancellationToken)).EnsureSuccessStatusCode();
+        (await restorer.Client.PostAsJsonAsync($"/api/v1/docs/{page.Key}/duplicate", new { }, HttpAssertions.Json, TestContext.Current.CancellationToken)).EnsureSuccessStatusCode();
+        await self.Client.AddDocCommentAsync(page.Key, $"Note to {self.Account.Mention()}");
+
+        // Act
+        var members = new[] { docComment, docCommentEdit, newPage, published, restorer, self };
+        var progress = await api.EvaluateAsync([.. members.Select(m => new AchievementSubject(m.Account.Id, start))], [AchievementCatalog.ShoutOut]);
+
+        // Assert
+        Assert.Equal([(1, 1), (1, 1), (1, 1), (1, 1), (0, 0), (0, 0)], members.Select(m => Of(progress, m.Account)));
     }
 
     private static (int Count, int Tier) Of(IReadOnlyList<AchievementProgress> progress, TestUser user) =>

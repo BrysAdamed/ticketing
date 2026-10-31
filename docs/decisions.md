@@ -1313,7 +1313,7 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
   - The migration backfills the old participants (every page and diagram creator, every author of a comment that is not deleted), so nobody stops hearing about a thread when it ships.
   - API: `GET /docs/{key}/watchers`, `PUT` / `DELETE /docs/{key}/watchers/me`, MCP `watch_doc` / `unwatch_doc`, and `DocDto.watchers { count, watching, users }` (null for folders). Read access and write-scoped credentials, like ticket watching.
   - Web: the Watch control of the ticket view moved to `core/watchers` (`tk-watch-control`, test ids by prefix) and sits in the doc page bar; `W` toggles it, optimistically with rollback, and a background refresh during a toggle keeps the optimistic list.
-- Rejected: notifying watchers about every published version in this slice (a new notification kind, noisy for living pages; tracked as a follow-up ticket); keeping the participant rule next to watchers (two overlapping audiences, and no way out of a thread but deleting your comment); watching folders (a folder has no thread, and following a subtree is a different feature).
+- Rejected: notifying watchers about every published version in this slice (a new notification kind, noisy for living pages; follow-up TKT-113); keeping the participant rule next to watchers (two overlapping audiences, and no way out of a thread but deleting your comment); watching folders (a folder has no thread, and following a subtree is a different feature).
 - Achievements: none for watching (housekeeping, like D-160).
 
 ### D-163 Doc comments take @mentions with the ticket comment rules (TKT-108)
@@ -1324,6 +1324,18 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
   - Effects through the projector: `DocCommentAdded` carries the body and the new `DocCommentEdited` carries the previous body from the activity entry and the current body from the tracked comment, so the activity payload stays as D-117 defined it (the current body is not copied into the history). `MentionCandidate` takes any collaboration event; a doc mention makes the user a doc watcher and notifies them with `Mentioned` ("mentioned you in a comment") instead of `Commented`. D-160 applies: `Mentioned` is direct and survives a project mute.
   - Web: the doc comment composer and edit box get the `@` people picker (`GET /users?projectKey=&access=read`), and comments render chips.
 - Rationale: one set of mention rules for every comment thread; reading the new body from the tracker costs no query, because the handler has just loaded and changed the comment.
+
+### D-164 Page content takes @mentions, checked and notified on publish only; shout-out counts doc mentions (TKT-109, TKT-110)
+
+- Question: pages address people too (section owners, reviewers; I-86). A page is edited as drafts and published as versions, restored and duplicated. When are mentions in a page checked and notified, and what about diagrams and achievements?
+- Decision:
+  - Only publishing a page runs the D-96 rules: create with content, `PATCH` content and find/replace edits call `DocPublisher.PrepareContentAsync` (the `MentionNormalizer` against the published content, field `content`). Drafts are not checked (they are private and the check happens when they are published). A restore and a duplicate copy text that was already published, so they neither validate nor notify, and a mention of someone who lost access never blocks a publish because it is not new.
+  - The projector reads `doc.created` (not duplicates) and `doc.updated` of pages as `DocCreated` (content) and `DocPublished` (previous and new content). The content comes from the tracked node, whose original value is the published content (the publishing handlers hold it row-locked), so the activity payload stays small. A newly mentioned user, except the actor, starts watching the page and gets `Mentioned` with the summary "mentioned you on the page"; that notification links to the page instead of `#comments`. Diagrams have no mentions.
+  - Reading: `DocDto.mentions` and `DocVersionDto.mentions` (and `get_doc` with `version`) are the mentioned active readers of that content; the reader, the history view and the editor preview render chips. The page editor gets an `@` people picker as a doc editor plugin (`provideDocMentions`, CodeMirror completion, toolbar button and slash command); users picked in the editor show as chips in the preview at once.
+  - Achievements: `shout-out` now also counts U's new or edited doc comment and U's new page or published version (version n against n-1) on a doc that is not deleted, through the same `MentionRules` (one query per batch: a `UNION ALL` of the ticket and doc texts). For a doc comment edit the comment's current body stands for the new text, since `doc.comment.edited` keeps only the old one. Its hint names pages. Watching a doc earns nothing (D-162).
+- Rejected: checking mentions in drafts (every autosave would fail on a half-typed mention and the check would run twice); a per-node mention table (comparing with the published content is enough, as D-96 argued for tickets); copying page content into the activity payload (pages are up to 100,000 characters).
+
+## Product owner answers
 
 ## Product owner answers (v1 review, 2026-10-27)
 

@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Ticketing.Application.Abstractions;
+using Ticketing.Application.Access;
+using Ticketing.Application.Collaboration;
 using Ticketing.Domain.Activity;
 using Ticketing.Domain.Common;
 using Ticketing.Domain.Docs;
@@ -13,7 +15,7 @@ namespace Ticketing.Application.Docs;
 /// the editor merges it onto the restored version like onto any newer one. Work that must follow every publish (Canvas
 /// outline) belongs here. The caller saves.
 /// </summary>
-public sealed class DocPublisher(ITicketingDbContext db, ICurrentUser currentUser, IClock clock, IActivityLog activity)
+public sealed class DocPublisher(ITicketingDbContext db, ICurrentUser currentUser, IClock clock, IActivityLog activity, MentionNormalizer mentions)
 {
     public const string UpdatedAction = "doc.updated";
     public const string VersionRestoredAction = "doc.version.restored";
@@ -41,6 +43,15 @@ public sealed class DocPublisher(ITicketingDbContext db, ICurrentUser currentUse
             activity.Record(ActivityEntityType.Doc, node.Id, node.ProjectId, VersionRestoredAction, new { version = node.CurrentVersion, restoredFrom });
         }
     }
+
+    /// <summary>
+    /// Prepares the content of a page for publishing (D-164): <c>@email</c> of a reader becomes a stored mention and newly added
+    /// mentions (compared with <paramref name="previous"/>, the published content) are validated, failing with
+    /// <c>mention.invalid</c> on <c>content</c>. Diagrams take no mentions; their content is returned as it is.
+    /// </summary>
+    public Task<string?> PrepareContentAsync(
+        ProjectAccessGrant grant, DocKind kind, string? previous, string? content, CancellationToken cancellationToken) =>
+        kind == DocKind.Page ? mentions.NormalizeAsync(grant, previous, content, "content", cancellationToken) : Task.FromResult(content);
 
     /// <summary>Snapshots version 1 of a node just created with its content (Canvas: validated, with outline and optional picture) and indexes its references.</summary>
     public async Task AddInitialVersionAsync(DocNode node, string? changeNote, string? snapshotSvg, CancellationToken cancellationToken)

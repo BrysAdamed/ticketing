@@ -40,7 +40,8 @@ const STEPS: readonly ExplainerStep[] = [
 ];
 
 /// "How regressions work" (coordinator decision 7): the regressions list has no tour, so its empty
-/// state explains the flow in four steps. Loaded on first open.
+/// state explains the flow in four steps. Lives in core so Show me on an achievement can open it
+/// too (D-170); open it through `LearnActions.openRegressionsExplainer`. Loaded on first open.
 @Component({
   selector: 'tk-regressions-explainer-dialog',
   imports: [MatDialogModule, MatButtonModule, IconComponent],

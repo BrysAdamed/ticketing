@@ -19,6 +19,7 @@ import {
   AchievementLearnTarget,
   canStartLearn,
   learnActionFor,
+  prepareLearn,
   startLearn,
 } from './achievement-learn';
 
@@ -83,9 +84,11 @@ function fakeLearn(startable: boolean): LearnActions & Record<string, ReturnType
     canStartTour: vi.fn(() => startable),
     canStartWalkthrough: vi.fn(() => startable),
     canRunHelpItem: vi.fn(() => startable),
+    prepareTour: vi.fn(),
     startTour: vi.fn().mockResolvedValue(undefined),
     startWalkthrough: vi.fn(),
     runHelpItem: vi.fn(),
+    openRegressionsExplainer: vi.fn().mockResolvedValue(undefined),
   } as unknown as LearnActions & Record<string, ReturnType<typeof vi.fn>>;
 }
 
@@ -104,7 +107,7 @@ describe('achievement learn actions', () => {
 
   it.each([...ACHIEVEMENT_LEARN_ACTIONS.entries()])(
     '%s starts something real that can start from the Achievements tab',
-    (_id, action) => {
+    async (_id, action) => {
       // Arrange
       const { target } = action;
 
@@ -114,14 +117,19 @@ describe('achievement learn actions', () => {
         case 'tour': {
           const entry = TOUR_CATALOGUE.find((e) => e.viewId === target.viewId);
           expect(entry).toBeDefined();
-          expect(entry?.path).toBeTruthy();
+          expect(entry?.path || entry?.opens).toBeTruthy();
           expect(entry?.requires).toBeUndefined();
+          if (target.step) {
+            const tour = await entry?.load();
+            expect(tour?.steps.map((s) => s.id)).toContain(target.step);
+          }
           break;
         }
         case 'help':
           expect(registeredHelp().find(target.itemId)).toBeDefined();
           break;
         case 'walkthrough':
+        case 'regressions-explainer':
           break;
       }
     },
@@ -163,7 +171,8 @@ describe('achievement learn actions', () => {
 
     // Act / Assert
     expect(learnActionFor(locked('reporter', { tier: 1 }))).toBeNull();
-    expect(learnActionFor(locked('connector'))).toBeNull();
+    expect(learnActionFor(locked('show-me'))).toBeNull();
+    expect(learnActionFor(locked('epic-finisher'))).toBeNull();
     expect(learnActionFor(masked)).toBeNull();
     for (const id of SECRETS)
       expect(learnActionFor(locked(id, { secret: true, howToEarn: null }))).toBeNull();
@@ -186,18 +195,61 @@ describe('achievement learn actions', () => {
     if (arg) expect(open[check]).toHaveBeenCalledWith(arg);
   });
 
+  it('offers the regressions explainer whenever it is mapped', () => {
+    // Arrange
+    const closed = fakeLearn(false);
+
+    // Act / Assert
+    expect(canStartLearn(closed, { kind: 'regressions-explainer' })).toBe(true);
+  });
+
+  it.each([
+    ['connector', 'ticket.detail', 'links'],
+    ['conversationalist', 'ticket.detail', 'mentions'],
+    ['shout-out', 'ticket.detail', 'mentions'],
+    ['delegator', 'ticket.detail', 'delegate'],
+    ['regression-runner', 'regressions.session', 'record'],
+    ['found-it', 'regressions.session', 'create-bug'],
+    ['spring-cleaning', 'board.kanban', undefined],
+  ])('%s opens the %s tour at %s', (id, viewId, step) => {
+    // Arrange
+    const target = learnActionFor(locked(id))?.target;
+
+    // Act / Assert
+    expect(target).toEqual(step ? { kind: 'tour', viewId, step } : { kind: 'tour', viewId });
+    expect(TOUR_CATALOGUE.find((e) => e.viewId === viewId)?.opens).toBeTruthy();
+  });
+
+  it('prepares only tours, so a tour that opens something can turn startable', () => {
+    // Arrange
+    const learn = fakeLearn(false);
+
+    // Act
+    prepareLearn(learn, { kind: 'tour', viewId: 'ticket.detail', step: 'links' });
+    prepareLearn(learn, { kind: 'help', itemId: CONNECT_AGENT_HELP_ID });
+    prepareLearn(learn, { kind: 'regressions-explainer' });
+
+    // Assert
+    expect(learn['prepareTour']).toHaveBeenCalledTimes(1);
+    expect(learn['prepareTour']).toHaveBeenCalledWith('ticket.detail');
+  });
+
   it('starts the target through LearnActions', () => {
     // Arrange
     const learn = fakeLearn(true);
 
     // Act
     startLearn(learn, { kind: 'tour', viewId: 'testcases.list' });
+    startLearn(learn, { kind: 'tour', viewId: 'ticket.detail', step: 'links' });
     startLearn(learn, { kind: 'walkthrough', skipOptional: true });
     startLearn(learn, { kind: 'help', itemId: CONNECT_AGENT_HELP_ID });
+    startLearn(learn, { kind: 'regressions-explainer' });
 
     // Assert
-    expect(learn['startTour']).toHaveBeenCalledWith('testcases.list');
+    expect(learn['startTour']).toHaveBeenCalledWith('testcases.list', { step: undefined });
+    expect(learn['startTour']).toHaveBeenCalledWith('ticket.detail', { step: 'links' });
     expect(learn['startWalkthrough']).toHaveBeenCalledWith({ skipOptional: true });
     expect(learn['runHelpItem']).toHaveBeenCalledWith(CONNECT_AGENT_HELP_ID);
+    expect(learn['openRegressionsExplainer']).toHaveBeenCalled();
   });
 });

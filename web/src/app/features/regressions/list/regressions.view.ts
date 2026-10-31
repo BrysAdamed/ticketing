@@ -13,6 +13,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatTooltip } from '@angular/material/tooltip';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
+import { LearnActions } from '@core/onboarding/learn-actions';
 import { ProjectContext } from '@core/projects/project-context';
 import { ShortcutService } from '@core/shortcuts/shortcut.service';
 import { RegressionSession } from '@core/testing/testing.models';
@@ -166,6 +167,7 @@ import { StartSessionData, StartSessionDialog } from './start-session.dialog';
 export class RegressionsView {
   protected readonly store = inject(RegressionsStore);
   private readonly dialog = inject(MatDialog);
+  private readonly learn = inject(LearnActions);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly project = inject(ProjectContext);
@@ -231,12 +233,7 @@ export class RegressionsView {
     if (session) void this.router.navigate([session.key], { relativeTo: this.route });
   }
 
-  protected async explain(): Promise<void> {
-    const { RegressionsExplainerDialog } = await import('./regressions-explainer.dialog');
-    this.dialog.open(RegressionsExplainerDialog, {
-      width: '480px',
-      autoFocus: 'first-tabbable',
-      ariaLabelledBy: 'regressions-explainer-title',
-    });
+  protected explain(): void {
+    void this.learn.openRegressionsExplainer();
   }
 }

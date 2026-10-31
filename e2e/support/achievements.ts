@@ -1,4 +1,4 @@
-import { Api } from '../../support/api';
+import { Api } from './api';
 
 export const ACHIEVEMENTS_FLAG = 'achievements';
 /// The projector runs every TICKETING_ACHIEVEMENTS_INTERVAL; the e2e stack sets it short.

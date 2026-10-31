@@ -4,7 +4,11 @@ import { Api } from '../../support/api';
 import { expect, test } from '../../support/fixtures';
 import { signInAs } from '../../support/session';
 import { PASSWORD, seedUser } from '../identity/identity';
-import { enableAchievementsFor, myAchievement, PROJECTOR_TIMEOUT_MS } from './achievements';
+import {
+    enableAchievementsFor,
+    myAchievement,
+    PROJECTOR_TIMEOUT_MS,
+} from '../../support/achievements';
 
 interface TicketSummary {
     key: string;

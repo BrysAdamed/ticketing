@@ -1,5 +1,9 @@
 import type { TourDefinition, TourRequirement } from '../engine/tour.model';
 
+/// What a tour without a `path` opens to start away from its view: a ticket, a board or a
+/// regression session the user can read (`TourTargets`, D-170).
+export type TourTargetKind = 'ticket' | 'board' | 'regression-session';
+
 /// A view that has a tour. The definition (its copy) is loaded on demand, so adding tours never
 /// grows the initial bundle. Plain TypeScript: e2e specs may import this file.
 export interface TourCatalogueEntry {
@@ -8,12 +12,14 @@ export interface TourCatalogueEntry {
   readonly title: string;
   /// Where the view lives when it needs at most a project (`/projects/:projectKey/backlog`,
   /// `/search`). The palette command can then start the tour from anywhere; without it, only on
-  /// the view itself.
+  /// the view itself or through `opens`.
   readonly path?: string;
   /// Who the whole tour is for (`project.settings` is for Owners, `admin.users` for Admins). Others
   /// get neither "Tour of this page" nor the palette command. Checked against the open project and
   /// the instance role, so a tour that needs `write` or `owner` has no `path`.
   readonly requires?: TourRequirement;
+  /// What the tour opens first when it starts away from its view and has no `path`.
+  readonly opens?: TourTargetKind;
   readonly load: () => Promise<TourDefinition>;
 }
 
@@ -46,6 +52,7 @@ export const TOUR_CATALOGUE: readonly TourCatalogueEntry[] = [
   {
     viewId: 'regressions.session',
     title: 'Regression session',
+    opens: 'regression-session',
     load: () => import('./regressions.tours').then((m) => m.REGRESSION_SESSION_TOUR),
   },
   {
@@ -64,11 +71,13 @@ export const TOUR_CATALOGUE: readonly TourCatalogueEntry[] = [
   {
     viewId: 'board.kanban',
     title: 'Board',
+    opens: 'board',
     load: () => import('./board.tours').then((m) => m.BOARD_TOUR),
   },
   {
     viewId: 'ticket.detail',
     title: 'Ticket',
+    opens: 'ticket',
     load: () => import('./ticket.tours').then((m) => m.TICKET_TOUR),
   },
 ];

@@ -24,6 +24,7 @@ public static class TestApi
 {
     public const string DefaultPassword = "Correct-Horse-Battery-1";
     private static readonly Uri BaseAddress = new("https://localhost");
+    private static readonly TimeSpan McpInitializationTimeout = TimeSpan.FromSeconds(90);
 
     public static async Task<TestUser> CreateUserAsync(
         this TicketingApiFactory api, GlobalRole role = GlobalRole.User, string? email = null, string password = DefaultPassword, string? displayName = null)
@@ -88,7 +89,11 @@ public static class TestApi
         return client;
     }
 
-    /// <summary>An MCP client over Streamable HTTP against <c>/mcp</c>, authenticated with <paramref name="token"/>.</summary>
+    /// <summary>
+    /// An MCP client over Streamable HTTP against <c>/mcp</c>, authenticated with <paramref name="token"/>.
+    /// The SDK's 5 s <c>server/discover</c> probe is disabled: under load it cancels the probe, the test host answers the
+    /// aborted request with 499 instead of a cancellation, and the client fails instead of falling back (TKT-90).
+    /// </summary>
     public static async Task<McpClient> CreateMcpClientAsync(this TicketingApiFactory api, string token)
     {
         var http = api.CreateBearerClient(token);
@@ -96,7 +101,8 @@ public static class TestApi
             new HttpClientTransportOptions { Endpoint = new Uri(BaseAddress, "/mcp"), TransportMode = HttpTransportMode.StreamableHttp },
             http,
             ownsHttpClient: true);
-        return await McpClient.CreateAsync(transport, cancellationToken: TestContext.Current.CancellationToken);
+        var options = new McpClientOptions { DiscoverProbeTimeout = Timeout.InfiniteTimeSpan, InitializationTimeout = McpInitializationTimeout };
+        return await McpClient.CreateAsync(transport, options, cancellationToken: TestContext.Current.CancellationToken);
     }
 
     public static async Task<T> WithDbAsync<T>(this TicketingApiFactory api, Func<TicketingDbContext, Task<T>> work)

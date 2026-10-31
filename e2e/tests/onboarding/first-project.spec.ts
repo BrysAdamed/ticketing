@@ -41,6 +41,41 @@ async function ownedKeys(request: APIRequestContext): Promise<string[]> {
     return page.items.filter((p) => p.myRole === 'Owner').map((p) => p.key);
 }
 
+interface ListPage {
+    items: Record<string, unknown>[];
+    nextCursor: string | null;
+}
+
+const OWN_DATA: Record<string, (item: Record<string, unknown>, userId: string) => boolean> = {
+    '/api/v1/projects': (project) => project['isMember'] === true,
+    '/api/v1/boards': (board, userId) => (board['owner'] as { id: string }).id === userId,
+};
+
+/// Other specs leave public projects and boards on the shared stack. The browser sees only the
+/// user's own (explicit memberships, boards they own), every page merged into one, so an entry
+/// state for an empty list stays reachable whatever ran before.
+async function showOnlyOwnData(page: Page, userId: string): Promise<void> {
+    await page.route(
+        (url) => url.pathname in OWN_DATA,
+        async (route) => {
+            if (route.request().method() !== 'GET') return route.fallback();
+            const url = new URL(route.request().url());
+            const isOwn = OWN_DATA[url.pathname];
+            const items: Record<string, unknown>[] = [];
+            let cursor: string | null = null;
+            do {
+                if (cursor) url.searchParams.set('cursor', cursor);
+                const response = await route.fetch({ url: url.toString() });
+                if (!response.ok()) return route.fulfill({ response });
+                const body = (await response.json()) as ListPage;
+                items.push(...body.items.filter((item) => isOwn(item, userId)));
+                cursor = body.nextCursor;
+            } while (cursor);
+            await route.fulfill({ json: { items, nextCursor: null } });
+        },
+    );
+}
+
 class Walkthrough {
     readonly card: Locator;
     readonly count: Locator;
@@ -301,11 +336,10 @@ test.describe('"Your first project" walkthrough', () => {
             email: user.email,
             password: PASSWORD,
         });
+        await showOnlyOwnData(page, user.id);
         const walkthrough = new Walkthrough(page);
         await page.goto('/projects');
         await expect(page.getByTestId('view-projects.list')).toBeVisible();
-        const projects = await json<{ items: unknown[] }>(context.request, '/projects');
-        test.skip(projects.items.length > 0, 'public projects of other specs fill the list');
         const state = page.locator('tk-empty-state');
 
         // Act
@@ -334,11 +368,10 @@ test.describe('"Your first project" walkthrough', () => {
             title: 'My first ticket',
             type: 'Technical',
         });
+        await showOnlyOwnData(page, user.id);
         const walkthrough = new Walkthrough(page);
         await page.goto('/boards');
         await expect(page.getByTestId('view-boards.list')).toBeVisible();
-        const boards = await json<{ items: unknown[] }>(context.request, '/boards');
-        test.skip(boards.items.length > 0, 'boards of other specs fill the list');
         const learn = page.locator('tk-empty-state').getByTestId('empty-state-learn');
         await expect(learn).toHaveText(/How boards work/);
 
@@ -366,8 +399,7 @@ test.describe('"Your first project" walkthrough', () => {
             { email: user.email, password: PASSWORD },
             { keepGuides: (g) => g.id === WELCOME_GUIDE.id },
         );
-        const projects = await json<{ items: unknown[] }>(context.request, '/projects');
-        test.skip(projects.items.length > 0, 'public projects of other specs are writable');
+        await showOnlyOwnData(page, user.id);
         const walkthrough = new Walkthrough(page);
         await page.goto('/my-work');
         await expect(page.getByTestId('welcome-dialog')).toBeVisible();

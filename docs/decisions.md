@@ -1349,6 +1349,13 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
   - Achievements: `shout-out` now also counts U's new or edited doc comment and U's new page or published version (version n against n-1) on a doc that is not deleted, through the same `MentionRules` (one query per batch: a `UNION ALL` of the ticket and doc texts). For a doc comment edit the comment's current body stands for the new text, since `doc.comment.edited` keeps only the old one. Its hint names pages. Watching a doc earns nothing (D-162).
 - Rejected: checking mentions in drafts (every autosave would fail on a half-typed mention and the check would run twice); a per-node mention table (comparing with the published content is enough, as D-96 argued for tickets); copying page content into the activity payload (pages are up to 100,000 characters).
 
+### D-167 Development and e2e stacks raise the sign-in rate limit through the compose override (TKT-83)
+
+- Question: the per-IP limit of 20 requests a minute on `/auth/login` and `/auth/set-password` (on top of the D-74 lockout) made full parallel Playwright runs fail with 429, because the suite seeds and signs in hundreds of users from one address.
+- Decision: `docker-compose.override.yml`, which only development and test stacks load (a server runs `-f docker-compose.yml`), sets `RateLimiting__LoginPermitsPerMinute` to `TICKETING_LOGIN_PERMITS_PER_MINUTE`, default 2000. The production default (appsettings, 20) and the base compose file are unchanged; integration tests already raise it in `TicketingApiFactory` and test the 429 with a low limit.
+- Entry-state specs (empty projects and boards lists, the welcome tour for a user who cannot write anywhere) no longer skip when other specs left public projects or boards: they filter the list responses the browser sees to the test user's own data (explicit membership, own boards) with `page.route` around the real response.
+- Rejected: fewer sign-ins in the suite (seeding a user needs set-password and a login, and every role test needs its own user); an e2e-only API switch or an exempt address (a production code path that only tests use); a separate e2e compose file (one more file to remember, while the documented e2e stack is `docker compose up`).
+
 ## Product owner answers (v1 review, 2026-10-27)
 
 These were open questions (Q-01..Q-05); the product owner resolved them as follows.

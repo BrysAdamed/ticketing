@@ -29,4 +29,25 @@ public sealed class WatcherTools
         [Description("Ticket key (for example WEB-42) or id.")] string key,
         CancellationToken cancellationToken = default) =>
         handler.HandleAsync(new UnwatchTicket.Command(key), cancellationToken);
+
+    [Authorize(Policy = AuthPolicies.CanWrite)]
+    [McpServerTool(Name = "watch_doc", Destructive = false, Idempotent = true, Title = "Watch doc")]
+    [Description("Starts watching a page or diagram you can read (viewers and archived projects included); watchers are notified "
+        + "about its new comments. Folders cannot be watched (doc.kind.unsupported). Watching twice is fine. "
+        + "Returns { count, watching, users } with the visible watchers.")]
+    public static Task<WatchersDto> WatchDoc(
+        WatchDoc.Handler handler,
+        [Description("Doc key (for example WEB-D-12) or id.")] string docKey,
+        CancellationToken cancellationToken = default) =>
+        handler.HandleAsync(new WatchDoc.Command(docKey), cancellationToken);
+
+    [Authorize(Policy = AuthPolicies.CanWrite)]
+    [McpServerTool(Name = "unwatch_doc", Destructive = false, Idempotent = true, Title = "Unwatch doc")]
+    [Description("Stops watching a page or diagram. Your next comment on it or a new mention of you makes you a watcher again. "
+        + "Returns { count, watching, users }.")]
+    public static Task<WatchersDto> UnwatchDoc(
+        UnwatchDoc.Handler handler,
+        [Description("Doc key (for example WEB-D-12) or id.")] string docKey,
+        CancellationToken cancellationToken = default) =>
+        handler.HandleAsync(new UnwatchDoc.Command(docKey), cancellationToken);
 }

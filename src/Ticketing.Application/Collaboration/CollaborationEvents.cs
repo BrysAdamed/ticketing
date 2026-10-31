@@ -4,10 +4,12 @@ using Microsoft.EntityFrameworkCore;
 using Ticketing.Application.Abstractions;
 using Ticketing.Application.Boards;
 using Ticketing.Application.Comments;
+using Ticketing.Application.Docs;
 using Ticketing.Application.Regressions;
 using Ticketing.Application.Tickets;
 using Ticketing.Domain.Activity;
 using Ticketing.Domain.Comments;
+using Ticketing.Domain.Docs;
 using Ticketing.Domain.Tickets;
 
 namespace Ticketing.Application.Collaboration;
@@ -45,9 +47,20 @@ public sealed record TicketMoved(Guid TicketId, Guid ProjectId, Guid? ActorId, D
 public sealed record TicketDeleted(Guid TicketId, Guid ProjectId, Guid? ActorId, DateTimeOffset OccurredAt)
     : TicketEvent(TicketId, ProjectId, ActorId, OccurredAt);
 
-/// <summary>A comment added to a page or diagram (docs refinement D12): its author and earlier commenters are notified.</summary>
-public sealed record DocCommentAdded(Guid DocNodeId, Guid ProjectId, Guid? ActorId, DateTimeOffset OccurredAt, Guid CommentId)
+public abstract record DocEvent(Guid DocNodeId, Guid ProjectId, Guid? ActorId, DateTimeOffset OccurredAt)
     : CollaborationEvent(ProjectId, ActorId, OccurredAt);
+
+/// <summary>A page or diagram was created (folders are skipped): its creator starts watching it (D-162).</summary>
+public sealed record DocCreated(Guid DocNodeId, Guid ProjectId, Guid? ActorId, DateTimeOffset OccurredAt)
+    : DocEvent(DocNodeId, ProjectId, ActorId, OccurredAt);
+
+/// <summary>A comment added to a page or diagram (docs refinement D12): the doc's watchers are notified (D-162), mentioned users too (D-163).</summary>
+public sealed record DocCommentAdded(Guid DocNodeId, Guid ProjectId, Guid? ActorId, DateTimeOffset OccurredAt, Guid CommentId, string? Body)
+    : DocEvent(DocNodeId, ProjectId, ActorId, OccurredAt);
+
+/// <summary>A doc comment edited by its author: users the edit newly mentions are notified (D-163). <see cref="To"/> is read from the comment.</summary>
+public sealed record DocCommentEdited(Guid DocNodeId, Guid ProjectId, Guid? ActorId, DateTimeOffset OccurredAt, Guid CommentId, string? From, string? To)
+    : DocEvent(DocNodeId, ProjectId, ActorId, OccurredAt);
 
 public sealed record RegressionItemAssigned(Guid SessionId, Guid ProjectId, Guid? ActorId, DateTimeOffset OccurredAt, string TestCaseKey, Guid? From, Guid? To)
     : CollaborationEvent(ProjectId, ActorId, OccurredAt);
@@ -65,7 +78,7 @@ public static class CollaborationEvents
         ITicketingDbContext db, IReadOnlyList<ActivityEntry> entries, CancellationToken cancellationToken)
     {
         var created = await CreatedTicketsAsync(db, entries, cancellationToken);
-        var comments = await AddedCommentsAsync(db, entries, cancellationToken);
+        var comments = await CommentBodiesAsync(db, entries, cancellationToken);
         var events = new List<CollaborationEvent>(entries.Count);
         foreach (var entry in entries)
         {
@@ -90,9 +103,16 @@ public static class CollaborationEvents
         }
         if (entry.EntityType == ActivityEntityType.Doc)
         {
-            if (entry.Action != AddDocComment.Action || Parse<CommentBody>(entry.NewValue) is not { } docComment)
-                return null;
-            return new DocCommentAdded(id, projectId, actor, at, docComment.CommentId);
+            return entry.Action switch
+            {
+                CreateDoc.Action when Parse<CreatedDoc>(entry.NewValue) is { Kind: not DocKind.Folder } =>
+                    new DocCreated(id, projectId, actor, at),
+                AddDocComment.Action when Parse<CommentBody>(entry.NewValue) is { } docComment =>
+                    new DocCommentAdded(id, projectId, actor, at, docComment.CommentId, comments.GetValueOrDefault(docComment.CommentId)),
+                UpdateDocComment.Action when Parse<CommentBody>(entry.NewValue) is { } edited =>
+                    new DocCommentEdited(id, projectId, actor, at, edited.CommentId, Parse<CommentBody>(entry.OldValue)?.Body, comments.GetValueOrDefault(edited.CommentId)),
+                _ => null,
+            };
         }
         if (entry.EntityType != ActivityEntityType.Ticket)
             return null;
@@ -146,12 +166,16 @@ public static class CollaborationEvents
         return result;
     }
 
-    /// <summary>Bodies of the comments added by <paramref name="entries"/>, from the change tracker or, when not tracked, one query.</summary>
-    private static async Task<IReadOnlyDictionary<Guid, string>> AddedCommentsAsync(
+    /// <summary>
+    /// Current bodies of the ticket comments added and the doc comments added or edited by <paramref name="entries"/>, from the
+    /// change tracker or, when not tracked, one query.
+    /// </summary>
+    private static async Task<IReadOnlyDictionary<Guid, string>> CommentBodiesAsync(
         ITicketingDbContext db, IReadOnlyList<ActivityEntry> entries, CancellationToken cancellationToken)
     {
         var ids = entries
-            .Where(e => e.EntityType == ActivityEntityType.Ticket && e.Action == AddComment.Action)
+            .Where(e => (e.EntityType == ActivityEntityType.Ticket && e.Action == AddComment.Action)
+                || (e.EntityType == ActivityEntityType.Doc && e.Action is AddDocComment.Action or UpdateDocComment.Action))
             .Select(e => Parse<CommentBody>(e.NewValue)?.CommentId)
             .OfType<Guid>()
             .ToHashSet();
@@ -179,6 +203,8 @@ public static class CollaborationEvents
     private sealed record CreatedTicket(Guid ReporterId, Guid? AssigneeId, string? Description);
 
     private sealed record CommentBody(Guid CommentId, string? Body);
+
+    private sealed record CreatedDoc(DocKind Kind);
 
     private sealed record ItemAssignment(string TestCaseKey, Guid? From, Guid? To);
 }

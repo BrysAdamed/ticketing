@@ -54,6 +54,8 @@ public sealed class TicketingDbContext(DbContextOptions<TicketingDbContext> opti
 
     public DbSet<TicketWatcher> TicketWatchers => Set<TicketWatcher>();
 
+    public DbSet<DocWatcher> DocWatchers => Set<DocWatcher>();
+
     public DbSet<Notification> Notifications => Set<Notification>();
 
     public DbSet<NotificationPreferences> NotificationPreferences => Set<NotificationPreferences>();

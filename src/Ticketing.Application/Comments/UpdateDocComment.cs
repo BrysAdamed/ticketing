@@ -1,13 +1,14 @@
 using System.Text.Json.Serialization;
 using Ticketing.Application.Abstractions;
 using Ticketing.Application.Access;
+using Ticketing.Application.Collaboration;
 using Ticketing.Application.Common;
 using Ticketing.Domain.Activity;
 using Ticketing.Domain.Comments;
 
 namespace Ticketing.Application.Comments;
 
-/// <summary>The author edits their doc comment; the previous body is kept in the doc's activity (spec 6.9).</summary>
+/// <summary>The author edits their doc comment; the previous body is kept in the doc's activity (spec 6.9). Newly added mentions notify (D-163).</summary>
 public static class UpdateDocComment
 {
     public const string Action = "doc.comment.edited";
@@ -17,14 +18,16 @@ public static class UpdateDocComment
         public void Validate(Validator validator) => validator.Required("body", Body, Comment.BodyMaxLength);
     }
 
-    public sealed class Handler(ITicketingDbContext db, IProjectAccess access, ICurrentUser currentUser, IClock clock, IActivityLog activity)
-        : IHandler<Command, DocCommentDto>
+    public sealed class Handler(ITicketingDbContext db, IProjectAccess access, ICurrentUser currentUser, IClock clock, IActivityLog activity,
+        MentionNormalizer mentions) : IHandler<Command, DocCommentDto>
     {
         public async Task<DocCommentDto> HandleAsync(Command command, CancellationToken cancellationToken)
         {
             command.EnsureValid();
             var (comment, doc) = await DocCommentLookup.WriteAsync(db, access, command.CommentId, cancellationToken);
-            var previous = comment.EditBy(currentUser.Id, command.Body, clock.Now);
+            comment.EnsureEditableBy(currentUser.Id);
+            var body = await mentions.NormalizeAsync(doc.Grant, comment.Body, command.Body, "body", cancellationToken);
+            var previous = comment.EditBy(currentUser.Id, body!, clock.Now);
             activity.RecordChange(
                 ActivityEntityType.Doc, doc.Id, doc.ProjectId, Action, UpdateComment.Field,
                 new { commentId = comment.Id, body = (string?)previous }, new { commentId = comment.Id, body = (string?)null });

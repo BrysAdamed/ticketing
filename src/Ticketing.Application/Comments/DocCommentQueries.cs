@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Ticketing.Application.Abstractions;
 using Ticketing.Application.Access;
+using Ticketing.Application.Collaboration;
 using Ticketing.Application.Common;
 using Ticketing.Application.Docs;
 using Ticketing.Application.Tickets;
@@ -9,7 +10,8 @@ using Ticketing.Domain.Docs;
 
 namespace Ticketing.Application.Comments;
 
-/// <summary>A comment in the footer thread of a page or diagram (docs refinement D12). Deleted comments have an empty body.</summary>
+/// <summary>A comment in the footer thread of a page or diagram (docs refinement D12). Deleted comments have an empty body;
+/// <see cref="Mentions"/> are the mentioned users who are active and can read the project (D-96, D-163).</summary>
 public sealed record DocCommentDto(
     Guid Id,
     string DocKey,
@@ -20,7 +22,8 @@ public sealed record DocCommentDto(
     bool Deleted,
     DateTimeOffset? DeletedAt,
     bool CanEdit,
-    bool CanDelete);
+    bool CanDelete,
+    IReadOnlyList<UserRefDto> Mentions);
 
 public static class DocCommentQueries
 {
@@ -36,14 +39,16 @@ public static class DocCommentQueries
         var rows = await Rows(db, comments)
             .OrderBy(r => r.Comment.CreatedAt).ThenBy(r => r.Comment.Id)
             .ToCursorPageAsync(page, r => new CommentCursor(r.Comment.CreatedAt, r.Comment.Id), cancellationToken);
-        return rows.Map(r => ToDto(r, currentUser, doc));
+        var mentioned = await MentionedUsers.LoadAsync(db, doc.ProjectId, rows.Items.Select(r => r.Comment.Body), cancellationToken);
+        return rows.Map(r => ToDto(r, currentUser, doc, mentioned));
     }
 
     public static async Task<DocCommentDto> OneAsync(
         ITicketingDbContext db, ICurrentUser currentUser, DocTarget doc, Guid commentId, CancellationToken cancellationToken)
     {
         var row = await Rows(db, db.Comments.Where(c => c.Id == commentId)).SingleAsync(cancellationToken);
-        return ToDto(row, currentUser, doc);
+        var mentioned = await MentionedUsers.LoadAsync(db, doc.ProjectId, [row.Comment.Body], cancellationToken);
+        return ToDto(row, currentUser, doc, mentioned);
     }
 
     /// <summary>Only pages and diagrams have a comment thread.</summary>
@@ -58,13 +63,14 @@ public static class DocCommentQueries
         join u in db.Users on c.AuthorId equals u.Id
         select new Row { Comment = c, Author = new UserRefDto(u.Id, u.Email, u.DisplayName, u.IsActive) };
 
-    private static DocCommentDto ToDto(Row row, ICurrentUser currentUser, DocTarget doc)
+    private static DocCommentDto ToDto(Row row, ICurrentUser currentUser, DocTarget doc, IReadOnlyDictionary<Guid, UserRefDto> mentioned)
     {
         var c = row.Comment;
         var canWrite = DocQueries.CanWrite(doc.Grant, currentUser) && !c.IsDeleted;
         var isAuthor = c.AuthorId == currentUser.Id;
         return new DocCommentDto(
-            c.Id, doc.Key, row.Author, c.Body, c.CreatedAt, c.EditedAt, c.IsDeleted, c.DeletedAt, canWrite && isAuthor, canWrite && (isAuthor || doc.Grant.IsOwner));
+            c.Id, doc.Key, row.Author, c.Body, c.CreatedAt, c.EditedAt, c.IsDeleted, c.DeletedAt, canWrite && isAuthor, canWrite && (isAuthor || doc.Grant.IsOwner),
+            MentionedUsers.In(c.Body, mentioned));
     }
 
     private sealed class Row

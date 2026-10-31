@@ -760,6 +760,8 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
 
 ### D-117 Doc comments share the comments table, notify the doc's participants and live in a footer section (TKT-21)
 
+> Since D-162 (TKT-107) a new doc comment notifies the doc's watchers instead of its participants.
+
 - Question: page comments (docs refinement D12) need storage, rules, notifications and a place in the reader. A separate `doc_comments` table, or the ticket comments generalized? Whom does a new doc comment notify while watching docs is out of scope?
 - Decision:
   - `comments.ticket_id` becomes nullable and `comments.doc_node_id` is added with `ck_comments_owner` (`num_nonnulls(ticket_id, doc_node_id) = 1`), like attachments (D-108). The `Comment` entity and its rules (edit own, delete own or as Owner, placeholder, previous body to activity) are shared; `Comment.CreateForDoc` makes a doc comment. Ticket lookups and lists filter on `ticket_id`, doc ones on `doc_node_id`, so `/comments/{id}` never reaches a doc comment and `/docs/comments/{id}` never a ticket comment (404 `comment.notFound`). Doc comments get their own `DocCommentDto` (`docKey`, no `mentions`) and use cases (`AddDocComment`, `ListDocComments`, `UpdateDocComment`, `DeleteDocComment`).
@@ -1293,7 +1295,6 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
   - Web: Profile → Notifications, one switch per kind ("About you", "On things you follow") and a muted projects list with a project picker; every change saves at once, optimistically, rolling back only the failed change.
 - Rejected: replacing the whole preference set with `PUT` (two tabs or an agent would overwrite each other, and muted projects the user can no longer see would be dropped); join tables per kind and project (two tables and more queries per save for a handful of values per user); hiding existing notifications when a kind or project is muted (read-time filtering costs every list and count query and surprises users who mute to stop new noise); letting a project mute silence mentions and assignments (hides work assigned to you).
 - Consequence: each save that produces notification candidates runs one more indexed lookup (`notification_preferences` by primary key). Achievements: none fits; muting is housekeeping, not something to encourage.
-
 ### D-161 Unlock toasts wait for an open toast, the palette keeps the chosen item; e2e Chromium runs its network service in-process, signs users in outside the browser and has 60 s / 10 s timeouts (TKT-103)
 
 - Question: full parallel e2e runs failed in a different handful of specs each time. What did the specs or the app do wrong, and what is load the suite has to live with?
@@ -1302,7 +1303,29 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
 - Rejected: local retries (they hide real races such as the toast one); fewer workers (slower for everyone, and the stalls come from outside the run); `test.slow()` on the three specs named in the ticket (the hangs hit whichever spec starts a worker).
 - Rationale: the app fix removes a real loss of the Undo action; the in-process network service removes the hang that no timeout can absorb; the longer budgets only absorb environmental stalls.
 
-### D-162 A plain click on a backlog row opens the peek and leaves the selection alone (TKT-104)
+### D-162 Doc watchers replace the participant rule for doc comments; the old participants are backfilled (TKT-107)
+
+- Question: D-117 notified a doc's creator and the authors of its live comments about a new comment, because watching docs did not exist. TKT-47 adds watching (I-85). Who watches a doc, what happens to people the old rule notified, and what does watching a doc notify about?
+- Decision:
+  - `doc_watchers (doc_node_id, user_id, created_at)`, primary key (doc, user), index (user, doc), cascade with the doc, restrict with the user, like `ticket_watchers` (D-93). Only pages and diagrams can be watched; a folder answers 409 `doc.kind.unsupported`. Rows stay when the user loses access; readers (watcher list, notifications) re-check it.
+  - Automatic watchers, written by the collaboration projector from activity: the creator on `doc.created` (duplicates included) and the author on `doc.comment.added`; newly mentioned users follow with the mention slices (TKT-108, TKT-109). Docs created in the same save get tracked rows; existing docs get one `INSERT … ON CONFLICT DO NOTHING` (D-159), so a concurrent explicit watch never fails the write.
+  - `DocCommentAdded` notifies the doc's watchers (not the actor, only readers) with `Commented`; D-160 preferences apply unchanged (a muted project silences it, `Commented` can be muted). Deleting your comment no longer takes you out; unwatching does.
+  - The migration backfills the old participants (every page and diagram creator, every author of a comment that is not deleted), so nobody stops hearing about a thread when it ships.
+  - API: `GET /docs/{key}/watchers`, `PUT` / `DELETE /docs/{key}/watchers/me`, MCP `watch_doc` / `unwatch_doc`, and `DocDto.watchers { count, watching, users }` (null for folders). Read access and write-scoped credentials, like ticket watching.
+  - Web: the Watch control of the ticket view moved to `core/watchers` (`tk-watch-control`, test ids by prefix) and sits in the doc page bar; `W` toggles it, optimistically with rollback, and a background refresh during a toggle keeps the optimistic list.
+- Rejected: notifying watchers about every published version in this slice (a new notification kind, noisy for living pages; tracked as a follow-up ticket); keeping the participant rule next to watchers (two overlapping audiences, and no way out of a thread but deleting your comment); watching folders (a folder has no thread, and following a subtree is a different feature).
+- Achievements: none for watching (housekeeping, like D-160).
+
+### D-163 Doc comments take @mentions with the ticket comment rules (TKT-108)
+
+- Question: D-96 limited mentions to ticket descriptions and comments. Doc comments are discussions too (I-86). Which rules carry over, and how does an edit find newly added mentions when `doc.comment.edited` keeps only the previous body (D-117)?
+- Decision:
+  - `AddDocComment` and `UpdateDocComment` run `MentionNormalizer` like the ticket comment handlers: `@email` of a reader becomes the stored token, new mentions get the current name, and a newly added mention of a user who is inactive, unknown or cannot read the project fails with 400 `mention.invalid` (field `body`). `DocCommentDto.mentions` lists the mentioned active readers, one query per page of comments.
+  - Effects through the projector: `DocCommentAdded` carries the body and the new `DocCommentEdited` carries the previous body from the activity entry and the current body from the tracked comment, so the activity payload stays as D-117 defined it (the current body is not copied into the history). `MentionCandidate` takes any collaboration event; a doc mention makes the user a doc watcher and notifies them with `Mentioned` ("mentioned you in a comment") instead of `Commented`. D-160 applies: `Mentioned` is direct and survives a project mute.
+  - Web: the doc comment composer and edit box get the `@` people picker (`GET /users?projectKey=&access=read`), and comments render chips.
+- Rationale: one set of mention rules for every comment thread; reading the new body from the tracker costs no query, because the handler has just loaded and changed the comment.
+
+### D-164 A plain click on a backlog row opens the peek and leaves the selection alone (TKT-104)
 
 - Question: a plain click on a backlog row replaced the selection with nothing before opening the peek, so a missed checkbox threw away a multi-row selection. Should opening a ticket change the selection at all?
 - Decision: no. A plain click only moves the keyboard focus to the row and opens the peek; the selection and its Shift anchor stay as they were. The checkbox, `X` and Ctrl/⌘+click toggle, Shift+click extends the range, `Esc` (after the peek) or the bulk bar's Clear empties it. The board already behaved this way (a plain card click only focuses and peeks). Because the focused row may now sit outside the selection, keyboard shortcuts keep the targets rule of D-78 / TKT-105: they act on the selection when the focused row is in it, otherwise on the focused row; the bulk bar always acts on the selection.

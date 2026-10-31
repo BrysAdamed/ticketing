@@ -43,7 +43,7 @@ public sealed class DocTools
         + "for example 'API → DB (SQL)', which is usually all you need to read; and snapshotUrl, its SVG picture, null until a person opened "
         + "it in the web app); folders list their children. Also: breadcrumb, editors (others with an unpublished draft changed in the last 10 minutes), permissions, "
         + "references (tickets with key, title, type and status, and docs, that the content mentions), embeds (diagrams embedded with "
-        + "![caption](KEY), Mermaid with its source) and backlinks (docs whose content links here: { total, items }). Tickets and docs you "
+        + "![caption](KEY), Mermaid with its source) backlinks (docs whose content links here: { total, items }) and, for pages and diagrams, watchers ({ count, watching, users }). Tickets and docs you "
         + "cannot read are left out. Use version as baseVersion for update_doc. With version (a number from get_doc_history), content is that older version's "
         + "and atVersion describes it (number, title, changeNote, author, createdAt, restoredFrom), and references and embeds are that version's; every other field (backlinks included) is the doc now.")]
     public static Task<DocDto> GetDoc(

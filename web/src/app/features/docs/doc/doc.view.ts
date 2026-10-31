@@ -17,6 +17,7 @@ import { ActivatedRoute, NavigationEnd, Router, RouterLink } from '@angular/rout
 import { provideIcons } from '@ng-icons/core';
 import { tablerDownload, tablerFileTypePdf, tablerHistory } from '@ng-icons/tabler-icons';
 import { filter, map } from 'rxjs';
+import { AuthService } from '@core/auth/auth.service';
 import { docsHomeUrl, docSlug, docUrl } from '@core/docs/doc-links';
 import { Doc, DocKind } from '@core/docs/doc.models';
 import { DocExports } from '@core/docs/doc-export';
@@ -29,6 +30,7 @@ import { PageTitleStrategy } from '@core/layout/page-title';
 import { ToastService } from '@core/notify/toast.service';
 import { ViewDefinition } from '@core/views/view-definition';
 import { ViewRegistry } from '@core/views/view-registry';
+import { WatchControlComponent } from '@core/watchers/watch-control.component';
 import { RelativeTimePipe } from '@shared/pipes/relative-time.pipe';
 import { AvatarComponent } from '@shared/ui/domain/avatar.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
@@ -64,6 +66,7 @@ const PRESENCE_REFRESH_MS = 30_000;
     EmptyStateComponent,
     KbdComponent,
     RelativeTimePipe,
+    WatchControlComponent,
   ],
   providers: [DocStore, DocBarSlot],
   viewProviders: [
@@ -118,6 +121,15 @@ const PRESENCE_REFRESH_MS = 30_000;
           <div class="right">
             @if (barSlot.actions(); as actions) {
               <ng-container *ngTemplateOutlet="actions" />
+            }
+            @if (doc.watchers; as watchers) {
+              <tk-watch-control
+                testIdPrefix="doc"
+                [noun]="doc.kind === 'Diagram' ? 'diagram' : 'page'"
+                [watchers]="watchers"
+                [meId]="meId()"
+                (toggled)="store.toggleWatch()"
+              />
             }
             <button
               type="button"
@@ -245,6 +257,8 @@ export class DocView {
   private readonly shortcuts = inject(ShortcutService);
   private readonly recentDocs = inject(RecentDocs);
   protected readonly exports = inject(DocExports);
+  private readonly auth = inject(AuthService);
+  protected readonly meId = computed(() => this.auth.currentUser()?.id ?? null);
 
   readonly projectKey = input.required<string>();
   readonly docKey = input.required<string>();
@@ -322,6 +336,14 @@ export class DocView {
         handler: () => {
           if (this.historyOpen()) this.closeHistory();
           else if (!this.editing()) this.openHistory();
+        },
+      },
+      {
+        keys: 'w',
+        description: 'Watch / unwatch the doc',
+        section: 'Docs',
+        handler: () => {
+          if (!this.editing() && this.store.doc()?.watchers) void this.store.toggleWatch();
         },
       },
       {

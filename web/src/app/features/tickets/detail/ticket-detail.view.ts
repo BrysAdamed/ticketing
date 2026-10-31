@@ -27,6 +27,7 @@ import { ViewTourAccess } from '@core/onboarding/view-tour-access';
 import { AuthService } from '@core/auth/auth.service';
 import { ToastService } from '@core/notify/toast.service';
 import { Shortcut, ShortcutService } from '@core/shortcuts/shortcut.service';
+import { WatchControlComponent } from '@core/watchers/watch-control.component';
 import { ProjectPeople } from '@core/tickets/project-people';
 import { TicketAttachments } from '@core/tickets/ticket-attachments';
 import { TicketHeaderHost } from '@core/tickets/ticket-header-actions';
@@ -49,7 +50,6 @@ import { TicketHeaderActionsHostComponent } from './ticket-header-actions-host.c
 import { TicketSectionsHostComponent } from './ticket-sections-host.component';
 import { TicketDetailStore } from './ticket-detail.store';
 import { TicketDescriptionComponent, TicketTitleComponent } from './ticket-text.component';
-import { TicketWatchComponent } from './ticket-watch.component';
 
 export type TicketPresentation = 'page' | 'peek';
 
@@ -76,7 +76,7 @@ export type TicketPresentation = 'page' | 'peek';
     TicketSectionsHostComponent,
     TicketTitleComponent,
     TicketDescriptionComponent,
-    TicketWatchComponent,
+    WatchControlComponent,
     TourAnchorDirective,
   ],
   providers: [TicketDetailStore, TicketHeaderHost],

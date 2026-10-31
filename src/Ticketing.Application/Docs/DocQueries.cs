@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Ticketing.Application.Abstractions;
 using Ticketing.Application.Access;
 using Ticketing.Application.Tickets;
+using Ticketing.Application.Watchers;
 using Ticketing.Domain.Common;
 using Ticketing.Domain.Docs;
 using Ticketing.Domain.Tokens;
@@ -136,6 +137,7 @@ public static class DocQueries
         {
             Outline = row.DiagramFormat == DiagramFormat.Canvas ? row.Outline ?? string.Empty : null,
             SnapshotUrl = row.HasSnapshot ? SnapshotUrl(key, row.CurrentVersion) : null,
+            Watchers = row.Kind == DocKind.Folder ? null : await DocWatcherQueries.LoadAsync(db, currentUser, target, cancellationToken),
         };
     }
 

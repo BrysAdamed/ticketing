@@ -41,6 +41,7 @@ export const MENTION_AT_START = new RegExp(`^${TOKEN_SOURCE}`);
 
 const NAME_FORBIDDEN = /[[\]()\r\n]/g;
 const OPENING_FENCE = /^ {0,3}(`{3,}|~{3,})/;
+const LIST_ITEM = /^ {0,3}([-+*]|\d{1,9}[.)])(\s|$)/;
 const QUERY_STOP = /[\r\n[\]()`]/;
 const BEFORE_AT = /[\s([{"'>*_~]/;
 const MAX_QUERY = 50;
@@ -76,35 +77,81 @@ export function mentionedUserIds(markdown: string | null | undefined): string[] 
   return [...new Set(parseMentions(markdown).map((t) => t.userId))];
 }
 
-/// [start, end) ranges of fenced code blocks (found line by line first) and of inline code spans in
-/// the text between them. An unclosed fence runs to the end; an unclosed backtick run is plain text.
+/// [start, end) ranges of fenced and indented code blocks (found line by line first) and of inline
+/// code spans in the text between them. An unclosed fence runs to the end; an unclosed backtick run is
+/// plain text. An indented block starts after a blank line, the start of the text or a closing fence,
+/// and never inside a list (D-159).
 export function codeRanges(markdown: string): [number, number][] {
   const ranges: [number, number][] = [];
   let textStart = 0;
   let fence: { char: string; length: number; start: number } | null = null;
+  let indented: { start: number; end: number } | null = null;
+  let afterBlank = true;
+  let afterFence = false;
+  let inList = false;
   let offset = 0;
   for (const line of markdown.split('\n')) {
     const lineEnd = offset + line.length;
+    const next = Math.min(lineEnd + 1, markdown.length);
     const content = line.endsWith('\r') ? line.slice(0, -1) : line;
+    const blank = content.trim() === '';
+    const start = offset;
+    offset = lineEnd + 1;
     if (fence) {
       const closing = new RegExp(`^ {0,3}${fence.char}{${fence.length},}[ \\t]*$`);
       if (closing.test(content)) {
         ranges.push([fence.start, lineEnd]);
         fence = null;
         textStart = lineEnd + 1;
+        afterFence = true;
       }
-    } else {
-      const opening = OPENING_FENCE.exec(content);
-      if (opening) {
-        ranges.push(...codeSpans(markdown, textStart, offset));
-        fence = { char: opening[1][0], length: opening[1].length, start: offset };
-      }
+      continue;
     }
-    offset = lineEnd + 1;
+    if (indented) {
+      if (blank || indentOf(content) >= 4) {
+        if (!blank) indented.end = next;
+        afterBlank = blank;
+        continue;
+      }
+      ranges.push([indented.start, indented.end]);
+      textStart = indented.end;
+      indented = null;
+    }
+    const opening = OPENING_FENCE.exec(content);
+    if (opening) {
+      ranges.push(...codeSpans(markdown, textStart, start));
+      fence = { char: opening[1][0], length: opening[1].length, start };
+      inList = inList && !afterBlank;
+    } else if (!blank && indentOf(content) >= 4 && (afterBlank || afterFence) && !inList) {
+      ranges.push(...codeSpans(markdown, textStart, start));
+      indented = { start, end: next };
+    } else if (!blank && indentOf(content) < 4) {
+      inList = LIST_ITEM.test(content) || (inList && !afterBlank);
+    }
+    afterBlank = blank;
+    afterFence = false;
   }
-  if (fence) ranges.push([fence.start, markdown.length]);
-  else ranges.push(...codeSpans(markdown, textStart, markdown.length));
+  if (fence) {
+    ranges.push([fence.start, markdown.length]);
+    return ranges;
+  }
+  if (indented) {
+    ranges.push([indented.start, indented.end]);
+    textStart = indented.end;
+  }
+  ranges.push(...codeSpans(markdown, textStart, markdown.length));
   return ranges;
+}
+
+/// Columns of leading whitespace, a tab advancing to the next multiple of four.
+function indentOf(line: string): number {
+  let columns = 0;
+  for (const char of line) {
+    if (char === ' ') columns++;
+    else if (char === '\t') columns += 4 - (columns % 4);
+    else break;
+  }
+  return columns;
 }
 
 function codeSpans(text: string, from: number, to: number): [number, number][] {

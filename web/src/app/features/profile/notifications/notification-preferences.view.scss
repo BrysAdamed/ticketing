@@ -1,0 +1,121 @@
+.tk-page-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tk-space-4);
+  max-width: 640px;
+}
+
+.card {
+  padding: 20px 24px 24px;
+  background: var(--tk-surface);
+  border: 1px solid var(--tk-border);
+  border-radius: var(--tk-radius-lg);
+
+  > header {
+    display: flex;
+    align-items: center;
+    gap: var(--tk-space-3);
+    margin-bottom: var(--tk-space-4);
+
+    h2 {
+      margin: 0;
+      font-size: var(--tk-text-lg);
+      line-height: var(--tk-leading-lg);
+      font-weight: var(--tk-weight-semibold);
+    }
+
+    p {
+      margin: 0;
+      font-size: var(--tk-text-sm);
+    }
+
+    .fill {
+      flex: 1;
+    }
+  }
+}
+
+.icon-tile {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--tk-bg-subtle);
+  color: var(--tk-text-muted);
+  flex: none;
+}
+
+.group-title {
+  margin: var(--tk-space-4) 0 var(--tk-space-1);
+  font-size: var(--tk-text-xs);
+  font-weight: var(--tk-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--tk-text-muted);
+
+  &:first-of-type {
+    margin-top: 0;
+  }
+}
+
+.kinds,
+.projects {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  > li + li {
+    border-top: 1px solid var(--tk-border-subtle);
+  }
+}
+
+.kind {
+  display: flex;
+  align-items: center;
+  gap: var(--tk-space-4);
+  padding: 10px 0;
+
+  .text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--tk-space-0-5);
+    min-width: 0;
+  }
+
+  .label {
+    font-weight: var(--tk-weight-medium);
+  }
+
+  .description {
+    font-size: var(--tk-text-sm);
+  }
+}
+
+.projects > li {
+  display: flex;
+  align-items: center;
+  gap: var(--tk-space-3);
+  padding: var(--tk-space-1-5) 0;
+
+  .key {
+    min-width: 56px;
+    font-family: var(--tk-font-mono);
+    font-size: var(--tk-text-sm);
+    color: var(--tk-text-muted);
+  }
+
+  .name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.none {
+  margin: 0;
+  font-size: var(--tk-text-sm);
+}

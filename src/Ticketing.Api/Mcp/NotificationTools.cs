@@ -4,6 +4,7 @@ using ModelContextProtocol.Server;
 using Ticketing.Api.Auth;
 using Ticketing.Application.Common;
 using Ticketing.Application.Notifications;
+using Ticketing.Domain.Collaboration;
 
 namespace Ticketing.Api.Mcp;
 
@@ -35,4 +36,28 @@ public sealed class NotificationTools
         [Description("Mark every notification read.")] bool? all = null,
         CancellationToken cancellationToken = default) =>
         handler.HandleAsync(new MarkNotificationsRead.Command(ids, all ?? false), cancellationToken);
+
+    private const string PreferencesShape = "Returns { kinds: [{ kind, muted, direct }], mutedProjects: [{ id, key, name }], updatedAt }; "
+        + "direct kinds (Assigned, Mentioned, RegressionItemAssigned) are addressed to you and still notify in muted projects.";
+
+    [McpServerTool(Name = "get_notification_preferences", ReadOnly = true, Idempotent = true, Title = "Get notification preferences")]
+    [Description("Your notification preferences: which kinds and projects you muted. " + PreferencesShape)]
+    public static Task<NotificationPreferencesDto> GetNotificationPreferences(
+        GetNotificationPreferences.Handler handler,
+        CancellationToken cancellationToken = default) =>
+        handler.HandleAsync(new GetNotificationPreferences.Query(), cancellationToken);
+
+    [Authorize(Policy = AuthPolicies.CanWrite)]
+    [McpServerTool(Name = "update_notification_preferences", Destructive = false, Idempotent = true, Title = "Update notification preferences")]
+    [Description("Mutes or unmutes notification kinds and projects for you. Kinds: Assigned, Mentioned, Commented, StatusChanged, "
+        + "PriorityRaised, Moved, Deleted, RegressionItemAssigned. A muted kind never notifies; a muted project stops the other kinds "
+        + "there. Omitted lists change nothing. " + PreferencesShape)]
+    public static Task<NotificationPreferencesDto> UpdateNotificationPreferences(
+        UpdateNotificationPreferences.Handler handler,
+        [Description("Kinds to mute.")] NotificationKind[]? muteKinds = null,
+        [Description("Kinds to unmute.")] NotificationKind[]? unmuteKinds = null,
+        [Description("Project keys or ids to mute (1..50), for example [\"WEB\"].")] string[]? muteProjects = null,
+        [Description("Project keys or ids to unmute (1..50).")] string[]? unmuteProjects = null,
+        CancellationToken cancellationToken = default) =>
+        handler.HandleAsync(new UpdateNotificationPreferences.Command(muteKinds, unmuteKinds, muteProjects, unmuteProjects), cancellationToken);
 }

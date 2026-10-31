@@ -4,6 +4,7 @@ import { featureGuard } from '@core/flags/feature.guard';
 import { viewRoute } from '@core/views/view-registry';
 import {
   ACCESS_TOKENS_VIEW,
+  NOTIFICATION_PREFERENCES_VIEW,
   PROFILE_ACHIEVEMENTS_VIEW,
   PROFILE_GENERAL_VIEW,
   PROFILE_LAYOUT_VIEW,
@@ -14,6 +15,11 @@ export default [
     path: '',
     children: [
       viewRoute(PROFILE_GENERAL_VIEW, { path: '' }),
+      viewRoute(NOTIFICATION_PREFERENCES_VIEW, {
+        path: 'notifications',
+        title: 'Notifications',
+        data: { breadcrumb: 'Notifications' },
+      }),
       viewRoute(ACCESS_TOKENS_VIEW, {
         path: 'tokens',
         title: 'Access tokens',

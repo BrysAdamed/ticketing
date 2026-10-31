@@ -8,6 +8,7 @@ import {
   ElementRef,
   inject,
 } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { AbsoluteTimePipe, RelativeTimePipe } from '@shared/pipes/relative-time.pipe';
 import { AvatarComponent } from '@shared/ui/domain/avatar.component';
 import { ProjectTileComponent } from '@shared/ui/domain/project-tile.component';
@@ -27,6 +28,7 @@ import { NotificationFilter, UserNotification } from './notification.models';
   selector: 'tk-notifications-panel',
   imports: [
     CdkTrapFocus,
+    RouterLink,
     AbsoluteTimePipe,
     RelativeTimePipe,
     AvatarComponent,
@@ -65,6 +67,16 @@ import { NotificationFilter, UserNotification } from './notification.models';
         >
           <tk-icon name="tablerChecks" [size]="14" />Mark all read
         </button>
+        <a
+          class="settings"
+          routerLink="/profile/notifications"
+          aria-label="Notification settings"
+          title="Notification settings"
+          data-testid="notifications-settings"
+          (click)="center.close()"
+        >
+          <tk-icon name="tablerSettings" [size]="14" />
+        </a>
       </div>
       <div class="body">
         @switch (center.status()) {
@@ -196,7 +208,8 @@ import { NotificationFilter, UserNotification } from './notification.models';
     }
     .mark-all,
     .load-more,
-    .link {
+    .link,
+    .settings {
       height: 24px;
       display: inline-flex;
       align-items: center;
@@ -211,9 +224,20 @@ import { NotificationFilter, UserNotification } from './notification.models';
     }
     .mark-all:hover:not(:disabled),
     .load-more:hover:not(:disabled),
-    .link:hover {
+    .link:hover,
+    .settings:hover {
       background: var(--tk-bg-hover);
       color: var(--tk-text);
+    }
+    .settings {
+      width: 24px;
+      justify-content: center;
+      padding: 0;
+      text-decoration: none;
+    }
+    .settings:focus-visible {
+      outline: 2px solid var(--tk-focus);
+      outline-offset: 1px;
     }
     button:disabled {
       color: var(--tk-text-disabled);

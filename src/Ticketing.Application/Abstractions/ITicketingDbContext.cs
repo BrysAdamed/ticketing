@@ -57,6 +57,8 @@ public interface ITicketingDbContext
 
     DbSet<Notification> Notifications { get; }
 
+    DbSet<NotificationPreferences> NotificationPreferences { get; }
+
     DbSet<Attachment> Attachments { get; }
 
     DbSet<TestCase> TestCases { get; }

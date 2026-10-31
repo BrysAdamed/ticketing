@@ -28,3 +28,13 @@ export const PROFILE_ACHIEVEMENTS_VIEW = defineView({
       import('./achievements/profile-achievements.view').then((m) => m.ProfileAchievementsView),
   },
 });
+
+export const NOTIFICATION_PREFERENCES_VIEW = defineView({
+  viewId: 'profile.notifications',
+  variants: {
+    default: () =>
+      import('./notifications/notification-preferences.view').then(
+        (m) => m.NotificationPreferencesView,
+      ),
+  },
+});

@@ -723,7 +723,7 @@ stateDiagram-v2
 
 ## 12. Notifications
 
-Spec [§6.16](../product/01-refined-spec.md#616-in-app-notifications-i-30-d-94), D-94. Notifications are derived in the same save as watchers (section 11): after `WatchingRules`, `NotificationRules` turns the events into candidates (recipient, kind), the projector drops the actor and anyone who cannot read the project, renders the summary and merges each candidate into an open notification or adds a new one. Every query is batched per save.
+Spec [§6.16](../product/01-refined-spec.md#616-in-app-notifications-i-30-d-94), D-94. Notifications are derived in the same save as watchers (section 11): after `WatchingRules`, `NotificationRules` turns the events into candidates (recipient, kind), the projector drops the actor, what the recipient muted (D-160: a muted kind everywhere; a muted project except mentions and assignments) and anyone who cannot read the project, renders the summary and merges each candidate into an open notification or adds a new one. Every query is batched per save.
 
 ```mermaid
 sequenceDiagram
@@ -734,6 +734,7 @@ sequenceDiagram
     P->>P: MentionRules, WatchingRules, then NotificationRules
     Note over P: newly mentioned users: Mentioned (instead of Commented for that comment)<br/>assignee of a new or reassigned ticket: Assigned<br/>assignee of a regression item: RegressionItemAssigned<br/>watchers on comment, status, priority raised to High/Highest,<br/>move (incl. board archive/delete), delete
     P->>DB: watchers of the tickets (stored + added in this save)
+    P->>DB: notification preferences of the recipients (muted kinds and projects)
     P->>DB: who of the recipients can read the project (active; Admin, public or member)
     P->>DB: board and session names for summaries
     P->>DB: unread notifications of these recipients and subjects created in the last 5 minutes

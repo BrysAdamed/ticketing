@@ -46,6 +46,11 @@ async function unreadCount(api: Api): Promise<number> {
     return (await api.get<{ count: number }>('/me/notifications/unread-count')).count;
 }
 
+async function mutedKinds(api: Api): Promise<string[]> {
+    const preferences = await api.get<{ kinds: { kind: string; muted: boolean }[] }>('/me/notification-preferences');
+    return preferences.kinds.filter((k) => k.muted).map((k) => k.kind);
+}
+
 test.describe('in-app notifications', () => {
     test('a watcher sees collapsed changes in the bell, opens the ticket from the panel and marks all read', async ({
         browser,
@@ -119,6 +124,56 @@ test.describe('in-app notifications', () => {
         await member.page.keyboard.press('Escape');
         await expect(bell.panel).toBeHidden();
         await expect(bell.bell).toBeFocused();
+
+        await member.api.dispose();
+        await member.context.close();
+    });
+
+    test('a user mutes comments and a project from the bell settings; assignments still arrive', async ({
+        browser,
+        api,
+    }, testInfo) => {
+        // Arrange
+        const projectKey = (await api.createProject({ visibility: 'Public' })).key;
+        const { key } = await api.post<TicketSummary>(`/projects/${projectKey}/tickets`, {
+            title: 'Quiet please',
+            type: 'UserStory',
+        });
+        const member = await signInNewUser(browser, api, testInfo);
+        await member.api.put(`/tickets/${key}/watchers/me`);
+        const page = member.page;
+        const bell = new NotificationsPanel(page);
+
+        // Act: open the settings from the bell and switch comments off
+        await bell.bell.click();
+        await page.getByTestId('notifications-settings').click();
+        const comments = page.getByTestId('notification-kind-Commented').getByRole('switch');
+        await expect(comments).toBeChecked();
+        await comments.click();
+
+        // Assert
+        await expect(bell.panel).toBeHidden();
+        await expect(comments).not.toBeChecked();
+        await expect.poll(() => mutedKinds(member.api)).toEqual(['Commented']);
+
+        // Act: mute the project through the picker
+        await page.getByTestId('notification-mute-project').click();
+        await page.getByPlaceholder('Find a project…').fill(projectKey);
+        await page.keyboard.press('Enter');
+
+        // Assert
+        await expect(page.getByTestId(`notification-muted-${projectKey}`)).toBeVisible();
+
+        // Act: activity in the muted project, then an assignment there
+        await api.post(`/tickets/${key}/comments`, { body: 'Nobody hears this.' });
+        await api.patch(`/tickets/${key}`, { status: 'InProgress' });
+        const me = await member.api.get<{ email: string }>('/me');
+        await api.patch(`/tickets/${key}`, { assignee: me.email });
+
+        // Assert: only the assignment notifies
+        await expect.poll(() => unreadCount(member.api)).toBe(1);
+        const [only] = await notifications(member.api);
+        expect(only.kind).toBe('Assigned');
 
         await member.api.dispose();
         await member.context.close();

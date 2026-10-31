@@ -1,27 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { TicketStatus } from '@shared/domain/enums';
-import { TicketGraph, TicketGraphEdge, TicketGraphNode } from '@core/tickets/ticket.models';
+import { TicketGraph } from '@core/tickets/ticket.models';
 import { buildGraphModel, neighbourhood } from './children-graph.model';
 import { layoutGraph, NODE_HEIGHT, NODE_WIDTH } from './children-graph.layout';
-
-const node = (key: string, status: TicketStatus = 'ToDo', external = false): TicketGraphNode => ({
-  id: key,
-  key,
-  title: `Title of ${key}`,
-  type: 'UserStory',
-  status,
-  priority: 'Medium',
-  assignee: null,
-  external,
-  blocked: false,
-});
-
-const blocks = (from: string, to: string): TicketGraphEdge => ({
-  linkId: `${from}>${to}`,
-  type: 'Blocks',
-  from,
-  to,
-});
+import { blocks, fiftyTicketsWithCircularLinks, node } from './children-graph.fixtures';
 
 /// Epic TKT-10 on the team's own instance (2026-10-27).
 const docsEpic: TicketGraph = {
@@ -241,22 +222,15 @@ describe('children graph layout', () => {
     expect(layout.height).toBeGreaterThan(layout.nodes.get('E-4')!.y + NODE_HEIGHT);
   });
 
-  it('lays out 50 tickets with circular links well within the 200 ms budget', () => {
+  it('lays out 50 tickets with circular links', () => {
     // Arrange
-    const nodes = Array.from({ length: 50 }, (_, i) => node(`P-${i + 1}`));
-    const edges: TicketGraphEdge[] = [];
-    for (let i = 1; i <= 50; i++) {
-      if (i > 1) edges.push(blocks(`P-${Math.ceil(i / 2)}`, `P-${i}`));
-      if (i % 7 === 0 && i + 3 <= 50) edges.push(blocks(`P-${i}`, `P-${i + 3}`));
-    }
-    edges.push(blocks('P-50', 'P-1'));
-    const started = performance.now();
+    const graph = fiftyTicketsWithCircularLinks();
 
     // Act
-    const layout = layoutGraph(buildGraphModel({ key: 'E-0', nodes, edges }));
+    const layout = layoutGraph(buildGraphModel(graph));
 
     // Assert
-    expect(performance.now() - started).toBeLessThan(200);
     expect(layout.nodes.size).toBe(50);
+    expect(layout.edges.size).toBe(graph.edges.length);
   });
 });

@@ -457,8 +457,7 @@ export class BacklogView {
     if (event.shiftKey) this.store.click(id, 'range');
     else if (event.ctrlKey || event.metaKey) this.store.click(id, 'toggle');
     else {
-      this.store.click(id, 'single');
-      this.store.clearSelection();
+      this.store.focusId.set(id);
       this.peek.open(key);
     }
   }

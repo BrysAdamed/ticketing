@@ -1,4 +1,5 @@
 import { Type } from '@angular/core';
+import { FlagKey } from '../flags/flag-keys';
 
 export const DEFAULT_VARIANT = 'default';
 
@@ -10,14 +11,14 @@ export type ViewLoader = () => Promise<ViewModule>;
 /// the variant whose name equals the flag's evaluated variant and falls back to `default`.
 export interface ViewDefinition {
   readonly viewId: string;
-  readonly flag?: string;
+  readonly flag?: FlagKey;
   readonly variants: Readonly<{ default: ViewLoader } & Record<string, ViewLoader>>;
 }
 
 export interface ViewExposure {
   readonly viewId: string;
   readonly variant: string;
-  readonly flag?: string;
+  readonly flag?: FlagKey;
 }
 
 export type ViewExposureListener = (exposure: ViewExposure) => void;

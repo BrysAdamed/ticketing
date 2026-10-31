@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using Ticketing.Application.Auth;
 using Ticketing.Application.Common;
+using Ticketing.Application.FeatureFlags;
 using Ticketing.Application.Me;
 using Ticketing.Domain.FeatureFlags;
 using Ticketing.Domain.Tokens;
@@ -133,11 +134,10 @@ public sealed class MeTests(TicketingApiFactory api)
         {
             var now = DateTimeOffset.UtcNow;
             db.FeatureFlags.AddRange(
-                Flag("disabled", enabled: false, rollout: 100, users: [user.Id], roles: [], now),
-                Flag("for-user", enabled: true, rollout: 0, users: [user.Id], roles: [], now),
-                Flag("for-admins", enabled: true, rollout: 0, users: [], roles: [GlobalRole.Admin], now),
-                Flag("everyone", enabled: true, rollout: 100, users: [], roles: [], now),
-                Flag("nobody", enabled: true, rollout: 0, users: [], roles: [], now));
+                Flag(FeatureFlagCatalog.SubticketsGraph.Key, enabled: false, rollout: 100, users: [user.Id], roles: [], now),
+                Flag(FeatureFlagCatalog.AgentDelegate.Key, enabled: true, rollout: 0, users: [user.Id], roles: [], now),
+                Flag(FeatureFlagCatalog.Achievements.Key, enabled: true, rollout: 0, users: [], roles: [GlobalRole.Admin], now),
+                Flag("retired.everyone", enabled: true, rollout: 100, users: [], roles: [], now));
             return await db.SaveChangesAsync(_ct);
         });
         var userClient = await api.LoginAsync(user);
@@ -149,16 +149,21 @@ public sealed class MeTests(TicketingApiFactory api)
 
         // Assert
         Assert.Equal(
-            new Dictionary<string, string> { ["disabled"] = "off", ["everyone"] = "on", ["for-admins"] = "off", ["for-user"] = "on", ["nobody"] = "off" },
+            new Dictionary<string, string>
+            {
+                [FeatureFlagCatalog.SubticketsGraph.Key] = "off",
+                [FeatureFlagCatalog.AgentDelegate.Key] = "on",
+                [FeatureFlagCatalog.Achievements.Key] = "off",
+            },
             userFlags);
-        Assert.Equal("on", adminFlags["for-admins"]);
-        Assert.Equal("off", adminFlags["for-user"]);
+        Assert.Equal("on", adminFlags[FeatureFlagCatalog.Achievements.Key]);
+        Assert.Equal("off", adminFlags[FeatureFlagCatalog.AgentDelegate.Key]);
     }
 
     private static FeatureFlag Flag(string key, bool enabled, int rollout, Guid[] users, GlobalRole[] roles, DateTimeOffset now)
     {
-        var flag = FeatureFlag.Create(key, null, null, now);
-        flag.Configure(null, enabled, rollout, users, roles, null, now);
+        var flag = FeatureFlag.Register(key, null, false, now);
+        flag.Configure(enabled, rollout, users, roles, null, now);
         return flag;
     }
 }

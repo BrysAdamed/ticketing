@@ -79,7 +79,7 @@ public sealed class FeatureFlagTests
     [InlineData("board.swimlanes")]
     [InlineData("ticket-view.v2")]
     [InlineData("a")]
-    public void Valid_keys_are_accepted(string key) => Assert.Equal(key, FeatureFlag.Create(key, null, null, Now).Key);
+    public void Valid_keys_are_accepted(string key) => Assert.Equal(key, FeatureFlag.Register(key, null, false, Now).Key);
 
     [Theory]
     [InlineData("Board")]
@@ -88,7 +88,7 @@ public sealed class FeatureFlagTests
     [InlineData("board.")]
     [InlineData("")]
     public void Invalid_keys_are_rejected(string key) =>
-        Assert.Equal("flag.key.invalid", Assert.Throws<DomainException>(() => FeatureFlag.Create(key, null, null, Now)).Code);
+        Assert.Equal("flag.key.invalid", Assert.Throws<DomainException>(() => FeatureFlag.Register(key, null, false, Now)).Code);
 
     [Theory]
     [InlineData(-1)]
@@ -96,10 +96,58 @@ public sealed class FeatureFlagTests
     public void Rollout_must_be_a_percentage(int rollout) =>
         Assert.Throws<DomainException>(() => Flag(true, rollout, [], []));
 
+    [Theory]
+    [InlineData(true, 100, "on")]
+    [InlineData(false, 0, "off")]
+    public void A_registered_flag_starts_from_its_default_for_everyone(bool defaultOn, int rollout, string variant)
+    {
+        // Act
+        var flag = FeatureFlag.Register("test.flag", "Declared in code", defaultOn, Now);
+
+        // Assert
+        Assert.Equal((defaultOn, rollout, (Guid?)null), (flag.Enabled, flag.RolloutPercentage, flag.UpdatedById));
+        Assert.True(flag.HasDefaultConfiguration(defaultOn));
+        Assert.False(flag.HasDefaultConfiguration(!defaultOn));
+        Assert.Equal(variant, flag.Evaluate(Guid.NewGuid(), GlobalRole.User));
+    }
+
+    [Fact]
+    public void Targeting_makes_a_flag_differ_from_its_default_and_reset_restores_it()
+    {
+        // Arrange
+        var actor = Guid.NewGuid();
+        var flag = FeatureFlag.Register("test.flag", null, defaultOn: true, Now);
+        flag.Configure(true, 100, [], [GlobalRole.Admin], actor, Now);
+        var changed = flag.HasDefaultConfiguration(true);
+
+        // Act
+        flag.ResetToDefault(true, actor, Now.AddHours(1));
+
+        // Assert
+        Assert.False(changed);
+        Assert.True(flag.HasDefaultConfiguration(true));
+        Assert.Empty(flag.TargetRoles);
+        Assert.Equal((actor, Now.AddHours(1)), (flag.UpdatedById!.Value, flag.UpdatedAt));
+    }
+
+    [Fact]
+    public void Describing_a_flag_from_code_does_not_count_as_a_change()
+    {
+        // Arrange
+        var flag = FeatureFlag.Register("test.flag", "Old", defaultOn: false, Now);
+
+        // Act
+        var first = flag.Describe("New");
+        var second = flag.Describe("New");
+
+        // Assert
+        Assert.Equal((true, false, "New", Now), (first, second, flag.Description, flag.UpdatedAt));
+    }
+
     private static FeatureFlag Flag(bool enabled, int rollout, Guid[] users, GlobalRole[] roles, string key = "test.flag")
     {
-        var flag = FeatureFlag.Create(key, null, null, Now);
-        flag.Configure(null, enabled, rollout, users, roles, null, Now);
+        var flag = FeatureFlag.Register(key, null, false, Now);
+        flag.Configure(enabled, rollout, users, roles, null, Now);
         return flag;
     }
 

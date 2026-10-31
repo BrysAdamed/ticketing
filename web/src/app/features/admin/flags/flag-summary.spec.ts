@@ -1,4 +1,4 @@
-import { FLAG_KEY_PATTERN, targetingSummary } from './flag-summary';
+import { groupFlags, targetingSummary } from './flag-summary';
 
 describe('targetingSummary', () => {
   it.each([
@@ -15,14 +15,31 @@ describe('targetingSummary', () => {
   });
 });
 
-describe('FLAG_KEY_PATTERN', () => {
-  it.each(['board.swimlanes', 'ticket-view.v2', 'a'])('accepts %s', (key) => {
-    // Act / Assert
-    expect(FLAG_KEY_PATTERN.test(key)).toBe(true);
+describe('groupFlags', () => {
+  it('lists declared flags by key and the retired ones last', () => {
+    // Arrange
+    const flags = [
+      { key: 'ticket.subtickets-graph', retired: false },
+      { key: 'old.feature', retired: true },
+      { key: 'agent.delegate', retired: false },
+      { key: 'a.gone', retired: true },
+      { key: 'achievements', retired: false },
+    ];
+
+    // Act
+    const { declared, retired } = groupFlags(flags);
+
+    // Assert
+    expect(declared.map((f) => f.key)).toEqual([
+      'achievements',
+      'agent.delegate',
+      'ticket.subtickets-graph',
+    ]);
+    expect(retired.map((f) => f.key)).toEqual(['a.gone', 'old.feature']);
   });
 
-  it.each(['Board', 'board..x', '1board', 'board.', 'board swimlanes'])('rejects %s', (key) => {
+  it('returns empty groups for no flags', () => {
     // Act / Assert
-    expect(FLAG_KEY_PATTERN.test(key)).toBe(false);
+    expect(groupFlags([])).toEqual({ declared: [], retired: [] });
   });
 });

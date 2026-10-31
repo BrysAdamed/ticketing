@@ -36,7 +36,7 @@ Update in the same branch: `docs/domain/workflows.md` and `docs/glossary.md` if 
 
 ## Definition of done
 
-`dotnet build` warning-free, `dotnet test` green, `npm run build` within budgets, `npm test`, `npm run lint` and `npm run format:check` green, `npm run typecheck` in `e2e/` clean, your Playwright specs green against `docker compose up --build`, branch pushed. Achievements considered: either a new catalogue entry and criterion (or a linked ticket for one), or a line in the ticket saying none fits.
+`dotnet build` warning-free, `dotnet test` green, `npm run build` within budgets, `npm test`, `npm run lint` and `npm run format:check` green, `npm run typecheck` in `e2e/` clean, your Playwright specs green against `docker compose up --build`, branch pushed. Achievements considered: either a new catalogue entry and criterion (or a linked ticket for one), or a line in the ticket saying none fits. A new feature flag is declared in the catalog with a deliberate default and mirrored in `flag-keys.ts` when the SPA reads it (backend.md and frontend.md "Adding a feature flag", D-168).
 
 ## Report (reply to the orchestrator, ≤25 lines)
 

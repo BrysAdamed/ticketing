@@ -1,5 +1,5 @@
 import { ActivatedRouteSnapshot, Routes } from '@angular/router';
-import { AGENT_FLAG } from '@core/agent/agent-prompt.models';
+import { AGENT_FLAG } from '@core/flags/flag-keys';
 import { promptTypeLabel } from '@core/agent/prompt-slugs';
 import { featureGuard } from '@core/flags/feature.guard';
 import { unsavedChangesGuard } from '@core/layout/unsaved-changes.guard';

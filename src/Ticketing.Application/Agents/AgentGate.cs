@@ -5,12 +5,6 @@ using Ticketing.Domain.Agents;
 
 namespace Ticketing.Application.Agents;
 
-/// <summary>The feature flag of agent delegation (spec 13.2): a string-variant flag, <c>on</c> or <c>off</c>, that Admins target.</summary>
-public static class AgentFeature
-{
-    public const string FlagKey = "agent.delegate";
-}
-
 /// <summary>Instance configuration for agent delegation.</summary>
 public sealed class AgentOptions
 {
@@ -29,7 +23,7 @@ public sealed class AgentOptions
 }
 
 /// <summary>
-/// The single check every agent entry point starts with: while <see cref="AgentFeature.FlagKey"/> is off for the caller, or
+/// The single check every agent entry point starts with: while <see cref="FeatureFlagCatalog.AgentDelegate"/> is off for the caller, or
 /// the instance has no <see cref="AgentOptions.PublicUrlVariable"/> to build ticket links from, everything about agents is a
 /// 404 <c>agent.disabled</c>, so the feature is neither visible nor callable.
 /// </summary>
@@ -38,7 +32,7 @@ public sealed class AgentGate(IFeatureFlags flags, IOptions<AgentOptions> option
     public bool IsConfigured => options.Value.InstanceUrl is not null;
 
     public async Task<bool> IsEnabledAsync(CancellationToken cancellationToken) =>
-        IsConfigured && await flags.IsOnAsync(AgentFeature.FlagKey, cancellationToken);
+        IsConfigured && await flags.IsOnAsync(FeatureFlagCatalog.AgentDelegate, cancellationToken);
 
     public async Task EnsureEnabledAsync(CancellationToken cancellationToken)
     {
@@ -53,7 +47,7 @@ public sealed class AgentGate(IFeatureFlags flags, IOptions<AgentOptions> option
     /// </summary>
     public async Task EnsureFlagOnAsync(CancellationToken cancellationToken)
     {
-        if (!await flags.IsOnAsync(AgentFeature.FlagKey, cancellationToken))
+        if (!await flags.IsOnAsync(FeatureFlagCatalog.AgentDelegate, cancellationToken))
             throw AppException.NotFound(AgentErrors.Disabled, "Agent delegation is not available.");
     }
 }

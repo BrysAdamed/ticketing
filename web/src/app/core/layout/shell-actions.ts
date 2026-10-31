@@ -6,7 +6,7 @@ import {
   TICKET_KEY_PATTERN,
   projectKeyOf,
 } from '@shared/domain/keys';
-import { AGENT_FLAG } from '../agent/agent-prompt.models';
+import { AGENT_FLAG } from '../flags/flag-keys';
 import { AuthService } from '../auth/auth.service';
 import { PaletteItem } from '../commands/command';
 import { CommandPaletteService } from '../commands/command-palette.service';

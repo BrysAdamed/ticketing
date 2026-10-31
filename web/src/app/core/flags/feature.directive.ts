@@ -8,18 +8,19 @@ import {
   ViewContainerRef,
 } from '@angular/core';
 import { FLAG_ON, FeatureFlagService } from './feature-flag.service';
+import { FlagKey } from './flag-keys';
 
 /// Renders its template when a flag evaluates to the given variant (default `on`).
 ///
-/// `<section *tkFeature="'board.swimlanes'">…</section>`
-/// `<x *tkFeature="'ticket-view.v2'; variant: 'b'; else legacy" />`
+/// `<section *tkFeature="'ticket.subtickets-graph'">…</section>` (keys from `flag-keys.ts`)
+/// `<x *tkFeature="'ticket.subtickets-graph'; variant: 'b'; else legacy" />`
 @Directive({ selector: '[tkFeature]' })
 export class FeatureDirective {
   private readonly flags = inject(FeatureFlagService);
   private readonly template = inject(TemplateRef<unknown>);
   private readonly container = inject(ViewContainerRef);
 
-  readonly tkFeature = input.required<string>();
+  readonly tkFeature = input.required<FlagKey>();
   readonly tkFeatureVariant = input<string>(FLAG_ON);
   readonly tkFeatureElse = input<TemplateRef<unknown> | null>(null);
 

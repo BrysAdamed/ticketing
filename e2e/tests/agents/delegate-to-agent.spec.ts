@@ -11,10 +11,6 @@ import { PASSWORD, seedUser } from '../identity/identity';
 const FLAG = 'agent.delegate';
 const REPOSITORY = 'https://git.example.com/team/delegate-e2e.git';
 
-interface Flag {
-    key: string;
-}
-
 interface TicketSummary {
     key: string;
 }
@@ -29,15 +25,7 @@ interface ResolvedPrompt {
 }
 
 async function setFlag(api: Api, enabled: boolean): Promise<void> {
-    const flags = await api.get<Flag[]>('/admin/flags');
-    if (!flags.some((f) => f.key === FLAG))
-        await api.post('/admin/flags', {
-            key: FLAG,
-            description: 'Delegate to agent (TKT-25)',
-            enabled,
-            rolloutPercentage: 100,
-        });
-    else await api.patch(`/admin/flags/${FLAG}`, { enabled, rolloutPercentage: 100 });
+    await api.patch(`/admin/flags/${FLAG}`, { enabled, rolloutPercentage: 100 });
 }
 
 async function seed(

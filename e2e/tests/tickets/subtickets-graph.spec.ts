@@ -9,20 +9,8 @@ interface TicketSummary {
     key: string;
 }
 
-interface Flag {
-    key: string;
-}
-
 async function setFlag(api: Api, enabled: boolean): Promise<void> {
-    const flags = await api.get<Flag[]>('/admin/flags');
-    if (!flags.some((f) => f.key === FLAG))
-        await api.post('/admin/flags', {
-            key: FLAG,
-            description: 'Sub-tickets graph (TKT-23)',
-            enabled,
-            targetRoles: ['Admin'],
-        });
-    else await api.patch(`/admin/flags/${FLAG}`, { enabled, targetRoles: ['Admin'] });
+    await api.patch(`/admin/flags/${FLAG}`, { enabled, targetRoles: ['Admin'] });
 }
 
 /// An epic shaped like TKT-10, scaled down: A blocks C, B blocks C and D, C blocks E; F is done

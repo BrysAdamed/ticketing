@@ -27,7 +27,7 @@ public static class ListSharedAchievements
                 .Where(u => u.Id == request.UserId && u.IsActive && !u.AchievementsHidden)
                 .Select(u => new FlagSubject(u.Id, u.GlobalRole))
                 .SingleOrDefaultAsync(cancellationToken);
-            if (owner is null || !(await flags.EvaluateForAsync(AchievementsFeature.FlagKey, [owner], cancellationToken)).Contains(owner.UserId))
+            if (owner is null || !(await flags.EvaluateForAsync(FeatureFlagCatalog.Achievements, [owner], cancellationToken)).Contains(owner.UserId))
                 throw AppException.NotFound(UserErrors.NotFound, "User not found.");
 
             var tiers = await db.UserAchievements

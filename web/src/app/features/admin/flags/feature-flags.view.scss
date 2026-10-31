@@ -32,6 +32,36 @@
   }
 }
 
+.key-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+span.key-cell {
+  cursor: default;
+}
+
+.retired {
+  margin-top: 24px;
+}
+
+.retired-title {
+  margin: 0;
+  font-size: var(--tk-text-sm);
+  font-weight: var(--tk-weight-semibold);
+  color: var(--tk-text-muted);
+}
+
+.retired-hint {
+  margin: 2px 0 8px;
+  font-size: var(--tk-text-sm);
+}
+
+.retired-row {
+  opacity: 0.7;
+}
+
 .key {
   font-family: var(--tk-font-mono);
   font-size: var(--tk-text-sm);

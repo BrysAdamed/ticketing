@@ -4,6 +4,7 @@ import { DestroyRef, inject, Injectable, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { ApiClient } from '../api/api-client';
 import { SKIP_AUTH_REDIRECT } from '../api/api-error.interceptor';
+import { FlagKey } from './flag-keys';
 
 export const FLAG_OFF = 'off';
 export const FLAG_ON = 'on';
@@ -16,7 +17,8 @@ interface FlagsResponse {
 }
 
 /// Feature flags evaluated by the server for the signed-in user (spec 6.13). Loaded at sign-in
-/// and refreshed on window focus when older than five minutes. A missing flag is `off`.
+/// and refreshed on window focus when older than five minutes. Keys are declared in
+/// `flag-keys.ts` (D-168); a key the server did not send is `off`.
 @Injectable({ providedIn: 'root' })
 export class FeatureFlagService {
   private readonly api = inject(ApiClient);
@@ -34,11 +36,11 @@ export class FeatureFlagService {
     inject(DestroyRef).onDestroy(() => window.removeEventListener('focus', onFocus));
   }
 
-  variant(key: string): string {
+  variant(key: FlagKey): string {
     return this.state()[key] ?? FLAG_OFF;
   }
 
-  isOn(key: string): boolean {
+  isOn(key: FlagKey): boolean {
     return this.variant(key) === FLAG_ON;
   }
 

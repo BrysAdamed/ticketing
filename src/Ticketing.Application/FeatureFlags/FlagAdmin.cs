@@ -9,7 +9,8 @@ namespace Ticketing.Application.FeatureFlags;
 
 /// <summary>
 /// A flag in the admin screens. <see cref="UsersOn"/> is how many of the <see cref="ActiveUsers"/> currently evaluate
-/// <c>on</c> (spec 6.13).
+/// <c>on</c> (spec 6.13). <see cref="DefaultOn"/> is the default declared in code, null for a <see cref="Retired"/> flag (one
+/// the code no longer declares); <see cref="IsDefault"/> is whether the configuration equals that default (D-168).
 /// </summary>
 public sealed record FlagDto(
     Guid Id,
@@ -21,6 +22,9 @@ public sealed record FlagDto(
     IReadOnlyList<GlobalRole> TargetRoles,
     int UsersOn,
     int ActiveUsers,
+    bool? DefaultOn,
+    bool Retired,
+    bool IsDefault,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
     UserLookupDto? UpdatedBy,
@@ -48,7 +52,8 @@ internal static class FlagAdmin
     }
 
     /// <summary>Builds the DTOs for the given flags with one query for referenced users and one for the active population.</summary>
-    public static async Task<IReadOnlyList<FlagDto>> ToDtosAsync(ITicketingDbContext db, IReadOnlyList<FeatureFlag> flags, CancellationToken cancellationToken)
+    public static async Task<IReadOnlyList<FlagDto>> ToDtosAsync(
+        ITicketingDbContext db, IFeatureFlagCatalog catalog, IReadOnlyList<FeatureFlag> flags, CancellationToken cancellationToken)
     {
         var referenced = flags.SelectMany(f => f.TargetUserIds).Concat(flags.Where(f => f.UpdatedById != null).Select(f => f.UpdatedById!.Value)).Distinct().ToList();
         var users = await db.Users
@@ -62,20 +67,27 @@ internal static class FlagAdmin
             .Select(u => new { u.Id, u.GlobalRole })
             .ToListAsync(cancellationToken);
 
-        return [.. flags.Select(f => new FlagDto(
-            f.Id,
-            f.Key,
-            f.Description,
-            f.Enabled,
-            f.RolloutPercentage,
-            [.. f.TargetUserIds.Where(users.ContainsKey).Select(id => users[id]).OrderBy(u => u.DisplayName, StringComparer.OrdinalIgnoreCase)],
-            [.. f.TargetRoles.Order()],
-            population.Count(u => f.Evaluate(u.Id, u.GlobalRole) == FlagVariants.On),
-            population.Count,
-            f.CreatedAt,
-            f.UpdatedAt,
-            f.UpdatedById is { } updatedBy ? users.GetValueOrDefault(updatedBy) : null,
-            f.RowVersion))];
+        return [.. flags.Select(f =>
+        {
+            var declared = catalog.Find(f.Key);
+            return new FlagDto(
+                f.Id,
+                f.Key,
+                f.Description,
+                f.Enabled,
+                f.RolloutPercentage,
+                [.. f.TargetUserIds.Where(users.ContainsKey).Select(id => users[id]).OrderBy(u => u.DisplayName, StringComparer.OrdinalIgnoreCase)],
+                [.. f.TargetRoles.Order()],
+                declared is null ? 0 : population.Count(u => f.Evaluate(u.Id, u.GlobalRole) == FlagVariants.On),
+                population.Count,
+                declared?.DefaultOn,
+                declared is null,
+                declared is not null && f.HasDefaultConfiguration(declared.DefaultOn),
+                f.CreatedAt,
+                f.UpdatedAt,
+                f.UpdatedById is { } updatedBy ? users.GetValueOrDefault(updatedBy) : null,
+                f.RowVersion);
+        })];
     }
 
     public static object Snapshot(FeatureFlag flag) =>

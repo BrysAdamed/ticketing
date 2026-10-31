@@ -3,8 +3,9 @@ import { ADMIN_STORAGE_STATE, BASE_URL } from './support/env';
 
 const CI = !!process.env.CI;
 
-/// The agent specs switch the instance-wide `agent.delegate` flag on and off, so they run one at a time.
-const AGENT_SPECS = /agents[\\/].*\.spec\.ts/;
+/// The agent specs and the feature flags spec switch the instance-wide `agent.delegate` flag on and off, so they run one
+/// at a time.
+const AGENT_SPECS = /(agents[\\/].*|identity[\\/]feature-flags)\.spec\.ts/;
 
 const PERF_SPECS = /\.perf\.spec\.ts$/;
 

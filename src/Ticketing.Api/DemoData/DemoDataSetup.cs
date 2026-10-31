@@ -1,3 +1,4 @@
+using Ticketing.Application.FeatureFlags;
 using Ticketing.Infrastructure.Persistence;
 
 namespace Ticketing.Api.DemoData;
@@ -23,12 +24,15 @@ public static class DemoDataSetup
     public static bool IsSeedCommand(string[] args) =>
         args.Length > 0 && string.Equals(args[0], SeedCommand, StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>The <c>seed-demo</c> command: migrate, create the bootstrap admin when needed, seed, and return without serving requests.</summary>
+    /// <summary>The <c>seed-demo</c> command: migrate, create the bootstrap admin when needed, register the declared flags, seed, and return without serving requests.</summary>
     public static async Task RunSeedCommandAsync(this WebApplication app)
     {
         var stopping = app.Lifetime.ApplicationStopping;
         await using (var scope = app.Services.CreateAsyncScope())
+        {
             await scope.ServiceProvider.GetRequiredService<DatabaseInitializer>().InitializeAsync(stopping);
+            await scope.ServiceProvider.GetRequiredService<FeatureFlagSync>().EnsureAsync(stopping);
+        }
         await app.Services.GetRequiredService<DemoDataSeeder>().SeedAsync(stopping);
     }
 }

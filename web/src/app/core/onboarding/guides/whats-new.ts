@@ -1,10 +1,11 @@
+import { FlagKey } from '../../flags/flag-keys';
 import { GuideRef } from '../onboarding.models';
 
 /// One highlight of a What's new entry. `flag` hides it while that feature flag is off for the user.
 export interface WhatsNewItem {
   readonly title: string;
   readonly body: string;
-  readonly flag?: string;
+  readonly flag?: FlagKey;
 }
 
 /// A What's new entry (spec 14.2): id `whats-new.<date>`, `date` as `yyyy-mm`. An entry whose month

@@ -30,7 +30,7 @@ internal sealed class CollaborationProjector(ITicketingDbContext db) : IActivity
         var candidates = WatchingRules.Candidates(events, mentions);
         if (candidates.Count > 0)
             await AddWatchersAsync(candidates, cancellationToken);
-        var docCandidates = WatchingRules.DocCandidates(events);
+        var docCandidates = WatchingRules.DocCandidates(events, mentions);
         if (docCandidates.Count > 0)
             await AddDocWatchersAsync(docCandidates, cancellationToken);
 

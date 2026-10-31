@@ -18,7 +18,7 @@ public static class NotificationSummaries
     public static string For(NotificationKind kind, CollaborationEvent e, SummaryNames names) => (kind, e) switch
     {
         (NotificationKind.Assigned, _) => "assigned the ticket to you",
-        (NotificationKind.Mentioned, TicketEvent ticketEvent) when MentionRules.InComment(ticketEvent) => "mentioned you in a comment",
+        (NotificationKind.Mentioned, _) when MentionRules.InComment(e) => "mentioned you in a comment",
         (NotificationKind.Mentioned, TicketCreated or DescriptionChanged) => "mentioned you in the description",
         (NotificationKind.Mentioned, _) => "mentioned you",
         (NotificationKind.Commented, _) => "commented",

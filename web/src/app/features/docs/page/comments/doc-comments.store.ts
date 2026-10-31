@@ -83,6 +83,7 @@ export class DocCommentsStore {
       deletedAt: null,
       canEdit: false,
       canDelete: false,
+      mentions: [],
       pending: true,
     };
     this.items.update((list) => [...list, temp]);

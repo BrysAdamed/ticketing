@@ -16,7 +16,7 @@ public sealed class DocCommentTools
 
     [McpServerTool(Name = "list_doc_comments", ReadOnly = true, Idempotent = true, Title = "List doc comments")]
     [Description("Comments of a page or diagram, oldest first: id, docKey, author, markdown body, createdAt, editedAt, deleted (deleted comments "
-        + "have an empty body), canEdit, canDelete. Folders have none. Returns { items, nextCursor }.")]
+        + "have an empty body), canEdit, canDelete and mentions (mentioned users who are active and can read the project). Folders have none. Returns { items, nextCursor }.")]
     public static Task<CursorPage<DocCommentDto>> ListDocComments(
         ListDocComments.Handler handler,
         [Description(DocKey)] string docKey,
@@ -28,11 +28,11 @@ public sealed class DocCommentTools
     [Authorize(Policy = AuthPolicies.CanWrite)]
     [McpServerTool(Name = "add_doc_comment", Destructive = false, Title = "Add doc comment")]
     [Description("Adds a markdown comment (1..20000 characters) below a page or diagram. Ticket keys such as WEB-42 render as links. "
-        + "The doc's watchers are notified, and you start watching it.")]
+        + "The doc's watchers are notified (newly mentioned users with Mentioned instead), and you start watching it. Returns the comment with mentions.")]
     public static Task<DocCommentDto> AddDocComment(
         AddDocComment.Handler handler,
         [Description(DocKey)] string docKey,
-        [Description("Markdown body.")] string body,
+        [Description("Markdown body. " + McpDescriptions.Mentions)] string body,
         CancellationToken cancellationToken = default) =>
         handler.HandleAsync(new AddDocComment.Command(body, docKey), cancellationToken);
 
@@ -42,7 +42,7 @@ public sealed class DocCommentTools
     public static Task<DocCommentDto> UpdateDocComment(
         UpdateDocComment.Handler handler,
         [Description(CommentId)] Guid commentId,
-        [Description("New markdown body.")] string body,
+        [Description("New markdown body. " + McpDescriptions.Mentions)] string body,
         CancellationToken cancellationToken = default) =>
         handler.HandleAsync(new UpdateDocComment.Command(body, commentId), cancellationToken);
 

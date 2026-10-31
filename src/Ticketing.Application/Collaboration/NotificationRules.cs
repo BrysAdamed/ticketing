@@ -11,7 +11,7 @@ public sealed record NotificationCandidate(Guid RecipientId, CollaborationEvent 
 /// and the watchers of a ticket when it is commented, changes status, has its priority raised to High or Highest, moves
 /// between backlog and boards or is deleted. A watcher mentioned in a new comment gets <c>Mentioned</c> instead of
 /// <c>Commented</c> for it. A comment on a page or diagram notifies the doc's watchers with <c>Commented</c>
-/// (D-161). The actor is never notified about their own action, and <see cref="Unmuted"/> applies each
+/// (D-161), or <c>Mentioned</c> those it newly mentions (D-162). The actor is never notified about their own action, and <see cref="Unmuted"/> applies each
 /// recipient's muted kinds and projects.
 /// </summary>
 public static class NotificationRules
@@ -30,7 +30,7 @@ public static class NotificationRules
         IReadOnlyList<MentionCandidate> mentions,
         ILookup<Guid, Guid> watchersByDoc)
     {
-        var mentioned = mentions.ToLookup(m => (CollaborationEvent)m.Event, m => m.UserId);
+        var mentioned = mentions.ToLookup(m => m.Event, m => m.UserId);
         var candidates = new List<NotificationCandidate>();
         foreach (var e in events)
         {
@@ -45,15 +45,17 @@ public static class NotificationRules
                 case RegressionItemAssigned { To: { } assignee }:
                     Add(candidates, e, assignee, NotificationKind.RegressionItemAssigned);
                     break;
-                case DocCommentAdded commented:
-                    foreach (var watcher in watchersByDoc[commented.DocNodeId].Distinct())
-                        Add(candidates, e, watcher, NotificationKind.Commented);
-                    break;
             }
 
             var mentionedHere = mentioned[e].ToHashSet();
             foreach (var userId in mentionedHere)
                 Add(candidates, e, userId, NotificationKind.Mentioned);
+
+            if (e is DocCommentAdded commented)
+            {
+                foreach (var watcher in watchersByDoc[commented.DocNodeId].Distinct().Where(w => !mentionedHere.Contains(w)))
+                    Add(candidates, e, watcher, NotificationKind.Commented);
+            }
 
             if (WatcherKind(e) is { } kind)
             {

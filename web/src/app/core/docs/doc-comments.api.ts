@@ -5,7 +5,8 @@ import { Page, PageRequest } from '../api/page';
 import { UserRef } from '../tickets/ticket.models';
 
 /// A comment below a page or diagram (`/docs/{key}/comments`). Deleted comments keep their place
-/// with an empty body. Doc comments have no @mentions (the "Docs collaboration" follow-up).
+/// with an empty body. `mentions` are the mentioned users who are active and can read the project,
+/// rendered as chips (D-96, D-162).
 export interface DocComment {
   id: string;
   docKey: string;
@@ -17,6 +18,7 @@ export interface DocComment {
   deletedAt: string | null;
   canEdit: boolean;
   canDelete: boolean;
+  mentions: UserRef[];
 }
 
 /// Typed client for the doc comment thread (docs refinement D12): list and add per doc, edit and

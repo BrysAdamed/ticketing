@@ -154,7 +154,7 @@ Domain terms used in the spec, the code, the UI and the API. Section links point
 
 **My work**: Page listing the current user's open tickets across projects, their waiting regression items and the open tickets they watch. [§6.8](product/01-refined-spec.md#68-search-lists-and-export)
 
-**Mention**: A reference to a user in a ticket description or comment, written with the `@` people picker or as `@email`, stored as `@[Name](user:<id>)` so it survives renames. Only active users who can read the project can be newly mentioned; a new mention notifies them once and makes them a watcher, and readers see it as a chip with the current name (others see plain text) (D-96). [§6.9](product/01-refined-spec.md#69-comments)
+**Mention**: A reference to a user in a ticket description, a ticket or doc comment (D-162), written with the `@` people picker or as `@email`, stored as `@[Name](user:<id>)` so it survives renames. Only active users who can read the project can be newly mentioned; a new mention notifies them once and makes them a watcher, and readers see it as a chip with the current name (others see plain text) (D-96). [§6.9](product/01-refined-spec.md#69-comments)
 
 **Mermaid diagram**: Diagram written as Mermaid text, either inline in markdown (a ```` ```mermaid ```` block, in pages, tickets and comments) or as a diagram doc with its own view and editor. Rendered in the browser with strict security; the supported types are flowchart, sequence, class, state (v2), ER, gantt and mind map. [§12.12](product/01-refined-spec.md#1212-mermaid-diagrams-web-mcp), D-121
 

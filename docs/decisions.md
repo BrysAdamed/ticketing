@@ -1308,6 +1308,15 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
 - Rejected: notifying watchers about every published version in this slice (a new notification kind, noisy for living pages; tracked as a follow-up ticket); keeping the participant rule next to watchers (two overlapping audiences, and no way out of a thread but deleting your comment); watching folders (a folder has no thread, and following a subtree is a different feature).
 - Achievements: none for watching (housekeeping, like D-160).
 
+### D-162 Doc comments take @mentions with the ticket comment rules (TKT-108)
+
+- Question: D-96 limited mentions to ticket descriptions and comments. Doc comments are discussions too (I-86). Which rules carry over, and how does an edit find newly added mentions when `doc.comment.edited` keeps only the previous body (D-117)?
+- Decision:
+  - `AddDocComment` and `UpdateDocComment` run `MentionNormalizer` like the ticket comment handlers: `@email` of a reader becomes the stored token, new mentions get the current name, and a newly added mention of a user who is inactive, unknown or cannot read the project fails with 400 `mention.invalid` (field `body`). `DocCommentDto.mentions` lists the mentioned active readers, one query per page of comments.
+  - Effects through the projector: `DocCommentAdded` carries the body and the new `DocCommentEdited` carries the previous body from the activity entry and the current body from the tracked comment, so the activity payload stays as D-117 defined it (the current body is not copied into the history). `MentionCandidate` takes any collaboration event; a doc mention makes the user a doc watcher and notifies them with `Mentioned` ("mentioned you in a comment") instead of `Commented`. D-160 applies: `Mentioned` is direct and survives a project mute.
+  - Web: the doc comment composer and edit box get the `@` people picker (`GET /users?projectKey=&access=read`), and comments render chips.
+- Rationale: one set of mention rules for every comment thread; reading the new body from the tracker costs no query, because the handler has just loaded and changed the comment.
+
 ## Product owner answers (v1 review, 2026-10-27)
 
 These were open questions (Q-01..Q-05); the product owner resolved them as follows.

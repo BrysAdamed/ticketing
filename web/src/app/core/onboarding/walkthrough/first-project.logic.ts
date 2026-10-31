@@ -29,6 +29,29 @@ export function ownedProjects<T extends OwnedProjectCandidate>(projects: readonl
     .sort((a, b) => (b.updatedAt ?? '').localeCompare(a.updatedAt ?? ''));
 }
 
+export interface WalkthroughBoardCandidate {
+  readonly id: string;
+  readonly createdAt: string;
+  readonly archivedAt: string | null;
+}
+
+/// The board the "Create a board" step moves to: the one the walkthrough created while it is live,
+/// else the newest live board.
+export function pickWalkthroughBoard<T extends WalkthroughBoardCandidate>(
+  boards: readonly T[],
+  createdId: string | undefined,
+): T | null {
+  const live = boards.filter((b) => !b.archivedAt);
+  return (
+    live.find((b) => b.id === createdId) ??
+    live.reduce<T | null>(
+      (newest, b) =>
+        !newest || Date.parse(b.createdAt) > Date.parse(newest.createdAt) ? b : newest,
+      null,
+    )
+  );
+}
+
 /// The project "Use <project>" offers: the one the walkthrough last used while the user still owns
 /// it, else the most recently updated owned project.
 export function pickWalkthroughProject<T extends OwnedProjectCandidate>(

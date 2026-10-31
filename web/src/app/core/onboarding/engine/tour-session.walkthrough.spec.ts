@@ -1,9 +1,9 @@
 import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { createOverlayRef } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
-import { Component, Injector, provideZonelessChangeDetection } from '@angular/core';
+import { Component, Injector, provideZonelessChangeDetection, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter, Router } from '@angular/router';
+import { NavigationEnd, provideRouter, Router, RouterOutlet } from '@angular/router';
 import { Subject } from 'rxjs';
 import { vi } from 'vitest';
 import { ShortcutService } from '../../shortcuts/shortcut.service';
@@ -58,6 +58,57 @@ const WALKTHROUGH: TourDefinition = {
       body: 'Click it.',
     },
     { id: 'read', anchor: 'w.read', route: '/page', title: 'Read', body: 'Read it.' },
+  ],
+};
+
+@Component({ selector: 'tk-test-outlet', imports: [RouterOutlet], template: '<router-outlet />' })
+class OutletComponent {}
+
+@Component({
+  imports: [TourAnchorDirective],
+  template: `<button type="button" tkTourAnchor="p.first">First</button>`,
+})
+class AnchorPageComponent {}
+
+@Component({
+  imports: [TourAnchorDirective],
+  template: `@if (ready()) {
+    <button type="button" tkTourAnchor="p.second">Second</button>
+  }`,
+})
+class LateAnchorPageComponent {
+  readonly ready = signal(false);
+
+  constructor() {
+    setTimeout(() => this.ready.set(true), 200);
+  }
+}
+
+const TWO_PAGES: TourDefinition = {
+  id: 'tour.pages',
+  version: 1,
+  viewId: 'pages',
+  title: 'Pages',
+  kind: 'walkthrough',
+  steps: [
+    {
+      id: 'first',
+      anchor: 'p.first',
+      route: '/page',
+      advanceWhen: { kind: 'condition', id: 'created' },
+      action: { label: 'Create it', does: 'custom', id: 'create' },
+      title: 'First',
+      body: 'On the first page.',
+    },
+    {
+      id: 'second',
+      anchor: 'p.second',
+      route: '/next',
+      advanceWhen: { kind: 'condition', id: 'clicked' },
+      action: { label: 'Click it', does: 'click-anchor' },
+      title: 'Second',
+      body: 'On the next page.',
+    },
   ],
 };
 
@@ -303,6 +354,51 @@ describe('TourSession action-driven steps and pausing', () => {
     // Assert
     expect(hidden).toBe(true);
     expect(launcher.running()).toBe('tour.walk');
+  });
+
+  it('moves to the next page without bouncing back when the old anchor leaves first', async () => {
+    // Arrange
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        provideRouter([
+          { path: 'page', component: AnchorPageComponent },
+          { path: 'next', component: LateAnchorPageComponent },
+        ]),
+      ],
+    });
+    vi.spyOn(TestBed.inject(LiveAnnouncer), 'announce').mockResolvedValue();
+    launcher = TestBed.inject(TourLauncher);
+    router = TestBed.inject(Router);
+    const visits: string[] = [];
+    router.events.subscribe((e) => {
+      if (e instanceof NavigationEnd) visits.push(e.urlAfterRedirects);
+    });
+    const outlet = TestBed.createComponent(OutletComponent);
+    await router.navigateByUrl('/page');
+    await outlet.whenStable();
+    conditions = new FakeConditions();
+    void launcher.start(TWO_PAGES, { access, conditions });
+    const reached = (stepId: string) => () =>
+      card()?.getAttribute('data-step') === stepId && !card()!.classList.contains('pending');
+    for (let i = 0; i < 80 && !reached('first')(); i++) {
+      await outlet.whenStable();
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    }
+
+    // Act
+    conditions.holds.add('created');
+    conditions.changes.next(null);
+    for (let i = 0; i < 200 && !reached('second')(); i++) {
+      await outlet.whenStable();
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    }
+
+    // Assert
+    expect(card()!.getAttribute('data-step')).toBe('second');
+    expect(router.url).toBe('/next');
+    expect(visits).toEqual(['/page', '/next']);
   });
 
   it('ends on Esc unless the user is typing in a field', async () => {

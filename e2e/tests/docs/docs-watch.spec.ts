@@ -1,5 +1,6 @@
 import { DocPagePage } from '../../pages/doc-page.page';
 import { expect, test } from '../../support/fixtures';
+import { seedUser } from '../identity/identity';
 
 interface Doc {
     key: string;
@@ -51,5 +52,46 @@ test.describe('watch docs', () => {
             .toBe(1);
         await count.click();
         await expect(page.getByTestId('doc-watchers')).toContainText('you');
+    });
+
+    test('picking a reader with @ in a doc comment shows a chip and makes them watch the page', async ({
+        page,
+        api,
+    }) => {
+        // Arrange
+        const projectKey = (await api.createProject({ visibility: 'Public' })).key;
+        const doc = await api.post<Doc>(`/projects/${projectKey}/docs`, {
+            kind: 'Page',
+            title: 'Rollout',
+            content: '# Rollout',
+        });
+        const reader = await seedUser(api, 'docmention');
+        const view = new DocPagePage(page);
+        await view.goto(projectKey, doc.key);
+
+        // Act
+        await view.commentComposer.click();
+        await view.commentComposer.pressSequentially(
+            `Please review @${reader.email.split('@')[0]}`,
+        );
+        await expect(
+            page.getByTestId('mention-picker').getByTestId(`mention-option-${reader.email}`),
+        ).toHaveAttribute('aria-selected', 'true');
+        await view.commentComposer.press('Enter');
+        await view.commentComposer.press('ControlOrMeta+Enter');
+
+        // Assert
+        await expect(view.commentCards().first().getByTestId(`mention-${reader.id}`)).toHaveText(
+            new RegExp(`${reader.displayName}$`),
+        );
+        await expect
+            .poll(async () =>
+                (
+                    await api.get<Watchers & { users: { id: string }[] }>(
+                        `/docs/${doc.key}/watchers`,
+                    )
+                ).users.map((u) => u.id),
+            )
+            .toContain(reader.id);
     });
 });

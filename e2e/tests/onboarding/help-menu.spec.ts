@@ -120,7 +120,9 @@ test.describe('Help menu', () => {
         await page.getByTestId('confirm-ok').click();
 
         // Assert
-        await expect(page.getByTestId('toast')).toContainText('All guides restarted');
+        await expect(
+            page.getByTestId('toast').filter({ hasText: 'All guides restarted' }),
+        ).toBeVisible();
         await expect.poll(() => guideIds(page)).toEqual([]);
         await context.close();
     });

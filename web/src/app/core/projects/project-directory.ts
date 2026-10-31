@@ -59,12 +59,22 @@ export class ProjectDirectory {
   readonly projects = this.items.asReadonly();
   readonly activeProjects = computed(() => this.items().filter((p) => !p.archivedAt));
 
+  private loading: Promise<void> | null = null;
+
   async load(): Promise<void> {
-    if (this.status() === 'loading' || this.status() === 'loaded') return;
-    await this.reload();
+    if (this.status() === 'loaded') return;
+    await (this.loading ?? this.reload());
   }
 
-  async reload(): Promise<void> {
+  reload(): Promise<void> {
+    const run = this.fetch().finally(() => {
+      if (this.loading === run) this.loading = null;
+    });
+    this.loading = run;
+    return run;
+  }
+
+  private async fetch(): Promise<void> {
     this.status.set('loading');
     try {
       const { items, capped } = await this.list();

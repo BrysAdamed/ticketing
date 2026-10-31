@@ -69,11 +69,12 @@
           mat-stroked-button
           type="button"
           data-testid="notification-mute-project"
-          [tkInlinePicker]="store.projectOptions()"
+          [tkSearchPicker]="store.searchProjects"
           pickerPlaceholder="Find a project…"
-          [pickerDisabled]="!store.preferences() || store.projectOptions().length === 0"
+          [pickerHint]="store.projectsHint()"
+          [pickerDisabled]="!store.preferences() || store.allProjectsMuted()"
           [matTooltip]="
-            store.preferences() && store.projectOptions().length === 0
+            store.preferences() && store.allProjectsMuted()
               ? 'Every project you can see is muted.'
               : ''
           "

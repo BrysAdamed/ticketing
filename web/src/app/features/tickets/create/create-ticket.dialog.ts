@@ -11,13 +11,13 @@ import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
 import { provideIcons } from '@ng-icons/core';
 import { firstValueFrom } from 'rxjs';
 import { toApiError } from '@core/api/api-error';
 import { PeekService } from '@core/layout/peek/peek';
 import { ToastService } from '@core/notify/toast.service';
-import { ProjectDirectory } from '@core/projects/project-directory';
+import { ProjectDirectory, ProjectSummary } from '@core/projects/project-directory';
+import { CAPPED_PROJECTS_HINT, findProjects, resolveProject } from '@core/projects/project-search';
 import { CreateTicketPrefill } from '@core/tickets/create-ticket';
 import { FieldHints } from '@core/tickets/field-hints';
 import { ProjectPeople } from '@core/tickets/project-people';
@@ -53,6 +53,10 @@ import { TICKET_ICONS } from '../ticket-icons';
 
 const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 
+function canCreateIn(project: ProjectSummary): boolean {
+  return !project.archivedAt && project.myRole !== 'Viewer';
+}
+
 /// Create-ticket dialog (global `c`, top bar "New ticket", or `TicketCreator.open(prefill)` from other
 /// features). The project is preselected from context; Ctrl/⌘+Enter creates.
 @Component({
@@ -62,7 +66,6 @@ const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(naviga
     MatDialogModule,
     MatFormFieldModule,
     MatInputModule,
-    MatSelectModule,
     MarkdownEditorComponent,
     LabelChipComponent,
     PriorityIconComponent,
@@ -103,10 +106,23 @@ export class CreateTicketDialog {
   protected readonly priorityLabels = PRIORITY_LABELS;
   protected readonly severityLabels = SEVERITY_LABELS;
 
-  protected readonly projects = computed(() =>
-    this.directory.activeProjects().filter((p) => p.myRole !== 'Viewer'),
+  protected readonly projectKey = signal(this.data.projectKey?.toUpperCase() ?? '');
+  private readonly picked = signal<ProjectSummary | null>(null);
+  protected readonly project = computed(() => {
+    const key = this.projectKey();
+    const picked = this.picked();
+    return picked?.key === key ? picked : (this.directory.byKey(key) ?? null);
+  });
+  protected readonly projectsHint = computed(() =>
+    this.directory.capped() ? CAPPED_PROJECTS_HINT : null,
   );
-  protected readonly projectKey = signal(this.data.projectKey ?? '');
+  protected readonly projectSearch = async (
+    query: string,
+  ): Promise<PickerOption<ProjectSummary>[]> =>
+    (await findProjects(this.directory, query)).filter(canCreateIn).map((p) => ({
+      value: p,
+      label: `${p.name} · ${p.key}`,
+    }));
   protected readonly title = signal(this.data.title ?? '');
   protected readonly type = signal<TicketType>(this.data.type ?? 'UserStory');
   protected readonly description = signal(this.data.description ?? '');
@@ -141,8 +157,16 @@ export class CreateTicketDialog {
   };
 
   constructor() {
-    void this.directory.load().then(() => {
-      if (!this.projectKey() && this.projects().length) this.projectKey.set(this.projects()[0].key);
+    void this.directory.load().then(async () => {
+      const key = this.projectKey();
+      if (!key) {
+        const first = this.directory.activeProjects().find(canCreateIn);
+        if (first && !this.projectKey()) this.projectKey.set(first.key);
+        return;
+      }
+      if (this.directory.byKey(key)) return;
+      const found = await resolveProject(this.directory, key);
+      if (found && this.projectKey() === found.key) this.picked.set(found);
     });
     effect(() => {
       const key = this.projectKey();
@@ -159,9 +183,10 @@ export class CreateTicketDialog {
     });
   }
 
-  protected setProject(key: string): void {
-    if (key === this.projectKey()) return;
-    this.projectKey.set(key);
+  protected setProject(project: ProjectSummary): void {
+    this.picked.set(project);
+    if (project.key === this.projectKey()) return;
+    this.projectKey.set(project.key);
     this.parent.set(null);
     this.parentKey.set(null);
     this.assignee.set(null);

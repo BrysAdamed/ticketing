@@ -12,7 +12,6 @@ import {
 } from '@angular/core';
 import { MatMenuModule } from '@angular/material/menu';
 import { ApiClient } from '@core/api/api-client';
-import { ProjectDirectory } from '@core/projects/project-directory';
 import { UserRef } from '@core/tickets/ticket.models';
 import {
   PRIORITIES,
@@ -28,7 +27,6 @@ import {
 import { AvatarComponent } from '@shared/ui/domain/avatar.component';
 import { LabelChipComponent } from '@shared/ui/domain/label-chip.component';
 import { PriorityIconComponent } from '@shared/ui/domain/priority-icon.component';
-import { ProjectTileComponent } from '@shared/ui/domain/project-tile.component';
 import { StatusIconComponent } from '@shared/ui/domain/status-icon.component';
 import { TypeIconComponent } from '@shared/ui/domain/type-icon.component';
 import { IconComponent } from '@shared/ui/icon/icon.component';
@@ -44,6 +42,7 @@ import {
   toggleValue,
   utcDate,
 } from './search-query';
+import { ProjectFacetComponent } from './project-facet.component';
 
 interface ExtraChip {
   id: string;
@@ -61,7 +60,7 @@ interface ExtraChip {
     AvatarComponent,
     LabelChipComponent,
     PriorityIconComponent,
-    ProjectTileComponent,
+    ProjectFacetComponent,
     StatusIconComponent,
     TypeIconComponent,
     IconComponent,
@@ -78,36 +77,11 @@ interface ExtraChip {
     }
   `,
   template: `
-    <button
-      type="button"
-      class="fchip"
-      [class.on]="f().project.length"
-      [matMenuTriggerFor]="projectMenu"
-      data-testid="filter-project"
-    >
-      @if (f().project.length) {
-        Project: <b>{{ summary(f().project) }}</b>
-      } @else {
-        <tk-icon name="tablerPlus" [size]="14" />Project
-      }
-    </button>
-    <mat-menu #projectMenu="matMenu" class="tk-filter-menu">
-      @for (project of projects(); track project.key) {
-        <button
-          mat-menu-item
-          type="button"
-          [attr.data-testid]="'filter-project-' + project.key"
-          (click)="$event.stopPropagation(); toggle('project', project.key)"
-        >
-          <span class="opt"
-            ><span class="box" [class.on]="f().project.includes(project.key)"></span
-            ><tk-project-tile [projectKey]="project.key" />{{ project.name }}</span
-          >
-        </button>
-      } @empty {
-        <div class="empty">No projects</div>
-      }
-    </mat-menu>
+    <tk-project-facet
+      testId="filter-project"
+      [selected]="f().project"
+      (toggled)="toggle('project', $event)"
+    />
 
     <button
       type="button"
@@ -473,7 +447,6 @@ interface ExtraChip {
   `,
 })
 export class SearchFilterBarComponent {
-  private readonly directory = inject(ProjectDirectory);
   private readonly api = inject(ApiClient);
 
   readonly filters = input.required<SearchFilters>();
@@ -482,7 +455,6 @@ export class SearchFilterBarComponent {
   readonly filtersChange = output<SearchFilters>();
 
   protected readonly f = this.filters;
-  protected readonly projects = this.directory.projects;
   protected readonly types = TICKET_TYPES;
   protected readonly statuses = TICKET_STATUSES;
   protected readonly categories = STATUS_CATEGORIES;

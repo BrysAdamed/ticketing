@@ -48,6 +48,9 @@ let nextPanelId = 0;
         <tk-kbd>{{ key }}</tk-kbd>
       }
     </div>
+    @if (hint() && !query()) {
+      <div class="hint" data-testid="search-picker-hint">{{ hint() }}</div>
+    }
     <div
       class="list"
       role="listbox"
@@ -138,6 +141,11 @@ let nextPanelId = 0;
       padding: 6px 8px;
       color: var(--tk-text-subtle);
     }
+    .hint {
+      padding: 2px 8px 6px;
+      color: var(--tk-text-subtle);
+      font-size: var(--tk-text-sm);
+    }
   `,
 })
 export class SearchPickerPanelComponent<T> {
@@ -145,6 +153,7 @@ export class SearchPickerPanelComponent<T> {
   readonly placeholder = input('Search…');
   readonly shortcut = input<string | null>(null);
   readonly optionTemplate = input<PickerOptionTemplate<T> | null>(null);
+  readonly hint = input<string | null>(null);
 
   readonly picked = output<T>();
   readonly dismissed = output<void>();
@@ -158,10 +167,12 @@ export class SearchPickerPanelComponent<T> {
   protected readonly options = signal<readonly PickerOption<T>[]>([]);
   protected readonly loading = signal(true);
   protected readonly active = signal(0);
+  protected readonly query = signal('');
 
   private readonly input = viewChild.required<ElementRef<HTMLInputElement>>('input');
   private timer: ReturnType<typeof setTimeout> | null = null;
   private token = 0;
+  private chooseWhenLoaded = false;
 
   constructor() {
     afterNextRender(() => {
@@ -175,6 +186,8 @@ export class SearchPickerPanelComponent<T> {
 
   protected onQuery(value: string): void {
     if (this.timer) clearTimeout(this.timer);
+    this.query.set(value.trim());
+    this.chooseWhenLoaded = false;
     this.loading.set(true);
     this.timer = setTimeout(() => void this.run(value), DEBOUNCE_MS);
   }
@@ -192,6 +205,10 @@ export class SearchPickerPanelComponent<T> {
         return;
       case 'Enter': {
         event.preventDefault();
+        if (this.loading()) {
+          this.chooseWhenLoaded = true;
+          return;
+        }
         const option = this.options()[this.active()];
         if (option) this.choose(option);
         return;
@@ -220,7 +237,14 @@ export class SearchPickerPanelComponent<T> {
     } catch {
       if (token === this.token) this.options.set([]);
     } finally {
-      if (token === this.token) this.loading.set(false);
+      if (token === this.token) {
+        this.loading.set(false);
+        if (this.chooseWhenLoaded) {
+          this.chooseWhenLoaded = false;
+          const first = this.options()[0];
+          if (first) this.choose(first);
+        }
+      }
     }
   }
 }

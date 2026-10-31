@@ -9,6 +9,8 @@ import {
 import { NotificationKind } from '@core/notifications/notification.models';
 import { ToastService } from '@core/notify/toast.service';
 import { LoadStatus, ProjectDirectory } from '@core/projects/project-directory';
+import { CAPPED_PROJECTS_HINT, findProjects } from '@core/projects/project-search';
+import { PickerOption } from '@shared/ui/inline-picker/picker-option';
 import {
   applyEdit,
   groupKinds,
@@ -30,9 +32,15 @@ export class NotificationPreferencesStore {
   readonly error = signal<ApiError | null>(null);
   readonly groups = computed(() => groupKinds(this.preferences()?.kinds ?? []));
   readonly mutedProjects = computed(() => this.preferences()?.mutedProjects ?? []);
-  readonly projectOptions = computed(() =>
-    projectsToMute(this.directory.projects(), this.mutedProjects()),
+  /// Every project the directory lists is muted and there are no others to find.
+  readonly allProjectsMuted = computed(
+    () =>
+      !this.directory.capped() &&
+      projectsToMute(this.directory.projects(), this.mutedProjects()).length === 0,
   );
+  readonly projectsHint = computed(() => (this.directory.capped() ? CAPPED_PROJECTS_HINT : null));
+  readonly searchProjects = async (query: string): Promise<PickerOption<MutedProject>[]> =>
+    projectsToMute(await findProjects(this.directory, query), this.mutedProjects());
 
   async load(): Promise<void> {
     this.status.set('loading');

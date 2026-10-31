@@ -1,4 +1,4 @@
-import { provideZonelessChangeDetection, signal } from '@angular/core';
+import { provideZonelessChangeDetection, signal, WritableSignal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { of, Subject } from 'rxjs';
 import { ApiError } from '@core/api/api-error';
@@ -9,8 +9,12 @@ import {
 } from '@core/notifications/notification-preferences.api';
 import { NOTIFICATION_KINDS } from '@core/notifications/notification.models';
 import { ToastService } from '@core/notify/toast.service';
-import { ProjectDirectory } from '@core/projects/project-directory';
+import { ProjectDirectory, ProjectSummary } from '@core/projects/project-directory';
 import { NotificationPreferencesStore } from './notification-preferences.store';
+
+function project(id: string, key: string): ProjectSummary {
+  return { id, key, name: key, visibility: 'Public', myRole: 'Member', archivedAt: null };
+}
 
 const DIRECT = new Set(['Assigned', 'Mentioned', 'RegressionItemAssigned']);
 
@@ -52,6 +56,12 @@ function mutedKinds(store: NotificationPreferencesStore): string[] {
 describe('NotificationPreferencesStore', () => {
   let api: FakeApi;
   let toast: { success: ReturnType<typeof vi.fn>; error: ReturnType<typeof vi.fn> };
+  let directory: {
+    projects: WritableSignal<ProjectSummary[]>;
+    capped: WritableSignal<boolean>;
+    load: () => Promise<void>;
+    search: ReturnType<typeof vi.fn<(term: string) => Promise<ProjectSummary[]>>>;
+  };
 
   async function setup(): Promise<NotificationPreferencesStore> {
     TestBed.configureTestingModule({
@@ -62,7 +72,7 @@ describe('NotificationPreferencesStore', () => {
         { provide: ToastService, useValue: toast },
         {
           provide: ProjectDirectory,
-          useValue: { projects: signal([]), load: () => Promise.resolve() },
+          useValue: directory,
         },
       ],
     });
@@ -74,6 +84,12 @@ describe('NotificationPreferencesStore', () => {
   beforeEach(() => {
     api = new FakeApi();
     toast = { success: vi.fn(), error: vi.fn() };
+    directory = {
+      projects: signal([]),
+      capped: signal(false),
+      load: () => Promise.resolve(),
+      search: vi.fn(async () => []),
+    };
   });
 
   it('shows a toggle at once and takes the server state when it answers', async () => {
@@ -147,5 +163,39 @@ describe('NotificationPreferencesStore', () => {
     expect(api.calls[0].change).toEqual({ muteProjects: ['p-web'] });
     expect(api.calls[1].change).toEqual({ unmuteProjects: ['p-web'] });
     expect(store.mutedProjects()).toEqual([]);
+  });
+
+  it('finds projects beyond a capped directory and says the list is cut', async () => {
+    // Arrange
+    const ops = { id: 'p-ops', key: 'OPS', name: 'Ops' };
+    directory.projects.set([project('p-ops', 'OPS')]);
+    directory.capped.set(true);
+    directory.search.mockResolvedValue([project('p-ops', 'OPS'), project('p-zed', 'ZED')]);
+    api.get.mockReturnValue(of({ ...preferences(), mutedProjects: [ops] }));
+    const store = await setup();
+
+    // Act
+    const options = await store.searchProjects('e');
+
+    // Assert
+    expect(directory.search).toHaveBeenCalledWith('e');
+    expect(options.map((o) => o.value.key)).toEqual(['ZED']);
+    expect(store.allProjectsMuted()).toBe(false);
+    expect(store.projectsHint()).toContain('first 1000');
+  });
+
+  it('says every project is muted only when the directory holds them all', async () => {
+    // Arrange
+    const ops = { id: 'p-ops', key: 'OPS', name: 'Ops' };
+    directory.projects.set([project('p-ops', 'OPS')]);
+    api.get.mockReturnValue(of({ ...preferences(), mutedProjects: [ops] }));
+    const store = await setup();
+
+    // Act
+    const muted = store.allProjectsMuted();
+
+    // Assert
+    expect(muted).toBe(true);
+    expect(store.projectsHint()).toBeNull();
   });
 });

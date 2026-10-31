@@ -3,21 +3,24 @@
   <div class="row two">
     <div class="field">
       <span class="tk-field-label" id="create-project-label">Project</span>
-      <mat-form-field>
-        <mat-select
-          data-testid="create-project"
-          aria-labelledby="create-project-label"
-          [value]="projectKey()"
-          (valueChange)="setProject($event)"
-        >
-          @for (project of projects(); track project.key) {
-            <mat-option [value]="project.key"
-              >{{ project.name }} <span class="subtle">{{ project.key }}</span></mat-option
-            >
-          }
-        </mat-select>
-        <tk-icon matSuffix class="chev" name="tablerChevronDown" [size]="14" />
-      </mat-form-field>
+      <button
+        type="button"
+        class="pick"
+        data-testid="create-project"
+        aria-labelledby="create-project-label"
+        [tkSearchPicker]="projectSearch"
+        pickerPlaceholder="Find a project…"
+        [pickerHint]="projectsHint()"
+        (picked)="setProject($event)"
+      >
+        @if (project(); as p) {
+          <span class="pname">{{ p.name }}</span
+          ><span class="subtle">{{ p.key }}</span>
+        } @else {
+          <span class="subtle placeholder">{{ projectKey() || 'Choose a project' }}</span>
+        }
+        <tk-icon class="chev" name="tablerChevronDown" [size]="14" />
+      </button>
     </div>
     <div class="field">
       <span class="tk-field-label">Type</span>

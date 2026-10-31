@@ -119,6 +119,63 @@ test.describe('contextual hints', () => {
         await context.close();
     });
 
+    test("the picker's hint is dismissed from the keyboard and the picker stays open", async ({
+        browser,
+        api,
+    }) => {
+        // Arrange
+        const project = (await api.createProject({ visibility: 'Public' })).key;
+        const ticket = await api.post<TicketSummary>(`/projects/${project}/tickets`, {
+            title: 'Keyboard hint',
+            type: 'Technical',
+        });
+        const user = await seedUser(api, 'hint-keyboard');
+        const { context, page } = await signInAs(
+            browser,
+            { email: user.email, password: PASSWORD },
+            { keepGuides: (g) => g.id.startsWith('hint.') },
+        );
+        await page.goto(`/projects/${project}/backlog`);
+        await page.getByTestId(`backlog-row-${ticket.key}`).getByTestId('row-status').click();
+        const picker = page.getByTestId('inline-picker');
+        const filter = picker.getByRole('combobox');
+        const hint = picker.getByTestId('hint-free-transitions');
+        const dismiss = hint.getByRole('button', { name: 'Dismiss hint' });
+        await expect(filter).toBeFocused();
+
+        // Act: Tab reaches the hint's dismiss button, Shift+Tab goes back
+        await page.keyboard.press('Tab');
+
+        // Assert
+        await expect(dismiss).toBeFocused();
+        await expect(picker).toBeVisible();
+
+        // Act
+        await page.keyboard.press('Shift+Tab');
+
+        // Assert
+        await expect(filter).toBeFocused();
+
+        // Act: dismiss with Enter
+        await page.keyboard.press('Tab');
+        await page.keyboard.press('Enter');
+
+        // Assert: the hint is gone, the picker is still open with the filter focused
+        await expect(hint).toBeHidden();
+        await expect(picker).toBeVisible();
+        await expect(filter).toBeFocused();
+        await expect
+            .poll(async () => (await stored(context.request, 'hint.free-transitions'))?.state)
+            .toBe('Dismissed');
+
+        // Act: without a hint, Tab closes the picker again
+        await page.keyboard.press('Tab');
+
+        // Assert
+        await expect(picker).toBeHidden();
+        await context.close();
+    });
+
     test('a Viewer does not see a hint about a write action that a Member sees', async ({
         browser,
         api,

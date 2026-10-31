@@ -1364,7 +1364,7 @@ Rules (D-137):
 - A hint shows until the user dismisses it ("Got it", or × in a picker), which records `hint.<id>` `Dismissed` at the hint's version. Raising the version in code shows it again; Restart all guides brings every hint back.
 - Nothing shows until the onboarding state has loaded (14.1). No hint shows while a tour runs, or while a dialog, menu or picker with a backdrop covers the page; a hint inside a picker is covered only by overlays other than its own picker.
 - At most one hint is on screen: of the hints placed on the page, the first one registered that is unseen, allowed and not covered wins. Opening a status picker on the backlog therefore swaps the backlog hint for the picker's hint until the picker closes.
-- Hints are inline (`role="note"`), never focus-stealing; the dismiss button is a normal button in the tab order. A hint in a picker is dismissed with the mouse, since Tab closes the picker.
+- Hints are inline (`role="note"`), never focus-stealing; the dismiss button is a normal button in the tab order. In a picker, Tab from the filter moves to the hint's × (Shift+Tab goes back) and Enter or Space dismisses it, after which focus returns to the filter with the picker still open; Tab past the ×, or Escape, closes the picker. Without a visible hint, Tab closes the picker as before (D-157).
 - Copy lives in `core/onboarding/guides/hints.ts` with stable ids (I-60). Hints are listed in `AUTO_SHOWN_GUIDES`, so the e2e suites mark them seen (D-134).
 
 ### 14.6 Help menu and palette Help group

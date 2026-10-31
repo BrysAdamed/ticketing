@@ -5,12 +5,13 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { toApiError } from '@core/api/api-error';
 import { Board, NewBoard } from '@core/boards/board.models';
+import { ProjectDirectory, ProjectSummary } from '@core/projects/project-directory';
 import {
-  MAX_LISTED_PROJECTS,
-  ProjectDirectory,
-  ProjectSummary,
-} from '@core/projects/project-directory';
-import { injectProjectSearch } from '@core/projects/project-search';
+  CAPPED_PROJECTS_HINT,
+  injectProjectSearch,
+  pickerProjects,
+  resolveProject,
+} from '@core/projects/project-search';
 import { ProjectTileComponent } from '@shared/ui/domain/project-tile.component';
 import { IconComponent } from '@shared/ui/icon/icon.component';
 
@@ -86,7 +87,7 @@ function canWrite(project: ProjectSummary): boolean {
       />
       @if (capped() && !filter().trim()) {
         <div class="muted capped" data-testid="create-board-projects-capped">
-          Showing the first {{ listedProjects }} projects, type to search
+          {{ cappedHint }}
         </div>
       }
       <div class="projects" role="group" aria-label="Projects">
@@ -234,28 +235,22 @@ export class CreateBoardDialog {
   protected readonly filter = signal('');
   protected readonly search = injectProjectSearch(() => this.filter());
   protected readonly capped = this.directory.capped;
-  protected readonly listedProjects = MAX_LISTED_PROJECTS;
+  protected readonly cappedHint = CAPPED_PROJECTS_HINT;
   private readonly picked = signal<ReadonlyMap<string, ProjectSummary>>(new Map());
-  protected readonly projects = computed(() => this.directory.activeProjects().filter(canWrite));
-  protected readonly visibleProjects = computed(() => {
-    const term = this.filter().trim().toLowerCase();
-    const selected = this.selected();
-    const source = term ? (this.search.results() ?? this.projects()) : this.projects();
-    const shown = term
-      ? source.filter(
-          (p) =>
-            canWrite(p) &&
-            (selected.has(p.key) ||
-              p.key.toLowerCase().includes(term) ||
-              p.name.toLowerCase().includes(term)),
-        )
-      : source;
-    const keys = new Set(shown.map((p) => p.key));
-    const extra = [...this.picked().values()].filter(
-      (p) => selected.has(p.key) && !keys.has(p.key),
-    );
-    return [...extra, ...shown];
-  });
+  private readonly chosen = computed(() =>
+    [...this.selected()]
+      .map((key) => this.picked().get(key) ?? this.directory.byKey(key))
+      .filter((p): p is ProjectSummary => !!p),
+  );
+  protected readonly visibleProjects = computed(() =>
+    pickerProjects(
+      this.directory.activeProjects(),
+      this.filter(),
+      this.search.results(),
+      this.chosen(),
+      canWrite,
+    ),
+  );
   protected readonly valid = computed(
     () => this.name().trim().length > 0 && this.selected().size > 0,
   );
@@ -282,15 +277,8 @@ export class CreateBoardDialog {
 
   private async resolveSuggestedProjects(): Promise<void> {
     const missing = [...this.selected()].filter((key) => !this.directory.byKey(key));
-    if (!missing.length || !this.directory.capped()) return;
-    const found = await Promise.all(
-      missing.map((key) =>
-        this.directory
-          .search(key)
-          .then((items) => items.find((p) => p.key === key))
-          .catch(() => undefined),
-      ),
-    );
+    if (!missing.length) return;
+    const found = await Promise.all(missing.map((key) => resolveProject(this.directory, key)));
     this.picked.update((map) => {
       const next = new Map(map);
       for (const project of found) if (project) next.set(project.key, project);

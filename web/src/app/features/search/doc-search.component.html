@@ -21,36 +21,11 @@
 
 <div class="tk-toolbar filters">
   <div class="chips" role="toolbar" aria-label="Filters">
-    <button
-      type="button"
-      class="fchip"
-      [class.on]="f().project.length"
-      [matMenuTriggerFor]="projectMenu"
-      data-testid="doc-filter-project"
-    >
-      @if (f().project.length) {
-        Project: <b>{{ summary(f().project) }}</b>
-      } @else {
-        <tk-icon name="tablerPlus" [size]="14" />Project
-      }
-    </button>
-    <mat-menu #projectMenu="matMenu" class="tk-filter-menu">
-      @for (project of projects(); track project.key) {
-        <button
-          mat-menu-item
-          type="button"
-          [attr.data-testid]="'doc-filter-project-' + project.key"
-          (click)="$event.stopPropagation(); toggle('project', project.key)"
-        >
-          <span class="opt"
-            ><span class="box" [class.on]="f().project.includes(project.key)"></span
-            ><tk-project-tile [projectKey]="project.key" />{{ project.name }}</span
-          >
-        </button>
-      } @empty {
-        <div class="empty">No projects</div>
-      }
-    </mat-menu>
+    <tk-project-facet
+      testId="doc-filter-project"
+      [selected]="f().project"
+      (toggled)="toggle('project', $event)"
+    />
 
     <button
       type="button"

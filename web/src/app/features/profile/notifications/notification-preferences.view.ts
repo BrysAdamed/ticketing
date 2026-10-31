@@ -5,7 +5,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { NotificationKindPreference } from '@core/notifications/notification-preferences.api';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { IconComponent } from '@shared/ui/icon/icon.component';
-import { InlinePickerDirective } from '@shared/ui/inline-picker/inline-picker.directive';
+import { SearchPickerDirective } from '@shared/ui/search-picker/search-picker.directive';
 import { SkeletonRowsComponent } from '@shared/ui/skeleton/skeleton-rows.component';
 import { KIND_COPY } from './notification-preferences.logic';
 import { NotificationPreferencesStore } from './notification-preferences.store';
@@ -18,7 +18,7 @@ import { NotificationPreferencesStore } from './notification-preferences.store';
     MatTooltipModule,
     EmptyStateComponent,
     IconComponent,
-    InlinePickerDirective,
+    SearchPickerDirective,
     SkeletonRowsComponent,
   ],
   providers: [NotificationPreferencesStore],

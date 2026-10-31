@@ -6,8 +6,10 @@ import {
 } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
 import {
+  ComponentRef,
   DestroyRef,
   Directive,
+  effect,
   ElementRef,
   inject,
   Injector,
@@ -38,14 +40,18 @@ export class SearchPickerDirective<T> {
   readonly pickerShortcut = input<string | null>(null);
   readonly pickerOptionTemplate = input<PickerOptionTemplate<T> | null>(null);
   readonly pickerDisabled = input(false);
+  /// A note under the search box while nothing is typed, for example that the list is cut.
+  readonly pickerHint = input<string | null>(null);
 
   readonly picked = output<T>();
 
   readonly isOpen = signal(false);
   private overlayRef: OverlayRef | null = null;
+  private readonly panel = signal<ComponentRef<SearchPickerPanelComponent<T>> | null>(null);
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.overlayRef?.dispose());
+    effect(() => this.panel()?.setInput('hint', this.pickerHint()));
   }
 
   toggle(): void {
@@ -76,6 +82,8 @@ export class SearchPickerDirective<T> {
     panel.setInput('placeholder', this.pickerPlaceholder());
     panel.setInput('shortcut', this.pickerShortcut());
     panel.setInput('optionTemplate', this.pickerOptionTemplate());
+    panel.setInput('hint', this.pickerHint());
+    this.panel.set(panel);
     panel.instance.picked.subscribe((value) => {
       this.close();
       this.picked.emit(value);
@@ -90,6 +98,7 @@ export class SearchPickerDirective<T> {
     if (!this.overlayRef) return;
     this.overlayRef.dispose();
     this.overlayRef = null;
+    this.panel.set(null);
     this.isOpen.set(false);
     this.host.nativeElement.focus();
   }

@@ -14,7 +14,8 @@ namespace Ticketing.Application.Tickets;
 /// <summary>
 /// PATCH a ticket (spec 6.2, 6.3): omitted fields stay, null clears an optional field. Every changed field writes one
 /// <c>ticket.field.changed</c> entry with the same timestamp. Status side effects (resolution, resolved date, leaving
-/// Done on an archived board) are applied in the same transaction.
+/// Done on an archived board) are applied in the same transaction. The ticket row is locked before it is read, so an edit
+/// without an expected version is last-writer-wins and never fails on a write that commits while it runs (D-43, D-175).
 /// </summary>
 public static class UpdateTicket
 {
@@ -98,7 +99,7 @@ public static class UpdateTicket
 
         private async Task<bool> ApplyAsync(Command command, TicketTarget target, CancellationToken cancellationToken)
         {
-            var ticket = await db.Tickets.SingleAsync(t => t.Id == target.Id, cancellationToken);
+            var ticket = await db.Tickets.FromSql($"SELECT *, xmin FROM tickets WHERE id = {target.Id} FOR UPDATE").SingleAsync(cancellationToken);
             db.ExpectVersion(ticket, command.ExpectedVersion);
             var now = clock.Now;
             var changes = new Changes(activity, ticket.Id, target.ProjectId);

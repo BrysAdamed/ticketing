@@ -438,22 +438,25 @@ export class TicketDetailStore {
   }
 
   /// Comments, links and attachments bump the ticket's `UpdatedAt` and row version on the server: take
-  /// those (keeping the collections loaded here) and refresh the activity list.
+  /// the fresh ticket (keeping the comments loaded here) and refresh the activity list. The fields come
+  /// along with the row version, so a stale copy is never passed on under a current version; a fresh
+  /// copy that is not newer than the one shown (a later save answered first) is dropped.
   private async refreshMeta(): Promise<void> {
     const key = this.key();
     try {
       const fresh = await firstValueFrom(this.api.get(key));
       const current = this.ticket();
-      if (!current || current.id !== fresh.id) return;
-      const merged: Ticket = {
-        ...current,
-        updatedAt: fresh.updatedAt,
-        rowVersion: fresh.rowVersion,
-        watchers: fresh.watchers ?? current.watchers,
-      };
-      this.ticket.set(merged);
-      this.cache.put(merged);
-      this.events.emit({ kind: 'updated', ticket: merged });
+      if (current && current.id === fresh.id && isNewer(fresh, current)) {
+        const merged: Ticket = {
+          ...fresh,
+          comments: current.comments,
+          commentCount: current.commentCount,
+          watchers: fresh.watchers ?? current.watchers,
+        };
+        this.ticket.set(merged);
+        this.cache.put(merged);
+        this.events.emit({ kind: 'updated', ticket: merged });
+      }
     } catch {
       // The view keeps its current values; the next load brings the new ones.
     }

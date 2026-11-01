@@ -720,7 +720,7 @@ stateDiagram-v2
 
 - Watch and unwatch need read access only and a write-scoped token; both are idempotent and record no history.
 - A hidden watcher keeps the row but is left out of the watcher list, the `watching=true` search, My work and notifications (section 12), because every reader re-checks access.
-- Pages and diagrams have watchers too (D-162): `DocWatcher` rows added by `PUT /docs/{key}/watchers/me` (MCP `watch_doc`) or by the projector for the creator (`doc.created`) and every commenter (`doc.comment.added`). The same states apply; folders cannot be watched. A new doc comment notifies the doc's watchers; users newly mentioned in a doc comment (D-163) or a published page (D-166) start watching too.
+- Pages and diagrams have watchers too (D-162): `DocWatcher` rows added by `PUT /docs/{key}/watchers/me` (MCP `watch_doc`) or by the projector for the creator (`doc.created`), every publisher of a version (`doc.updated` with a version, `doc.version.restored`; D-178) and every commenter (`doc.comment.added`). The same states apply; folders cannot be watched. A new doc comment notifies the doc's watchers; users newly mentioned in a doc comment (D-163) or a published page (D-166) start watching too.
 
 ## 12. Notifications
 

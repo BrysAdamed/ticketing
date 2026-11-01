@@ -58,13 +58,13 @@ public sealed record DocCreated(Guid DocNodeId, Guid ProjectId, Guid? ActorId, D
     : DocEvent(DocNodeId, ProjectId, ActorId, OccurredAt);
 
 /// <summary>
-/// A new version of a page or diagram was published (not restored): its watchers are notified (D-173), users a page newly
-/// mentions too (D-166). <see cref="From"/> and <see cref="To"/> are the page content before and after; null for diagrams.
+/// A new version of a page or diagram was published (not restored): the publisher starts watching it (D-178), its watchers are
+/// notified (D-173), users a page newly mentions too (D-166). <see cref="From"/> and <see cref="To"/> are the page content before and after; null for diagrams.
 /// </summary>
 public sealed record DocPublished(Guid DocNodeId, Guid ProjectId, Guid? ActorId, DateTimeOffset OccurredAt, int Version, string? From, string? To)
     : DocEvent(DocNodeId, ProjectId, ActorId, OccurredAt);
 
-/// <summary>An older version of a page or diagram was restored as <see cref="Version"/>: its watchers are notified (D-173), mentions are not (D-166).</summary>
+/// <summary>An older version of a page or diagram was restored as <see cref="Version"/>: the restorer starts watching it (D-178), its watchers are notified (D-173), mentions are not (D-166).</summary>
 public sealed record DocRestored(Guid DocNodeId, Guid ProjectId, Guid? ActorId, DateTimeOffset OccurredAt, int Version, int RestoredFrom)
     : DocEvent(DocNodeId, ProjectId, ActorId, OccurredAt);
 

@@ -1307,7 +1307,7 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
 
 ### D-162 Doc watchers replace the participant rule for doc comments; the old participants are backfilled (TKT-107)
 
-> Since D-173 (TKT-113) watchers also hear about new published and restored versions.
+> Since D-173 (TKT-113) watchers also hear about new published and restored versions. Since D-178 (TKT-119) whoever publishes or restores a version starts watching too.
 
 - Question: D-117 notified a doc's creator and the authors of its live comments about a new comment, because watching docs did not exist. TKT-47 adds watching (I-85). Who watches a doc, what happens to people the old rule notified, and what does watching a doc notify about?
 - Decision:
@@ -1434,6 +1434,8 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
 - Rejected: relying on the 5-minute window alone (too many rows for a page edited all afternoon); collapsing until read with no time limit (an unread row would keep a day-old place in the list while the doc changes underneath); notifying the publisher's co-authors by making every publisher watch (a change to D-162's audience, left to TKT-119); parsing the version back out of the summary for the link (summaries are display text).
 - Achievements: none; reading about a new version is not an action worth one.
 
+> Since D-178 (TKT-119) a publisher starts watching the doc, so co-authors hear about each other's versions.
+
 ### D-174 Every project picker searches the server once the directory is capped (TKT-116)
 
 - Question: D-168 left four pickers on the directory's first 1000 projects: the Create ticket project select, the board settings "Link a project" select, the project facet of the ticket and doc search, and "Mute a project". How should they reach the rest?
@@ -1486,6 +1488,17 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
 - Rejected: one `docs.doc` tour with the tree steps (the home is where people land and has no tour then); `opens: 'doc'` with a doc finder in `TourTargets` (only useful with a learn action, and none needs it); a separate Docs search tour (tours are keyed by view, not by state); anchors in the editor bar to make the doc tour start in edit mode (the steps would point at different things in the two modes).
 - Rationale: data plus anchors, as the tour engine intends; the docs home tour is the front door, the doc tour explains a page where it is read, and search keeps one tour whose steps resolve in either scope.
 - Achievements: none new (see above).
+
+### D-178 Whoever publishes or restores a version of a page or diagram starts watching it; no backfill (TKT-119)
+
+- Question: D-162 subscribes a doc's creator and its commenters; D-173 left publishers out, so two co-authors did not hear about each other's versions unless they pressed Watch. Which writes subscribe, and are past editors backfilled from `doc_versions`?
+- Decision:
+  - **Triggers**: every new version, so `DocPublished` (PATCH with content and find/replace edits, over REST or MCP, pages and diagrams) and `DocRestored` (a restore publishes a version too, and whoever restores has taken responsibility for the content) add the actor to `WatchingRules.DocCandidates`, next to `DocCreated` and `DocCommentAdded`. Drafts (autosave), renames, moves and duplicates subscribe nobody new beyond D-162. The projector adds watchers before it computes notifications and never notifies the actor, so a publisher's own version does not notify them.
+  - **Writes**: the existing doc watcher path (D-159, D-162): one `INSERT … ON CONFLICT DO NOTHING` for an existing doc, so a concurrent explicit watch never fails the publish, and someone already watching stays as they are.
+  - **Unwatching** holds until the publisher's next version, like comments.
+  - **No backfill**: `doc_watchers` keeps no record of an unwatch, so a backfill from `doc_versions` could not tell a past editor who unwatched from one who never watched and would resubscribe people who chose to leave. Past editors start watching with their next version; D-162's backfill was different, because it preserved an audience the old rule already notified.
+- Rejected: leaving find/replace over MCP out (an agent acts as its token's owner, who is the author of record of that version); leaving restores out (a restore is a publish of older content, and the restorer is answerable for it); backfilling from `doc_versions` (see above).
+- Achievements: none; watching earns nothing (D-162).
 
 ## Product owner answers (v1 review, 2026-10-27)
 

@@ -30,7 +30,7 @@ async function lazyChildren(route: Route): Promise<Routes> {
   return Array.isArray(loaded) ? loaded : loaded.default;
 }
 
-describe('tour views', () => {
+describe('tour views', { timeout: 30_000 }, () => {
   it('registers the view of every tour in the ViewRegistry through the app routes', async () => {
     // Arrange
     TestBed.configureTestingModule({

@@ -1398,6 +1398,8 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
 - Rejected: probing for targets at app start so the palette commands work everywhere (requests for every user on every load, for a rarely used command); a fallback from a session tour to the explainer when there is no session (D-143: an action does what its note says); bumping tour versions or adding steps here.
 - Rationale: one front door (`LearnActions`) still starts every learn action, the catalogue stays plain data, and any later tour that needs a ticket or a board is one `opens` value away.
 
+> Since D-175 (TKT-117) the ticket tour has an Attachments step and Show me starts it there.
+
 ### D-171 PDF bookmarks nest by folder depth through `aria-level`, at most six levels (TKT-74)
 
 - Question: D-127 left folder PDF bookmarks flat, because Chromium's `generateDocumentOutline` follows heading levels and shifting the real heading tags by depth would change how pages look. Can they nest without that?
@@ -1446,7 +1448,19 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
 - Rationale: one way to find a project in every picker, no matter how many there are, with the selection never blank.
 - Achievements: none; finding a project in a picker is not an action worth one.
 
-### D-175 A ticket edit locks the row before reading it; views never let an older copy replace a newer one (TKT-118)
+### D-175 The ticket tour gains an Attachments step at version 2; Show me covers Show me (TKT-117)
+
+- Question: D-170 left `show-me` without a learn action because no tour step shows attachments. Where does the step go, who sees it, and do users who already finished the ticket tour see it again?
+- Decision:
+  - **Step** `attachments` after Test cases and before Delegate, in page order (the attachments section sits below test cases; Delegate stays last as a header action). Its anchor `ticket.attachments` is on the section header in `tk-attachments-section`, which renders with and without attachments, so the step always resolves.
+  - **For everyone**: no `requires`; a Viewer can see and download attachments, and the copy says where files come from rather than only how to add them. Writers get eight steps, Viewers six.
+  - **Version 2**: the tour gained a step users should see (frontend.md, "Version bump"), so everyone who completed or dismissed version 1 gets the tour as new again. One extra "new" badge on one tour is a small cost against users never learning the section exists.
+  - **Map**: `show-me` → ticket tour at Attachments, with a note that files attached to docs count too (the criterion counts both). The docs page has no tour, so a ticket is the only place to point at.
+- Rejected: `requires: 'write'` (hides a read-only part of the page from Viewers); leaving the version at 1 (people who saw the tour would never meet the step outside Show me); a docs attachments target (no docs tour to start).
+- Rationale: one step and one map entry close the gap D-170 left for Show me; Epic finisher stays unmapped (no tour step shows closing an Epic).
+- Achievements: none new; this makes the existing `show-me` learnable.
+
+### D-176 A ticket edit locks the row before reading it; views never let an older copy replace a newer one (TKT-118)
 
 - Question: D-43 makes inline edits last-writer-wins, but `UpdateTicket` read the ticket without a lock and EF's `xmin` token made every `UPDATE` conditional on the version it read. Any write of the same ticket that committed while a PATCH ran (a second inline edit of the row, the rank move after a quick create, a rebalance, a comment's touch) failed it with 409 `concurrency.conflict`; the backlog rolled the row back. Two quick inline edits after a quick create could both be lost (the flaky `backlog-and-ticket` e2e).
 - Decision:

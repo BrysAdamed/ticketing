@@ -171,7 +171,6 @@ describe('achievement learn actions', () => {
 
     // Act / Assert
     expect(learnActionFor(locked('reporter', { tier: 1 }))).toBeNull();
-    expect(learnActionFor(locked('show-me'))).toBeNull();
     expect(learnActionFor(locked('epic-finisher'))).toBeNull();
     expect(learnActionFor(masked)).toBeNull();
     for (const id of SECRETS)
@@ -207,6 +206,7 @@ describe('achievement learn actions', () => {
     ['connector', 'ticket.detail', 'links'],
     ['conversationalist', 'ticket.detail', 'mentions'],
     ['shout-out', 'ticket.detail', 'mentions'],
+    ['show-me', 'ticket.detail', 'attachments'],
     ['delegator', 'ticket.detail', 'delegate'],
     ['regression-runner', 'regressions.session', 'record'],
     ['found-it', 'regressions.session', 'create-bug'],

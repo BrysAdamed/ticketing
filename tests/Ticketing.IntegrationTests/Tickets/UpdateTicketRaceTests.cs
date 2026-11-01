@@ -8,7 +8,7 @@ using Ticketing.IntegrationTests.Infrastructure;
 
 namespace Ticketing.IntegrationTests.Tickets;
 
-/// <summary>D-43, D-175: an edit without If-Match is last-writer-wins, so a write of the same ticket committing while it runs cannot fail it.</summary>
+/// <summary>D-43, D-176: an edit without If-Match is last-writer-wins, so a write of the same ticket committing while it runs cannot fail it.</summary>
 [Collection(nameof(TicketsCollection))]
 public sealed class UpdateTicketRaceTests(TicketingApiFactory api)
 {

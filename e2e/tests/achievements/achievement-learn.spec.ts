@@ -62,43 +62,48 @@ test.describe('@achievements how to earn', () => {
         await context.close();
     });
 
-    test('Show me on Connector opens a readable ticket and starts its tour at Links', async ({
-        browser,
-        api,
-    }) => {
-        // Arrange
-        const project = (await api.createProject()).key;
-        await api.post(`/projects/${project}/tickets`, {
-            title: 'Checkout total is wrong',
-            type: 'UserStory',
+    for (const [id, name, step] of [
+        ['connector', 'Connector', 'Links'],
+        ['show-me', 'Show me', 'Attachments'],
+    ]) {
+        test(`Show me on ${name} opens a readable ticket and starts its tour at ${step}`, async ({
+            browser,
+            api,
+        }) => {
+            // Arrange
+            const project = (await api.createProject()).key;
+            await api.post(`/projects/${project}/tickets`, {
+                title: 'Checkout total is wrong',
+                type: 'UserStory',
+            });
+            const user = await seedUser(api, id);
+            await api.post(`/projects/${project}/members`, { user: user.id, role: 'Member' });
+            await enableFor(api, [user.id]);
+            const { context, page } = await signInAs(browser, {
+                email: user.email,
+                password: PASSWORD,
+            });
+            const achievements = new AchievementsPage(page);
+            await achievements.goto();
+
+            // Act
+            await achievements.openButton(id).click();
+
+            // Assert
+            await expect(achievements.detail.getByTestId('achievement-learn')).toContainText(
+                `Opens a ticket and starts its tour at ${step}`,
+            );
+
+            // Act
+            await achievements.detail.getByTestId('achievement-show-me').click();
+
+            // Assert
+            const tour = page.getByTestId('tour-popover');
+            await expect(page).toHaveURL(/\/tickets\/[A-Z0-9]+-\d+$/);
+            await expect(tour.getByRole('heading')).toHaveText(step);
+            await expect(tour.getByTestId('tour-back')).toBeVisible();
+
+            await context.close();
         });
-        const user = await seedUser(api, 'connector');
-        await api.post(`/projects/${project}/members`, { user: user.id, role: 'Member' });
-        await enableFor(api, [user.id]);
-        const { context, page } = await signInAs(browser, {
-            email: user.email,
-            password: PASSWORD,
-        });
-        const achievements = new AchievementsPage(page);
-        await achievements.goto();
-
-        // Act
-        await achievements.openButton('connector').click();
-
-        // Assert
-        await expect(achievements.detail.getByTestId('achievement-learn')).toContainText(
-            'Opens a ticket and starts its tour at Links.',
-        );
-
-        // Act
-        await achievements.detail.getByTestId('achievement-show-me').click();
-
-        // Assert
-        const tour = page.getByTestId('tour-popover');
-        await expect(page).toHaveURL(/\/tickets\/[A-Z0-9]+-\d+$/);
-        await expect(tour.getByRole('heading')).toHaveText('Links');
-        await expect(tour.getByTestId('tour-back')).toBeVisible();
-
-        await context.close();
-    });
+    }
 });

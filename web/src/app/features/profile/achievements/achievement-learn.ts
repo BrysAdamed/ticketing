@@ -28,10 +28,9 @@ const sessionTour = (step: string): AchievementLearnTarget => ({
   step,
 });
 
-/// The learn action of each catalogue entry that has one (spec 15.9, D-154, D-170). Tours with a
-/// path start in a project; the ticket, board and regression-session tours first open one the user
-/// can read. Show me (attachments) and Epic finisher have no matching tour step. Secret entries
-/// never appear here.
+/// The learn action of each catalogue entry that has one (spec 15.9, D-154, D-170, D-175). Tours
+/// with a path start in a project; the ticket, board and regression-session tours first open one
+/// the user can read. Epic finisher has no matching tour step. Secret entries never appear here.
 export const ACHIEVEMENT_LEARN_ACTIONS: ReadonlyMap<string, AchievementLearnAction> = new Map([
   [
     'reporter',
@@ -86,6 +85,13 @@ export const ACHIEVEMENT_LEARN_ACTIONS: ReadonlyMap<string, AchievementLearnActi
   [
     'shout-out',
     { target: ticketTour('mentions'), note: 'Opens a ticket and starts its tour at @mentions.' },
+  ],
+  [
+    'show-me',
+    {
+      target: ticketTour('attachments'),
+      note: 'Opens a ticket and starts its tour at Attachments; files attached to docs count too.',
+    },
   ],
   [
     'delegator',

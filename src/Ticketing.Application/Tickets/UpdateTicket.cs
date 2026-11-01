@@ -15,7 +15,7 @@ namespace Ticketing.Application.Tickets;
 /// PATCH a ticket (spec 6.2, 6.3): omitted fields stay, null clears an optional field. Every changed field writes one
 /// <c>ticket.field.changed</c> entry with the same timestamp. Status side effects (resolution, resolved date, leaving
 /// Done on an archived board) are applied in the same transaction. The ticket row is locked before it is read, so an edit
-/// without an expected version is last-writer-wins and never fails on a write that commits while it runs (D-43, D-175).
+/// without an expected version is last-writer-wins and never fails on a write that commits while it runs (D-43, D-176).
 /// </summary>
 public static class UpdateTicket
 {

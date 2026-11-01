@@ -85,6 +85,59 @@ describe('TicketDetailStore', () => {
     expect(api.history).toHaveBeenCalledOnce();
   });
 
+  it('takes the fresh fields with the new row version after a comment and passes them on', async () => {
+    // Arrange: the view shows a copy from before an inline edit made elsewhere
+    api.get.mockReturnValue(
+      of(
+        ticket({
+          priority: 'High',
+          status: 'InProgress',
+          updatedAt: '2026-10-02T09:00:00Z',
+          rowVersion: 7,
+          comments: [],
+        } as Partial<Ticket>),
+      ),
+    );
+    const events: TicketEvent[] = [];
+    TestBed.inject(TicketEvents).events.subscribe((e) => events.push(e));
+
+    // Act
+    await store.addComment('c2');
+    await vi.waitFor(() => expect(store.ticket()?.rowVersion).toBe(7));
+
+    // Assert
+    expect(store.ticket()?.priority).toBe('High');
+    expect(store.ticket()?.status).toBe('InProgress');
+    expect(store.comments().map((c) => c.id)).toEqual(['c1', 'c2']);
+    expect(events.at(-1)).toEqual({
+      kind: 'updated',
+      ticket: expect.objectContaining({ priority: 'High', status: 'InProgress', rowVersion: 7 }),
+    });
+  });
+
+  it('keeps a newer save when the refresh after a comment answers with an older copy', async () => {
+    // Arrange
+    const fresh = new Subject<Ticket>();
+    api.get.mockReturnValue(fresh);
+
+    // Act
+    await store.addComment('c2');
+    store.ticket.set(
+      ticket({
+        title: 'Renamed',
+        updatedAt: '2026-10-02T10:00:00Z',
+        rowVersion: 9,
+      } as Partial<Ticket>),
+    );
+    fresh.next(ticket({ updatedAt: '2026-10-02T09:00:00Z', rowVersion: 7 }));
+    fresh.complete();
+    await Promise.resolve();
+
+    // Assert
+    expect(store.ticket()?.rowVersion).toBe(9);
+    expect(store.ticket()?.title).toBe('Renamed');
+  });
+
   it('refreshes after an attachment change on this ticket only', async () => {
     // Arrange
     api.get.mockClear();

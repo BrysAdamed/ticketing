@@ -256,6 +256,7 @@ export class BacklogStore {
   // Edits
 
   /// Applies a field change to several tickets: optimistic, one PATCH per ticket, rollback per failure.
+  /// A rollback reverts only the fields this edit changed, so a parallel edit of the row survives it.
   async update(
     ids: readonly string[],
     patch: TicketPatch,
@@ -265,8 +266,9 @@ export class BacklogStore {
       ids.map((id) => [id, this.item(id)]).filter((e): e is [string, BacklogItem] => !!e[1]),
     );
     if (before.size === 0) return;
+    const applied = new Map([...before].map(([id, item]) => [id, local(item)]));
     this.items.update((items) =>
-      items.map((item) => (before.has(item.id) ? { ...item, ...local(item) } : item)),
+      items.map((item) => (applied.has(item.id) ? { ...item, ...applied.get(item.id) } : item)),
     );
     const results = await Promise.allSettled(
       [...before.values()].map(async (item) => {
@@ -282,7 +284,9 @@ export class BacklogStore {
     if (failed.length === 0) return;
     const failedIds = new Set(failed.map((i) => i.id));
     this.items.update((items) =>
-      items.map((item) => (failedIds.has(item.id) ? (before.get(item.id) ?? item) : item)),
+      items.map((item) =>
+        failedIds.has(item.id) ? revert(item, before.get(item.id)!, applied.get(item.id)!) : item,
+      ),
     );
     const reason = (results.find((r) => r.status === 'rejected') as PromiseRejectedResult).reason;
     this.toast.error(
@@ -694,11 +698,13 @@ export class BacklogStore {
 
   private applyServerTicket(ticket: Ticket): void {
     if (ticket.projectKey !== this.projectKey()) return;
+    const shown = this.items().find((i) => i.id === ticket.id);
+    if (shown && Date.parse(ticket.updatedAt) < Date.parse(shown.updatedAt)) return;
     if (ticket.location.kind !== 'Backlog') {
       this.removeLocal([ticket.key]);
       return;
     }
-    if (!this.items().some((i) => i.id === ticket.id)) {
+    if (!shown) {
       if (ticket.status !== 'Done' || this.filters().showDone) void this.reload();
       return;
     }
@@ -820,6 +826,19 @@ const PENDING_PREFIX = 'pending:';
 /// A quick-created ticket shown before the server confirmed it.
 export function isPending(id: string): boolean {
   return id.startsWith(PENDING_PREFIX);
+}
+
+/// Puts back the fields a failed edit changed, unless something newer (a parallel edit's server
+/// answer) has replaced its optimistic value since.
+function revert(
+  item: BacklogItem,
+  before: BacklogItem,
+  applied: Partial<BacklogItem>,
+): BacklogItem {
+  const fields = (Object.keys(applied) as (keyof BacklogItem)[]).filter(
+    (field) => item[field] === applied[field],
+  );
+  return { ...item, ...Object.fromEntries(fields.map((field) => [field, before[field]])) };
 }
 
 function backlogCacheKey(projectKey: string, filters: BacklogFilters): string {

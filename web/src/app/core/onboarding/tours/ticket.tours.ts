@@ -1,12 +1,12 @@
 import { TourDefinition } from '../engine/tour.model';
 
-/// Tour of the ticket page (spec 14.4). Writers get up to seven steps, Viewers five (no @mentions,
+/// Tour of the ticket page (spec 14.4). Writers get up to eight steps, Viewers six (no @mentions,
 /// no Delegate). Access comes from the ticket itself (D-138). Sub-tickets are skipped on a spike
 /// without children, and Delegate only shows while agent delegation is on for the project: the
 /// Delegate button exposes its anchor only when it is visible.
 export const TICKET_TOUR: TourDefinition = {
   id: 'tour.ticket.detail',
-  version: 1,
+  version: 2,
   viewId: 'ticket.detail',
   title: 'Ticket',
   steps: [
@@ -49,6 +49,12 @@ export const TICKET_TOUR: TourDefinition = {
       anchor: 'ticket.test-cases',
       title: 'Test cases',
       body: "The test cases that cover this ticket, with their status and last regression result. They're run in regression sessions.",
+    },
+    {
+      id: 'attachments',
+      anchor: 'ticket.attachments',
+      title: 'Attachments',
+      body: 'Screenshots, logs and other files for this ticket. Attach them here or drop them on the section; images pasted into a comment or the description land here too.',
     },
     {
       id: 'delegate',

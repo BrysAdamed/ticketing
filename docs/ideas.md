@@ -117,7 +117,7 @@ Later items of the Achievements epic (TKT-61, D-144). Anything that lets others 
 | ID | Idea | Why | Size |
 | --- | --- | --- | --- |
 | I-132 | Bonus avatars unlocked by achievements | A few extra animals as a reward. The 32 animal avatars stay free (D-130). | S |
-| I-133 | `scribe` achievement for Docs | Recognises writing docs. Needs the Docs feature (TKT-10) and its activity. | S |
+| I-133 | `scribe` achievement for Docs | Recognises writing docs. Docs has shipped (TKT-10) and records its activity, so this needs only a criterion through the extension point (backend.md "Adding an achievement"). | S |
 | I-134 | `merged` achievement | Recognises merged work. Needs git integration (I-50). | S |
 | I-135 | `NotificationKind` for achievement unlocks | Unlocks in the notification list, not only as a toast. Notifications belong to a project today, so it needs a nullable `notifications.project_id` (an achievement stores no project, D-144). | S |
 | I-136 | Team achievement dashboards | Shared team milestones. Must not rank or compare individuals (no leaderboards, D-144). | M |

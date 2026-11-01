@@ -1435,7 +1435,7 @@ Users earn private, tiered achievements for real actions, through any channel. T
 
 ### 15.1 Feature flag and privacy
 
-- Everything sits behind the string-variant flag `achievements` (6.13), evaluated per user: the projector, the REST API, the MCP tools and the UI. While it is off for the caller, every achievements endpoint returns 404 `achievements.disabled` and the MCP tools are missing from `tools/list` (`AchievementsGate`, the same pattern as `AgentGate`).
+- Everything sits behind the string-variant flag `achievements` (6.13), declared in code with the default on (D-169) and evaluated per user: the projector, the REST API, the MCP tools and the UI. While it is off for the caller, every achievements endpoint returns 404 `achievements.disabled` and the MCP tools are missing from `tools/list` (`AchievementsGate`, the same pattern as `AgentGate`).
 - An achievement is visible only to its owner, Admins included. There is no admin or manager view of individuals, no leaderboard (not even per team), no export, no points and nothing time-based (no streaks, night-owl or weekend achievements). A user may share an individual achievement (TKT-97); others then see its name, icon and tier, never dates (D-144).
 - No project or ticket id is stored with an achievement, so nothing can reveal a private project.
 - Achievements are monotonic: an earned tier is never revoked, even when the counted entities are later deleted. Only the opt-out deletes them.

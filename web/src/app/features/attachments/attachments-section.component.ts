@@ -27,6 +27,7 @@ import {
 import { firstValueFrom } from 'rxjs';
 import { ConfirmService } from '@core/notify/confirm.service';
 import { ToastService } from '@core/notify/toast.service';
+import { TourAnchorDirective } from '@core/onboarding/engine/tour-anchor.directive';
 import { TicketCache } from '@core/tickets/ticket-cache';
 import {
   Attachment,
@@ -49,7 +50,14 @@ interface PendingUpload {
 /// delete for the uploader or an Owner, and upload by button, drag and drop or paste in editors.
 @Component({
   selector: 'tk-attachments-section',
-  imports: [MatTooltip, RelativeTimePipe, AbsoluteTimePipe, IconComponent, SkeletonRowsComponent],
+  imports: [
+    MatTooltip,
+    RelativeTimePipe,
+    AbsoluteTimePipe,
+    IconComponent,
+    SkeletonRowsComponent,
+    TourAnchorDirective,
+  ],
   viewProviders: [
     provideIcons({
       tablerDownload,
@@ -72,7 +80,7 @@ interface PendingUpload {
     '(drop)': 'onDrop($event)',
   },
   template: `
-    <div class="sec-h">
+    <div class="sec-h" tkTourAnchor="ticket.attachments">
       <h2>Attachments</h2>
       @if (items().length) {
         <span class="n tnum" data-testid="attachments-count">{{ items().length }}</span>

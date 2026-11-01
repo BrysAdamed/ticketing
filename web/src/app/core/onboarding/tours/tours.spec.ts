@@ -272,8 +272,19 @@ describe('ticket tour', () => {
       'watch',
       'mentions',
       'test-cases',
+      'attachments',
       'delegate',
     ]);
+  });
+
+  it('points the Attachments step at the attachments section, for Viewers too', () => {
+    // Arrange
+    const step = TICKET_TOUR.steps.find((s) => s.id === 'attachments');
+
+    // Assert
+    expect(step?.anchor).toBe('ticket.attachments');
+    expect(step?.requires).toBeUndefined();
+    expect(TICKET_TOUR.version).toBeGreaterThanOrEqual(2);
   });
 
   it('skips Delegate when the Delegate button is not shown (flag off) and still starts', () => {
@@ -298,6 +309,7 @@ describe('ticket tour', () => {
       'links',
       'watch',
       'test-cases',
+      'attachments',
     ]);
     expect(result.skipped).toEqual([]);
   });

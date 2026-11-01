@@ -18,10 +18,6 @@
     width: 100%;
   }
 
-  ::ng-deep .mat-mdc-select-arrow-wrapper {
-    display: none;
-  }
-
   .chev {
     margin-right: 10px;
     color: var(--tk-text-subtle);
@@ -45,6 +41,17 @@
   .chev {
     margin-left: auto;
     color: var(--tk-text-subtle);
+  }
+
+  .pname {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .placeholder {
+    margin-left: 0;
   }
 }
 

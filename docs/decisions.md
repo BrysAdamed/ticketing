@@ -1369,7 +1369,7 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
   - Pickers built on the directory use `injectProjectSearch`: local filtering below the cap, server search for the typed text once capped. The New board dialog uses it, notes "Showing the first 1000 projects, type to search", and keeps selected projects (including suggested ones beyond the cap) visible.
   - Command palette: the local project provider stays; a remote provider adds server matches for the typed text only while the directory is capped.
   - Sidebar: unchanged. It shows at most 8 projects (the first by key, plus the open project even when it is not in the directory), and "All projects…" leads to the searchable page; when capped that link always reads "All projects…". Ordering by favourites and recently viewed stays in ideas.md: it needs per-user state that no other v1 feature has, and at most 8 rows were never going to show 1000 projects anyway.
-  - Still on the directory alone (TKT-116): the Create ticket project select, the board settings project picker, the search filter bar's project facet and the notification project mutes.
+  - Still on the directory alone (TKT-116): the Create ticket project select, the board settings project picker, the search filter bar's project facet and the notification project mutes. Done in D-174.
 - Rejected: loading every project (unbounded memory and start-up requests on a large instance); infinite scroll on the projects page (scrolling past 1000 rows to find one project is worse than typing, and the segment counts would still be partial); a server-side count endpoint just for the header (the `1000+` is enough to say the list is cut).
 
 ### D-169 Feature flags are declared in code with a default; the admin page only changes targeting (TKT-81)
@@ -1431,6 +1431,20 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
   - **Preferences**: `DocUpdated` is listed by D-160 (web: "Doc updates" under "On things you follow"), can be muted, and is silenced by a muted project because it is not direct.
 - Rejected: relying on the 5-minute window alone (too many rows for a page edited all afternoon); collapsing until read with no time limit (an unread row would keep a day-old place in the list while the doc changes underneath); notifying the publisher's co-authors by making every publisher watch (a change to D-162's audience, left to TKT-119); parsing the version back out of the summary for the link (summaries are display text).
 - Achievements: none; reading about a new version is not an action worth one.
+
+### D-174 Every project picker searches the server once the directory is capped (TKT-116)
+
+- Question: D-168 left four pickers on the directory's first 1000 projects: the Create ticket project select, the board settings "Link a project" select, the project facet of the ticket and doc search, and "Mute a project". How should they reach the rest?
+- Decision:
+  - The Create ticket project field and "Link a project" become search pickers (`tkSearchPicker`, the control the dialog already uses for assignee and parent) instead of `mat-select`, which cannot take typed text. "Mute a project" moves from the inline picker to the search picker too. Their search goes through `findProjects` (`core/projects/project-search.ts`): the directory filtered locally, or `GET /projects?query=` once the directory is capped and something is typed.
+  - The ticket and doc search share one `tk-project-facet` (`features/search/`): the menu gains a "Find a project…" box (also below the cap, like the assignee menu), lists `pickerProjects` (local filter, or the server's matches through `injectProjectSearch` when capped) and keeps chosen projects listed first when they are not in the list; a chosen key it knows nothing about (from a URL) shows as its key.
+  - A chosen project stays visible: Create ticket resolves a prefilled key beyond the cap with `resolveProject` and shows the picked project's name; the New board dialog uses the same helpers.
+  - When capped, each says "Showing the first 1000 projects, type to search" (`CAPPED_PROJECTS_HINT`): a note in the menu, or the new `pickerHint` of the search picker, shown while nothing is typed. "Every project you can see is muted" only disables the mute button while the directory is not capped.
+  - The search picker now waits for pending results when Enter comes before them and picks the first match, so a fast "type, Enter" never picks a stale option.
+  - `ProjectDirectory.load()` returns the load already on its way instead of resolving at once, so a picker opened during the first load sees the list. The picker helpers live in `project-search.ts`, outside the directory class, which is in the initial bundle.
+- Rejected: an input inside the `mat-select` panel (fights the select's own keyboard handling and typeahead); keeping the selects below the cap and switching controls only when capped (two code paths for one field).
+- Rationale: one way to find a project in every picker, no matter how many there are, with the selection never blank.
+- Achievements: none; finding a project in a picker is not an action worth one.
 
 ## Product owner answers (v1 review, 2026-10-27)
 

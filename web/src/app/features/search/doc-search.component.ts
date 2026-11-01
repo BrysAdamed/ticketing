@@ -17,10 +17,8 @@ import { ActivatedRoute, Params, Router, RouterLink } from '@angular/router';
 import { provideIcons } from '@ng-icons/core';
 import { tablerChalkboard, tablerFolder, tablerSitemap } from '@ng-icons/tabler-icons';
 import { docKindIcon, DocSearchItem } from '@core/docs/doc-search.api';
-import { ProjectDirectory } from '@core/projects/project-directory';
 import { ShortcutService } from '@core/shortcuts/shortcut.service';
 import { AbsoluteTimePipe, RelativeTimePipe } from '@shared/pipes/relative-time.pipe';
-import { ProjectTileComponent } from '@shared/ui/domain/project-tile.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { HighlightedTextComponent } from '@shared/ui/highlighted-text/highlighted-text.component';
 import { IconComponent } from '@shared/ui/icon/icon.component';
@@ -42,6 +40,7 @@ import {
   toDocSearchParams,
 } from './doc-search-query';
 import { DocSearchStore } from './doc-search.store';
+import { ProjectFacetComponent } from './project-facet.component';
 import { docLocation } from './quick-jump';
 import { DATE_PRESETS, DatePreset, rangeLabel, utcDate } from './search-query';
 
@@ -67,7 +66,7 @@ const KIND_LABELS: Record<string, string> = {
     HighlightedTextComponent,
     IconComponent,
     KbdComponent,
-    ProjectTileComponent,
+    ProjectFacetComponent,
     SegmentedControlComponent,
     SkeletonRowsComponent,
   ],
@@ -83,7 +82,6 @@ export class DocSearchComponent {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
 
-  protected readonly projects = inject(ProjectDirectory).projects;
   protected readonly kinds = DOC_KINDS;
   protected readonly kindLabels = KIND_LABELS;
   protected readonly presets = DATE_PRESETS;

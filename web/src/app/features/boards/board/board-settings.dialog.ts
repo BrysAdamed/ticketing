@@ -8,14 +8,16 @@ import {
 } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
 import { provideIcons } from '@ng-icons/core';
 import { ConfirmService } from '@core/notify/confirm.service';
 import { ToastService } from '@core/notify/toast.service';
-import { ProjectDirectory } from '@core/projects/project-directory';
+import { ProjectDirectory, ProjectSummary } from '@core/projects/project-directory';
+import { CAPPED_PROJECTS_HINT, findProjects } from '@core/projects/project-search';
 import { ProjectTileComponent } from '@shared/ui/domain/project-tile.component';
 import { UserDisplayComponent } from '@shared/ui/domain/user-display.component';
 import { IconComponent } from '@shared/ui/icon/icon.component';
+import { PickerOption } from '@shared/ui/inline-picker/picker-option';
+import { SearchPickerDirective } from '@shared/ui/search-picker/search-picker.directive';
 import { BOARD_ICONS } from '../board-icons';
 import { ArchiveBoardDialog } from './archive-board.dialog';
 import { BoardStore } from './board.store';
@@ -33,10 +35,10 @@ const MAX_PROJECTS = 20;
     MatDialogModule,
     MatFormFieldModule,
     MatInputModule,
-    MatSelectModule,
     ProjectTileComponent,
     UserDisplayComponent,
     IconComponent,
+    SearchPickerDirective,
   ],
   viewProviders: [provideIcons(BOARD_ICONS)],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -106,22 +108,24 @@ const MAX_PROJECTS = 20;
                 </li>
               }
             </ul>
-            @if (linkable().length && b.projects.length < maxProjects) {
+            @if ((capped() || linkable().length) && b.projects.length < maxProjects) {
               <div class="add">
-                <mat-form-field>
-                  <mat-select
-                    placeholder="Link a project"
-                    data-testid="settings-link-project"
-                    [value]="toLink()"
-                    (valueChange)="toLink.set($event)"
-                  >
-                    @for (project of linkable(); track project.id) {
-                      <mat-option [value]="project.key"
-                        >{{ project.key }} · {{ project.name }}</mat-option
-                      >
-                    }
-                  </mat-select>
-                </mat-form-field>
+                <button
+                  type="button"
+                  class="pick"
+                  data-testid="settings-link-project"
+                  [tkSearchPicker]="linkSearch"
+                  pickerPlaceholder="Find a project…"
+                  [pickerHint]="projectsHint()"
+                  (picked)="toLink.set($event)"
+                >
+                  @if (toLink(); as p) {
+                    <span class="pname">{{ p.key }} · {{ p.name }}</span>
+                  } @else {
+                    <span class="pname muted">Link a project</span>
+                  }
+                  <tk-icon name="tablerChevronDown" [size]="14" />
+                </button>
                 <button
                   mat-stroked-button
                   type="button"
@@ -275,6 +279,25 @@ const MAX_PROJECTS = 20;
     .add mat-form-field {
       flex: 1;
     }
+    .pick {
+      flex: 1;
+      min-width: 0;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 10px 0 12px;
+      border: 1px solid var(--tk-border-input, var(--tk-border));
+      border-radius: var(--tk-radius-md);
+      background: var(--tk-surface);
+      color: var(--tk-text);
+      font: inherit;
+      text-align: left;
+      cursor: pointer;
+    }
+    .pick tk-icon {
+      color: var(--tk-text-subtle);
+    }
     .owner {
       margin-bottom: 8px;
     }
@@ -310,7 +333,7 @@ export class BoardSettingsDialog {
   protected readonly maxProjects = MAX_PROJECTS;
   protected readonly name = signal(this.board()?.name ?? '');
   protected readonly description = signal(this.board()?.description ?? '');
-  protected readonly toLink = signal<string | null>(null);
+  protected readonly toLink = signal<ProjectSummary | null>(null);
   protected readonly ownerEmail = signal('');
   protected readonly busy = signal(false);
 
@@ -322,12 +345,15 @@ export class BoardSettingsDialog {
         (this.description().trim() || null) !== (b.description ?? null))
     );
   });
-  protected readonly linkable = computed(() => {
-    const linked = new Set(this.board()?.projects.map((p) => p.key));
-    return this.directory
-      .activeProjects()
-      .filter((p) => !linked.has(p.key) && (p.myRole === 'Owner' || p.myRole === 'Member'));
-  });
+  protected readonly linkable = computed(() =>
+    this.directory.activeProjects().filter((p) => this.canLink(p)),
+  );
+  protected readonly capped = this.directory.capped;
+  protected readonly projectsHint = computed(() => (this.capped() ? CAPPED_PROJECTS_HINT : null));
+  protected readonly linkSearch = async (query: string): Promise<PickerOption<ProjectSummary>[]> =>
+    (await findProjects(this.directory, query))
+      .filter((p) => this.canLink(p))
+      .map((p) => ({ value: p, label: `${p.key} · ${p.name}` }));
 
   constructor() {
     void this.directory.load();
@@ -344,8 +370,16 @@ export class BoardSettingsDialog {
     );
   }
 
+  private canLink(project: ProjectSummary): boolean {
+    return (
+      !project.archivedAt &&
+      (project.myRole === 'Owner' || project.myRole === 'Member') &&
+      !this.board()?.projects.some((p) => p.key === project.key)
+    );
+  }
+
   protected async link(): Promise<void> {
-    const key = this.toLink();
+    const key = this.toLink()?.key;
     if (!key) return;
     if (await this.run(() => this.store.update({ addProjectKeys: [key] }), `${key} linked`))
       this.toLink.set(null);

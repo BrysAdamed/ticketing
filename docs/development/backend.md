@@ -168,6 +168,7 @@ Rules:
      - Each call takes a per-container advisory lock held until commit, so parallel placements get distinct ranks.
      - Pass the tickets being moved as `movingTicketIds`. They are excluded from neighbour lookup and from rebalancing.
      - When a key gets too long, or the neighbours are equal or out of order, the ranker rebalances the container itself. Don't keep other tickets of that container tracked: the rebalance rewrites them in SQL.
+     - Lock order (D-179): board locks (`BoardAccess.LockAsync`), then rank locks, then ticket rows. A write that ranks and also row-locks tickets takes every rank lock it needs first, at once through `ITicketRanker.LockAsync` (fixed order), and only then the rows (`SELECT … FOR NO KEY UPDATE`, id order), as `MoveTickets` does. Holding a ticket row while waiting for a rank lock can deadlock with a rebalance.
    - Creates: wrap the work in `idempotency.ExecuteAsync(command.IdempotencyKey, "<feature>.create", command with { IdempotencyKey = null }, ...)`. Mark `IdempotencyKey` with `[property: JsonIgnore]`.
      - Requests with the same user and key are serialized: the first one runs, and the others replay its result.
      - Map your unique indexes to feature codes, as `ProjectUniqueness.SaveAsync` does. The friendly pre-check alone is not race-proof.

@@ -311,6 +311,38 @@ describe('BacklogStore', () => {
     expect(toast.error.mock.calls[0][1].action.label).toBe('Retry');
   });
 
+  it('reports a failed placement of a quick-created ticket and retries it', async () => {
+    // Arrange
+    api.create.mockReturnValue(of(summary(10, 'Placed')));
+    api.move.mockReturnValueOnce(throwError(() => new Error('conflict')));
+    api.move.mockReturnValueOnce(of([]));
+    store.groupBy.set('none');
+
+    // Act
+    const created = await store.quickCreate('Placed', 'Bug', {
+      kind: 'create',
+      id: 'create:all',
+      groupId: 'all',
+      value: null,
+    });
+    const reported = toast.error.mock.calls.length;
+    toast.error.mock.calls[0][1].action.run();
+    await flush();
+
+    // Assert
+    expect(created?.key).toBe('WEB-10');
+    expect(reported).toBe(1);
+    expect(toast.error.mock.calls[0][0]).toContain("Couldn't place WEB-10");
+    expect(api.move).toHaveBeenCalledTimes(2);
+    expect(api.move.mock.calls[1][0]).toEqual({
+      keys: ['WEB-10'],
+      target: 'backlog',
+      from: 'backlog',
+      beforeKey: 'WEB-1',
+    });
+    expect(toast.error).toHaveBeenCalledOnce();
+  });
+
   it('deletes through TicketDeletion and moves focus to the next row', async () => {
     // Arrange
     store.focusId.set('id-2');

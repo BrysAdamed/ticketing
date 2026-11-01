@@ -23,7 +23,9 @@ public enum RankPosition
 /// and writes field history; a container change writes <c>ticket.moved</c>. A pure reorder writes no history and keeps
 /// <c>UpdatedAt</c> (D-48). An optional source guards stale views: every ticket must still be there. With
 /// <c>IncludeChildren</c> the block also takes each ticket's qualifying sub-tickets (<see cref="MoveChildren"/>, D-107), right
-/// after their parent; a target status applies to the sent tickets only. Serves REST
+/// after their parent; a target status applies to the sent tickets only. Locks are taken in a fixed order (D-179): board
+/// share locks, then the rank locks of every source and target container, then the ticket rows, so an edit committing while
+/// a move runs never fails it. Serves REST
 /// <c>POST /tickets/move</c> and MCP <c>move_ticket</c>.
 /// </summary>
 public static class MoveTickets
@@ -125,19 +127,24 @@ public static class MoveTickets
             Command command, IReadOnlyList<TicketTarget> sent, Guid? boardId, RankAnchor anchor, Guid? anchorId, CancellationToken cancellationToken)
         {
             var sentIds = sent.Select(t => t.Id).ToHashSet();
-            var tickets = await db.Tickets.Where(t => sentIds.Contains(t.Id)).ToDictionaryAsync(t => t.Id, cancellationToken);
-            var sourceBoards = tickets.Values.Where(t => t.BoardId is not null).Select(t => t.BoardId!.Value);
+            var boards = await db.Tickets.AsNoTracking()
+                .Where(t => sentIds.Contains(t.Id))
+                .ToDictionaryAsync(t => t.Id, t => t.BoardId, cancellationToken);
+            var sourceBoards = boards.Values.Where(b => b is not null).Select(b => b!.Value);
             await BoardAccess.LockAsync(db, boardId is { } b ? sourceBoards.Append(b) : sourceBoards, exclusive: false, cancellationToken);
-            EnsureSource(command.From, sent, id => tickets[id].BoardId);
-            var targets = command.IncludeChildren ? await WithChildrenAsync(sent, tickets, anchorId, cancellationToken) : sent;
+            EnsureSource(command.From, sent, id => boards[id]);
+            var targets = command.IncludeChildren ? await WithChildrenAsync(sent, boards, anchorId, cancellationToken) : sent;
             var ids = targets.Select(t => t.Id).ToList();
-            await EnsureBoardsAsync(targets, tickets, boardId, cancellationToken);
+            await EnsureBoardsAsync(targets, boards, boardId, cancellationToken);
 
-            var now = clock.Now;
             List<(RankContainer Container, List<Guid> Ids)> containers = boardId is { } board
                 ? [(RankContainer.Board(board), ids)]
                 : targets.GroupBy(t => t.ProjectId).OrderBy(g => g.Key)
                     .Select(g => (RankContainer.Backlog(g.Key), g.Select(t => t.Id).ToList())).ToList();
+            await ranker.LockAsync(containers.Select(c => c.Container).Concat(targets.Select(t => SourceOf(t, boards[t.Id]))), cancellationToken);
+            var tickets = await LockTicketsAsync(targets, boards, cancellationToken);
+
+            var now = clock.Now;
             foreach (var (container, containerIds) in containers)
             {
                 var ranks = await ranker.PlaceManyAsync(container, anchor, containerIds.Count, containerIds, cancellationToken);
@@ -149,12 +156,12 @@ public static class MoveTickets
             return ids;
         }
 
-        /// <summary>The sent tickets, each followed by its qualifying sub-tickets; the children are loaded and write-checked too.</summary>
+        /// <summary>The sent tickets, each followed by its qualifying sub-tickets, which are write-checked and added to <paramref name="boards"/> too.</summary>
         private async Task<IReadOnlyList<TicketTarget>> WithChildrenAsync(
-            IReadOnlyList<TicketTarget> sent, Dictionary<Guid, Ticket> tickets, Guid? anchorId, CancellationToken cancellationToken)
+            IReadOnlyList<TicketTarget> sent, Dictionary<Guid, Guid?> boards, Guid? anchorId, CancellationToken cancellationToken)
         {
             var groups = await MoveChildren.GroupsAsync(
-                db, [.. sent.Select(t => new MoveChildren.Parent(t.Id, tickets[t.Id].BoardId))], cancellationToken);
+                db, [.. sent.Select(t => new MoveChildren.Parent(t.Id, boards[t.Id]))], cancellationToken);
             var count = sent.Count + groups.Sum(g => g.Children.Count);
             if (count > MaxTickets)
                 throw MoveChildren.TooMany(count);
@@ -162,10 +169,6 @@ public static class MoveTickets
                 throw AppException.Invalid("keys", "A ticket cannot be placed next to one of the sub-tickets moving with it.");
 
             var grants = new Dictionary<Guid, ProjectAccessGrant>();
-            var childIds = groups.SelectMany(g => g.Children).Select(c => c.Id).ToList();
-            foreach (var child in await db.Tickets.Where(t => childIds.Contains(t.Id)).ToListAsync(cancellationToken))
-                tickets[child.Id] = child;
-
             var targets = new List<TicketTarget>(count);
             foreach (var (parent, group) in sent.Zip(groups))
             {
@@ -175,9 +178,35 @@ public static class MoveTickets
                     if (!grants.TryGetValue(child.ProjectId, out var grant))
                         grants[child.ProjectId] = grant = await access.EnsureCanWriteAsync(child.ProjectId, cancellationToken);
                     targets.Add(new TicketTarget(child.Id, child.ProjectId, child.Number, grant));
+                    boards[child.Id] = boards[parent.Id];
                 }
             }
             return targets;
+        }
+
+        private static RankContainer SourceOf(TicketTarget ticket, Guid? boardId) =>
+            boardId is { } id ? RankContainer.Board(id) : RankContainer.Backlog(ticket.ProjectId);
+
+        /// <summary>
+        /// Loads the tickets tracked and row-locked in id order, after their containers are locked (D-179): an edit of one of them
+        /// that commits meanwhile is waited for instead of failing the save. A ticket moved elsewhere since it was read is a conflict.
+        /// </summary>
+        private async Task<Dictionary<Guid, Ticket>> LockTicketsAsync(
+            IReadOnlyList<TicketTarget> targets, IReadOnlyDictionary<Guid, Guid?> boards, CancellationToken cancellationToken)
+        {
+            var ids = targets.Select(t => t.Id).ToArray();
+            var tickets = await db.Tickets
+                .FromSql($"SELECT *, xmin FROM tickets WHERE id = ANY({ids}) AND deleted_at IS NULL ORDER BY id FOR NO KEY UPDATE")
+                .ToDictionaryAsync(t => t.Id, cancellationToken);
+            foreach (var target in targets)
+            {
+                if (!tickets.TryGetValue(target.Id, out var ticket))
+                    throw TicketLookup.NotFound(target.Key);
+                if (ticket.BoardId != boards[target.Id])
+                    throw AppException.Conflict(
+                        TicketErrors.NotInSource, $"{target.Key} was moved by someone else meanwhile.", "Reload the list; the ticket was moved.");
+            }
+            return tickets;
         }
 
         private void Apply(Ticket ticket, Guid? boardId, string rank, TicketStatus? status, DateTimeOffset now)
@@ -207,9 +236,9 @@ public static class MoveTickets
 
         /// <summary>Source boards must be active (archived boards are read-only); a target board must be active and link every ticket's project.</summary>
         private async Task EnsureBoardsAsync(
-            IReadOnlyList<TicketTarget> targets, IReadOnlyDictionary<Guid, Ticket> tickets, Guid? boardId, CancellationToken cancellationToken)
+            IReadOnlyList<TicketTarget> targets, IReadOnlyDictionary<Guid, Guid?> sources, Guid? boardId, CancellationToken cancellationToken)
         {
-            var boardIds = tickets.Values.Where(t => t.BoardId is not null).Select(t => t.BoardId!.Value).ToHashSet();
+            var boardIds = sources.Values.Where(b => b is not null).Select(b => b!.Value).ToHashSet();
             if (boardId is { } id)
                 boardIds.Add(id);
             var boards = await db.Boards.AsNoTracking()
@@ -219,7 +248,7 @@ public static class MoveTickets
 
             foreach (var target in targets)
             {
-                if (tickets[target.Id].BoardId is { } source && boards.TryGetValue(source, out var from) && from.ArchivedAt is not null)
+                if (sources[target.Id] is { } source && boards.TryGetValue(source, out var from) && from.ArchivedAt is not null)
                     throw AppException.Conflict(
                         BoardErrors.Archived, $"{target.Key} is on an archived board, which is read-only.", "Unarchive the board first.");
             }

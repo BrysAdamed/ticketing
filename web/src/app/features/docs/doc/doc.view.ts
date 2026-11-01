@@ -23,6 +23,7 @@ import { Doc, DocKind } from '@core/docs/doc.models';
 import { DocExports } from '@core/docs/doc-export';
 import { DocsApi } from '@core/docs/docs.api';
 import { RecentDocs } from '@core/docs/recent-docs';
+import { TourAnchorDirective } from '@core/onboarding/engine/tour-anchor.directive';
 import { ShortcutService } from '@core/shortcuts/shortcut.service';
 import { KbdComponent } from '@shared/ui/kbd/kbd.component';
 import { Breadcrumbs } from '@core/layout/breadcrumbs';
@@ -67,6 +68,7 @@ const PRESENCE_REFRESH_MS = 30_000;
     KbdComponent,
     RelativeTimePipe,
     WatchControlComponent,
+    TourAnchorDirective,
   ],
   providers: [DocStore, DocBarSlot],
   viewProviders: [
@@ -82,7 +84,7 @@ const PRESENCE_REFRESH_MS = 30_000;
     @if (viewDoc(); as doc) {
       @if (!editing() && !historyOpen()) {
         <div class="pbar" data-testid="doc-bar">
-          <span class="meta">
+          <span class="meta" tkTourAnchor="docs.bar">
             <tk-icon
               class="i"
               [name]="doc.breadcrumb.length ? 'tablerFolder' : 'tablerBook'"
@@ -125,6 +127,7 @@ const PRESENCE_REFRESH_MS = 30_000;
             @if (doc.watchers; as watchers) {
               <tk-watch-control
                 testIdPrefix="doc"
+                tkTourAnchor="docs.watch"
                 [noun]="doc.kind === 'Diagram' ? 'diagram' : 'page'"
                 [watchers]="watchers"
                 [meId]="meId()"
@@ -137,6 +140,7 @@ const PRESENCE_REFRESH_MS = 30_000;
               [title]="exportTitle"
               aria-label="Export PDF"
               data-testid="doc-export-pdf"
+              tkTourAnchor="docs.share"
               [disabled]="exports.isExporting(doc.key, shownVersion())"
               [attr.aria-busy]="exports.isExporting(doc.key, shownVersion())"
               (click)="exportPdf(doc)"
@@ -193,6 +197,7 @@ const PRESENCE_REFRESH_MS = 30_000;
                 type="button"
                 class="edit"
                 data-testid="doc-edit"
+                tkTourAnchor="docs.edit"
                 (click)="edit()"
               >
                 <tk-icon name="tablerPencil" [size]="16" />Edit<tk-kbd>E</tk-kbd>

@@ -24,7 +24,7 @@
   </button>
 </div>
 
-<div class="tree-f">
+<div class="tree-f" tkTourAnchor="docs.filter">
   <tk-icon class="f-icon" name="tablerSearch" [size]="14" />
   <input
     #filterInput
@@ -259,7 +259,7 @@
 </div>
 
 @if (store.canManageTrash()) {
-  <div class="tree-foot">
+  <div class="tree-foot" tkTourAnchor="docs.trash">
     <a class="foot-link" [routerLink]="trashUrl()" data-testid="doc-tree-trash">
       <tk-icon name="tablerTrash" [size]="16" />
       Trash

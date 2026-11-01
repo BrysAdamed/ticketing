@@ -80,6 +80,17 @@ export const TOUR_CATALOGUE: readonly TourCatalogueEntry[] = [
     opens: 'ticket',
     load: () => import('./ticket.tours').then((m) => m.TICKET_TOUR),
   },
+  {
+    viewId: 'docs.home',
+    title: 'Docs',
+    path: '/projects/:projectKey/docs',
+    load: () => import('./docs.tours').then((m) => m.DOCS_HOME_TOUR),
+  },
+  {
+    viewId: 'docs.doc',
+    title: 'Doc',
+    load: () => import('./docs.tours').then((m) => m.DOCS_DOC_TOUR),
+  },
 ];
 
 /// Guide id stored in the onboarding state for the tour of a view.

@@ -5,9 +5,17 @@ import { Api } from '../../support/api';
 import { expect, test } from '../../support/fixtures';
 import { ShellPage } from '../../pages/shell.page';
 
+/// A page to open, and the anchors that state of the view leaves out by design (the Docs scope of
+/// search has no CSV export).
+interface RecipePage {
+    readonly url: string;
+    readonly without: readonly string[];
+}
+
 /// Pages to open for one tour, seeded through the API. Every listed page must show every anchor of
-/// the tour, so list each state the tour has to work on (an empty and a filled dashboard).
-type SeedingRecipe = (api: Api) => Promise<readonly string[]>;
+/// the tour except the ones it lists as `without`, so list each state the tour has to work on (an
+/// empty and a filled dashboard).
+type SeedingRecipe = (api: Api) => Promise<readonly (string | RecipePage)[]>;
 
 interface Keyed {
     key: string;
@@ -19,6 +27,10 @@ async function ticket(api: Api, projectKey: string, title: string, extra: object
         type: 'UserStory',
         ...extra,
     });
+}
+
+async function doc(api: Api, projectKey: string, body: Record<string, unknown>) {
+    return api.post<Keyed>(`/projects/${projectKey}/docs`, body);
 }
 
 async function board(api: Api, projectKey: string) {
@@ -58,7 +70,41 @@ const RECIPES: Readonly<Record<string, SeedingRecipe>> = {
     'search.results': async (api) => {
         const project = await api.createProject();
         await ticket(api, project.key, `Anchor search ${project.key}`);
-        return [`/search?q=${project.key}`, `/search?q=nothing-matches-${project.key}`];
+        await doc(api, project.key, { kind: 'Page', title: `Anchor search ${project.key}` });
+        const docsScope = (q: string) => ({
+            url: `/search?scope=docs&q=${q}`,
+            without: ['search.export'],
+        });
+        return [
+            `/search?q=${project.key}`,
+            `/search?q=nothing-matches-${project.key}`,
+            docsScope(project.key),
+            docsScope(`nothing-matches-${project.key}`),
+        ];
+    },
+    'docs.home': async (api) => {
+        const empty = await api.createProject();
+        const filled = await api.createProject();
+        await doc(api, filled.key, { kind: 'Page', title: 'Runbook', content: 'Restart it.' });
+        return [`/projects/${empty.key}/docs`, `/projects/${filled.key}/docs`];
+    },
+    'docs.doc': async (api) => {
+        const project = await api.createProject();
+        const page = await doc(api, project.key, {
+            kind: 'Page',
+            title: 'Runbook',
+            content: '# Restart\n\nRestart the service.',
+        });
+        const diagram = await doc(api, project.key, {
+            kind: 'Diagram',
+            diagramFormat: 'Mermaid',
+            title: 'Checkout flow',
+            content: 'flowchart LR\n  Shop --> Stripe',
+        });
+        return [
+            `/projects/${project.key}/docs/${page.key}`,
+            `/projects/${project.key}/docs/${diagram.key}`,
+        ];
     },
     'testcases.list': async (api) => {
         const project = await api.createProject();
@@ -97,11 +143,22 @@ const COVERED_ELSEWHERE: Readonly<Record<string, string>> = {
         'needs the instance-wide agent.delegate flag; covered by e2e/tests/agents/delegate-to-agent.spec.ts',
 };
 
-/// Asserts every anchor of the tour is visible and returns how many steps the tour should show.
-async function expectEveryAnchor(page: Page, tour: TourDefinition, url: string): Promise<number> {
+/// Asserts every anchor of the tour is visible, except the ones this state leaves out (which must
+/// then be absent), and returns how many steps the tour should show.
+async function expectEveryAnchor(
+    page: Page,
+    tour: TourDefinition,
+    { url, without }: RecipePage,
+): Promise<number> {
     let shown = 0;
     for (const step of tour.steps) {
         const anchor = page.locator(`[data-tour="${step.anchor}"]`);
+        if (without.includes(step.anchor)) {
+            await expect(anchor, `${url}: anchor "${step.anchor}" should be left out`).toHaveCount(
+                0,
+            );
+            continue;
+        }
         if (COVERED_ELSEWHERE[step.anchor] && (await anchor.count()) === 0) continue;
         await expect(
             anchor,
@@ -127,17 +184,19 @@ test.describe('tour anchors', () => {
                 routed.map((s) => s.id),
                 `${tour.id}: steps on another route are not covered by this spec yet`,
             ).toEqual([]);
-            const urls = await recipe(api);
+            const pages = (await recipe(api)).map((p) =>
+                typeof p === 'string' ? { url: p, without: [] } : p,
+            );
             const shell = new ShellPage(page);
 
-            for (const url of urls) {
+            for (const recipePage of pages) {
                 // Act
-                await page.goto(url);
+                await page.goto(recipePage.url);
                 await expect(page.getByTestId(`view-${entry.viewId}`)).toBeVisible();
 
                 // Assert: the Admin (Owner everywhere) sees every anchor, and the tour starts with
                 // every step
-                const shown = await expectEveryAnchor(page, tour, url);
+                const shown = await expectEveryAnchor(page, tour, recipePage);
                 await shell.openHelp();
                 await shell.helpItem('help-tour-page').click();
                 await expect(page.getByTestId('tour-step-count')).toHaveText(

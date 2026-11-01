@@ -17,6 +17,7 @@ import { ActivatedRoute, Params, Router, RouterLink } from '@angular/router';
 import { provideIcons } from '@ng-icons/core';
 import { tablerChalkboard, tablerFolder, tablerSitemap } from '@ng-icons/tabler-icons';
 import { docKindIcon, DocSearchItem } from '@core/docs/doc-search.api';
+import { TourAnchorDirective } from '@core/onboarding/engine/tour-anchor.directive';
 import { ShortcutService } from '@core/shortcuts/shortcut.service';
 import { AbsoluteTimePipe, RelativeTimePipe } from '@shared/pipes/relative-time.pipe';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
@@ -69,6 +70,7 @@ const KIND_LABELS: Record<string, string> = {
     ProjectFacetComponent,
     SegmentedControlComponent,
     SkeletonRowsComponent,
+    TourAnchorDirective,
   ],
   providers: [DocSearchStore],
   viewProviders: [provideIcons({ tablerChalkboard, tablerFolder, tablerSitemap })],

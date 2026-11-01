@@ -1,5 +1,5 @@
 <div class="query">
-  <label class="qbox">
+  <label class="qbox" tkTourAnchor="search.text">
     <tk-icon name="tablerSearch" [size]="16" />
     <input
       #textInput
@@ -20,7 +20,7 @@
 </div>
 
 <div class="tk-toolbar filters">
-  <div class="chips" role="toolbar" aria-label="Filters">
+  <div class="chips" role="toolbar" aria-label="Filters" tkTourAnchor="search.filters">
     <tk-project-facet
       testId="doc-filter-project"
       [selected]="f().project"
@@ -108,7 +108,7 @@
       </button>
     }
   </div>
-  <span class="right">
+  <span class="right" tkTourAnchor="search.sort">
     <span class="count" data-testid="doc-search-count">{{ countLabel() }}</span>
     <tk-segmented
       ariaLabel="Sort"
@@ -146,6 +146,7 @@
     <tk-empty-state
       icon="tablerSearch"
       title="No docs match"
+      tkTourAnchor="search.results"
       description="Try fewer filters or other words."
     >
       <button mat-stroked-button type="button" data-testid="doc-search-clear" (click)="clearAll()">
@@ -156,6 +157,7 @@
     <tk-empty-state
       icon="tablerFileText"
       title="No docs yet"
+      tkTourAnchor="search.results"
       description="Pages, folders and diagrams from every project you can read show up here."
     />
   }
@@ -166,6 +168,7 @@
     role="listbox"
     aria-label="Doc results"
     data-testid="doc-search-results"
+    tkTourAnchor="search.results"
     [class.stale]="store.status() === 'loading'"
   >
     @for (item of store.items(); track item.id; let i = $index) {

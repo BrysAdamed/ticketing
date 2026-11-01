@@ -32,6 +32,22 @@ function item(n: number, overrides: Partial<BacklogItem> = {}): BacklogItem {
   };
 }
 
+function serverTicket(n: number, overrides: Partial<Ticket> = {}): Ticket {
+  return {
+    id: `id-${n}`,
+    key: `WEB-${n}`,
+    projectKey: 'WEB',
+    title: `Ticket ${n}`,
+    type: 'UserStory',
+    status: 'ToDo',
+    priority: 'Medium',
+    labels: [],
+    location: { kind: 'Backlog' },
+    updatedAt: '2026-10-20T00:00:00Z',
+    ...overrides,
+  } as Ticket;
+}
+
 class FakeApi {
   backlogResult: Backlog = {
     projectId: 'p',
@@ -115,6 +131,57 @@ describe('BacklogStore', () => {
     expect(store.item('id-1')?.priority).toBe('Medium');
     expect(toast.error).toHaveBeenCalledOnce();
     expect(toast.error.mock.calls[0][1].action.label).toBe('Retry');
+  });
+
+  it('keeps a parallel edit of the row when another edit of it fails', async () => {
+    // Arrange
+    const priority = new Subject<Ticket>();
+    const status = new Subject<Ticket>();
+    api.update.mockImplementation((_key, patch) =>
+      (patch as { priority?: string }).priority ? priority : status,
+    );
+
+    // Act
+    const priorityEdit = store.setPriority(['id-1'], 'High');
+    const statusEdit = store.setStatus(['id-1'], 'InProgress');
+    status.next(serverTicket(1, { status: 'InProgress', updatedAt: '2026-10-21T00:00:00Z' }));
+    status.complete();
+    await statusEdit;
+    priority.error(new Error('boom'));
+    await priorityEdit;
+
+    // Assert
+    expect(store.item('id-1')?.status).toBe('InProgress');
+    expect(store.item('id-1')?.priority).toBe('Medium');
+    expect(toast.error).toHaveBeenCalledOnce();
+  });
+
+  it('ignores a server copy of a row older than the one shown', async () => {
+    // Arrange
+    const priority = new Subject<Ticket>();
+    const status = new Subject<Ticket>();
+    api.update.mockImplementation((_key, patch) =>
+      (patch as { priority?: string }).priority ? priority : status,
+    );
+
+    // Act: the second edit's answer arrives first
+    const priorityEdit = store.setPriority(['id-1'], 'High');
+    const statusEdit = store.setStatus(['id-1'], 'InProgress');
+    status.next(
+      serverTicket(1, {
+        priority: 'High',
+        status: 'InProgress',
+        updatedAt: '2026-10-21T00:00:02Z',
+      }),
+    );
+    status.complete();
+    priority.next(serverTicket(1, { priority: 'High', updatedAt: '2026-10-21T00:00:01Z' }));
+    priority.complete();
+    await Promise.all([priorityEdit, statusEdit]);
+
+    // Assert
+    expect(store.item('id-1')?.status).toBe('InProgress');
+    expect(store.item('id-1')?.priority).toBe('High');
   });
 
   it('reorders optimistically and restores the order when ranking fails', async () => {

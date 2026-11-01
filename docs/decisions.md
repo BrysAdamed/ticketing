@@ -1460,9 +1460,21 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
 - Rationale: one step and one map entry close the gap D-170 left for Show me; Epic finisher stays unmapped (no tour step shows closing an Epic).
 - Achievements: none new; this makes the existing `show-me` learnable.
 
-> Since D-176 (TKT-89) Docs has tours, but no step there shows attachments, so Show me still starts the ticket tour.
+> Since D-177 (TKT-89) Docs has tours, but no step there shows attachments, so Show me still starts the ticket tour.
 
-### D-176 Docs gets two tours, the home and an open doc; the search tour covers the Docs scope at version 2 (TKT-89)
+### D-176 A ticket edit locks the row before reading it; views never let an older copy replace a newer one (TKT-118)
+
+- Question: D-43 makes inline edits last-writer-wins, but `UpdateTicket` read the ticket without a lock and EF's `xmin` token made every `UPDATE` conditional on the version it read. Any write of the same ticket that committed while a PATCH ran (a second inline edit of the row, the rank move after a quick create, a rebalance, a comment's touch) failed it with 409 `concurrency.conflict`; the backlog rolled the row back. Two quick inline edits after a quick create could both be lost (the flaky `backlog-and-ticket` e2e).
+- Decision:
+  - `UpdateTicket` loads the ticket with `SELECT … FOR UPDATE` (like restore and attachment upload). A concurrent writer is waited for, the PATCH then works on the committed row, and the `xmin` check can no longer fail it. `If-Match` / `expectedVersion` is compared with the locked row, so a stale version still answers 409.
+  - Backlog: a failed edit reverts only the fields it changed, and only where they still show its optimistic value, so a parallel edit of the row survives the rollback. An `updated` event older (`updatedAt`) than the row shown is ignored, so answers arriving out of order cannot bring an older value back.
+  - Ticket view: after a comment, link or attachment change, `refreshMeta` takes the fresh ticket's fields with its row version (keeping the loaded comments) and only when it is newer than the copy shown; before, it put the new row version on possibly stale fields and broadcast that to the backlog.
+  - `TicketCache.fetch` does not let its answer replace a newer copy: PATCH responses merged while the request was in flight (the hover prefetch) are applied on top when they are newer, and a cached copy that became newer meanwhile is kept.
+- Not changed: moves still read their tickets without a row lock, so a move can fail with 409 while one of its tickets is edited (TKT-120); taking row locks there needs a lock order with the board and rank locks.
+- Rejected: retrying the PATCH on `DbUpdateConcurrencyException` (re-running the whole handler with its activity entries for a check that last-writer-wins does not want); sending the backlog's inline edits one after another per ticket (hides the server bug and slows the UI, and other clients would still conflict).
+- Achievements: none; this fixes existing edits.
+
+### D-177 Docs gets two tours, the home and an open doc; the search tour covers the Docs scope at version 2 (TKT-89)
 
 - Question: the Docs tour deferred from TKT-10 should cover the tree, a page, editing and search. Tours are keyed by the deepest routed view (`docs.home`, `docs.doc`; the page, diagram and editor views render inside `docs.doc` and are not routed), and search is one view with two scopes. Which tours, where do the anchors go, and does any achievement's Show me move?
 - Decision:

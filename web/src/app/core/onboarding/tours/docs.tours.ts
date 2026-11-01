@@ -1,6 +1,6 @@
 import { TourDefinition } from '../engine/tour.model';
 
-/// Tour of a project's Docs home (spec 14.4, D-176): the tree (its rail while it is hidden), the
+/// Tour of a project's Docs home (spec 14.4, D-177): the tree (its rail while it is hidden), the
 /// tree filter, creating docs, Recently updated (the empty state in its place) and the trash.
 /// Writers get the New step, Owners the trash; Viewers get three steps.
 export const DOCS_HOME_TOUR: TourDefinition = {
@@ -48,7 +48,7 @@ export const DOCS_HOME_TOUR: TourDefinition = {
   ],
 };
 
-/// Tour of one open page or diagram (spec 14.4, D-176): the page bar, Watch, Edit, export and
+/// Tour of one open page or diagram (spec 14.4, D-177): the page bar, Watch, Edit, export and
 /// links, and the comments. Viewers get no Edit step. A folder only has the bar and export, and the
 /// editor (`?mode=edit`) and the history replace the bar, so the tour is meant for the read view.
 export const DOCS_DOC_TOUR: TourDefinition = {

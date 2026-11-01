@@ -2,7 +2,7 @@ import { TourDefinition } from '../engine/tour.model';
 
 /// Tour of search (spec 6.8, 14.4): Tickets or Docs, the text box, filters, sort, results and CSV
 /// export. Read-only, so everyone gets every step. Both scopes expose the same anchors except
-/// export, which the Docs scope has not, so the copy covers both (D-176). The results step points
+/// export, which the Docs scope has not, so the copy covers both (D-177). The results step points
 /// at the list or, with nothing found, at the empty state in its place.
 export const SEARCH_TOUR: TourDefinition = {
   id: 'tour.search.results',

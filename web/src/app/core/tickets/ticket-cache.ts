@@ -18,6 +18,9 @@ export class TicketCache {
   private readonly api = inject(TicketsApi);
   private readonly entries = new Map<string, Entry>();
   private readonly inFlight = new Map<string, Promise<Ticket>>();
+  /// Updates merged while the ticket was not cached but being fetched: the fetch may answer with the
+  /// ticket from before them.
+  private readonly lateUpdates = new Map<string, Partial<Ticket>>();
 
   peek(key: string): Ticket | null {
     return this.entries.get(key.toUpperCase())?.ticket ?? null;
@@ -40,24 +43,39 @@ export class TicketCache {
 
   /// Merges a partial update (for example a PATCH response without collections) into the cached ticket.
   merge(key: string, update: Partial<Ticket>): void {
-    const current = this.peek(key);
+    const normalized = key.toUpperCase();
+    const current = this.peek(normalized);
     if (current) this.put({ ...current, ...stripNulls(update) });
+    else if (this.inFlight.has(normalized))
+      this.lateUpdates.set(normalized, {
+        ...this.lateUpdates.get(normalized),
+        ...stripNulls(update),
+      });
   }
 
   evict(key: string): void {
     this.entries.delete(key.toUpperCase());
   }
 
+  /// Loads the ticket into the cache. An answer older than what the cache learned meanwhile (a PATCH
+  /// response merged while the request was in flight) does not replace it.
   fetch(key: string): Promise<Ticket> {
     const normalized = key.toUpperCase();
     const pending = this.inFlight.get(normalized);
     if (pending) return pending;
     const request = firstValueFrom(this.api.get(normalized))
-      .then((ticket) => {
+      .then((fetched) => {
+        const late = this.lateUpdates.get(normalized);
+        const withLate = late && isLater(late, fetched) ? { ...fetched, ...late } : fetched;
+        const cached = this.peek(normalized);
+        const ticket = cached && isLater(cached, withLate) ? cached : withLate;
         this.put(ticket);
         return ticket;
       })
-      .finally(() => this.inFlight.delete(normalized));
+      .finally(() => {
+        this.inFlight.delete(normalized);
+        this.lateUpdates.delete(normalized);
+      });
     this.inFlight.set(normalized, request);
     return request;
   }
@@ -65,6 +83,16 @@ export class TicketCache {
   prefetch(key: string): void {
     if (!this.isFresh(key)) void this.fetch(key).catch(() => undefined);
   }
+}
+
+/// The server saved `candidate` after `than`: another row version and a later `updatedAt`.
+function isLater(candidate: Partial<Ticket>, than: Ticket): boolean {
+  return (
+    candidate.rowVersion !== undefined &&
+    candidate.rowVersion !== than.rowVersion &&
+    candidate.updatedAt !== undefined &&
+    Date.parse(candidate.updatedAt) > Date.parse(than.updatedAt)
+  );
 }
 
 /// PATCH responses carry `null` for collections that were not requested; keep the cached ones.

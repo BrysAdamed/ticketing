@@ -585,16 +585,7 @@ export class BacklogStore {
         .slice(order.indexOf(created.id) + 1)
         .find((id) => !isPending(id) && this.groupOf(id) === this.groupOf(created.id));
       const next = nextId ? this.item(nextId) : undefined;
-      if (next && this.sortBy() === 'rank') {
-        await firstValueFrom(
-          this.api.move({
-            keys: [created.key],
-            target: 'backlog',
-            from: 'backlog',
-            beforeKey: next.key,
-          }),
-        ).catch(() => undefined);
-      }
+      if (next && this.sortBy() === 'rank') await this.placeCreated(created.key, next.key);
       return created;
     } catch (error) {
       this.items.update((items) => items.filter((i) => i.id !== tempId));
@@ -605,6 +596,20 @@ export class BacklogStore {
         },
       });
       return null;
+    }
+  }
+
+  /// Moves a quick-created ticket to the row it was typed in. A failure is reported with a retry,
+  /// since the list would otherwise show a place the server does not have (TKT-120).
+  private async placeCreated(key: string, beforeKey: string): Promise<void> {
+    try {
+      await firstValueFrom(
+        this.api.move({ keys: [key], target: 'backlog', from: 'backlog', beforeKey }),
+      );
+    } catch (error) {
+      this.toast.error(`Couldn't place ${key}: ${toApiError(error).title}`, {
+        action: { label: 'Retry', run: () => void this.placeCreated(key, beforeKey) },
+      });
     }
   }
 

@@ -60,6 +60,22 @@ internal sealed class TicketRanker(TicketingDbContext db) : ITicketRanker
         return (await PlaceManyAsync(container, fallback, 1, movingTicketIds, cancellationToken))[0];
     }
 
+    public async Task LockAsync(IEnumerable<RankContainer> containers, CancellationToken cancellationToken)
+    {
+        var ordered = containers
+            .DistinctBy(c => c.LockKey)
+            .OrderBy(c => c switch { BacklogContainer => 0, BoardContainer => 1, _ => 2 })
+            .ThenBy(c => c switch
+            {
+                BacklogContainer backlog => backlog.ProjectId,
+                BoardContainer board => board.BoardId,
+                DocFolderContainer folder => folder.ProjectId,
+                _ => throw new ArgumentOutOfRangeException(nameof(containers)),
+            });
+        foreach (var container in ordered)
+            await AdvisoryLocks.AcquireAsync(db, container.LockKey, cancellationToken);
+    }
+
     private static async Task<string> AnchorRankAsync(RankContainer container, IQueryable<RankedItem> others, Guid anchorId, CancellationToken cancellationToken) =>
         await others.Where(t => t.Id == anchorId).Select(t => t.Rank).FirstOrDefaultAsync(cancellationToken)
         ?? throw (container is DocFolderContainer

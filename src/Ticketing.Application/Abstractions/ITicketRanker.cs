@@ -33,6 +33,13 @@ public interface ITicketRanker
     /// </summary>
     Task<string> ReuseOrPlaceAsync(
         RankContainer container, string rank, RankAnchor fallback, IReadOnlyCollection<Guid> movingTicketIds, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Takes the locks of several containers up front, in one fixed order (backlogs by project id, then boards by board id,
+    /// then docs trees by project id), so a writer can lock every container it reads from or places into before it locks
+    /// item rows (D-179). Placing into a locked container later does not wait again.
+    /// </summary>
+    Task LockAsync(IEnumerable<RankContainer> containers, CancellationToken cancellationToken);
 }
 
 /// <summary>Where a block of items goes inside its container: the top, the bottom, or right before or after another item.</summary>

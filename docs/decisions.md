@@ -1473,6 +1473,8 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
   - Ticket view: after a comment, link or attachment change, `refreshMeta` takes the fresh ticket's fields with its row version (keeping the loaded comments) and only when it is newer than the copy shown; before, it put the new row version on possibly stale fields and broadcast that to the backlog.
   - `TicketCache.fetch` does not let its answer replace a newer copy: PATCH responses merged while the request was in flight (the hover prefetch) are applied on top when they are newer, and a cached copy that became newer meanwhile is kept.
 - Not changed: moves still read their tickets without a row lock, so a move can fail with 409 while one of its tickets is edited (TKT-120); taking row locks there needs a lock order with the board and rank locks.
+
+> Since D-179 (TKT-120) moves lock their ticket rows too, after the board and rank locks.
 - Rejected: retrying the PATCH on `DbUpdateConcurrencyException` (re-running the whole handler with its activity entries for a check that last-writer-wins does not want); sending the backlog's inline edits one after another per ticket (hides the server bug and slows the UI, and other clients would still conflict).
 - Achievements: none; this fixes existing edits.
 
@@ -1499,6 +1501,18 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
   - **No backfill**: `doc_watchers` keeps no record of an unwatch, so a backfill from `doc_versions` could not tell a past editor who unwatched from one who never watched and would resubscribe people who chose to leave. Past editors start watching with their next version; D-162's backfill was different, because it preserved an audience the old rule already notified.
 - Rejected: leaving find/replace over MCP out (an agent acts as its token's owner, who is the author of record of that version); leaving restores out (a restore is a publish of older content, and the restorer is answerable for it); backfilling from `doc_versions` (see above).
 - Achievements: none; watching earns nothing (D-162).
+
+### D-179 A move locks boards, then every source and target container, then its ticket rows (TKT-120)
+
+- Question: `MoveTickets` loaded its tickets tracked without a row lock, so EF's `xmin` check failed the move with 409 `concurrency.conflict` whenever an edit of a moved ticket (or of a sub-ticket moving with it, or a rebalance rewriting its rank) committed while it ran. A row lock taken first, as `UpdateTicket` does (D-176), would deadlock: a rebalance updates the other rows of its container while holding that container's rank lock, so a move holding a row and waiting for the rank lock meets a rebalance holding the rank lock and waiting for the row.
+- Decision:
+  - **Lock order of a move**: (1) read the tickets' boards without locking; (2) share-lock the source and target boards (`BoardAccess.LockAsync`, id order, as before), then check the source guard and archived boards; (3) take the rank lock of every container involved, the target ones and the ones the tickets (and their sub-tickets) are leaving, through `ITicketRanker.LockAsync` in one fixed order: backlogs by project id, then boards by board id, the order board relocation (archive, unlink, delete) already uses; (4) load the tickets tracked with `SELECT … FOR NO KEY UPDATE` ordered by id; (5) rank, apply and save.
+  - The rows are locked only after every rank lock the move will need, so a move never waits for a rank lock while it holds a row, and no rebalance can run in a container whose rows the move holds (it holds that container's rank lock). An edit holds one row and waits for nothing a move holds, except leaving Done on an archived board, which takes the backlog lock after the row; a move never locks a ticket on an archived board (step 2 rejects it before any row lock).
+  - `FOR NO KEY UPDATE`, not `FOR UPDATE`: a move does not change keys, so comments, links and sub-tickets created meanwhile (foreign keys take `KEY SHARE`) are not blocked by it.
+  - A ticket whose board changed between step 1 and the row lock (someone else moved it) answers 409 `ticket.notInSource` with "reload"; a deleted one answers 404. Only field edits and rebalances are waited through, not a competing move of the same ticket to another place.
+  - Web: the backlog's quick create moves the new ticket to the row it was typed in; a failed move now shows an error toast with Retry instead of being swallowed.
+- Rejected: retrying the move on `DbUpdateConcurrencyException` (re-runs the rank placement and the activity entries, and hides the race instead of ordering it); making rebalances lock rows in id order instead (a move would still hold rows while it waits for a rank lock, and every writer that ranks would have to follow that rule).
+- Achievements: none; this fixes existing moves.
 
 ## Product owner answers (v1 review, 2026-10-27)
 

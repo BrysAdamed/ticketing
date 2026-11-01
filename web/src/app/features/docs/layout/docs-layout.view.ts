@@ -2,6 +2,7 @@ import { DOCUMENT } from '@angular/common';
 import {
   afterNextRender,
   ChangeDetectionStrategy,
+  computed,
   Component,
   effect,
   inject,
@@ -14,6 +15,7 @@ import {
 import { RouterOutlet } from '@angular/router';
 import { provideIcons } from '@ng-icons/core';
 import { tablerLayoutSidebarLeftExpand } from '@ng-icons/tabler-icons';
+import { TourAnchorDirective } from '@core/onboarding/engine/tour-anchor.directive';
 import { ShortcutService } from '@core/shortcuts/shortcut.service';
 import { IconComponent } from '@shared/ui/icon/icon.component';
 import { DocTreeComponent } from '../tree/doc-tree.component';
@@ -32,7 +34,7 @@ export const TREE_TOGGLE_KEYS = 'mod+\\';
 /// shares.
 @Component({
   selector: 'tk-docs-layout-view',
-  imports: [RouterOutlet, DocTreeComponent, IconComponent],
+  imports: [RouterOutlet, DocTreeComponent, IconComponent, TourAnchorDirective],
   providers: [DocTreeStore],
   viewProviders: [provideIcons({ tablerLayoutSidebarLeftExpand })],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -43,7 +45,7 @@ export const TREE_TOGGLE_KEYS = 'mod+\\';
   },
   template: `
     @if (collapsed()) {
-      <div class="rail">
+      <div class="rail" [tkTourAnchor]="treeAnchor()">
         <button
           type="button"
           class="tk-icon-btn"
@@ -58,6 +60,7 @@ export const TREE_TOGGLE_KEYS = 'mod+\\';
     } @else {
       <tk-doc-tree
         class="tree"
+        [tkTourAnchor]="treeAnchor()"
         [collapseTitle]="toggleTitle('Hide the tree')"
         (collapse)="toggle()"
       />
@@ -133,6 +136,9 @@ export class DocsLayoutView {
   protected readonly maxWidth = MAX_WIDTH;
   protected readonly width = signal(this.readWidth());
   protected readonly collapsed = signal(this.read(COLLAPSED_KEY) === 'true');
+  protected readonly treeAnchor = computed(() =>
+    this.store.status() === 'loaded' ? 'docs.tree' : null,
+  );
 
   constructor() {
     effect(() => {

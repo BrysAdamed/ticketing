@@ -12,6 +12,7 @@ import { RouterLink } from '@angular/router';
 import { provideIcons } from '@ng-icons/core';
 import { docPathSegments, docUrl } from '@core/docs/doc-links';
 import { DocKind } from '@core/docs/doc.models';
+import { TourAnchorDirective } from '@core/onboarding/engine/tour-anchor.directive';
 import { RelativeTimePipe } from '@shared/pipes/relative-time.pipe';
 import { AvatarComponent } from '@shared/ui/domain/avatar.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
@@ -35,6 +36,7 @@ import { DocsHomeStore } from './docs-home.store';
     EmptyStateComponent,
     SkeletonRowsComponent,
     RelativeTimePipe,
+    TourAnchorDirective,
   ],
   providers: [DocsHomeStore],
   viewProviders: [provideIcons(DOCS_ICONS)],
@@ -47,12 +49,14 @@ import { DocsHomeStore } from './docs-home.store';
         title="No docs yet"
         description="Pages, folders and diagrams for this project live here."
         data-testid="docs-empty"
+        tkTourAnchor="docs.recent"
       >
         @if (tree.canWrite()) {
           <button
             mat-flat-button
             type="button"
             data-testid="docs-empty-new-page"
+            tkTourAnchor="docs.new"
             (click)="create('Page')"
           >
             New page <tk-kbd tone="on-solid">N</tk-kbd>
@@ -69,7 +73,7 @@ import { DocsHomeStore } from './docs-home.store';
             <span class="count tnum" data-testid="docs-count">{{ countLabel() }}</span>
           }
           @if (tree.canWrite()) {
-            <div class="right">
+            <div class="right" tkTourAnchor="docs.new">
               <button mat-stroked-button type="button" (click)="create('Folder')">
                 <tk-icon name="tablerFolderPlus" [size]="14" />
                 New folder
@@ -91,42 +95,44 @@ import { DocsHomeStore } from './docs-home.store';
           }
         </header>
 
-        <h2 class="sech">Recently updated</h2>
-        @switch (store.status()) {
-          @case ('loaded') {
-            @if (store.recent().length === 0) {
-              <p class="none" data-testid="docs-recent-none">
-                Nothing yet. Pages and diagrams show up here when they are written.
-              </p>
-            } @else {
-              <div class="lst" data-testid="docs-recent">
-                @for (doc of store.recent(); track doc.key) {
-                  <a
-                    class="lr"
-                    [routerLink]="url(doc.key, doc.title)"
-                    [attr.data-testid]="'docs-recent-' + doc.key"
-                  >
-                    <tk-icon class="i" [name]="icon(doc.kind, doc.diagramFormat)" [size]="16" />
-                    <span class="t">{{ doc.title }}</span>
-                    <span class="p">{{ folderOf(doc.path) }}</span>
-                    <tk-avatar
-                      [userId]="doc.updatedBy.id"
-                      [name]="doc.updatedBy.displayName"
-                      [size]="20"
-                    />
-                    <span class="w">{{ doc.updatedAt | relativeTime }}</span>
-                  </a>
-                }
-              </div>
+        <section tkTourAnchor="docs.recent">
+          <h2 class="sech">Recently updated</h2>
+          @switch (store.status()) {
+            @case ('loaded') {
+              @if (store.recent().length === 0) {
+                <p class="none" data-testid="docs-recent-none">
+                  Nothing yet. Pages and diagrams show up here when they are written.
+                </p>
+              } @else {
+                <div class="lst" data-testid="docs-recent">
+                  @for (doc of store.recent(); track doc.key) {
+                    <a
+                      class="lr"
+                      [routerLink]="url(doc.key, doc.title)"
+                      [attr.data-testid]="'docs-recent-' + doc.key"
+                    >
+                      <tk-icon class="i" [name]="icon(doc.kind, doc.diagramFormat)" [size]="16" />
+                      <span class="t">{{ doc.title }}</span>
+                      <span class="p">{{ folderOf(doc.path) }}</span>
+                      <tk-avatar
+                        [userId]="doc.updatedBy.id"
+                        [name]="doc.updatedBy.displayName"
+                        [size]="20"
+                      />
+                      <span class="w">{{ doc.updatedAt | relativeTime }}</span>
+                    </a>
+                  }
+                </div>
+              }
+            }
+            @case ('error') {
+              <p class="none danger">Couldn't load recent docs: {{ store.error() }}</p>
+            }
+            @default {
+              <tk-skeleton-rows [count]="5" />
             }
           }
-          @case ('error') {
-            <p class="none danger">Couldn't load recent docs: {{ store.error() }}</p>
-          }
-          @default {
-            <tk-skeleton-rows [count]="5" />
-          }
-        }
+        </section>
       </div>
     }
   `,

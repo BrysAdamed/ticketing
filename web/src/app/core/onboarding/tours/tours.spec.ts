@@ -5,6 +5,7 @@ import { ADMIN_USERS_TOUR } from './admin-users.tours';
 import { BACKLOG_TOUR } from './backlog.tours';
 import { BOARD_TOUR } from './board.tours';
 import { DASHBOARD_TOUR, DASHBOARD_TOUR_STEPS } from './dashboard.tours';
+import { DOCS_DOC_TOUR, DOCS_HOME_TOUR } from './docs.tours';
 import { PROJECT_SETTINGS_TOUR } from './project-settings.tours';
 import { REGRESSION_SESSION_TOUR } from './regressions.tours';
 import { SEARCH_TOUR } from './search.tours';
@@ -24,6 +25,7 @@ function plan(access: TourAccess, anchors: readonly string[], tour = BACKLOG_TOU
 }
 
 const ALL_ANCHORS = BACKLOG_TOUR.steps.map((s) => s.anchor);
+const ids = (steps: readonly { id: string }[]) => steps.map((s) => s.id);
 
 describe('tour catalogue', () => {
   it('loads a definition per entry whose ids, view and title match the entry', async () => {
@@ -57,7 +59,6 @@ describe('tour audiences', () => {
   const anchorsOf = (tour: TourDefinition) => tour.steps.map((s) => s.anchor);
   const planOn = (tour: TourDefinition, access: TourAccess, anchors = anchorsOf(tour)) =>
     planTour(tour, access, { url: '/x', params: {}, hasAnchor: (a) => anchors.includes(a) });
-  const ids = (steps: readonly { id: string }[]) => steps.map((s) => s.id);
 
   it('keeps every new tour between three and six steps', () => {
     for (const tour of [
@@ -67,6 +68,8 @@ describe('tour audiences', () => {
       REGRESSION_SESSION_TOUR,
       PROJECT_SETTINGS_TOUR,
       ADMIN_USERS_TOUR,
+      DOCS_HOME_TOUR,
+      DOCS_DOC_TOUR,
     ]) {
       expect(tour.steps.length).toBeGreaterThanOrEqual(3);
       expect(tour.steps.length).toBeLessThanOrEqual(6);
@@ -312,5 +315,109 @@ describe('ticket tour', () => {
       'attachments',
     ]);
     expect(result.skipped).toEqual([]);
+  });
+});
+
+describe('search tour', () => {
+  const anchors = SEARCH_TOUR.steps.map((s) => s.anchor);
+
+  it('starts with the scope switch and is version 2', () => {
+    // Assert
+    expect(SEARCH_TOUR.steps[0].anchor).toBe('search.scope');
+    expect(SEARCH_TOUR.version).toBeGreaterThanOrEqual(2);
+  });
+
+  it('runs in the Docs scope without the export step', () => {
+    // Act
+    const result = plan(
+      VIEWER,
+      anchors.filter((a) => a !== 'search.export'),
+      SEARCH_TOUR,
+    );
+
+    // Assert
+    expect(result.abort).toBe(false);
+    expect(ids(result.steps)).toEqual(['scope', 'text', 'filters', 'sort', 'results']);
+    expect(ids(result.skipped)).toEqual(['export']);
+  });
+});
+
+describe('docs home tour', () => {
+  const anchors = DOCS_HOME_TOUR.steps.map((s) => s.anchor);
+  const OWNER: TourAccess = { canWrite: true, isOwner: true, isAdmin: false };
+
+  it('starts from anywhere in a project', () => {
+    // Act
+    const entry = TOUR_CATALOGUE.find((e) => e.viewId === 'docs.home');
+
+    // Assert
+    expect(entry?.path).toBe('/projects/:projectKey/docs');
+    expect(entry?.requires).toBeUndefined();
+  });
+
+  it('gives Owners the trash, writers New, and Viewers the tree, filter and recent docs', () => {
+    // Act
+    const owner = plan(OWNER, anchors, DOCS_HOME_TOUR);
+    const writer = plan(WRITER, anchors, DOCS_HOME_TOUR);
+    const viewer = plan(VIEWER, anchors, DOCS_HOME_TOUR);
+
+    // Assert
+    expect(ids(owner.steps)).toEqual(['tree', 'filter', 'new', 'recent', 'trash']);
+    expect(ids(writer.steps)).toEqual(['tree', 'filter', 'new', 'recent']);
+    expect(ids(viewer.steps)).toEqual(['tree', 'filter', 'recent']);
+  });
+
+  it('still starts while the tree is hidden (the rail carries the tree anchor)', () => {
+    // Act
+    const result = plan(
+      OWNER,
+      anchors.filter((a) => a !== 'docs.filter' && a !== 'docs.trash'),
+      DOCS_HOME_TOUR,
+    );
+
+    // Assert
+    expect(result.abort).toBe(false);
+    expect(ids(result.steps)).toEqual(['tree', 'new', 'recent']);
+  });
+});
+
+describe('doc tour', () => {
+  const anchors = DOCS_DOC_TOUR.steps.map((s) => s.anchor);
+
+  it('is offered on an open doc only', () => {
+    // Act
+    const entry = TOUR_CATALOGUE.find((e) => e.viewId === 'docs.doc');
+
+    // Assert
+    expect(entry?.title).toBe(DOCS_DOC_TOUR.title);
+    expect(entry?.path).toBeUndefined();
+    expect(entry?.opens).toBeUndefined();
+  });
+
+  it('shows a writer every step of a page and a Viewer all but Edit', () => {
+    // Act
+    const writer = plan(WRITER, anchors, DOCS_DOC_TOUR);
+    const viewer = plan(VIEWER, anchors, DOCS_DOC_TOUR);
+
+    // Assert
+    expect(ids(writer.steps)).toEqual(['bar', 'watch', 'edit', 'share', 'comments']);
+    expect(ids(viewer.steps)).toEqual(['bar', 'watch', 'share', 'comments']);
+  });
+
+  it('does not start in the editor or the history, which replace the page bar', () => {
+    // Act
+    const result = plan(WRITER, [], DOCS_DOC_TOUR);
+
+    // Assert
+    expect(result.abort).toBe(true);
+  });
+
+  it('skips Edit and comments while they are not on the page and still starts', () => {
+    // Act
+    const result = plan(WRITER, ['docs.bar', 'docs.watch', 'docs.share'], DOCS_DOC_TOUR);
+
+    // Assert
+    expect(result.abort).toBe(false);
+    expect(ids(result.skipped)).toEqual(['edit', 'comments']);
   });
 });

@@ -35,6 +35,7 @@ import { DocExports } from '@core/docs/doc-export';
 import { docsHomeUrl, docUrl } from '@core/docs/doc-links';
 import { DiagramFormat, DOC_ROOT, DocKind, DocTreeItem } from '@core/docs/doc.models';
 import { ToastService } from '@core/notify/toast.service';
+import { TourAnchorDirective } from '@core/onboarding/engine/tour-anchor.directive';
 import { ShortcutService } from '@core/shortcuts/shortcut.service';
 import { IconComponent } from '@shared/ui/icon/icon.component';
 import { InlinePickerDirective } from '@shared/ui/inline-picker/inline-picker.directive';
@@ -79,6 +80,7 @@ const SKELETON = [0, 1, 1, 1, 0, 1, 2, 2, 0, 0].map((depth, i) => ({
     KbdComponent,
     InlinePickerDirective,
     AutofocusSelectDirective,
+    TourAnchorDirective,
   ],
   viewProviders: [
     provideIcons({ ...DOCS_ICONS, tablerFileTypePdf, tablerLayoutSidebarLeftCollapse }),

@@ -1460,6 +1460,21 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
 - Rationale: one step and one map entry close the gap D-170 left for Show me; Epic finisher stays unmapped (no tour step shows closing an Epic).
 - Achievements: none new; this makes the existing `show-me` learnable.
 
+> Since D-176 (TKT-89) Docs has tours, but no step there shows attachments, so Show me still starts the ticket tour.
+
+### D-176 Docs gets two tours, the home and an open doc; the search tour covers the Docs scope at version 2 (TKT-89)
+
+- Question: the Docs tour deferred from TKT-10 should cover the tree, a page, editing and search. Tours are keyed by the deepest routed view (`docs.home`, `docs.doc`; the page, diagram and editor views render inside `docs.doc` and are not routed), and search is one view with two scopes. Which tours, where do the anchors go, and does any achievement's Show me move?
+- Decision:
+  - **Two tours in `docs.tours.ts`.** `tour.docs.home` (title "Docs", path `/projects/:projectKey/docs`, so the palette starts it from anywhere): the tree, its filter, New (`write`), Recently updated, the trash (`owner`, as only Owners reach it). `tour.docs.doc` (title "Doc", no path and no `opens`: started on an open doc only): the page bar, Watch, Edit (`write`; the copy names `[[`, `#`, `@` and `Ctrl S`, so the editor needs no tour of its own), export and copy link, comments with @mentions.
+  - **Anchors in every state.** `docs.tree` is on the tree panel and, while the tree is hidden, on its rail; `docs.recent` on the Recently updated section or, on a project without docs, the empty state; `docs.new` on the header actions or the empty state's New page. The doc tour is for the read view of pages and diagrams: the editor (`?mode=edit`) and the history replace the page bar, and a folder has only the bar and export, so there the tour does not start (fewer than half its anchors, the rule every tour has), except a Viewer on a folder, who gets those two steps. A folder or editor tour is not worth more anchors in the editor chrome.
+  - **Search, one tour for both scopes.** The Docs scope exposes the same `search.text`, `search.filters`, `search.sort` and `search.results` anchors as the Tickets scope; a new first step `scope` (`search.scope`, the Tickets/Docs switch) is on both; `search.export` exists in the Tickets scope only, so that step is skipped in Docs. The copy covers both scopes. Version 2, because the tour gained a step (frontend.md, "Version bump").
+  - **Coverage**: `tour-anchors.spec.ts` recipes for `docs.home` (an empty and a filled project) and `docs.doc` (a page and a Mermaid diagram), and search pages in the Docs scope. A recipe page may list anchors its state leaves out by design (`without`); the spec asserts those are absent.
+  - **Achievements**: no Show me moves. Show me, Conversationalist and Shout-out count docs too, but the ticket tour shows the same actions (attachments, comments, mentions) and a ticket is more often there to open; the doc tour has no `opens`, so it could not start from the profile anyway. The tours themselves earn nothing.
+- Rejected: one `docs.doc` tour with the tree steps (the home is where people land and has no tour then); `opens: 'doc'` with a doc finder in `TourTargets` (only useful with a learn action, and none needs it); a separate Docs search tour (tours are keyed by view, not by state); anchors in the editor bar to make the doc tour start in edit mode (the steps would point at different things in the two modes).
+- Rationale: data plus anchors, as the tour engine intends; the docs home tour is the front door, the doc tour explains a page where it is read, and search keeps one tour whose steps resolve in either scope.
+- Achievements: none new (see above).
+
 ## Product owner answers (v1 review, 2026-10-27)
 
 These were open questions (Q-01..Q-05); the product owner resolved them as follows.

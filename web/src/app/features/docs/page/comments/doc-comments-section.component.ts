@@ -17,6 +17,7 @@ import { provideIcons } from '@ng-icons/core';
 import { tablerMessageCircle, tablerPencil, tablerTrash } from '@ng-icons/tabler-icons';
 import { Doc } from '@core/docs/doc.models';
 import { ConfirmService } from '@core/notify/confirm.service';
+import { TourAnchorDirective } from '@core/onboarding/engine/tour-anchor.directive';
 import { ShortcutService } from '@core/shortcuts/shortcut.service';
 import { ProjectPeople } from '@core/tickets/project-people';
 import { MarkdownEditorComponent } from '@shared/markdown/markdown-editor.component';
@@ -43,13 +44,14 @@ import { DocCommentsStore, DocThreadComment } from './doc-comments.store';
     AvatarComponent,
     IconComponent,
     SkeletonRowsComponent,
+    TourAnchorDirective,
   ],
   providers: [DocCommentsStore],
   viewProviders: [provideIcons({ tablerMessageCircle, tablerPencil, tablerTrash })],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { id: 'comments', 'data-testid': 'doc-comments' },
   template: `
-    <div class="sec-h">
+    <div class="sec-h" tkTourAnchor="docs.comments">
       <h2>Comments</h2>
       @if (doc().commentCount) {
         <span class="n tnum" data-testid="doc-comments-count">{{ doc().commentCount }}</span>

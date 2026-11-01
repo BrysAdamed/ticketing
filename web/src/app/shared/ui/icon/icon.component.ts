@@ -4,7 +4,7 @@ import { NgIcon } from '@ng-icons/core';
 export type IconSize = 12 | 14 | 16 | 20 | 32;
 
 /// Single wrapper around the icon set (Tabler via ng-icons) so swapping icon sets touches one
-/// file. Icons must be registered with `provideIcons` (app-wide set in `app-icons.ts`, or in a
+/// file. Icons must be registered with `provideIcons` (app-wide set in `app-icons.generated.ts`, or in a
 /// component's `viewProviders`).
 @Component({
   selector: 'tk-icon',

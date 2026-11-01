@@ -46,7 +46,7 @@ import { provideSearch } from '@features/search/search.providers';
 import { TICKET_DETAIL_VIEW } from '@features/tickets/tickets.views';
 import { AVATAR_SOURCE } from '@shared/avatars/avatar-source';
 import { DIAGRAM_THEME } from '@shared/diagrams/diagram-theme.token';
-import { APP_ICONS } from '@shared/ui/icon/app-icons';
+import { APP_ICONS } from '@shared/ui/icon/app-icons.generated';
 import { PICKER_SHORTCUT_AVAILABLE } from '@shared/ui/inline-picker/picker-option';
 import { routes } from './app.routes';
 

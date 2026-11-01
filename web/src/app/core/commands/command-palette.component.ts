@@ -12,8 +12,6 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
-import { provideIcons } from '@ng-icons/core';
-import { tablerChalkboard, tablerFolder, tablerSitemap } from '@ng-icons/tabler-icons';
 import { HighlightedTextComponent } from '@shared/ui/highlighted-text/highlighted-text.component';
 import { IconComponent } from '@shared/ui/icon/icon.component';
 import { KbdComponent } from '@shared/ui/kbd/kbd.component';
@@ -34,7 +32,6 @@ interface Group {
 @Component({
   selector: 'tk-command-palette',
   imports: [HighlightedTextComponent, IconComponent, KbdComponent],
-  viewProviders: [provideIcons({ tablerChalkboard, tablerFolder, tablerSitemap })],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { 'data-testid': 'command-palette' },
   template: `

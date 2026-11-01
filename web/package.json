@@ -14,7 +14,8 @@
     "lint": "ng lint",
     "format": "prettier --write \"src/**/*.{ts,html,scss}\"",
     "format:check": "prettier --check \"src/**/*.{ts,html,scss}\"",
-    "generate:avatars": "node scripts/generate-avatar-art.mjs"
+    "generate:avatars": "node scripts/generate-avatar-art.mjs",
+    "generate:icons": "node scripts/generate-app-icons.mjs"
   },
   "private": true,
   "packageManager": "npm@11.19.1",

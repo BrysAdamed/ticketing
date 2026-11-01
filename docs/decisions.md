@@ -1514,6 +1514,16 @@ Superseded by D-81 for the meaning of `a` and `i`; the rest still holds.
 - Rejected: retrying the move on `DbUpdateConcurrencyException` (re-runs the rank placement and the activity entries, and hides the race instead of ordering it); making rebalances lock rows in id order instead (a move would still hold rows while it waits for a rank lock, and every writer that ranks would have to follow that rule).
 - Achievements: none; this fixes existing moves.
 
+### D-180 The app-wide icons are a generated copy of the Tabler SVGs, so the initial bundle never imports `@ng-icons/tabler-icons` (TKT-121)
+
+- Question: the initial bundle passed the 1 MB warning by 69 bytes. The largest avoidable part was 71 kB of Tabler icons: esbuild keeps one package module in one chunk, so once eager code (`app-icons.ts`, the top bar, the command palette) imports anything from `@ng-icons/tabler-icons`, every icon that any lazy feature imports from it lands in the initial bundle too (the effect D-155 worked around for medal glyphs). Raise the budget or move code out?
+- Decision:
+  - `shared/ui/icon/app-icons.generated.ts` holds `APP_ICONS` as SVG strings, written by `npm run generate:icons` (`web/scripts/generate-app-icons.mjs`) from the names listed in the script; `app-icons.generated.spec.ts` checks every string against the package, so an upgrade that changes an icon fails the test until the file is regenerated. Adding an app-wide icon: add its name to the script and run the command.
+  - Eager code (the shell, `core/` that `app.config.ts` reaches) uses only `APP_ICONS` and never imports `@ng-icons/tabler-icons`; the top bar's award and the palette's folder, board and diagram icons joined `APP_ICONS`. Lazy features keep importing icons from the package in their `viewProviders`, so the package is a shared lazy chunk.
+  - Result: initial total 1.00 MB → 962 kB raw (240.7 kB estimated transfer); the budget stays at 1 MB / 1.6 MB.
+- Rejected: raising the warning (the size grew from a bundling side effect, not from code the first paint needs); lazy-loading the notifications panel or the command palette (about 11 kB each, and a delay on the first open of `G N` or Ctrl+K); moving `MAT_FORM_FIELD_DEFAULT_OPTIONS` out of `app.config.ts` to drop Material form field and forms from the initial bundle (the sign-in page needs them at first paint, and dialogs opened from root services would miss route-level defaults).
+- Achievements: none; a build-size fix.
+
 ## Product owner answers (v1 review, 2026-10-27)
 
 These were open questions (Q-01..Q-05); the product owner resolved them as follows.

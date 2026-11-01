@@ -13,7 +13,7 @@ import {
 } from '@core/onboarding/onboarding-state.service';
 import { ProjectDirectory } from '@core/projects/project-directory';
 import { TicketCreator } from '@core/tickets/create-ticket';
-import { APP_ICONS } from '@shared/ui/icon/app-icons';
+import { APP_ICONS } from '@shared/ui/icon/app-icons.generated';
 import { ChecklistCardComponent, WRITE_REFRESH_DEBOUNCE_MS } from './checklist-card.component';
 
 function item(id: string, done = false, optional = false): OnboardingChecklistItem {

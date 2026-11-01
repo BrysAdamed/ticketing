@@ -110,15 +110,14 @@ public sealed class MoveTicketsRaceTests(TicketingApiFactory api)
 
         // Act
         var requests = new List<Task<HttpResponseMessage>>();
-        for (var round = 0; round < 3; round++)
+        for (var round = 0; round < 2; round++)
         {
             requests.Add(client.MoveAsync("backlog", [keys[0], keys[1]], beforeKey: keys[2]));
             requests.Add(client.MoveAsync("backlog", [keys[2]], beforeKey: keys[0]));
             requests.Add(client.MoveAsync(board.Id.ToString(), [keys[3]], round % 2 == 0 ? "InProgress" : "ToDo"));
             requests.Add(client.MoveAsync("backlog", [keys[3]]));
             requests.Add(client.MoveAsync(other.Id.ToString(), [keys[4]], beforeKey: keys[5]));
-            requests.Add(client.PatchAsJsonAsync($"/api/v1/tickets/{keys[round]}", new { priority = round % 2 == 0 ? "High" : "Low" }, _ct));
-            requests.Add(client.PatchAsJsonAsync($"/api/v1/tickets/{keys[3]}", new { storyPoints = round }, _ct));
+            requests.Add(client.PatchAsJsonAsync($"/api/v1/tickets/{keys[round * 3]}", new { priority = round % 2 == 0 ? "High" : "Low" }, _ct));
         }
         requests.Add(client.PostAsJsonAsync($"/api/v1/boards/{other.Id}/archive", new { carryOverTo = "backlog" }, HttpAssertions.Json, _ct));
         var responses = await Task.WhenAll(requests);

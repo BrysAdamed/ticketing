@@ -7,12 +7,15 @@ namespace Ticketing.IntegrationTests.Infrastructure;
 
 /// <summary>
 /// One PostgreSQL 18 container per test run with a migrated template database. Every test collection gets its own
-/// database cloned from the template (<c>CREATE DATABASE … TEMPLATE</c>), so collections run in parallel.
+/// database cloned from the template (<c>CREATE DATABASE … TEMPLATE</c>), so collections run in parallel. Every collection
+/// keeps its own connection pool, so the server allows more connections than PostgreSQL's default 100.
 /// </summary>
 internal static class PostgresServer
 {
     private const string TemplateDatabase = "ticketing_template";
-    private static readonly PostgreSqlContainer Container = new PostgreSqlBuilder("postgres:18-alpine").Build();
+    private static readonly PostgreSqlContainer Container = new PostgreSqlBuilder("postgres:18-alpine")
+        .WithCommand("-c", "max_connections=300")
+        .Build();
     private static readonly SemaphoreSlim Gate = new(1, 1);
     private static bool _started;
 

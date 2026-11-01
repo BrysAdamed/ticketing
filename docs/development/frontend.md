@@ -309,7 +309,7 @@ Live catalogue: `/dev/ui-kit`. Import components one by one (all standalone, `tk
 
 | Component / API | Notes |
 | --- | --- |
-| `tk-icon name size` | Wrapper over ng-icons (Tabler). App-wide icons are in `shared/ui/icon/app-icons.ts`. Register feature-only icons with `viewProviders: [provideIcons({ … })]`. |
+| `tk-icon name size` | Wrapper over ng-icons (Tabler). App-wide icons are `APP_ICONS` in `shared/ui/icon/app-icons.generated.ts`: add the name to `scripts/generate-app-icons.mjs` and run `npm run generate:icons`. Code the initial bundle reaches never imports `@ng-icons/tabler-icons`, or every Tabler icon a lazy feature uses moves into the initial bundle (D-180). Register feature-only icons with `viewProviders: [provideIcons({ … })]`. |
 | `tk-type-icon [type] [showLabel]` | Epic / User Story / Technical / Spike / Bug glyphs in type colors. |
 | `tk-status-icon [status]`, `tk-status-badge [status] [tinted]` | Progress ring for the 8 statuses. The tinted badge uses the status category colour. |
 | `tk-priority-icon [priority]` | Signal bars; the label goes to aria-label and title. |

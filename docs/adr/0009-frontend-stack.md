@@ -7,7 +7,7 @@
 
 The brief requires Angular and says the app must look professional and feel fast. The spec sets an initial bundle under 500 KB gzipped, a board of 500 cards rendered in under 1 s, optimistic drag and drop, keyboard access and WCAG 2.1 AA contrast ([spec §10](../product/01-refined-spec.md#10-non-functional-requirements)). Markdown is CommonMark + GFM with raw HTML not rendered ([spec §2](../product/01-refined-spec.md#2-cross-cutting-conventions)). The original plan was Angular + PrimeNG.
 
-The research found that **PrimeNG 22 is no longer open source**: `primeng@22.x` and its theme and icon packages ship under the commercial PrimeUI License, the free tier does not cover a company of Adamed's size, and the MIT-licensed PrimeNG 21 only supports Angular 21 ([tech-stack.md](../research/tech-stack.md), red flag R1). The owner decided on 2026-10-26: no PrimeNG.
+The research found that **PrimeNG 22 is no longer open source**: `primeng@22.x` and its theme and icon packages ship under the commercial PrimeUI License, the free tier is limited to very small organizations, and the MIT-licensed PrimeNG 21 only supports Angular 21 ([tech-stack.md](../research/tech-stack.md), red flag R1). The owner decided on 2026-10-26: no PrimeNG.
 
 ## Decision
 
@@ -30,7 +30,6 @@ The research found that **PrimeNG 22 is no longer open source**: `primeng@22.x` 
 - Material's look must be pushed toward our design through tokens; anything we cannot express as tokens becomes a small custom component, not a `::ng-deep` override.
 - Chart.js measured at 63 KB gzip for line + bar + tooltip + legend versus 190 KB for ECharts, which keeps the dashboard chunk small.
 - Escaping raw HTML deviates from `marked` defaults and must be covered by unit tests (including XSS payloads).
-- AdaCon and AdaConExt (Angular 21 + PrimeNG 21) will face the same licensing problem when they move to Angular 22.
 
 ## Alternatives considered
 

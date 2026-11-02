@@ -243,7 +243,7 @@ Format: question, options considered, decision, rationale. "PO" marks decisions 
 
 ### D-45 UI component library
 
-- Decision: Angular Material 22 + CDK, themed with our tokens (PO decision). PrimeNG 22 switched to a commercial license that Adamed would have to buy.
+- Decision: Angular Material 22 + CDK, themed with our tokens (PO decision). PrimeNG 22 switched to a commercial license with paid seats.
 - See [ADR 0009](adr/0009-frontend-stack.md).
 
 ### D-46 Spec vs research discrepancies
